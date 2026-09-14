@@ -46,7 +46,7 @@ const { showServerSelect, serverOptions, serverSelection, onServerPick } =
   flex: none;
   opacity: 0.85;
 }
-.v2-srv__select {
+.v2-srv :deep(.v2-srv__select) {
   min-width: 0;
   max-width: 140px;
 }

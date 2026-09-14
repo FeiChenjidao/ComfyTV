@@ -58611,7 +58611,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-DWqrptCF.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-0KcdXWLJ.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -143599,7 +143599,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-DGNKzXjI.mjs");
+    const { STLLoader } = await import("./STLLoader-BnGttijH.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -143607,7 +143607,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-DFxpfv7f.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-BnITb_AJ.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -230598,7 +230598,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
         onPointerdown: _cache2[0] || (_cache2[0] = withModifiers(() => {
         }, ["stop"]))
       }, [
-        _cache2[1] || (_cache2[1] = createStaticVNode('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-v-f737bbd3><rect x="3.5" y="4" width="17" height="6.5" rx="1.5" data-v-f737bbd3></rect><rect x="3.5" y="13.5" width="17" height="6.5" rx="1.5" data-v-f737bbd3></rect><circle cx="7" cy="7.2" r="0.9" fill="currentColor" stroke="none" data-v-f737bbd3></circle><circle cx="7" cy="16.7" r="0.9" fill="currentColor" stroke="none" data-v-f737bbd3></circle></svg>', 1)),
+        _cache2[1] || (_cache2[1] = createStaticVNode('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" data-v-67a9f1ee><rect x="3.5" y="4" width="17" height="6.5" rx="1.5" data-v-67a9f1ee></rect><rect x="3.5" y="13.5" width="17" height="6.5" rx="1.5" data-v-67a9f1ee></rect><circle cx="7" cy="7.2" r="0.9" fill="currentColor" stroke="none" data-v-67a9f1ee></circle><circle cx="7" cy="16.7" r="0.9" fill="currentColor" stroke="none" data-v-67a9f1ee></circle></svg>', 1)),
         createVNode(_sfc_main$4r, {
           class: "v2-srv__select",
           "model-value": unref(serverSelection),
@@ -230611,7 +230611,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const ServerSelectV2 = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-f737bbd3"]]);
+const ServerSelectV2 = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-67a9f1ee"]]);
 const nudgeScope = effectScope(true);
 const nudgePending = /* @__PURE__ */ new Set();
 let nudged = [];
@@ -231369,12 +231369,14 @@ const V2_CSS_PANELS = `
   background:
     linear-gradient(135deg, transparent 0 50%, var(--v2-scrollbar) 50% 60%, transparent 60% 75%, var(--v2-scrollbar) 75% 85%, transparent 85%);
 }
-.v2-panel__selects { flex: 1; min-width: 0; display: flex; }
+.v2-panel__selects { flex: 1 1 150px; min-width: 120px; display: flex; }
 .v2-panel__prompthost .comfytv-prompt-editor { min-height: 54px; font-size: 13px; }
 .v2-panel__footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   color: var(--v2-text-mid);
   font: 500 12px/1 system-ui, sans-serif;
 }
@@ -231404,8 +231406,18 @@ const V2_CSS_PANELS = `
 }
 .v2-panel__opt svg { width: 14px; height: 14px; opacity: .85; flex: none; }
 .v2-panel__spacer { flex: 1; }
-.v2-panel__server { flex: none; display: flex; min-width: 0; max-width: 160px; }
-.v2-panel__count { color: var(--v2-text-muted); font-size: 11px; white-space: nowrap; }
+.v2-panel__server { flex: 1 1 92px; display: flex; min-width: 0; max-width: 160px; }
+.v2-panel__count {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--v2-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+/* Run keeps to the right edge of whichever line it ends up on */
+.v2-panel__footer > .v2-run { margin-left: auto; }
 .v2-run {
   width: 32px;
   height: 32px;
@@ -238810,4 +238822,4 @@ export {
   LinearFilter as y,
   LinearMipMapLinearFilter as z
 };
-//# sourceMappingURL=main-DZ5K0Rft.mjs.map
+//# sourceMappingURL=main-B6pDaf_P.mjs.map
