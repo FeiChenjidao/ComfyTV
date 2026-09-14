@@ -75,6 +75,9 @@
     "CropStage": {
       "display_name": "裁剪"
     },
+    "CustomSplitStage": {
+      "display_name": "自定义分割"
+    },
     "CutoutStage": {
       "display_name": "抠图"
     },
@@ -93,6 +96,9 @@
     "ImageLoaderStage": {
       "display_name": "加载图片"
     },
+    "ImageMergeStage": {
+      "display_name": "图片合并"
+    },
     "ImagePickerStage": {
       "display_name": "图片选择器"
     },
@@ -101,6 +107,9 @@
     },
     "ImageVariationsStage": {
       "display_name": "图像变体"
+    },
+    "ImagesSplitStage": {
+      "display_name": "图像组分离"
     },
     "InpaintStage": {
       "display_name": "重绘"
@@ -131,6 +140,9 @@
     },
     "ProjectStage": {
       "display_name": "项目"
+    },
+    "PsdLayerTreeStage": {
+      "display_name": "PSD 图层树"
     },
     "RelightStage": {
       "display_name": "打光"
@@ -818,6 +830,31 @@
       }
     }
   },
+  "ComfyTV_CustomSplitStage": {
+    "display_name": "自定义分割",
+    "inputs": {
+      "h_splits": {
+        "name": "水平分割"
+      },
+      "image": {
+        "name": "图像"
+      },
+      "v_splits": {
+        "name": "垂直分割"
+      },
+      "cell_labels": {
+        "name": "格子标注"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像组"
+      },
+      "1": {
+        "name": "图像"
+      }
+    }
+  },
   "ComfyTV_CutoutStage": {
     "display_name": "抠图",
     "inputs": {
@@ -1004,6 +1041,24 @@
       }
     }
   },
+  "ComfyTV_ImageMergeStage": {
+    "display_name": "图片合并",
+    "inputs": {
+      "images": {
+        "name": "图片",
+        "tooltip": "可接入任意数量的图片，多连几根线会自动增加接口。"
+      },
+      "merge_mode": {
+        "name": "方式",
+        "tooltip": "图层叠加 = 像 PSD 一样叠在一起；横向排布 = 从左到右排开。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像"
+      }
+    }
+  },
   "ComfyTV_ImagePickerStage": {
     "display_name": "图片选择器",
     "inputs": {
@@ -1138,6 +1193,16 @@
         "name": "图像"
       }
     }
+  },
+  "ComfyTV_ImagesSplitStage": {
+    "display_name": "图像组分离",
+    "inputs": {
+      "images": {
+        "name": "图像组",
+        "tooltip": "把图像组拆成每层一个输出口。"
+      }
+    },
+    "outputs": {}
   },
   "ComfyTV_InpaintStage": {
     "display_name": "重绘",
@@ -1334,6 +1399,33 @@
       }
     },
     "outputs": {}
+  },
+  "ComfyTV_PsdLayerTreeStage": {
+    "display_name": "PSD 图层树",
+    "inputs": {
+      "captured_image": {
+        "name": "合成图"
+      },
+      "captured_images": {
+        "name": "图像组"
+      },
+      "psd_file": {
+        "name": "PSD 文件"
+      },
+      "selected_id": {
+        "name": "选中图层"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像",
+        "tooltip": "选中图层合成到文档尺寸的透明图。"
+      },
+      "1": {
+        "name": "图像组",
+        "tooltip": "每个选中图层或组各一张文档尺寸透明图。"
+      }
+    }
   },
   "ComfyTV_RelightStage": {
     "display_name": "打光",
@@ -2058,6 +2150,10 @@
       "images": {
         "name": "图像"
       },
+      "images.正": { "name": "正" },
+      "images.左": { "name": "左" },
+      "images.背": { "name": "背" },
+      "images.右": { "name": "右" },
       "models": {
         "name": "模型"
       }

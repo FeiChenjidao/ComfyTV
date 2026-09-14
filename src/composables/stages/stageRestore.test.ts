@@ -79,4 +79,18 @@ describe('restoreLatestOutput', () => {
     await flush()
     expect(project.adoptOutputs).not.toHaveBeenCalled()
   })
+
+  it('does not wipe live images-split snapshots when no db row exists', async () => {
+    project.fetchLatestOutput.mockResolvedValue(null)
+    const state = makeState()
+    state.output = '/a.png'
+    state.outputs = ['/a.png', '/b.png']
+    const node: any = makeNode()
+    node.comfyClass = 'ComfyTV.ImagesSplitStage'
+    bindOutputRestore({ node, state, store, kind: 'image', variant: 'transform' })
+    await flush()
+    expect(project.fetchLatestOutput).not.toHaveBeenCalled()
+    expect(state.outputs).toEqual(['/a.png', '/b.png'])
+    expect(state.output).toBe('/a.png')
+  })
 })

@@ -329,6 +329,14 @@ body[data-v2-slot-hover] .p-tooltip { display: none !important; }
   z-index: 40;
 }
 .lg-node[data-v2-shell][data-v2-selected] .v2-toolbar { display: flex; }
+
+/* Plugin setting: hide control panels unless the card is selected */
+body[data-v2-panel-on-select] .lg-node[data-v2-shell]:not([data-v2-selected]) .v2-panel,
+body[data-v2-panel-on-select] .lg-node[data-v2-shell]:not([data-v2-selected]) .v2-fx-footer,
+body[data-v2-panel-on-select] .lg-node[data-v2-shell]:not([data-v2-selected]) .v2-ed__panel,
+body[data-v2-panel-on-select] .lg-node[data-v2-shell]:not([data-v2-selected]) .v2-ed__status {
+  display: none !important;
+}
 .v2-toolbar:empty { display: none !important; }
 .v2-toolbar__btn {
   display: flex;

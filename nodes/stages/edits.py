@@ -1,6 +1,6 @@
 from .transforms import (
-    CropStage, RotateStage, MirrorStage, GridSplitStage, CompareStage,
-    ColorGradeStage,
+    CropStage, RotateStage, MirrorStage, GridSplitStage, CustomSplitStage,
+    ImagesSplitStage, ImageMergeStage, CompareStage, ColorGradeStage,
 )
 from .model_edits import (
     UpscaleStage, OutpaintStage, InpaintStage, ImageEditStage,
@@ -11,7 +11,9 @@ from .variations import ImageVariationsStage
 __all__ = [
     "UpscaleStage", "OutpaintStage", "InpaintStage", "ImageEditStage",
     "EraseStage", "CutoutStage",
-    "CropStage", "RotateStage", "MirrorStage", "GridSplitStage", "CompareStage",
+    "CropStage", "RotateStage", "MirrorStage", "GridSplitStage", "CustomSplitStage",
+    "ImagesSplitStage", "ImageMergeStage",
+    "CompareStage",
     "ColorGradeStage",
     "ImageVariationsStage",
     "RelightStage", "MultiangleStage",

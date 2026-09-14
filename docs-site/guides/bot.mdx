@@ -18,13 +18,14 @@ Typical asks:
 
 ## No API keys, by design
 
-The bot does not talk to any cloud model API directly and ComfyTV never stores a key. Instead it drives an **agent CLI already installed on your machine** using that CLI's own login — or, with the Local LLM and ComfyUI LLM providers, a **model running on your own hardware**. Five providers ship today:
+The bot does not talk to any cloud model API directly and ComfyTV never stores a key. Instead it drives an **agent CLI already installed on your machine** using that CLI's own login — or, with the Local LLM and ComfyUI LLM providers, a **model running on your own hardware**. Six providers ship today:
 
 | Provider | Install | Sign in | Attachments |
 | --- | --- | --- | --- |
 | [Claude Code](https://claude.com/claude-code) | `npm install -g @anthropic-ai/claude-code` | run `claude`, log in once | images / video / audio |
 | [Codex](https://developers.openai.com/codex) | `npm install -g @openai/codex` | `codex login` | images / video / audio |
 | [Qwen Code](https://qwenlm.github.io/qwen-code-docs/) | official install script (see its docs) | run `qwen`, then `/auth` | not yet |
+| [Cursor CLI](https://cursor.com/docs/cli/overview) | `curl https://cursor.com/install -fsS \| bash` (Windows: `irm 'https://cursor.com/install?win32=true' \| iex`) | `agent login` | images / video / audio |
 | Local LLM | any OpenAI-compatible local server | none — set the endpoint URL in Settings | not yet |
 | ComfyUI LLM | a Qwen3- or Gemma-family checkpoint in `models/text_encoders` | none | not yet |
 
@@ -35,7 +36,7 @@ Prerequisites:
 
 With more than one provider available, the ➕ button asks which engine a new chat should use; each chat remembers its provider. If no provider is found, the panel shows an install guide instead of a chat box.
 
-Provider isolation is per-engine: Claude Code runs with a strict per-turn MCP config and a tool whitelist; Codex runs `codex exec` sandboxed to the bot's working directory with shell and web search disabled, every MCP server except ComfyTV's turned off, and its localhost canvas-tool approvals routed through Codex's automatic reviewer (headless runs cannot prompt); Qwen Code runs against a project-scoped `.qwen/settings.json` inside the bot's working directory (ComfyTV MCP server only, built-in shell/file tools excluded) — your global CLI configuration is never touched.
+Provider isolation is per-engine: Claude Code runs with a strict per-turn MCP config and a tool whitelist; Codex runs `codex exec` sandboxed to the bot's working directory with shell and web search disabled, every MCP server except ComfyTV's turned off, and its localhost canvas-tool approvals routed through Codex's automatic reviewer (headless runs cannot prompt); Qwen Code runs against a project-scoped `.qwen/settings.json` inside the bot's working directory (ComfyTV MCP server only, built-in shell/file tools excluded); Cursor CLI runs `agent -p` against an isolated bot-home workspace with a project `.cursor/mcp.json` (ComfyTV MCP only) and `.cursor/cli.json` that denies shell, file writes and web fetch — your global `~/.cursor/mcp.json` is never touched.
 
 ## Local LLM provider
 
@@ -70,7 +71,7 @@ Compared to the Local LLM provider:
 
 ## How it works, briefly
 
-Each turn spawns a fresh CLI process in headless mode, locked down to the ComfyTV MCP server (`--strict-mcp-config`, tools whitelisted to `mcp__comfytv__*`), resuming the chat's session for continuity. The conversation state lives with the CLI; ComfyTV's database keeps a display mirror of the transcript. Canvas writes still follow MCP rules — an open ComfyTV page executes them, whether it is in Comfy Desktop or a browser.
+Each turn spawns a fresh CLI process in headless mode, locked down to the ComfyTV MCP server (Claude Code uses `--strict-mcp-config` and a `mcp__comfytv__*` tool whitelist; other CLIs use their own equivalent lockdown), resuming the chat's session for continuity. The conversation state lives with the CLI; ComfyTV's database keeps a display mirror of the transcript. Canvas writes still follow MCP rules — an open ComfyTV page executes them, whether it is in Comfy Desktop or a browser.
 
 ## Troubleshooting
 

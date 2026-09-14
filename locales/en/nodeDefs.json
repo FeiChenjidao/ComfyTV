@@ -75,6 +75,9 @@
     "CropStage": {
       "display_name": "Crop"
     },
+    "CustomSplitStage": {
+      "display_name": "Custom Split"
+    },
     "CutoutStage": {
       "display_name": "Cutout"
     },
@@ -93,6 +96,9 @@
     "ImageLoaderStage": {
       "display_name": "Load Image"
     },
+    "ImageMergeStage": {
+      "display_name": "Merge Images"
+    },
     "ImagePickerStage": {
       "display_name": "Image Picker"
     },
@@ -101,6 +107,9 @@
     },
     "ImageVariationsStage": {
       "display_name": "Image Variations"
+    },
+    "ImagesSplitStage": {
+      "display_name": "Split Images"
     },
     "InpaintStage": {
       "display_name": "Inpaint"
@@ -131,6 +140,9 @@
     },
     "ProjectStage": {
       "display_name": "Project"
+    },
+    "PsdLayerTreeStage": {
+      "display_name": "PSD Layer Tree"
     },
     "RelightStage": {
       "display_name": "Relight"
@@ -818,6 +830,31 @@
       }
     }
   },
+  "ComfyTV_CustomSplitStage": {
+    "display_name": "Custom Split",
+    "inputs": {
+      "h_splits": {
+        "name": "Horizontal splits"
+      },
+      "image": {
+        "name": "Image"
+      },
+      "v_splits": {
+        "name": "Vertical splits"
+      },
+      "cell_labels": {
+        "name": "Cell labels"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Images"
+      },
+      "1": {
+        "name": "Image"
+      }
+    }
+  },
   "ComfyTV_CutoutStage": {
     "display_name": "Cutout",
     "inputs": {
@@ -1004,6 +1041,24 @@
       }
     }
   },
+  "ComfyTV_ImageMergeStage": {
+    "display_name": "Merge Images",
+    "inputs": {
+      "images": {
+        "name": "Images",
+        "tooltip": "Any number of images. Connect more sockets as needed."
+      },
+      "merge_mode": {
+        "name": "Mode",
+        "tooltip": "layers = Photoshop-style stack; row = place images left to right."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Image"
+      }
+    }
+  },
   "ComfyTV_ImagePickerStage": {
     "display_name": "Image Picker",
     "inputs": {
@@ -1138,6 +1193,16 @@
         "name": "Image"
       }
     }
+  },
+  "ComfyTV_ImagesSplitStage": {
+    "display_name": "Split Images",
+    "inputs": {
+      "images": {
+        "name": "Images",
+        "tooltip": "Image group to split into one output per layer."
+      }
+    },
+    "outputs": {}
   },
   "ComfyTV_InpaintStage": {
     "display_name": "Inpaint",
@@ -1334,6 +1399,33 @@
       }
     },
     "outputs": {}
+  },
+  "ComfyTV_PsdLayerTreeStage": {
+    "display_name": "PSD Layer Tree",
+    "inputs": {
+      "captured_image": {
+        "name": "Captured image"
+      },
+      "captured_images": {
+        "name": "Captured images"
+      },
+      "psd_file": {
+        "name": "PSD file"
+      },
+      "selected_id": {
+        "name": "Selected layers"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Image",
+        "tooltip": "Composite of the selected layers at document size."
+      },
+      "1": {
+        "name": "Images",
+        "tooltip": "One document-sized PNG per selected layer or group."
+      }
+    }
   },
   "ComfyTV_RelightStage": {
     "display_name": "Relight",
@@ -2042,6 +2134,10 @@
       "images": {
         "name": "Images"
       },
+      "images.正": { "name": "正" },
+      "images.左": { "name": "左" },
+      "images.背": { "name": "背" },
+      "images.右": { "name": "右" },
       "models": {
         "name": "Models"
       }

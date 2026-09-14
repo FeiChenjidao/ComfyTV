@@ -674,6 +674,28 @@ describe('stageStore.setOutputSlot', () => {
   })
 })
 
+describe('stageStore.setOutputSlots', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+
+  it('writes many slots and notifies once', () => {
+    const store = useStageStore()
+    const state = freshState({ outputs: [null] })
+    const before = store.stateTick
+    store.setOutputSlots(state, ['/a', '/b', null])
+    expect(state.outputs).toEqual(['/a', '/b', null])
+    expect(state.output).toBe('/a')
+    expect(store.stateTick).toBe(before + 1)
+  })
+
+  it('is a no-op when every slot already matches', () => {
+    const store = useStageStore()
+    const state = freshState({ output: '/a', outputs: ['/a', '/b'] })
+    const before = store.stateTick
+    store.setOutputSlots(state, ['/a', '/b'])
+    expect(store.stateTick).toBe(before)
+  })
+})
+
 describe('imagePoolCount', () => {
   it('counts the images in a batch', () => {
     expect(imagePoolCount(JSON.stringify({ images: [{}, {}] }))).toBe(2)

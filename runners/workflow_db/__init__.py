@@ -44,6 +44,11 @@ from .bindings import (
     set_api_json,
     save_api_sidecar,
 )
+from .api_cost import (
+    collect_api_cost_nodes,
+    get_workflow_api_cost,
+    invalidate_api_node_defs,
+)
 
 __all__ = [
     "seed_workflows_from_disk",
@@ -76,4 +81,7 @@ __all__ = [
     "build_object_info",
     "convert_gui_to_api",
     "convert_workflow",
+    "collect_api_cost_nodes",
+    "get_workflow_api_cost",
+    "invalidate_api_node_defs",
 ]

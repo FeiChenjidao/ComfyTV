@@ -16,6 +16,7 @@ import { slotColor } from '@/composables/stages/imageSlotMentions'
 import {
   assetEntry,
   batchEntry,
+  liveLinks,
   type MediaEntry,
   type MediaType,
   MEDIA_TYPES,
@@ -29,6 +30,7 @@ import {
   mediaEntryUrl,
   moveMediaEntry,
   removeMediaEntry,
+  syncMediaTable,
 } from '@/composables/stages/mediaOrderSync'
 import { importAssetFiles } from '@/composables/sidebar/assetImport'
 import { toastLoaderUploadFailed, useLoaderFileDrop } from '@/composables/stages/useLoaderFileDrop'
@@ -103,6 +105,7 @@ export function useMediaStrip(
   const items = computed<StripItem[]>(() => {
     void version.value
     void selectionStore.bindingsVersion
+    void stageStore.stateTick
     const node = getNode()
     const table = readMediaTable(node)
     const state = node ? stageStore.getStage(node) : undefined
@@ -126,6 +129,16 @@ export function useMediaStrip(
     }
     return out
   })
+
+  watch(
+    () => {
+      void version.value
+      void stageStore.stateTick
+      const node = getNode()
+      return MEDIA_TYPES.flatMap(t => liveLinks(node, t).map(l => `${t}:${l.link}`)).join('|')
+    },
+    () => { syncMediaTable(getNode()) },
+  )
 
   const addedIds = computed(() =>
     items.value.map(it => it.entry.asset_id).filter((id): id is number => id != null))

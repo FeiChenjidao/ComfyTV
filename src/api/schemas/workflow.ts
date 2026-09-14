@@ -176,6 +176,44 @@ export const WorkflowInfoSchema = z.record(
   z.record(z.string(), WorkflowUsageEntrySchema),
 )
 export type WorkflowInfo = z.infer<typeof WorkflowInfoSchema>
+
+const PriceBadgeWidgetDepSchema = z.object({
+  name: z.string(),
+  type: z.string().optional(),
+}).passthrough()
+
+export const WorkflowApiCostNodeSchema = z.object({
+  id: z.string(),
+  class_type: z.string(),
+  title: z.string(),
+  price_badge: z.object({
+    engine: z.string().optional(),
+    expr: z.string(),
+    depends_on: z.object({
+      widgets: z.array(PriceBadgeWidgetDepSchema).optional(),
+      inputs: z.array(z.string()).optional(),
+      input_groups: z.array(z.string()).optional(),
+    }).passthrough().optional(),
+  }).passthrough().nullable().optional(),
+  widgets: z.record(z.string(), z.unknown()).optional(),
+  inputs: z.record(z.string(), z.object({ connected: z.boolean() }).passthrough()).optional(),
+  input_groups: z.record(z.string(), z.number()).optional(),
+}).passthrough()
+
+export const WorkflowApiCostSchema = z.object({
+  kind: z.string(),
+  label: z.string(),
+  has_api: z.boolean().optional(),
+  nodes: z.array(WorkflowApiCostNodeSchema),
+  bindings: z.array(z.object({
+    node_id: z.string(),
+    input_name: z.string(),
+    from: z.string(),
+    default: z.unknown().optional(),
+  }).passthrough()).optional(),
+}).passthrough()
+export type WorkflowApiCost = z.infer<typeof WorkflowApiCostSchema>
+export type WorkflowApiCostNode = z.infer<typeof WorkflowApiCostNodeSchema>
 export const StageDefaultsSchema = z.object({
   defaults: z.record(z.string(), z.unknown()),
 })

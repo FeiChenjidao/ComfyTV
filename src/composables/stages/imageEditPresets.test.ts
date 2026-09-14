@@ -19,7 +19,7 @@ describe('IMAGE_EDIT_PRESETS', () => {
   it('includes expected stages', () => {
     const ids = new Set(IMAGE_EDIT_PRESETS.map(p => p.id))
     for (const exp of ['hd', 'outpaint', 'inpaint', 'erase', 'cutout',
-                       'crop', 'rotate', 'mirror', 'grid']) {
+                       'crop', 'rotate', 'mirror', 'grid', 'custom-split']) {
       expect(ids.has(exp)).toBe(true)
     }
   })

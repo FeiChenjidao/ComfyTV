@@ -26,6 +26,10 @@ import MeshOpStageCard from '@/components/stages/MeshOpStageCard.vue'
 import MeshPrimitiveStageCard from '@/components/stages/MeshPrimitiveStageCard.vue'
 import MeshBooleanStageCard from '@/components/stages/MeshBooleanStageCard.vue'
 import GridSplitStageCard from '@/components/stages/GridSplitStageCard.vue'
+import CustomSplitStageCard from '@/components/stages/CustomSplitStageCard.vue'
+import PsdLayerTreeStageCard from '@/components/stages/PsdLayerTreeStageCard.vue'
+import ImagesSplitStageCard from '@/components/stages/ImagesSplitStageCard.vue'
+import ImageMergeStageCard from '@/components/stages/ImageMergeStageCard.vue'
 import DirectorTimelineStageCard from '@/components/stages/DirectorTimelineStageCard.vue'
 import DirectorStageCard from '@/components/stages/DirectorStageCard.vue'
 import OutpaintStageCard from '@/components/stages/OutpaintStageCard.vue'
@@ -211,6 +215,9 @@ export const RICH_STAGE_CARDS: Record<string, any> = {
   'ComfyTV.PanoramaMultiViewStage':   PanoramaMultiViewStageCard,
   'ComfyTV.CompareStage':             CompareStageCard,
   'ComfyTV.AssetImageLoaderStage':    AssetLoaderCard,
+  'ComfyTV.PsdLayerTreeStage':        PsdLayerTreeStageCard,
+  'ComfyTV.ImagesSplitStage':         ImagesSplitStageCard,
+  'ComfyTV.ImageMergeStage':          ImageMergeStageCard,
   'ComfyTV.AssetVideoLoaderStage':    AssetLoaderCard,
   'ComfyTV.AssetAudioLoaderStage':    AssetLoaderCard,
   'ComfyTV.AssetTextLoaderStage':     AssetLoaderCard,
@@ -222,6 +229,7 @@ export const RICH_STAGE_CARDS: Record<string, any> = {
   'ComfyTV.MeshBooleanStage':         MeshBooleanStageCard,
   'ComfyTV.LineArtStage':             LineArtStageCard,
   'ComfyTV.GridSplitStage':           GridSplitStageCard,
+  'ComfyTV.CustomSplitStage':         CustomSplitStageCard,
   'ComfyTV.DirectorTimelineStage':    DirectorTimelineStageCard,
   'ComfyTV.DirectorStage':            DirectorStageCard,
   'ComfyTV.OutpaintStage':            OutpaintStageCard,
@@ -316,6 +324,10 @@ export const FLEX_FILL_STAGES = new Set([
   'ComfyTV.ColorGradeStage',
   'ComfyTV.CornerPinStage',
   'ComfyTV.GridSplitStage',
+  'ComfyTV.CustomSplitStage',
+  'ComfyTV.PsdLayerTreeStage',
+  'ComfyTV.ImagesSplitStage',
+  'ComfyTV.ImageMergeStage',
   'ComfyTV.MirrorStage',
   'ComfyTV.RotateStage',
   'ComfyTV.MotionTrackStage',
@@ -373,6 +385,10 @@ export const RICH_STAGE_MIN_HEIGHTS: Record<string, number> = {
   'ComfyTV.MeshBooleanStage':         760,
   'ComfyTV.LineArtStage':             720,
   'ComfyTV.GridSplitStage':           560,
+  'ComfyTV.CustomSplitStage':         560,
+  'ComfyTV.PsdLayerTreeStage':        420,
+  'ComfyTV.ImagesSplitStage':         680,
+  'ComfyTV.ImageMergeStage':          460,
   'ComfyTV.OutpaintStage':            620,
   'ComfyTV.Scene3DStage':             640,
   'ComfyTV.BlenderSceneStage':        720,

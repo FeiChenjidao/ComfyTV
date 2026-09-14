@@ -19,7 +19,7 @@ export function bindShellChrome(node: ComfyNode, opts: {
   socketAnchor: HTMLElement
   socketY?: 'center' | { frac: number; cap: number }
   state?: StageState
-  media?: { source: MediaSource; host?: HTMLElement }
+  media?: { source: MediaSource; host?: HTMLElement; preferImageInput?: boolean }
   lod?: boolean
   manageHeight?: { min: number }
 }) {
@@ -77,7 +77,11 @@ export function bindShellChrome(node: ComfyNode, opts: {
       )
     })
     bindMediaMeta(state, opts.media, socketAnchor, scope)
-    if (opts.lod && opts.media) bindLodPoster(card, socketAnchor, state, opts.media.source, scope)
+    if (opts.lod && opts.media) {
+      bindLodPoster(card, socketAnchor, state, opts.media.source, scope, {
+        preferImageInput: opts.media.preferImageInput,
+      })
+    }
   }
 
   const titleEl = card.querySelector<HTMLElement>('.v2-handle span')

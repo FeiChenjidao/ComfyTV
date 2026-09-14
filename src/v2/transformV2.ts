@@ -3,7 +3,7 @@ import type { Component } from 'vue'
 import { useStageNode } from '@/composables/stages/useStageNode'
 import { t } from '@/i18n'
 import { type ComfyNode } from '@/lib/comfyApp'
-import { bindNodeDrag } from '@/v2/nodeDrag'
+import { bindNodeDrag, selectNodeFromPointer } from '@/v2/nodeDrag'
 import { bindShellChrome } from '@/v2/shellChrome'
 import { bindProgressRing, createNodeScope, ensureMinSize, ICON_GRIP } from '@/v2/shellCommon'
 import { installV2ShellCss } from '@/v2/shellCss'
@@ -14,6 +14,9 @@ import { attachOutputToolbar } from '@/v2/outputToolbar'
 import CompareEditorV2 from '@/v2/CompareEditorV2.vue'
 import GradeEditorV2 from '@/v2/GradeEditorV2.vue'
 import GridSplitEditorV2 from '@/v2/GridSplitEditorV2.vue'
+import CustomSplitEditorV2 from '@/v2/CustomSplitEditorV2.vue'
+import ImagesSplitEditorV2 from '@/v2/ImagesSplitEditorV2.vue'
+import ImageMergeEditorV2 from '@/v2/ImageMergeEditorV2.vue'
 import MirrorEditorV2 from '@/v2/MirrorEditorV2.vue'
 import RotateEditorV2 from '@/v2/RotateEditorV2.vue'
 import type { StageKind, StageVariant } from '@/stores/stageStore'
@@ -23,9 +26,22 @@ const ED_CSS = `
   padding: 0 6px 6px !important;
   cursor: grab;
   border-radius: 14px;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .v2-ed-card:active { cursor: grabbing; }
-.v2-ed-host { cursor: default; }
+.v2-ed-host { cursor: default; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.v2-ed-preview {
+  flex: 1;
+  overflow: hidden;
+  cursor: default;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 .v2-ed {
   display: flex;
   flex-direction: column;
@@ -230,6 +246,9 @@ const ICON_MIRROR = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const ICON_GRADE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="10" r="5.5"/><circle cx="15" cy="14" r="5.5"/><path d="M12.2 6.2a5.5 5.5 0 012.6 3.4M11.8 17.8a5.5 5.5 0 01-2.6-3.4" opacity=".5"/></svg>`
 const ICON_COMPARE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 3.5v17"/><path d="M6.5 12h3M14.5 12h3M8 10l1.5 2L8 14M16 10l-1.5 2 1.5 2"/></svg>`
 const ICON_GRIDSPLIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M12 3.5v17M3.5 12h17"/></svg>`
+const ICON_CUSTOMSPLIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M9 3.5v17M3.5 14h17"/></svg>`
+const ICON_IMAGESSPLIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="4" width="7" height="7" rx="1.2"/><rect x="13.5" y="4" width="7" height="7" rx="1.2"/><rect x="3.5" y="13" width="7" height="7" rx="1.2"/><rect x="13.5" y="13" width="7" height="7" rx="1.2"/></svg>`
+const ICON_IMAGEMERGE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="6" width="11" height="11" rx="1.5"/><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M19 4.5h3.5M20.75 2.75v3.5"/></svg>`
 
 let extraCssInstalled = false
 function installCss() {
@@ -248,15 +267,17 @@ function el(tag: string, cls: string, html?: string) {
   return e
 }
 
-interface EditorShellConfig {
+export interface EditorShellConfig {
   component: Component
   titleKey: string
   icon: string
   minW?: number
   minH?: number
+  lod?: boolean
+  lodPreferImageInput?: boolean
 }
 
-function makeEditorShell(config: EditorShellConfig) {
+export function makeEditorShell(config: EditorShellConfig) {
   return function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
     installCss()
     const anyNode = node as any
@@ -266,7 +287,13 @@ function makeEditorShell(config: EditorShellConfig) {
     const label = el('div', 'v2-label v2-handle', `${ICON_GRIP}${config.icon}<span>${t(config.titleKey)}</span>`)
     const editorAnchor = el('div', 'v2-ed-host')
     editorAnchor.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;'
-    card.append(label, editorAnchor)
+    const preview = config.lod ? el('div', 'v2-preview v2-ed-preview') : null
+    if (preview) {
+      preview.appendChild(editorAnchor)
+      card.append(label, preview)
+    } else {
+      card.append(label, editorAnchor)
+    }
 
     node.addDOMWidget('v2_shell', 'v2', card, {
       getMinHeight: () => 300,
@@ -296,8 +323,22 @@ function makeEditorShell(config: EditorShellConfig) {
     }
 
     bindNodeDrag(node, card)
+    // Editors stopPropagation on pointerdown so LiteGraph never selects the node;
+    // capture-phase select keeps "panel on select" / chrome working when clicking the image.
+    editorAnchor.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return
+      selectNodeFromPointer(node, e)
+    }, true)
 
-    bindShellChrome(node, { scope, card, socketAnchor: editorAnchor, state: stageState })
+    bindShellChrome(node, {
+      scope, card,
+      socketAnchor: preview ?? editorAnchor,
+      state: stageState,
+      media: config.lod
+        ? { source: 'batch', preferImageInput: !!config.lodPreferImageInput }
+        : undefined,
+      lod: !!config.lod,
+    })
 
     const prevRemoved = anyNode.onRemoved
     anyNode.onRemoved = function (...args: unknown[]) {
@@ -323,4 +364,14 @@ V2_SHELLS['ComfyTV.CompareStage'] = makeEditorShell({
 })
 V2_SHELLS['ComfyTV.GridSplitStage'] = makeEditorShell({
   component: GridSplitEditorV2, titleKey: 'v2.ed.gridSplit', icon: ICON_GRIDSPLIT, minH: 460,
+})
+V2_SHELLS['ComfyTV.CustomSplitStage'] = makeEditorShell({
+  component: CustomSplitEditorV2, titleKey: 'v2.ed.customSplit', icon: ICON_CUSTOMSPLIT,
+  minH: 460, lod: true, lodPreferImageInput: true,
+})
+V2_SHELLS['ComfyTV.ImagesSplitStage'] = makeEditorShell({
+  component: ImagesSplitEditorV2, titleKey: 'v2.ed.imagesSplit', icon: ICON_IMAGESSPLIT, minW: 360, minH: 680, lod: true,
+})
+V2_SHELLS['ComfyTV.ImageMergeStage'] = makeEditorShell({
+  component: ImageMergeEditorV2, titleKey: 'v2.ed.imageMerge', icon: ICON_IMAGEMERGE, minH: 460, lod: true,
 })

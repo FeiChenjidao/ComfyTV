@@ -475,6 +475,10 @@
         "label": "运行时自动接挑选节点",
         "desc": "Image 或 Video stage 运行时，如果输出端还没有连线，自动在后面接一个 Picker stage。"
       },
+      "v2-panel-on-select": {
+        "label": "仅选中时显示控制面板",
+        "desc": "启用后，V2 卡片控制区域只在选中卡片时显示。"
+      },
       "enable-db-backup": {
         "label": "启动时自动备份",
         "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。"

@@ -26,6 +26,10 @@ import {
   subscribePrepState,
 } from '@/composables/stages/useWorkflowPrep'
 import { getStageMeta } from '@/composables/stages/stageMeta'
+import {
+  IMAGES_SPLIT_CLASS,
+  syncImagesSplitStage,
+} from '@/composables/stages/imagesSplit'
 import { addWorkflowUploadButton } from '@/composables/stages/workflowUpload'
 import { releaseStageUid } from '@/composables/stages/stageIdentity'
 import { createStageNodeActions } from '@/composables/stages/stageNodeActions'
@@ -68,7 +72,13 @@ export function useStageNode(
 
   bindStageWidgets({ node, state, store, kind, variant, applyPickedIndex })
 
-  const refresh = () => store.refreshStageInputs(node, state, app as any)
+  const refresh = () => {
+    store.refreshStageInputs(node, state, app as any)
+    if (String(node.comfyClass) === IMAGES_SPLIT_CLASS) {
+      const raw = state.inputs.find(i => i.slot === 'images')?.content ?? null
+      syncImagesSplitStage(node, raw, urls => store.setOutputSlots(state, urls))
+    }
+  }
 
   const reValidate = () => {
     const assetStore = useAssetStore()
@@ -127,6 +137,10 @@ export function useStageNode(
     queueMicrotask(refresh)
     queueMicrotask(() => store.notifyConsumers(state))
     if (variant === 'generator') queueMicrotask(reValidate)
+  })
+  node.onConnectInput = useChainCallback(node.onConnectInput, () => {
+    queueMicrotask(syncMedia)
+    queueMicrotask(refresh)
   })
 
   queueMicrotask(syncMedia)

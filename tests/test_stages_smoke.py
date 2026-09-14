@@ -21,11 +21,12 @@ def _import_all_stage_modules():
     keyed by class name."""
     from ComfyTV.nodes.stages import generators, edits, loaders, panorama, \
         timeline, video_edit, material, split_part, _common
+    from ComfyTV.nodes.stages import transforms
     import inspect
 
     out: dict[str, type] = {}
     for mod in (generators, edits, loaders, panorama, timeline, video_edit,
-                material, split_part):
+                material, split_part, transforms):
         for name, obj in inspect.getmembers(mod):
             if inspect.isclass(obj) and hasattr(obj, "define_schema") \
                     and obj.__module__ == mod.__name__:
@@ -45,6 +46,7 @@ class TestSchemaDefinitions:
         # Loaders
         "ImageLoaderStage", "VideoLoaderStage",
         "ModelLoaderStage", "AssetModelLoaderStage", "AssetTextLoaderStage",
+        "PsdLayerTreeStage",
         # Generators
         "ProjectStage", "TextStage", "ImageStage", "VideoStage",
         "AudioStage", "SpeechStage", "ShotImagesStage", "StoryboardStage",
@@ -53,7 +55,8 @@ class TestSchemaDefinitions:
         "UpscaleStage", "InpaintStage", "OutpaintStage", "EraseStage",
         "ImageEditStage", "ImageVariationsStage", "RelightStage",
         "MultiangleStage", "CutoutStage", "CropStage", "RotateStage",
-        "MirrorStage", "CompareStage", "GridSplitStage",
+        "MirrorStage", "CompareStage", "GridSplitStage", "CustomSplitStage",
+        "ImagesSplitStage", "ImageMergeStage",
         # Panorama
         "PanoramaStage", "PanoramaCurrentViewStage", "PanoramaMultiViewStage",
         # Timeline
@@ -103,6 +106,61 @@ class TestLoaderExecute:
         from ComfyTV.nodes.stages.loaders import ImageLoaderStage
         out = ImageLoaderStage.execute(project_id="default", image="")
         # Empty filename → "" payload
+        assert out.values[0] == ""
+
+    def test_psd_layer_tree_stub(self, reset_db):
+        from ComfyTV.nodes.stages.loaders import PsdLayerTreeStage
+        out = PsdLayerTreeStage.execute(
+            project_id="default",
+            captured_image="/view?filename=layer.png",
+            captured_images='{"images":[{"index":"1","image_url":"/view?filename=layer.png"}]}',
+        )
+        assert out.values[0] == "/view?filename=layer.png"
+        assert '"images"' in out.values[1]
+
+    def test_psd_layer_tree_empty(self, reset_db):
+        from ComfyTV.nodes.stages.loaders import PsdLayerTreeStage
+        out = PsdLayerTreeStage.execute(project_id="default")
+        assert out.values[0] == ""
+        assert out.values[1] == ""
+
+    def test_images_split_from_group(self, reset_db):
+        from ComfyTV.nodes.stages.transforms import IMAGES_SPLIT_MAX, ImagesSplitStage
+        batch = json.dumps({
+            "images": [
+                {"index": "1", "label": "Sky", "image_url": "/view?filename=a.png"},
+                {"index": "2", "label": "Ground", "image_url": "/view?filename=b.png"},
+            ]
+        })
+        out = ImagesSplitStage.execute(project_id="default", images=batch)
+        assert out.values[0] == "/view?filename=a.png"
+        assert out.values[1] == "/view?filename=b.png"
+        assert len(out.values) == IMAGES_SPLIT_MAX
+        assert all(v == "" for v in out.values[2:])
+
+    def test_images_split_bare_url(self, reset_db):
+        from ComfyTV.nodes.stages.transforms import ImagesSplitStage
+        out = ImagesSplitStage.execute(project_id="default", images="/view?filename=solo.png")
+        assert out.values[0] == "/view?filename=solo.png"
+        assert out.values[1] == ""
+
+    def test_images_split_empty(self, reset_db):
+        from ComfyTV.nodes.stages.transforms import ImagesSplitStage
+        out = ImagesSplitStage.execute(project_id="default")
+        assert out.values[0] == ""
+
+    def test_image_merge_passthrough_first(self, reset_db):
+        from ComfyTV.nodes.stages.transforms import ImageMergeStage
+        out = ImageMergeStage.execute(
+            project_id="default",
+            merge_mode="layers",
+            images=["/view?filename=a.png", "/view?filename=b.png"],
+        )
+        assert out.values[0] == "/view?filename=a.png"
+
+    def test_image_merge_empty(self, reset_db):
+        from ComfyTV.nodes.stages.transforms import ImageMergeStage
+        out = ImageMergeStage.execute(project_id="default")
         assert out.values[0] == ""
 
     def test_model_loader_execute(self, reset_db):
@@ -382,6 +440,15 @@ class TestTransformStageExecute:
                                      rows=2, cols=2)
         data = json.loads(out.values[0])
         assert len(data["images"]) == 4
+
+    def test_custom_split_stub(self, reset_db):
+        from ComfyTV.nodes.stages.edits import CustomSplitStage
+        out = CustomSplitStage.execute(project_id="default",
+                                       image="/view?filename=a.png",
+                                       v_splits="[0.5]", h_splits="[]")
+        data = json.loads(out.values[0])
+        assert data["images"] == ["/view?filename=a.png"]
+        assert out.values[1] == "/view?filename=a.png"
 
     def test_compare(self, reset_db):
         from ComfyTV.nodes.stages.edits import CompareStage

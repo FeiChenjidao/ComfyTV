@@ -21,7 +21,8 @@ from .schema import (
 from .inputs import (
     _force_run_token, _project_id_input, _parent_output_id_input,
     _selected_index_input, _main_prompt_input, _custom_params_input,
-    _text_template, _image_template, _video_template, _audio_template,
+    _text_template, _image_template, _face_image_template, FACE_IMAGE_NAMES,
+    _video_template, _audio_template,
     _model_template, _material_template,
 )
 from .fx_spec import (
@@ -76,7 +77,8 @@ __all__ = [
     "_VIDEO_SAMPLES", "_AUDIO_SAMPLES",
     "_force_run_token", "_project_id_input", "_parent_output_id_input",
     "_selected_index_input", "_main_prompt_input", "_custom_params_input",
-    "_text_template", "_image_template", "_video_template", "_audio_template",
+    "_text_template", "_image_template", "_face_image_template", "FACE_IMAGE_NAMES",
+    "_video_template", "_audio_template",
     "_model_template", "_material_template",
     "build_fx_spec", "build_torch_fx_spec", "_fx_spec_only", "_fx_passthrough",
     "_fx_identity", "pack_fx_video", "unpack_fx_video", "fx_video_url",

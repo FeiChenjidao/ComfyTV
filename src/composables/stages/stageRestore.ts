@@ -4,6 +4,7 @@ import { ensureStageUid, getStageUidClaimedAt, stageClassName } from '@/composab
 import { outputTypeForKind } from '@/composables/stages/stageOutputType'
 import { readWidgetStr } from '@/utils/widget'
 import { useProjectStore } from '@/stores/projectStore'
+import { IMAGES_SPLIT_CLASS } from '@/composables/stages/imagesSplit'
 import {
   computePickedFromBatch,
   isPoolPickerKind,
@@ -89,6 +90,7 @@ export function bindOutputRestore(opts: {
   let adoptionTried = false
   async function restoreLatestOutput(projectId: string) {
     if (variant === 'loader') return
+    if (String(node.comfyClass) === IMAGES_SPLIT_CLASS) return
     if (isPoolPickerKind(kind)) return
     if (!node.id || node.id < 0) return
     const uid = ensureStageUid(node)

@@ -2,6 +2,23 @@ import { IMAGE_VARIANT_PRESETS, type ImagePreset } from '@/composables/stages/im
 import { IMAGE_EDIT_PRESETS } from '@/composables/stages/imageEditPresets'
 import { VIDEO_CHANGE_PRESETS } from '@/composables/stages/videoChangePresets'
 import { AUDIO_CHANGE_PRESETS } from '@/composables/stages/audioChangePresets'
+import {
+  IMAGE_MERGE_CLASS,
+  MERGE_IMAGE_TYPE,
+  ensureMergeImageSockets,
+  findMergeImageSlot,
+  parseMergeMode,
+  uniqueSlotIndexes,
+  type MergeMode,
+} from '@/composables/stages/imageMerge'
+import {
+  CUSTOM_SPLIT_IMAGE_TYPE,
+  FACE_LABELS,
+  MODEL3D_CLASS,
+  findCustomSplitTileSlot,
+  findModel3DFaceSlot,
+  isFaceLabel,
+} from '@/composables/stages/useCustomSplit'
 import { useStageStore, type StageKind, type ImagePickContext } from '@/stores/stageStore'
 import { useAssetStore } from '@/stores/assetStore'
 import { createAssetLoaderNode } from '@/composables/stages/assetLoaderNode'
@@ -57,6 +74,178 @@ export function findNamedSlot(node: any, name: string): number {
     if (String(node.inputs[i].name || '') === name) return i
   }
   return -1
+}
+
+export function findNamedOutputSlot(node: any, name: string): number {
+  const outs = node?.outputs
+  if (!outs) return -1
+  for (let i = 0; i < outs.length; i++) {
+    if (String(outs[i]?.name || '') === name) return i
+  }
+  return -1
+}
+
+function lookupGraphLink(graph: any, id: unknown): any {
+  const links = graph?.links
+  if (!links) return graph?.getLink?.(id) ?? null
+  if (typeof links.get === 'function') return links.get(id) ?? null
+  return links[id as any] ?? null
+}
+
+export function findDownstreamOfClass(srcNode: any, originSlot: number, cls: string): any | null {
+  const graph = srcNode?.graph ?? (app as any)?.graph
+  const links = srcNode?.outputs?.[originSlot]?.links ?? []
+  if (!graph || !links.length) return null
+  for (const lid of links) {
+    const link = lookupGraphLink(graph, lid)
+    if (!link) continue
+    const tid = link.target_id ?? link.targetId
+    const t = graph.getNodeById?.(tid)
+    if (t?.comfyClass === cls) return t
+  }
+  return null
+}
+
+export function spawnOrFocusImagesSplit(srcNode: any) {
+  let srcSlot = findNamedOutputSlot(srcNode, 'images')
+  if (srcSlot < 0) srcSlot = 1
+  const existing = findDownstreamOfClass(srcNode, srcSlot, 'ComfyTV.ImagesSplitStage')
+  if (existing) {
+    const canvas = (app as any)?.canvas
+    canvas?.centerOnNode?.(existing)
+    canvas?.selectNode?.(existing)
+    return existing
+  }
+  return spawnConsumingNode(srcNode, 'ComfyTV.ImagesSplitStage', 'images', srcSlot)
+}
+
+export const IMAGE_VARIATIONS_CLASS = 'ComfyTV.ImageVariationsStage'
+export const IMAGE_LOADER_CLASS = 'ComfyTV.ImageLoaderStage'
+export { IMAGE_MERGE_CLASS }
+
+export function connectSrcSlotsToAutogrow(
+  srcNode: any,
+  srcSlots: number[],
+  dstNode: any,
+  _type: 'image' | 'video' | 'audio' = 'image',
+) {
+  ensureMergeImageSockets(dstNode)
+  const wire = (i: number, attempt: number) => {
+    if (i >= srcSlots.length) {
+      ensureMergeImageSockets(dstNode)
+      return
+    }
+    ensureMergeImageSockets(dstNode)
+    const inSlot = findMergeImageSlot(dstNode, i)
+    if (inSlot >= 0) {
+      const inp = dstNode.inputs?.[inSlot]
+      if (inp) inp.type = MERGE_IMAGE_TYPE
+      srcNode.connect(srcSlots[i], dstNode, inSlot)
+      ensureMergeImageSockets(dstNode)
+      wire(i + 1, 0)
+      return
+    }
+    if (attempt < 20) setTimeout(() => wire(i, attempt + 1), 40)
+    else console.warn('[ComfyTV/merge] missing image slot', i)
+  }
+  wire(0, 0)
+}
+
+export function spawnImageMergeFromSlots(
+  srcNode: any,
+  slotIndexes: number[],
+  mode: MergeMode = 'layers',
+) {
+  const slots = uniqueSlotIndexes(slotIndexes)
+  if (!srcNode || !slots.length) return null
+  const node = createNodeAt(IMAGE_MERGE_CLASS, posRightOf(srcNode))
+  if (!node) return null
+  setWidget(node, 'merge_mode', parseMergeMode(mode))
+  stampLineage(srcNode, node)
+  connectSrcSlotsToAutogrow(srcNode, slots, node, 'image')
+  const canvas = (app as any)?.canvas
+  canvas?.centerOnNode?.(node)
+  canvas?.selectNode?.(node)
+  useStageStore().notifyDownstream()
+  return node
+}
+
+export function spawnModel3DFromCustomSplit(srcNode: any) {
+  if (!srcNode) return null
+
+  let existing: any | null = null
+  for (const face of FACE_LABELS) {
+    const srcSlot = findCustomSplitTileSlot(srcNode, face)
+    if (srcSlot < 0) continue
+    existing = findDownstreamOfClass(srcNode, srcSlot, MODEL3D_CLASS)
+    if (existing) break
+  }
+  const node = existing || createNodeAt(MODEL3D_CLASS, posRightOf(srcNode))
+  if (!node) return null
+  if (!existing) stampLineage(srcNode, node)
+
+  const wireFace = (face: string, attempt: number) => {
+    const srcSlot = findCustomSplitTileSlot(srcNode, face)
+    if (srcSlot < 0) return
+    const inSlot = findModel3DFaceSlot(node, face)
+    if (inSlot >= 0) {
+      const inp = node.inputs?.[inSlot]
+      if (inp) inp.type = CUSTOM_SPLIT_IMAGE_TYPE
+      srcNode.connect(srcSlot, node, inSlot)
+      return
+    }
+    if (attempt < 25) setTimeout(() => wireFace(face, attempt + 1), 40)
+    else console.warn('[ComfyTV/customsplit] Model3D missing face slot', face)
+  }
+
+  const faces = (srcNode.outputs ?? [])
+    .slice(1)
+    .map((o: any) => String(o?.name || ''))
+    .filter((n: string) => isFaceLabel(n))
+  const toWire = faces.length ? faces : [...FACE_LABELS]
+  for (const face of toWire) wireFace(face, 0)
+
+  const canvas = (app as any)?.canvas
+  canvas?.centerOnNode?.(node)
+  canvas?.selectNode?.(node)
+  useStageStore().notifyDownstream()
+  return node
+}
+
+export function spawnImageVariationsFromSlots(srcNode: any, slotIndexes: number[]) {
+  const slots = [...new Set(slotIndexes.filter(i => Number.isInteger(i) && i >= 0))].sort((a, b) => a - b)
+  if (!srcNode || !slots.length) return []
+  const store = useStageStore()
+  const created: any[] = []
+  const baseX = (srcNode.pos?.[0] || 0) + (srcNode.size?.[0] || 280) + 60
+  let y = srcNode.pos?.[1] || 0
+  for (const slot of slots) {
+    const node = createNodeAt(IMAGE_VARIATIONS_CLASS, [baseX, y])
+    if (!node) continue
+    const inSlot = findNamedSlot(node, 'image')
+    if (inSlot >= 0) srcNode.connect(slot, node, inSlot)
+    else console.warn('[ComfyTV/images-split] ImageVariationsStage has no image input')
+    stampLineage(srcNode, node)
+    created.push(node)
+    y += (node.size?.[1] || 260) + 40
+  }
+  store.notifyDownstream()
+  return created
+}
+
+export function spawnSeededImageLoader(srcNode: any, fileKey: string, viewUrl: string) {
+  const node = createNodeAt(IMAGE_LOADER_CLASS, posRightOf(srcNode))
+  if (!node) return null
+  const w = node.widgets?.find((wi: any) => wi.name === 'image')
+  const values = w?.options?.values
+  if (Array.isArray(values) && !values.includes(fileKey)) values.push(fileKey)
+  setWidget(node, 'image', fileKey)
+  stampLineage(srcNode, node)
+  const store = useStageStore()
+  const state = store.getStage(node)
+  if (state) store.applyExecutedPayload(state, { output: [viewUrl] })
+  store.notifyDownstream()
+  return node
 }
 
 export function outputHasLinks(node: any, idx: number): boolean {

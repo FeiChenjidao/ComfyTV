@@ -6,6 +6,7 @@ import type { BackupResult, SettingRow, SettingValue } from '@/api'
 import { fetchBlenderStatus } from '@/api/blender'
 import { applyAutoPickerSetting } from '@/composables/stages/autoPicker'
 import { applyLodSettings } from '@/v2/lodV2'
+import { applyPanelOnSelectSetting } from '@/v2/panelOnSelect'
 import { fetchEagleStatus } from '@/api/eagle'
 import { agentProviders, refreshAgentStatus } from '@/agent/status'
 
@@ -231,6 +232,7 @@ export function useSettingsPanel(
       syncValues()
       applyLodSettings(rows.value)
       applyAutoPickerSetting(rows.value)
+      applyPanelOnSelectSetting(rows.value)
       if (Object.keys(changed).some((k) => AGENT_TOGGLE_KEYS.has(k) || k.startsWith('bot-'))) {
         await refreshAgentStatus()
       }

@@ -407,3 +407,41 @@ class AudioLoaderStage(io.ComfyNode):
         return _stage_emit_auto(cls, project_id=project_id, payload_str=payload,
                                 parent_output_id=parent_output_id)
 
+
+class PsdLayerTreeStage(io.ComfyNode):
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="ComfyTV.PsdLayerTreeStage",
+            display_name="PSD Layer Tree",
+            category="ComfyTV/Input",
+            inputs=[
+                _project_id_input(),
+                _parent_output_id_input(),
+                io.String.Input("psd_file", default="",
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="Uploaded PSD /view URL. Hidden — driven by the Vue panel."),
+                io.String.Input("selected_id", default="",
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="Selected layer/group id, or a JSON array of ids. Hidden — driven by the Vue panel."),
+                io.String.Input("captured_image", default="",
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="Last subtree composite /view URL. Hidden — driven by the Vue panel."),
+                io.String.Input("captured_images", default="",
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="JSON images batch of selected subtrees. Hidden — driven by the Vue panel."),
+            ],
+            outputs=[
+                COMFYTV_IMAGE.Output("image"),
+                COMFYTV_IMAGES.Output("images"),
+            ],
+            is_output_node=True,
+            hidden=[io.Hidden.unique_id],
+        )
+
+    @classmethod
+    def execute(cls, project_id="", parent_output_id=0,
+                psd_file="", selected_id="", captured_image="", captured_images=""):
+        return io.NodeOutput(captured_image or "", captured_images or "")
+

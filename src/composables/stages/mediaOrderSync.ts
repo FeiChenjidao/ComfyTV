@@ -21,6 +21,7 @@ import { useProjectStore } from '@/stores/projectStore'
 import { useSelectionStore } from '@/stores/selectionStore'
 import { useStageStore } from '@/stores/stageStore'
 import { getWidget, writeWidget } from '@/utils/widget'
+import { pickedMediaItem, previewUrlFromPayload } from '@/v2/mediaItems'
 
 export type RemovedToken = { type: MediaType; position: number }
 
@@ -47,6 +48,7 @@ export function syncMediaTable(
   if (!result.changed) return { changed: false, removed: [] }
   writeMediaTable(node, result.table)
   const removed = rewritePromptTokens(node, result.remap)
+  useSelectionStore().bumpBindings()
   for (const r of removed) {
     console.warn(`[ComfyTV/media] @${r.type}_${r.position} removed from prompt — its media left the stage`)
   }
@@ -124,9 +126,23 @@ export function linkInputName(node: unknown, entry: MediaEntry): string | null {
 export function mediaEntryUrl(node: unknown, entry: MediaEntry): string | null {
   if (entry.src === 'link') {
     const name = linkInputName(node, entry)
-    if (!name) return null
-    const inputs = useStageStore().getStage(node as object)?.inputs ?? []
-    return inputs.find(i => i.slot === name)?.content ?? null
+    const store = useStageStore()
+    if (name) {
+      const fromSlot = previewUrlFromPayload(
+        store.getStage(node as object)?.inputs.find(i => i.slot === name)?.content ?? null,
+      )
+      if (fromSlot) return fromSlot
+    }
+    const src = mediaEntrySourceNode(node, entry)
+    const srcState = src ? store.getStage(src) : undefined
+    if (!srcState) return null
+    const originSlot = Number(entry.from?.[1] ?? 0)
+    const slotted = Number.isInteger(originSlot) && originSlot >= 0
+      ? srcState.outputs?.[originSlot]
+      : null
+    return previewUrlFromPayload(slotted)
+      ?? pickedMediaItem(srcState, 'batch')?.url
+      ?? previewUrlFromPayload(srcState.output)
   }
   if (entry.src === 'batch') {
     const pid = useProjectStore().currentProjectId || ''

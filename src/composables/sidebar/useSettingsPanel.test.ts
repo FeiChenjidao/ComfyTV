@@ -216,6 +216,13 @@ describe('useSettingsPanel', () => {
     expect(depthOf('enable-v2')).toBe(0)
   })
 
+  it('nests v2-panel-on-select under enable-v2', () => {
+    expect(depthOf('v2-panel-on-select')).toBe(1)
+    expect(sectionOf('v2-panel-on-select')).toBe('general')
+    expect(isSettingVisible('v2-panel-on-select', { 'enable-v2': false })).toBe(false)
+    expect(isSettingVisible('v2-panel-on-select', { 'enable-v2': true })).toBe(true)
+  })
+
   it('isSettingVisible and sectionOf default sensibly for keys without prerequisites', () => {
     expect(isSettingVisible('enable-db-backup', {})).toBe(true)
     expect(isSettingVisible('blender-bridge-url', {})).toBe(true)

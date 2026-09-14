@@ -87,6 +87,18 @@ def _image_template(max_n: int = 12) -> 'io.Autogrow.TemplatePrefix':
     )
 
 
+# Turnaround / multi-view faces for 3D Model Stage (and Custom Split wiring).
+FACE_IMAGE_NAMES = ["正", "左", "背", "右"]
+
+
+def _face_image_template() -> 'io.Autogrow.TemplateNames':
+    return io.Autogrow.TemplateNames(
+        COMFYTV_IMAGE.Input("image", optional=True),
+        names=list(FACE_IMAGE_NAMES),
+        min=len(FACE_IMAGE_NAMES),
+    )
+
+
 def _video_template(max_n: int = 6) -> 'io.Autogrow.TemplatePrefix':
     return io.Autogrow.TemplatePrefix(
         COMFYTV_VIDEO.Input("video", optional=True),

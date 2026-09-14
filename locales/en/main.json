@@ -475,6 +475,10 @@
         "label": "Auto-attach picker on run",
         "desc": "When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically."
       },
+      "v2-panel-on-select": {
+        "label": "Show control panel only when selected",
+        "desc": "When enabled, V2 card controls stay hidden until the card is selected."
+      },
       "enable-db-backup": {
         "label": "Automatic backup on startup",
         "desc": "Back up the ComfyTV data directory (database + workflows) every time the server starts, before any migration runs."

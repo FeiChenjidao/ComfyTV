@@ -127,3 +127,23 @@ class TestPromptUid:
             if not isinstance(hidden, list) or io.Hidden.extra_pnginfo not in hidden:
                 missing.append(cls.__name__)
         assert missing == []
+
+    def test_every_registered_stage_declares_comfy_org_auth(self):
+        import asyncio
+        from comfy_api.latest import io
+        from ComfyTV.nodes.stages import ComfyTVExtension
+        from ComfyTV.nodes.bridges import ALL_BRIDGES
+        bridges = {c.__name__ for c in ALL_BRIDGES}
+        missing = []
+        needed = (
+            io.Hidden.auth_token_comfy_org,
+            io.Hidden.api_key_comfy_org,
+        )
+        for cls in asyncio.run(ComfyTVExtension().get_node_list()):
+            if cls.__name__ in bridges:
+                continue
+            from ComfyTV.api.presets import _schema_field
+            hidden = _schema_field(cls.define_schema(), "hidden")
+            if not isinstance(hidden, list) or any(h not in hidden for h in needed):
+                missing.append(cls.__name__)
+        assert missing == []

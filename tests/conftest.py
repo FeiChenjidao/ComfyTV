@@ -146,7 +146,12 @@ def _ensure_comfyui_stubs():
 
         _UploadType = types.SimpleNamespace(image="image", video="video", audio="audio", model="model")
         _FolderType = types.SimpleNamespace(input="input", output="output", temp="temp")
-        _Hidden     = types.SimpleNamespace(unique_id="unique_id", extra_pnginfo="extra_pnginfo")
+        _Hidden     = types.SimpleNamespace(
+            unique_id="unique_id", extra_pnginfo="extra_pnginfo",
+            auth_token_comfy_org="auth_token_comfy_org",
+            api_key_comfy_org="api_key_comfy_org",
+            comfy_usage_source="comfy_usage_source",
+        )
         _NumDisplay = types.SimpleNamespace(slider="slider", number="number")
 
         class _Color(_Input):

@@ -11,7 +11,7 @@ from .edits import (
     UpscaleStage, OutpaintStage, InpaintStage, ImageEditStage,
     EraseStage, CutoutStage, CropStage, RotateStage, MirrorStage,
     ColorGradeStage,
-    GridSplitStage, CompareStage, ImageVariationsStage, RelightStage,
+    GridSplitStage, CustomSplitStage, ImagesSplitStage, ImageMergeStage, CompareStage, ImageVariationsStage, RelightStage,
     MultiangleStage,
 )
 from .timeline import (
@@ -107,6 +107,7 @@ from .loaders import (
     AssetImageLoaderStage, AssetVideoLoaderStage, AssetAudioLoaderStage,
     AssetTextLoaderStage,
     ModelLoaderStage, AssetModelLoaderStage,
+    PsdLayerTreeStage,
 )
 from .geometry import (
     LineArtStage, MeshOpStage, MeshPrimitiveStage, MeshBooleanStage, MeshBakeMapsStage,
@@ -132,6 +133,7 @@ def stage_classes() -> list:
         UpscaleStage, OutpaintStage, InpaintStage, ImageEditStage,
         EraseStage, CutoutStage, CropStage,
         RotateStage, MirrorStage, ColorGradeStage, CompareStage, GridSplitStage,
+        CustomSplitStage, ImagesSplitStage, ImageMergeStage,
         VideoExtractFrameStage, VideoFramesStage,
         VideoClipStage, VideoCropStage, VideoConcatStage, VideoResizeStage,
         VideoSpeedStage, VideoRotateStage, VideoSplitStage,
@@ -178,6 +180,7 @@ def stage_classes() -> list:
         ImageLoaderStage, VideoLoaderStage, AudioLoaderStage,
         AssetImageLoaderStage, AssetVideoLoaderStage, AssetAudioLoaderStage,
         AssetTextLoaderStage,
+        PsdLayerTreeStage,
         Model3DStage, ModelLoaderStage, AssetModelLoaderStage,
         MeshOpStage, MeshPrimitiveStage, MeshBooleanStage, MeshBakeMapsStage,
         LineArtStage,
@@ -208,7 +211,10 @@ def _ensure_hidden_pnginfo(cls) -> None:
         if hidden is None and isinstance(getattr(schema, "kw", None), dict):
             hidden = schema.kw.setdefault("hidden", [])
         if isinstance(hidden, list):
-            for name in ("unique_id", "extra_pnginfo"):
+            for name in (
+                "unique_id", "extra_pnginfo",
+                "auth_token_comfy_org", "api_key_comfy_org", "comfy_usage_source",
+            ):
                 h = getattr(io.Hidden, name, None)
                 if h is not None and h not in hidden:
                     hidden.append(h)
@@ -234,11 +240,13 @@ class ComfyTVExtension(ComfyExtension):
     async def get_node_list(self) -> list[type[io.ComfyNode]]:
         classes = stage_classes()
         _check_registry_drift(classes)
+        from ...runners.auth_extra import install_auth_passthrough
         from ...runners.exec_errors import install_exec_error_recorder
         for cls in classes:
             meta = STAGE_META.get(cls.__name__) or {}
             install_exec_error_recorder(cls, meta.get("kind", "stage"))
             _ensure_hidden_pnginfo(cls)
+            install_auth_passthrough(cls)
         return classes
 
 
