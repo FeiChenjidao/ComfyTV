@@ -399,6 +399,24 @@ describe('V2 shell smoke', () => {
     node.onRemoved?.()
   })
 
+  it('panel collapse shifts node height by the panel delta so the preview keeps its size', () => {
+    const node = makeNode('ComfyTV.VideoStage')
+    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+    const panel = card.querySelector('.v2-panel') as HTMLElement
+    const bar = panel.querySelector('.v2-collapse') as HTMLElement
+    Object.defineProperty(panel, 'offsetHeight', {
+      get: () => (panel.hasAttribute('data-v2-collapsed') ? 40 : 220),
+    })
+    const h0 = node.size[1]
+
+    bar.click()
+    expect(node.size[1]).toBe(h0 - 180)
+    bar.click()
+    expect(node.size[1]).toBe(h0)
+    node.onRemoved?.()
+  })
+
   it('stacks preview cards by the real item count', async () => {
     const pool = (n: number) => JSON.stringify({
       images: Array.from({ length: n }, (_, i) => ({ image_url: `/view?filename=${i}.png` })),

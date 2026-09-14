@@ -58605,7 +58605,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-By_skmr2.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-D8wEIQNz.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -86627,7 +86627,7 @@ const _sfc_main$46 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const ImageReferences = /* @__PURE__ */ _export_sfc(_sfc_main$46, [["__scopeId", "data-v-31aace16"]]);
+const ImageReferences = /* @__PURE__ */ _export_sfc(_sfc_main$46, [["__scopeId", "data-v-2053557f"]]);
 function OrderedMap(content) {
   this.content = content;
 }
@@ -126471,7 +126471,7 @@ const _sfc_main$3U = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const StageCard = /* @__PURE__ */ _export_sfc(_sfc_main$3U, [["__scopeId", "data-v-567dff90"]]);
+const StageCard = /* @__PURE__ */ _export_sfc(_sfc_main$3U, [["__scopeId", "data-v-e878b41b"]]);
 const _sfc_main$3T = /* @__PURE__ */ defineComponent({
   __name: "SceneCanvas",
   props: {
@@ -143564,7 +143564,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-NVDJWj-w.mjs");
+    const { STLLoader } = await import("./STLLoader-BZk6dx9p.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -143572,7 +143572,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-BCC8AVpy.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-DvAK42YM.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -149241,7 +149241,7 @@ const _sfc_main$37 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const DirectorStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$37, [["__scopeId", "data-v-0bfe022e"]]);
+const DirectorStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$37, [["__scopeId", "data-v-07736a87"]]);
 function useChainCallback(originalCallback, ...callbacks) {
   return function(...args) {
     if (typeof originalCallback === "function") {
@@ -228920,19 +228920,22 @@ function el$8(tag, cls, html2) {
   if (html2 != null) e.innerHTML = html2;
   return e;
 }
+function growNodeHeight(node, delta) {
+  var _a3, _b2;
+  if (Math.abs(delta) <= 1) return;
+  node.setSize([node.size[0], node.size[1] + delta]);
+  (_b2 = (_a3 = app.graph) == null ? void 0 : _a3.setDirtyCanvas) == null ? void 0 : _b2.call(_a3, true, true);
+}
 function bindPromptResize(node, promptAnchor, scope2) {
   scope2.run(() => {
     let last = -1;
     useResizeObserver(promptAnchor, (entries2) => {
-      var _a3, _b2;
+      var _a3;
       const h2 = ((_a3 = entries2[0]) == null ? void 0 : _a3.contentRect.height) ?? 0;
       if (h2 <= 0) return;
       if (last >= 0) {
         const delta = h2 - last;
-        if (Math.abs(delta) > 1) {
-          node.setSize([node.size[0], node.size[1] + delta]);
-          (_b2 = app.graph) == null ? void 0 : _b2.setDirtyCanvas(true, true);
-        }
+        growNodeHeight(node, delta);
       }
       last = h2;
     });
@@ -230449,7 +230452,7 @@ const _sfc_main$i = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const MediaStripV2 = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["__scopeId", "data-v-e396adac"]]);
+const MediaStripV2 = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["__scopeId", "data-v-48a84db7"]]);
 const _sfc_main$h = /* @__PURE__ */ defineComponent({
   __name: "ServerSelectV2",
   props: {
@@ -230638,9 +230641,11 @@ function bindPanelCollapse(node, opts) {
   bar.addEventListener("pointerdown", (e) => e.stopPropagation());
   bar.addEventListener("click", (e) => {
     e.stopPropagation();
+    const before = panel.offsetHeight;
     anyNode.properties = anyNode.properties ?? {};
     anyNode.properties[COLLAPSED_PROP] = !isCollapsed();
     apply2();
+    if (before > 0) growNodeHeight(node, panel.offsetHeight - before);
   });
   opts.scope.run(() => {
     watch(() => opts.info(), (txt) => {
@@ -231499,7 +231504,9 @@ html:not(.dark-theme) .lg-node[data-v2-shell] .ctv\\:text-success-background { c
 .lg-node[data-v2-shell] > .isolate { display: none; }
 .lg-node[data-v2-shell] { filter: none; }
 .lg-node[data-v2-shell] [data-testid="node-state-outline-overlay"] { display: none; }
-.lg-node[data-v2-shell] [data-testid^="node-body-"] > img { display: none; }
+.lg-node[data-v2-shell] [data-testid^="node-body-"] > img,
+.lg-node[data-v2-shell] [data-testid^="node-body-"] > .text-node-component-header-text,
+.lg-node[data-v2-shell] [data-testid^="node-body-"] > .text-pure-white { display: none; }
 .lg-node[data-v2-shell] .h-2.bg-primary-500 { display: none; }
 .lg-node[data-v2-shell] [class~="ctv:bg-black"]:has([class~="ctv:text-white/50"]) {
   background: var(--v2-media-bg);
@@ -237329,7 +237336,7 @@ const _sfc_main$1 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const CustomInputsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-ec20cf4a"]]);
+const CustomInputsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-af5c72e0"]]);
 const _hoisted_1 = { class: "v2-cio__head" };
 const _hoisted_2 = { class: "v2-cio__title" };
 const _hoisted_3 = ["title"];
@@ -238663,4 +238670,4 @@ export {
   LinearFilter as y,
   LinearMipMapLinearFilter as z
 };
-//# sourceMappingURL=main-eUlIC_gJ.mjs.map
+//# sourceMappingURL=main-XlpC7Hu_.mjs.map

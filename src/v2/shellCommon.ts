@@ -19,6 +19,12 @@ export function el(tag: string, cls: string, html?: string) {
   return e
 }
 
+export function growNodeHeight(node: ComfyNode, delta: number) {
+  if (Math.abs(delta) <= 1) return
+  node.setSize([node.size[0], node.size[1] + delta])
+  ;(app as any).graph?.setDirtyCanvas?.(true, true)
+}
+
 export function bindPromptResize(node: ComfyNode, promptAnchor: HTMLElement, scope: EffectScope) {
   scope.run(() => {
     let last = -1
@@ -27,10 +33,7 @@ export function bindPromptResize(node: ComfyNode, promptAnchor: HTMLElement, sco
       if (h <= 0) return
       if (last >= 0) {
         const delta = h - last
-        if (Math.abs(delta) > 1) {
-          node.setSize([node.size[0], node.size[1] + delta])
-          ;(app as any).graph?.setDirtyCanvas(true, true)
-        }
+        growNodeHeight(node, delta)
       }
       last = h
     })

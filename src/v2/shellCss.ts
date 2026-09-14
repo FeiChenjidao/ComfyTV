@@ -88,7 +88,9 @@ html:not(.dark-theme) .lg-node[data-v2-shell] .ctv\\:text-success-background { c
 .lg-node[data-v2-shell] > .isolate { display: none; }
 .lg-node[data-v2-shell] { filter: none; }
 .lg-node[data-v2-shell] [data-testid="node-state-outline-overlay"] { display: none; }
-.lg-node[data-v2-shell] [data-testid^="node-body-"] > img { display: none; }
+.lg-node[data-v2-shell] [data-testid^="node-body-"] > img,
+.lg-node[data-v2-shell] [data-testid^="node-body-"] > .text-node-component-header-text,
+.lg-node[data-v2-shell] [data-testid^="node-body-"] > .text-pure-white { display: none; }
 .lg-node[data-v2-shell] .h-2.bg-primary-500 { display: none; }
 .lg-node[data-v2-shell] [class~="ctv:bg-black"]:has([class~="ctv:text-white/50"]) {
   background: var(--v2-media-bg);
