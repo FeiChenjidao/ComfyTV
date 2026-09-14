@@ -47,6 +47,7 @@ export function bindClusterHoverIntent(root: HTMLElement, scope: EffectScope) {
     if (!leave) continue
     c.addEventListener('pointerenter', () => {
       leave.stop()
+      document.body.toggleAttribute('data-v2-slot-hover', true)
       if (!c.classList.contains('v2-open')) {
         c.classList.add('v2-open')
         nudgeSlotAnchors(root)
@@ -55,6 +56,7 @@ export function bindClusterHoverIntent(root: HTMLElement, scope: EffectScope) {
     c.addEventListener('pointerleave', () => {
       leave.stop()
       leave.start()
+      document.body.toggleAttribute('data-v2-slot-hover', false)
     })
   }
 }

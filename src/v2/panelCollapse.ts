@@ -3,7 +3,7 @@ import { watch, type EffectScope } from 'vue'
 import { t } from '@/i18n'
 import { type ComfyNode } from '@/lib/comfyApp'
 import { getWidget } from '@/utils/widget'
-import { el, growNodeHeight, I } from '@/v2/shellCommon'
+import { el, I } from '@/v2/shellCommon'
 
 const COLLAPSED_PROP = 'v2_panel_collapsed'
 
@@ -47,11 +47,10 @@ export function bindPanelCollapse(node: ComfyNode, opts: {
   bar.addEventListener('pointerdown', (e) => e.stopPropagation())
   bar.addEventListener('click', (e) => {
     e.stopPropagation()
-    const before = panel.offsetHeight
     anyNode.properties = anyNode.properties ?? {}
     anyNode.properties[COLLAPSED_PROP] = !isCollapsed()
     apply()
-    if (before > 0) growNodeHeight(node, panel.offsetHeight - before)
+    anyNode.__comfytvSyncHeight?.()
   })
 
   opts.scope.run(() => {

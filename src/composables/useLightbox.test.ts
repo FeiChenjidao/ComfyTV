@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { openLightbox, useLightbox, type LightboxItem } from './useLightbox'
+import { lightboxKind, openLightbox, useLightbox, type LightboxItem } from './useLightbox'
 
 function items(n: number): LightboxItem[] {
   return Array.from({ length: n }, (_, i) => ({
@@ -106,5 +106,31 @@ describe('useLightbox', () => {
     expect(lb.count.value).toBe(0)
     expect(lb.index.value).toBe(-1)
     expect(lb.current.value).toBeNull()
+  })
+})
+
+describe('lightboxKind', () => {
+  const view = (name: string, sub = '') =>
+    `/view?filename=${encodeURIComponent(name)}${sub ? `&subfolder=${sub}` : ''}&type=output`
+
+  it('reads the kind off the filename, past the query string', () => {
+    expect(lightboxKind({ url: view('a.png') })).toBe('image')
+    expect(lightboxKind({ url: view('a.mp4') })).toBe('video')
+    expect(lightboxKind({ url: view('a.mp3', 'audio') })).toBe('audio')
+    expect(lightboxKind({ url: view('a.flac', 'audio') })).toBe('audio')
+    expect(lightboxKind({ url: view('a.glb', '3d') })).toBe('model')
+  })
+
+  it('sees past a trailing [output] annotation', () => {
+    expect(lightboxKind({ url: view('a.mp3 [output]') })).toBe('audio')
+    expect(lightboxKind({ url: view('a.glb [output]') })).toBe('model')
+  })
+
+  it('lets an explicit kind win over the filename', () => {
+    expect(lightboxKind({ url: view('a.png'), kind: 'model' })).toBe('model')
+  })
+
+  it('falls back to image for anything unrecognised', () => {
+    expect(lightboxKind({ url: view('a.xyz') })).toBe('image')
   })
 })

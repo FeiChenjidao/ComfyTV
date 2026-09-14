@@ -27,7 +27,6 @@ import ServerSelectV2 from '@/v2/ServerSelectV2.vue'
 import { bindShellChrome } from '@/v2/shellChrome'
 import {
   bindProgressRing,
-  bindPromptResize,
   createNodeScope,
   el,
   ensureMinSize,
@@ -292,8 +291,8 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
     scope, card, socketAnchor: preview, state: stageState,
     media: { source: 'batch' },
     lod: true,
+    manageHeight: { min: 170 },
   })
-  bindPromptResize(node, promptAnchor, scope)
   bindPanelCollapse(node, {
     scope, panel, footer, run,
     info: () => stageInfoLine(node, stageState),

@@ -4,7 +4,7 @@ import { effectScope, watch, type EffectScope } from 'vue'
 import { app } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
 import { THUMB_CELL, thumbUrl } from '@/utils/thumbUrl'
-import { openLightbox } from '@/composables/useLightbox'
+import { lightboxKind, openLightbox } from '@/composables/useLightbox'
 import { pickedMediaItem, type MediaSource } from '@/v2/mediaItems'
 
 export const LOD_ATTR = 'data-v2-lod'
@@ -17,6 +17,12 @@ let farExit = farEnter + FAR_HYSTERESIS
 const POSTER_MAX = THUMB_CELL
 const ICON_PLAY = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>`
 const ICON_EXPAND = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>`
+const ICON_WAVE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 8v8"/></svg>`
+const ICON_MESH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path d="M12 12.2l8-4.6M12 12.2v9M12 12.2L4 7.6"/></svg>`
+// Only images and videos have a raster thumbnail; an <img> pointed at an mp3 or a glb
+// renders the browser's broken-image icon, so those get a glyph instead. Read off the url
+// rather than the stage kind, so custom and timeline stages follow whatever they produced.
+const GLYPH: Record<string, string> = { audio: ICON_WAVE, model: ICON_MESH }
 
 const CSS = `
 .v2-card {
@@ -50,6 +56,23 @@ html[${FILL_ATTR}="image"] .v2-lod-poster-bg {
   background: var(--v2-media-bg);
   border: 1px solid var(--v2-media-border);
 }
+.v2-lod-glyph {
+  display: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--v2-media-bg);
+  border: 1px solid var(--v2-media-border);
+  color: var(--v2-text-faint);
+}
+.v2-lod-glyph svg { width: 34%; max-width: 92px; height: auto; }
+.v2-lod-poster[data-off],
+.v2-lod-poster-bg[data-off],
+.v2-lod-glyph[data-off] { display: none !important; }
 .v2-lod-open {
   display: none;
   position: absolute;
@@ -72,12 +95,13 @@ html[${FILL_ATTR}="image"] .v2-lod-poster-bg {
 .v2-lod-open svg { width: 55%; height: 55%; }
 .v2-lod-open:hover { background: rgba(20,20,24,.95); border-color: #fff; }
 html[${LOD_ATTR}="far"] .v2-card[data-v2-lod-media]:hover .v2-lod-open[data-ready] { display: flex; }
-html[${LOD_ATTR}="far"] .v2-card[data-v2-lod-media] .v2-preview > :not(.v2-lod-poster):not(.v2-lod-poster-bg):not(.v2-lod-open),
+html[${LOD_ATTR}="far"] .v2-card[data-v2-lod-media] .v2-preview > :not(.v2-lod-poster):not(.v2-lod-poster-bg):not(.v2-lod-glyph):not(.v2-lod-open),
 html[${LOD_ATTR}="far"] .v2-card[data-v2-lod-media] > :not(.v2-label):not(.v2-preview):not(.v2-ring) {
   display: none !important;
 }
 html[${LOD_ATTR}="far"] .v2-card[data-v2-lod-media] .v2-lod-poster,
 html[${LOD_ATTR}="far"] .v2-card[data-v2-lod-media] .v2-lod-poster-bg { display: block; }
+html[${LOD_ATTR}="far"] .v2-card[data-v2-lod-media] .v2-lod-glyph { display: flex; }
 html[${LOD_ATTR}="far"] .v2-card, html[${LOD_ATTR}="far"] .v2-card *:not(.v2-ring) {
   box-shadow: none !important;
   filter: none !important;
@@ -190,26 +214,34 @@ export function bindLodPoster(
     return img
   }
   const imgs = [mk('v2-lod-poster-bg'), mk('v2-lod-poster')]
-  const isVideo = state.kind === 'video' || state.kind === 'video-picker'
+  const glyph = document.createElement('div')
+  glyph.className = 'v2-lod-glyph'
+  preview.appendChild(glyph)
   const open = document.createElement('button')
   open.className = 'v2-lod-open'
-  open.innerHTML = isVideo ? ICON_PLAY : ICON_EXPAND
+  open.innerHTML = ICON_EXPAND
   open.addEventListener('pointerdown', (e) => e.stopPropagation())
   open.addEventListener('click', (e) => {
     e.stopPropagation()
     const url = pickedMediaItem(state, source)?.url
-    if (url) openLightbox([{ url, kind: isVideo ? 'video' : 'image' }])
+    if (url) openLightbox([{ url }])
   })
   preview.appendChild(open)
   nodeScope.run(() => {
     watch(
       () => pickedMediaItem(state, source)?.url ?? '',
       (url) => {
-        const src = url ? thumbUrl(url, POSTER_MAX) : ''
+        const kind = url ? lightboxKind({ url }) : 'image'
+        const raster = kind === 'image' || kind === 'video'
+        const src = url && raster ? thumbUrl(url, POSTER_MAX) : ''
         for (const img of imgs) {
           if (src) img.src = src
           else img.removeAttribute('src')
+          img.toggleAttribute('data-off', !raster)
         }
+        glyph.innerHTML = GLYPH[kind] ?? ''
+        glyph.toggleAttribute('data-off', raster)
+        open.innerHTML = kind === 'video' || kind === 'audio' ? ICON_PLAY : ICON_EXPAND
         open.toggleAttribute('data-ready', !!url)
       },
       { immediate: true },

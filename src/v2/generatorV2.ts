@@ -14,7 +14,6 @@ import { bindPanelCollapse, stageInfoLine } from '@/v2/panelCollapse'
 import { bindShellChrome } from '@/v2/shellChrome'
 import {
   bindProgressRing,
-  bindPromptResize,
   createNodeScope,
   ensureMinSize,
   hideNativeWidgets,
@@ -190,8 +189,8 @@ function makeGeneratorShell(config: GeneratorConfig) {
       scope, card, socketAnchor: preview, state: stageState,
       media: config.preview === 'text' ? undefined : { source: 'batch' },
       lod: true,
+      manageHeight: { min: 170 },
     })
-    bindPromptResize(node, promptAnchor, scope)
     bindPanelCollapse(node, {
       scope, panel, footer, run,
       info: () => stageInfoLine(node, stageState),

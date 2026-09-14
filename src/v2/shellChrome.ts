@@ -11,7 +11,7 @@ import { bindClusterHoverIntent, nudgeSlotAnchors } from '@/v2/nodeDrag'
 import { observeProperty } from '@/v2/observeProps'
 import { bindLodPoster, registerCull } from '@/v2/lodV2'
 import { cancelMeasure, scheduleMeasure } from '@/v2/measureBatch'
-import { el } from '@/v2/shellCommon'
+import { bindCardHeight, el, stopNativeAutoGrow } from '@/v2/shellCommon'
 
 export function bindShellChrome(node: ComfyNode, opts: {
   scope: EffectScope
@@ -21,10 +21,18 @@ export function bindShellChrome(node: ComfyNode, opts: {
   state?: StageState
   media?: { source: MediaSource; host?: HTMLElement }
   lod?: boolean
+  manageHeight?: { min: number }
 }) {
   const anyNode = node as any
   const { scope, card, socketAnchor } = opts
   const socketY = opts.socketY ?? 'center'
+
+  stopNativeAutoGrow(node)
+  if (opts.manageHeight) {
+    anyNode.__comfytvSyncHeight = bindCardHeight(node, {
+      scope, card, flexible: socketAnchor, min: opts.manageHeight.min,
+    })
+  }
 
   const warnStrip = el('div', 'v2-warn')
   socketAnchor.after(warnStrip)

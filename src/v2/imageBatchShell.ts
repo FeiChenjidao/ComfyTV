@@ -25,7 +25,6 @@ import {
   ICON_GRIP,
   RUN_BUTTON_HTML,
   bindProgressRing,
-  bindPromptResize,
   createNodeScope,
   el,
   ensureMinSize,
@@ -290,8 +289,8 @@ function makeImageBatchShell(shellCfg: ImageBatchShellConfig = {}) {
 
   bindShellChrome(node, {
     scope, card, socketAnchor: preview, state: stageState, media: { source: 'batch' }, lod: true,
+    manageHeight: { min: 170 },
   })
-  bindPromptResize(node, promptAnchor, scope)
   bindPanelCollapse(node, {
     scope, panel, footer, run,
     info: () => stageInfoLine(node, stageState),

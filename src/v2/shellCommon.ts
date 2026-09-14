@@ -19,10 +19,88 @@ export function el(tag: string, cls: string, html?: string) {
   return e
 }
 
-export function growNodeHeight(node: ComfyNode, delta: number) {
+function growNodeHeight(node: ComfyNode, delta: number) {
   if (Math.abs(delta) <= 1) return
   node.setSize([node.size[0], node.size[1] + delta])
   ;(app as any).graph?.setDirtyCanvas?.(true, true)
+}
+
+export function stopNativeAutoGrow(node: ComfyNode) {
+  // V2 slots float outside layout, so litegraph's natural size would only fight the card.
+  // Both core auto-size paths read computeSize(), so pinning it here covers them all.
+  ;(node as any).computeSize = () => [node.size[0], node.size[1]]
+}
+
+// The card owns the node height: height = chrome + the flexible block's wanted height,
+// where chrome is every fixed block measured together. Absolute, so calling it twice is a
+// no-op and no trigger can double-count a chrome change. Nothing is persisted: litegraph
+// already saves the node height and wanted is derived back out of it.
+export function bindCardHeight(node: ComfyNode, opts: {
+  scope: EffectScope
+  card: HTMLElement
+  flexible: HTMLElement
+  min: number
+}): () => void {
+  const anyNode = node as any
+  const { card, flexible, min } = opts
+  const laidOut = () => card.offsetHeight > 0 && flexible.offsetHeight > 0
+  const chromeOf = () => card.offsetHeight - flexible.offsetHeight
+
+  let chrome = -1
+  let applied = -1
+  let wanted = 0
+  // the card is taller than node.size by a constant (the hidden title row); measure it
+  // whenever the DOM and node.size are known to agree, and work in DOM space throughout.
+  let offset = 0
+  let live = false
+
+  // Panels hydrate asynchronously after mount — islands, and a media strip that waits on the
+  // server. Absorbing that into the preview is what flexbox would do and keeps a saved node at
+  // the height it was saved at, so only take over once the user is demonstrably working here.
+  const sample = () => {
+    chrome = chromeOf()
+    offset = card.offsetHeight - node.size[1]
+    wanted = Math.max(min, flexible.offsetHeight)
+    applied = node.size[1]
+  }
+
+  const goLive = () => {
+    if (live || !laidOut()) return
+    live = true
+    sample()
+  }
+
+  const apply = () => {
+    goLive()
+    if (!live || !laidOut()) return
+    chrome = chromeOf()
+    const h = chrome + wanted - offset
+    applied = h
+    if (Math.abs(h - node.size[1]) < 1) return
+    node.setSize([node.size[0], h])
+    ;(app as any).graph?.setDirtyCanvas?.(true, true)
+  }
+
+  card.dataset.v2Height = '1'
+  card.addEventListener('pointerdown', goLive, { capture: true })
+  const prevConn = anyNode.onConnectionsChange
+  anyNode.onConnectionsChange = function (...args: unknown[]) {
+    goLive()
+    return prevConn?.apply(this, args)
+  }
+
+  opts.scope.run(() => {
+    const onResize = () => {
+      if (!laidOut()) return
+      if (!live) { chrome = chromeOf(); return }
+      // chrome moved: we drive the node. chrome steady but the card moved: the user did.
+      if (chromeOf() !== chrome) apply()
+      else if (Math.abs(node.size[1] - applied) >= 1) sample()
+    }
+    useResizeObserver(card, onResize)
+    useResizeObserver(flexible, onResize)
+  })
+  return apply
 }
 
 export function bindPromptResize(node: ComfyNode, promptAnchor: HTMLElement, scope: EffectScope) {
