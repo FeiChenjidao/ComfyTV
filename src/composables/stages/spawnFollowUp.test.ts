@@ -25,6 +25,13 @@ import {
   spawnConsumingNode,
   spawnAssetImageLoader,
   spawnFollowUpStage,
+  spawnOrFocusImagesSplit,
+  spawnImageVariationsFromSlots,
+  spawnImageMergeFromSlots,
+  spawnSeededImageLoader,
+  spawnModel3DFromCustomSplit,
+  findNamedOutputSlot,
+  findDownstreamOfClass,
 } from './spawnFollowUp'
 
 const DEFAULT_INPUT_NAMES = [
@@ -56,6 +63,7 @@ function makeNode(over: Record<string, any> = {}): any {
       { name: 'variant_count', value: 0 },
       { name: 'parent_output_id', value: 0 },
       { name: 'view_count', value: 0 },
+      { name: 'merge_mode', value: 'layers' },
     ],
     connect: vi.fn(),
     ...over,
@@ -223,6 +231,173 @@ describe('spawnConsumingNode', () => {
     const src = makeNode()
     expect(spawnConsumingNode(src, 'ComfyTV.PanoramaStage', 'image')).toBeNull()
     expect(console.error).toHaveBeenCalled()
+  })
+})
+
+describe('spawnOrFocusImagesSplit', () => {
+  it('finds the images output slot by name', () => {
+    const src = makeNode({
+      outputs: [
+        { name: 'image', links: [] },
+        { name: 'images', links: [] },
+      ],
+    })
+    expect(findNamedOutputSlot(src, 'images')).toBe(1)
+  })
+
+  it('reuses a split node already wired to the images output', () => {
+    const split = makeNode({ id: 77, comfyClass: 'ComfyTV.ImagesSplitStage' })
+    const graph = {
+      links: new Map([[9, { target_id: 77, origin_slot: 1 }]]),
+      getNodeById: (id: number) => (id === 77 ? split : null),
+    }
+    const src = makeNode({
+      graph,
+      outputs: [
+        { name: 'image', links: [] },
+        { name: 'images', links: [9] },
+      ],
+    })
+    expect(findDownstreamOfClass(src, 1, 'ComfyTV.ImagesSplitStage')).toBe(split)
+    expect(spawnOrFocusImagesSplit(src)).toBe(split)
+    expect((window as any).LiteGraph.createNode).not.toHaveBeenCalled()
+  })
+
+  it('spawns and wires a new split node on the images output', () => {
+    inputsByClass['ComfyTV.ImagesSplitStage'] = ['images']
+    const src = makeNode({
+      outputs: [
+        { name: 'image', links: [] },
+        { name: 'images', links: [] },
+      ],
+    })
+    const node = spawnOrFocusImagesSplit(src)
+    expect(node.comfyClass).toBe('ComfyTV.ImagesSplitStage')
+    expect(src.connect).toHaveBeenCalledWith(1, node, 0)
+  })
+})
+
+describe('spawnImageVariationsFromSlots', () => {
+  it('wires each selected split socket onto its own Image Variations card', () => {
+    inputsByClass['ComfyTV.ImageVariationsStage'] = ['image']
+    const src = makeNode({
+      outputs: [{ name: '梅花', links: [] }, { name: '鱼', links: [] }],
+    })
+    const nodes = spawnImageVariationsFromSlots(src, [1, 0])
+    expect(nodes).toHaveLength(2)
+    expect(nodes.map((n: any) => n.comfyClass)).toEqual([
+      'ComfyTV.ImageVariationsStage',
+      'ComfyTV.ImageVariationsStage',
+    ])
+    expect(src.connect).toHaveBeenCalledWith(0, nodes[0], 0)
+    expect(src.connect).toHaveBeenCalledWith(1, nodes[1], 0)
+    expect(nodes[1].pos[1]).toBeGreaterThan(nodes[0].pos[1])
+  })
+
+  it('does nothing when nothing is selected', () => {
+    const src = makeNode()
+    expect(spawnImageVariationsFromSlots(src, [])).toEqual([])
+    expect((window as any).LiteGraph.createNode).not.toHaveBeenCalled()
+  })
+})
+
+describe('spawnImageMergeFromSlots', () => {
+  it('spawns a merge node and wires selected outputs in order', () => {
+    inputsByClass['ComfyTV.ImageMergeStage'] = ['images.image0', 'images.image1']
+    const src = makeNode({
+      outputs: [{ name: 'Sky', links: [] }, { name: 'Ground', links: [] }],
+    })
+    const node = spawnImageMergeFromSlots(src, [1, 0], 'row')
+    expect(node.comfyClass).toBe('ComfyTV.ImageMergeStage')
+    expect(widgetValue(node, 'merge_mode')).toBe('row')
+    expect(src.connect).toHaveBeenCalledWith(1, node, 0)
+    expect(src.connect).toHaveBeenCalledWith(0, node, 1)
+  })
+
+  it('retries until later autogrow slots appear', () => {
+    vi.useFakeTimers()
+    inputsByClass['ComfyTV.ImageMergeStage'] = ['images.image0']
+    const src = makeNode()
+    const node = spawnImageMergeFromSlots(src, [0, 2])
+    expect(src.connect).toHaveBeenCalledTimes(1)
+    expect(src.connect).toHaveBeenCalledWith(0, node, 0)
+    node.inputs.push({ name: 'images.image1', link: null })
+    vi.advanceTimersByTime(40)
+    expect(src.connect).toHaveBeenCalledWith(2, node, 1)
+  })
+
+  it('skips the autogrow group socket and wires numbered image slots', () => {
+    inputsByClass['ComfyTV.ImageMergeStage'] = ['images', 'images.image0', 'images.image1']
+    const src = makeNode()
+    const node = spawnImageMergeFromSlots(src, [0, 1])
+    expect(src.connect).toHaveBeenCalledWith(0, node, 1)
+    expect(src.connect).toHaveBeenCalledWith(1, node, 2)
+    expect(src.connect).not.toHaveBeenCalledWith(0, node, 0)
+    expect(node.inputs[1].type).toBe('COMFYTV_IMAGE')
+    expect(node.inputs[2].type).toBe('COMFYTV_IMAGE')
+  })
+
+  it('wires bare imageN sockets when autogrow uses short names', () => {
+    inputsByClass['ComfyTV.ImageMergeStage'] = ['image0', 'image1']
+    const src = makeNode()
+    const node = spawnImageMergeFromSlots(src, [3, 5])
+    expect(src.connect).toHaveBeenCalledWith(3, node, 0)
+    expect(src.connect).toHaveBeenCalledWith(5, node, 1)
+  })
+})
+
+describe('spawnModel3DFromCustomSplit', () => {
+  it('spawns Model3D and wires 正左背右 by name', () => {
+    inputsByClass['ComfyTV.Model3DStage'] = [
+      'images.正', 'images.左', 'images.背', 'images.右',
+    ]
+    const src = makeNode({
+      outputs: [
+        { name: 'images', links: [] },
+        { name: '正', links: [] },
+        { name: '左', links: [] },
+        { name: '背', links: [] },
+        { name: '右', links: [] },
+      ],
+    })
+    const node = spawnModel3DFromCustomSplit(src)
+    expect(node.comfyClass).toBe('ComfyTV.Model3DStage')
+    expect(src.connect).toHaveBeenCalledWith(1, node, 0)
+    expect(src.connect).toHaveBeenCalledWith(2, node, 1)
+    expect(src.connect).toHaveBeenCalledWith(3, node, 2)
+    expect(src.connect).toHaveBeenCalledWith(4, node, 3)
+    expect(node.inputs[0].type).toBe('COMFYTV_IMAGE')
+  })
+
+  it('only wires faces that exist on the split node', () => {
+    inputsByClass['ComfyTV.Model3DStage'] = [
+      'images.正', 'images.左', 'images.背', 'images.右',
+    ]
+    const src = makeNode({
+      outputs: [
+        { name: 'images', links: [] },
+        { name: '正', links: [] },
+        { name: '背', links: [] },
+      ],
+    })
+    const node = spawnModel3DFromCustomSplit(src)
+    expect(src.connect).toHaveBeenCalledTimes(2)
+    expect(src.connect).toHaveBeenCalledWith(1, node, 0)
+    expect(src.connect).toHaveBeenCalledWith(2, node, 2)
+  })
+})
+
+describe('spawnSeededImageLoader', () => {
+  it('creates a Load Image card and seeds the uploaded file', () => {
+    const src = makeNode()
+    onCreated = (n) => {
+      n.widgets.push({ name: 'image', value: '', options: { values: [] } })
+    }
+    const node = spawnSeededImageLoader(src, 'comfytv/uploads/merge.png', '/view?filename=merge.png')
+    expect(node.comfyClass).toBe('ComfyTV.ImageLoaderStage')
+    expect(widgetValue(node, 'image')).toBe('comfytv/uploads/merge.png')
+    expect(node.widgets.find((w: any) => w.name === 'image').options.values)
+      .toContain('comfytv/uploads/merge.png')
   })
 })
 

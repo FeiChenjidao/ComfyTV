@@ -9,6 +9,11 @@
         @update:model-value="v => writeVal('workflow', v)"
       />
     </div>
+    <span
+      v-if="costVisible"
+      class="v2-fsel__cost"
+      :title="costDetail || t('v2.apiCostHint')"
+    >{{ costLabel }}</span>
     <button
       v-if="linkKind"
       type="button"
@@ -79,11 +84,13 @@ export interface FooterAction {
 </script>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import GenOptionsV2 from '@/v2/GenOptionsV2.vue'
 import { openLinkWorkflow } from '@/composables/stages/openLinkWorkflow'
+import { useWorkflowApiCostBadge } from '@/composables/stages/useWorkflowApiCostBadge'
 import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
 import type { LGraphNode } from '@/lib/comfyApp'
 import { useWidgetValues } from '@/v2/useWidgetValues'
@@ -124,6 +131,21 @@ function has(name: string): boolean {
 
 const { t } = useI18n()
 
+const costTick = computed(() => [
+  values.workflow,
+  values.aspect_ratio,
+  values.resolution,
+  values.batch_size,
+  values.duration,
+  values.main_prompt,
+].join('|'))
+
+const {
+  label: costLabel,
+  detail: costDetail,
+  visible: costVisible,
+} = useWorkflowApiCostBadge(props.getNode, () => sv('workflow'), costTick)
+
 function isNumberWidget(name: string): boolean {
   const type = String(widgetOf(name)?.type ?? '')
   return type === 'number' || type === 'slider' || type === 'int' || type === 'float'
@@ -156,6 +178,21 @@ function onLinkWorkflow() {
 }
 .v2-fsel__item { flex: none; min-width: 0; }
 .v2-fsel__item--grow { flex: 1 1 auto; min-width: 0; max-width: 150px; }
+.v2-fsel__cost {
+  flex: none;
+  max-width: 120px;
+  padding: 3px 7px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, #c9a227 45%, var(--v2-chip-border));
+  background: color-mix(in srgb, #c9a227 14%, transparent);
+  color: color-mix(in srgb, #c9a227 70%, var(--v2-text-mid));
+  font: 600 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  cursor: help;
+}
 .v2-fsel :deep(button) {
   height: 26px;
   padding: 0 8px;

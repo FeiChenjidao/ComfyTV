@@ -15,6 +15,8 @@ import AssetLoaderV2 from '@/v2/AssetLoaderV2.vue'
 import LoaderActionsV2 from '@/v2/LoaderActionsV2.vue'
 import MediaCornerV2 from '@/v2/MediaCornerV2.vue'
 import MediaPreviewV2 from '@/v2/MediaPreviewV2.vue'
+import PsdLayerTreeEditorV2 from '@/v2/PsdLayerTreeEditorV2.vue'
+import { makeEditorShell } from '@/v2/transformV2'
 import { bindWheelCapture } from '@/v2/wheelCapture'
 import { createIslandGroup } from '@/v2/islands'
 import type { StageKind, StageState, StageVariant } from '@/stores/stageStore'
@@ -410,3 +412,8 @@ V2_SHELLS['ComfyTV.AssetVideoLoaderStage'] = attachAssetLoader
 V2_SHELLS['ComfyTV.AssetAudioLoaderStage'] = attachAssetLoader
 V2_SHELLS['ComfyTV.AssetModelLoaderStage'] = attachAssetLoader
 V2_SHELLS['ComfyTV.AssetTextLoaderStage'] = attachAssetLoader
+
+const ICON_PSDLAYER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="14" height="10" rx="1.5"/><rect x="6" y="9" width="14" height="10" rx="1.5"/><path d="M9 13h8"/></svg>`
+V2_SHELLS['ComfyTV.PsdLayerTreeStage'] = makeEditorShell({
+  component: PsdLayerTreeEditorV2, titleKey: 'v2.ed.psdLayerTree', icon: ICON_PSDLAYER, minH: 420, lod: true,
+})

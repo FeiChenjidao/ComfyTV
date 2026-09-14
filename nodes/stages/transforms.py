@@ -1,4 +1,34 @@
+import json
+
 from ._common import *
+
+IMAGES_SPLIT_MAX = 32
+IMAGE_MERGE_MAX = 32
+
+
+def _image_group_urls(images: str) -> list[str]:
+    s = (images or "").strip()
+    if not s:
+        return []
+    try:
+        parsed = json.loads(s)
+    except Exception:
+        return [s]
+    items = parsed.get("images") if isinstance(parsed, dict) else None
+    if not isinstance(items, list):
+        return []
+    urls: list[str] = []
+    for im in items:
+        if isinstance(im, dict):
+            u = str(im.get("image_url") or im.get("url") or "").strip()
+        else:
+            u = str(im or "").strip()
+        if not u:
+            continue
+        urls.append(u)
+        if len(urls) >= IMAGES_SPLIT_MAX:
+            break
+    return urls
 
 
 class CropStage(io.ComfyNode):
@@ -155,6 +185,43 @@ class GridSplitStage(io.ComfyNode):
         return io.NodeOutput(_json.dumps({"images": [image] if image else []}), image)
 
 
+class CustomSplitStage(io.ComfyNode):
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="ComfyTV.CustomSplitStage",
+            display_name="Custom Split",
+            category="ComfyTV/Image",
+            inputs=[
+                *_standard_stage_inputs(),
+                io.String.Input("v_splits", default="[0.5]", multiline=False,
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="JSON array of vertical split fractions (0–1). "
+                                        "Hidden — driven by the Vue panel."),
+                io.String.Input("h_splits", default="[]", multiline=False,
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="JSON array of horizontal split fractions (0–1). "
+                                        "Hidden — driven by the Vue panel."),
+                io.String.Input("cell_labels", default="[]", multiline=False,
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="JSON array of per-cell names (正/左/背/右). "
+                                        "Hidden — driven by the Vue panel."),
+                COMFYTV_IMAGE.Input("image", optional=True),
+                _selected_index_input(),
+            ],
+            outputs=[COMFYTV_IMAGES.Output("images"), COMFYTV_IMAGE.Output("image")],
+            is_output_node=True,
+            hidden=[io.Hidden.unique_id],
+        )
+
+    @classmethod
+    def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
+                v_splits="[0.5]", h_splits="[]", cell_labels="[]", image="", selected_index=1):
+        import json as _json
+        return io.NodeOutput(_json.dumps({"images": [image] if image else []}), image)
+
+
 class CompareStage(io.ComfyNode):
 
     @classmethod
@@ -176,3 +243,71 @@ class CompareStage(io.ComfyNode):
     @classmethod
     def execute(cls, project_id="", image_a="", image_b=""):
         return io.NodeOutput()
+
+
+class ImagesSplitStage(io.ComfyNode):
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="ComfyTV.ImagesSplitStage",
+            display_name="Split Images",
+            category="ComfyTV/Image",
+            inputs=[
+                *_standard_stage_inputs(),
+                io.MultiType.Input(
+                    "images", [COMFYTV_IMAGES, COMFYTV_IMAGE], optional=True,
+                    tooltip="Image group to split into one COMFYTV_IMAGE socket per item.",
+                ),
+            ],
+            outputs=[
+                COMFYTV_IMAGE.Output(f"image{i}")
+                for i in range(1, IMAGES_SPLIT_MAX + 1)
+            ],
+            is_output_node=True,
+            hidden=[io.Hidden.unique_id],
+        )
+
+    @classmethod
+    def execute(cls, force_run_token=0, project_id="", parent_output_id=0, images=""):
+        urls = _image_group_urls(images)
+        padded = urls + [""] * (IMAGES_SPLIT_MAX - len(urls))
+        return io.NodeOutput(*padded[:IMAGES_SPLIT_MAX])
+
+
+class ImageMergeStage(io.ComfyNode):
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="ComfyTV.ImageMergeStage",
+            display_name="Merge Images",
+            category="ComfyTV/Image",
+            inputs=[
+                *_standard_stage_inputs(),
+                io.Combo.Input(
+                    "merge_mode", options=["layers", "row"], default="layers",
+                    socketless=True, extra_dict={"hidden": True},
+                    tooltip="layers = stack like Photoshop (source-over at 0,0); "
+                            "row = place images left to right.",
+                ),
+                io.Autogrow.Input(
+                    "images",
+                    template=io.Autogrow.TemplatePrefix(
+                        COMFYTV_IMAGE.Input("image", optional=True),
+                        prefix="image",
+                        min=1,
+                        max=IMAGE_MERGE_MAX,
+                    ),
+                ),
+            ],
+            outputs=[COMFYTV_IMAGE.Output("image")],
+            is_output_node=True,
+            hidden=[io.Hidden.unique_id],
+        )
+
+    @classmethod
+    def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
+                merge_mode="layers", images=None):
+        vals = [v for v in _autogrow_values(images) if v]
+        return io.NodeOutput(vals[0] if vals else "")

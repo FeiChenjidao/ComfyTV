@@ -10,6 +10,7 @@
         {{ $t('bot.noProviderBody') }}
       </div>
       <code class="ctv:rounded ctv:bg-secondary-background ctv:px-2 ctv:py-1 ctv:text-xs">npm install -g {{ '@' }}anthropic-ai/claude-code</code>
+      <code class="ctv:rounded ctv:bg-secondary-background ctv:px-2 ctv:py-1 ctv:text-xs">curl https://cursor.com/install -fsS | bash</code>
       <button
         class="ctv:mt-1 ctv:rounded-md ctv:border ctv:border-border-subtle ctv:bg-transparent ctv:px-3 ctv:py-1.5 ctv:text-xs ctv:text-base-foreground ctv:cursor-pointer"
         @click="store.refreshStatus()"

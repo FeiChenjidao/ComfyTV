@@ -35,6 +35,10 @@
       "grade": "调色 · 编辑",
       "compare": "对比 · 编辑",
       "gridSplit": "宫格切分 · 编辑",
+      "customSplit": "自定义分割 · 编辑",
+      "imagesSplit": "图像组分离",
+      "imageMerge": "图片合并",
+      "psdLayerTree": "PSD 图层树",
       "compareHint": "接入 A、B 两张图开始对比",
       "wired": "已接入",
       "empty": "未接入"
@@ -48,6 +52,7 @@
     "poolCount": "池内 {n} 张",
     "clear": "清空",
     "linkWorkflow": "关联工作流",
+    "apiCostHint": "绑定工作流内 ComfyUI API 付费节点的预估消耗（credits/Run）",
     "videoColorTitle": "调色 · Video FX",
     "videoCurvesTitle": "曲线 · Video FX",
     "fxChainTitle": "FX 链 · 出片",
@@ -280,6 +285,7 @@
       "erase": "擦除",
       "cutout": "抠图",
       "grid": "宫格切分",
+      "customSplit": "自定义分割",
       "panorama": "全景",
       "crop": "裁剪",
       "download": "下载"
@@ -471,6 +477,10 @@
         "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。",
         "options": { "checker": "棋盘格", "image": "同图压暗铺满" }
       },
+      "v2-panel-on-select": {
+        "label": "仅选中时显示控制面板",
+        "desc": "勾选后，V2 卡片底部的提示词、工作流选择、消耗徽章和运行按钮默认隐藏，只有选中该卡片时才显示，画布更清爽。"
+      },
       "enable-db-backup": {
         "label": "启动时自动备份",
         "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。"
@@ -507,6 +517,11 @@
         "desc": "Bot 回合传给 qwen -m 的模型。留空 = 用 qwen 自己设置里选的模型。",
         "placeholder": "CLI 默认"
       },
+      "bot-model-cursor-cli": {
+        "label": "Cursor CLI 模型",
+        "desc": "Bot 回合传给 agent --model 的模型。留空 = CLI 自己的默认。",
+        "placeholder": "CLI 默认"
+      },
       "bot-model-local-llm": {
         "label": "Local LLM 模型",
         "desc": "本地端点上的模型 id。留空 = 用端点报告的第一个模型。",
@@ -528,7 +543,7 @@
       },
       "bot-enable-comfy-mcp": {
         "label": "挂载 comfy-mcp",
-        "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex 与 Local LLM 保持只挂 comfytv。"
+        "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code、Qwen Code 和 Cursor CLI — Codex 与 Local LLM 保持只挂 comfytv。"
       },
       "bot-comfy-mcp-command": {
         "label": "comfy-mcp 命令",
@@ -1136,6 +1151,10 @@
       "grid": {
         "label": "宫格切分",
         "tooltip": "按 R×C 切成多张（浏览器端）→ 图片批次"
+      },
+      "custom-split": {
+        "label": "自定义分割",
+        "tooltip": "拖拽分割线切成不等宽的多张（浏览器端）→ 图片批次"
       },
       "ken-burns": {
         "label": "静帧推拉",
@@ -1787,6 +1806,54 @@
     "cols": "列",
     "border": "边框",
     "outerBorder": "包括外框"
+  },
+  "customSplit": {
+    "connectImage": "请连接一张图以切分",
+    "hint": "添加分割线并拖拽，按任意比例切开",
+    "splitting": "切分为 {n} 块中…",
+    "done": "已切分为 {n} 块 — 下游可直接使用",
+    "addV": "加竖线",
+    "addH": "加横线",
+    "remove": "删除线",
+    "annotate": "标注",
+    "annotateHint": "先选 正 / 左 / 背 / 右，再点格子。输出纹理组顺序为正 → 左 → 背 → 右。",
+    "generateModel": "多视图生成模型"
+  },
+  "psdLayerTree": {
+    "pick": "选择 PSD",
+    "pickHint": "选择本地 PSD / PSB 文件",
+    "dropHint": "将 PSD / PSB 拖到这里",
+    "loading": "正在解析 PSD…",
+    "compositing": "正在合成图层…",
+    "done": "已合成 — 下游可直接使用",
+    "warning": "近似合成 — 智能对象/特效可能与 Photoshop 不一致",
+    "dims": "{w} × {h}",
+    "memory": "这份 PSD 太大，浏览器无法完成合成。请换更小的文档，或只点选单个图层而不是文档根。",
+    "scaled": "已按 {w} × {h} 合成（文档 {dw} × {dh}）",
+    "clickHint": "单击选择 · Ctrl/⌘ 加选 · Shift 范围选择",
+    "clipping": "剪切蒙版",
+    "expand": "展开"
+  },
+  "imagesSplit": {
+    "connect": "请接入图像组",
+    "empty": "图像组里还没有图层",
+    "truncated": "仅展开前 {n} 层",
+    "selectHint": "单击选择 · Ctrl/⌘ 加选 · Shift 范围选择",
+    "merge": "合并选中",
+    "mergeBusy": "正在合并…",
+    "mergeFailed": "合并失败",
+    "variations": "图像变体"
+  },
+  "imageMerge": {
+    "mode": "合并方式",
+    "layers": "图层叠加",
+    "row": "横向排布",
+    "hint": "可接入任意数量的图片",
+    "needImages": "请接入要合并的图片",
+    "wired": "已接入 {n} 张",
+    "applying": "正在合并…",
+    "applied": "已合并 — 下游可直接使用",
+    "adjustToApply": "选择一种合并方式"
   },
   "panoramaView": {
     "connectPanorama": "请在上游接入全景图",
@@ -2835,7 +2902,7 @@
     "cancelSelect": "退出多选",
     "batchDeleteConfirm": "删除所选的 {count} 个对话?此操作不可撤销。",
     "noProviderTitle": "未检测到本地 agent CLI",
-    "noProviderBody": "ComfyTV Bot 通过本机安装的 agent CLI(Claude Code)驱动画布。安装并登录一次即可,全程不存任何 API key。",
+    "noProviderBody": "ComfyTV Bot 通过本机安装的 agent CLI(Claude Code、Cursor CLI、Codex 或 Qwen Code)驱动画布。安装并登录一次即可,全程不存任何 API key。",
     "recheck": "重新检测",
     "attachImage": "添加媒体文件",
     "removeAttachment": "移除",

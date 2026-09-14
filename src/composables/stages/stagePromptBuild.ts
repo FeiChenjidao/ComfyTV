@@ -1,6 +1,10 @@
 import { fetchWorkflowMetaCached, mentionWorkflowRef } from '@/composables/stages/assetSlots'
 import { expandDirectorTimeline } from '@/composables/stages/directorMentions'
 import {
+  IMAGES_SPLIT_CLASS,
+  imagesSplitUrlAt,
+} from '@/composables/stages/imagesSplit'
+import {
   expandMentionTokens,
   mentionOrdinalText,
   minimaxAudioOffset,
@@ -75,18 +79,23 @@ export async function buildRunPrompt(node: any, store: Store): Promise<BuiltRunP
       if (!Array.isArray(val) || val.length !== 2) continue
       const upstreamId = val[0]
       if (!isBridgeIn && pm?.output?.[String(upstreamId)]) continue
-      const upstreamSlot = Number(val[1]) || 0
+      const upstreamSlotRaw = Number(val[1])
+      const upstreamSlot = Number.isFinite(upstreamSlotRaw) && upstreamSlotRaw >= 0 ? upstreamSlotRaw : 0
       const upstreamNode = a.graph?.getNodeById?.(Number(upstreamId))
                         ?? a.graph?.getNodeById?.(String(upstreamId))
       if (!upstreamNode) continue
       const upstreamState = store.getStage(upstreamNode)
       let snapshot: string | null | undefined
       if (upstreamState) {
-        const slotted = upstreamState.outputs?.[upstreamSlot]
-        if (slotted != null) {
-          snapshot = slotted
-        } else if (upstreamSlot === 0 && upstreamState.output) {
-          snapshot = upstreamState.output
+        if (String(upstreamNode.comfyClass) === IMAGES_SPLIT_CLASS) {
+          snapshot = imagesSplitUrlAt(upstreamState, upstreamSlot)
+        } else {
+          const slotted = upstreamState.outputs?.[upstreamSlot]
+          if (slotted != null && String(slotted).length > 0) {
+            snapshot = slotted
+          } else if (upstreamSlot === 0 && upstreamState.output) {
+            snapshot = upstreamState.output
+          }
         }
       }
       if (snapshot != null) {

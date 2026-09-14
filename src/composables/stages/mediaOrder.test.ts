@@ -69,6 +69,15 @@ describe('liveLinks / nodeAcceptsMedia', () => {
     expect(nodeAcceptsMedia(n, 'video')).toBe(false)
   })
 
+  it('accepts bare imageN sockets used by merge autogrow labels', () => {
+    const n = node([['image0', 11], ['image1', 12], ['images', 99]])
+    expect(liveLinks(n, 'image', graph)).toEqual([
+      { link: 11, slot: 0, inputName: 'image0', inputIndex: 0, from: [3, 0] },
+      { link: 12, slot: 1, inputName: 'image1', inputIndex: 1, from: [4, 1] },
+    ])
+    expect(nodeAcceptsMedia(n, 'image')).toBe(true)
+  })
+
   it('treats the plain audio input as slot 0', () => {
     const n = node([['audio', 13]])
     expect(liveLinks(n, 'audio', graph)[0]).toMatchObject({ link: 13, slot: 0 })

@@ -46,10 +46,12 @@ import {
   UnlinkWorkflowResultSchema,
   WorkflowConfigSchema,
   CustomIoSaveResultSchema,
+  WorkflowApiCostSchema,
 } from './schemas'
 import type {
   WorkflowConfig,
   CustomIoSaveResult,
+  WorkflowApiCost,
   AdoptAssetsResult,
   ApiSidecarResult,
   BackupResult,
@@ -456,6 +458,13 @@ export function fetchWorkflowConfig(kind: string, label: string): Promise<Workfl
   return apiFetch(
     `/comfytv/workflows/config?kind=${encodeURIComponent(kind)}&label=${encodeURIComponent(label)}`,
     WorkflowConfigSchema,
+  )
+}
+
+export function fetchWorkflowApiCost(kind: string, label: string): Promise<WorkflowApiCost> {
+  return apiFetch(
+    `/comfytv/workflows/api_cost?kind=${encodeURIComponent(kind)}&label=${encodeURIComponent(label)}`,
+    WorkflowApiCostSchema,
   )
 }
 

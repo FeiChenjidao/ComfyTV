@@ -39,6 +39,7 @@ import { app, type ComfyNode } from '@/lib/comfyApp'
 import type { ComfyExtension, ComfyNodeDef } from '@comfyorg/comfyui-frontend-types'
 import { applyHiddenWidgetFlags, getWidget } from '@/utils/widget'
 import { checkThemeTokens } from '@/utils/devTokenCheck'
+import { attachComfyOrgAuth } from '@/utils/comfyOrgAuth'
 import { installGlobalRunBridge } from '@/utils/globalRunBridge'
 import { installCanvasMirror } from '@/composables/stages/useCanvasMirror'
 import { installCollabPresence } from '@/collab/useCollabPresence'
@@ -246,6 +247,7 @@ const extension: ComfyExtension = {
       resolveStore: () => useStageStore(pinia),
       toast: (opts) => a.extensionManager?.toast?.add?.(opts),
       t: (key, params) => i18n.global.t(key, params ?? {}),
+      attachAuth: attachComfyOrgAuth,
     })
 
     installCanvasMirror(a, {
@@ -428,7 +430,10 @@ const extension: ComfyExtension = {
     const minH = richMin ?? 140
     const minW = RICH_STAGE_MIN_WIDTHS[node.comfyClass] ?? 320
     const [w, h] = node.size
-    node.setSize([Math.max(w, minW), Math.max(h, minH)])
+    const nextH = node.comfyClass === 'ComfyTV.PsdLayerTreeStage' && h >= 540
+      ? minH
+      : Math.max(h, minH)
+    node.setSize([Math.max(w, minW), nextH])
   },
 }
 

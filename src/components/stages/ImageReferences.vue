@@ -14,7 +14,7 @@
   >
     <div class="ctv:flex ctv:items-center ctv:gap-2">
       <span class="ctv:text-[11px] ctv:font-semibold">{{ $t('imageRefs.title') }}</span>
-      <span class="ctv:text-3xs ctv:text-muted-foreground ctv:font-mono">{{ pinned.length || '' }}</span>
+      <span class="ctv:text-3xs ctv:text-muted-foreground ctv:font-mono">{{ items.length || '' }}</span>
       <button
         type="button"
         :class="['ctv:ml-auto', plusBtnClass]"
@@ -36,9 +36,9 @@
       @close="pickerOpen = false"
     />
 
-    <div v-if="pinned.length" class="ctv:flex ctv:flex-wrap ctv:gap-1.5">
+    <div v-if="items.length" class="ctv:flex ctv:flex-wrap ctv:gap-1.5">
       <div
-        v-for="it in pinned"
+        v-for="it in items"
         :key="`${it.type}-${it.entry.key}`"
         class="imgref-tile ctv-hover-host ctv:relative ctv:w-[76px] ctv:h-[76px] ctv:rounded-sm ctv:overflow-hidden
                ctv:bg-black/30 ctv:border"
@@ -66,6 +66,12 @@
             draggable="false"
           />
         </template>
+        <div
+          v-else-if="it.entry.src === 'link'"
+          class="ctv:flex ctv:items-center ctv:justify-center ctv:size-full ctv:p-1 ctv:text-center ctv:text-3xs ctv:italic ctv:text-muted-foreground/60"
+        >
+          {{ $t('mediaStrip.wired') }}
+        </div>
         <div
           v-else
           class="ctv:flex ctv:items-center ctv:justify-center ctv:size-full ctv:p-1 ctv:text-center ctv:text-3xs ctv:italic ctv:text-muted-foreground/60"
@@ -144,9 +150,7 @@ const {
 
 onMounted(init)
 
-const pinned = computed(() => items.value.filter(it => it.entry.src !== 'link'))
-
-const imageLightboxItems = computed(() => pinned.value
+const imageLightboxItems = computed(() => items.value
   .filter(it => it.type === 'image' && it.url)
   .map(it => ({ url: it.url!, label: `#${it.position}` })))
 

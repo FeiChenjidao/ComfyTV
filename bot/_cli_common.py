@@ -285,7 +285,7 @@ async def run_cli_turn(
     env: dict,
     emit: EmitFn,
     handle: TurnHandle,
-    parser: CliStreamParser,
+    parser,
     stdin_payload: Optional[str] = None,
     exe_label: str = "cli",
 ) -> TurnResult:

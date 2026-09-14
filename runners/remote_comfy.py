@@ -180,7 +180,11 @@ class RemoteComfyUIRunner(Runner):
 
     async def _queue_prompt(self, session: aiohttp.ClientSession,
                             workflow: dict, client_id: str) -> str:
-        body = {"prompt": workflow, "client_id": client_id}
+        from .auth_extra import current_auth_extra
+        body: dict = {"prompt": workflow, "client_id": client_id}
+        extra = current_auth_extra()
+        if extra:
+            body["extra_data"] = extra
         async with session.post(f"{self.base_url}/prompt", json=body) as resp:
             text = await resp.text()
             if resp.status != 200:

@@ -75,6 +75,19 @@ async def workflow_get_config(request: web.Request) -> web.Response:
     return web.json_response(cfg)
 
 
+@routes.get("/comfytv/workflows/api_cost")
+async def workflow_api_cost(request: web.Request) -> web.Response:
+    """Paid ComfyUI API nodes inside a bound workflow + price_badge payloads."""
+    kind  = request.query.get("kind")  or ""
+    label = request.query.get("label") or ""
+    if not kind or not label:
+        return web.json_response({"error": "kind and label required"}, status=400)
+    payload = workflow_db.get_workflow_api_cost(kind, label)
+    if payload is None:
+        return web.json_response({"error": "workflow not found"}, status=404)
+    return web.json_response(payload)
+
+
 @routes.get("/comfytv/workflows/preset")
 async def workflow_export_preset(request: web.Request) -> web.Response:
     kind  = request.query.get("kind")  or ""

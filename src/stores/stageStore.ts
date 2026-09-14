@@ -238,7 +238,8 @@ export const useStageStore = defineStore('comfytv-stage', () => {
       : (linksMap?.[linkId as any] ?? app?.graph?.getLink?.(linkId))
     const srcNode = link ? app?.graph?.getNodeById?.(link.origin_id) : null
     const srcState = srcNode ? stages.get(srcNode) : null
-    const srcSlot = Number(link?.origin_slot) || 0
+    const srcSlotRaw = Number(link?.origin_slot ?? link?.originSlot)
+    const srcSlot = Number.isFinite(srcSlotRaw) && srcSlotRaw >= 0 ? srcSlotRaw : 0
     if (srcNode && srcSlot === 0 && isChainableFx(srcNode)) {
       const vin = (srcNode.inputs || []).find((i: any) => i?.name === 'video')
       if (vin?.link != null) return resolveUpstreamValue(app, vin.link, depth + 1)
@@ -347,6 +348,25 @@ export const useStageStore = defineStore('comfytv-stage', () => {
     notifyConsumers(state)
   }
 
+  function setOutputSlots(state: StageState, values: Array<string | null>) {
+    let changed = false
+    while (state.outputs.length < values.length) {
+      state.outputs.push(null)
+      changed = true
+    }
+    for (let i = 0; i < values.length; i++) {
+      if (state.outputs[i] !== values[i]) {
+        state.outputs[i] = values[i]
+        changed = true
+      }
+    }
+    if (values.length > 0 && state.output !== values[0]) {
+      state.output = values[0]
+      changed = true
+    }
+    if (changed) notifyConsumers(state)
+  }
+
   function applyExecutionError(
     state: StageState,
     error: { message: string; type?: string; traceback?: string },
@@ -376,6 +396,7 @@ export const useStageStore = defineStore('comfytv-stage', () => {
     applyExecutionError,
     clearError,
     setOutputSlot,
+    setOutputSlots,
     setPickerPool,
     clearPickerPool,
   }

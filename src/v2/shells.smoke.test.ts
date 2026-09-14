@@ -75,6 +75,9 @@ const SHELL_META: Record<string, Meta> = {
   'ComfyTV.ColorGradeStage': { kind: 'image', variant: 'transform' },
   'ComfyTV.CompareStage': { kind: 'image', variant: 'transform' },
   'ComfyTV.GridSplitStage': { kind: 'image-batch', variant: 'transform' },
+  'ComfyTV.CustomSplitStage': { kind: 'image-batch', variant: 'transform' },
+  'ComfyTV.ImagesSplitStage': { kind: 'image', variant: 'transform' },
+  'ComfyTV.ImageMergeStage': { kind: 'image', variant: 'transform' },
   'ComfyTV.VideoColorStage': { kind: 'video' },
   'ComfyTV.VideoCurvesStage': { kind: 'video' },
   'ComfyTV.VideoLUTStage': { kind: 'video' },
@@ -169,6 +172,7 @@ const SHELL_META: Record<string, Meta> = {
   'ComfyTV.AssetAudioLoaderStage': { kind: 'audio', variant: 'loader' },
   'ComfyTV.AssetTextLoaderStage': { kind: 'text', variant: 'loader' },
   'ComfyTV.AssetModelLoaderStage': { kind: 'model', variant: 'loader' },
+  'ComfyTV.PsdLayerTreeStage': { kind: 'image', variant: 'loader' },
   'ComfyTV.TextStage': { kind: 'text' },
   'ComfyTV.SubtitleGenStage': { kind: 'text' },
   'ComfyTV.VideoStage': { kind: 'video' },
@@ -397,6 +401,21 @@ describe('V2 shell smoke', () => {
     expect(bar.contains(run)).toBe(false)
     expect(panel.querySelector('.v2-panel__footer')!.contains(run)).toBe(true)
     node.onRemoved?.()
+  })
+
+  it('LOD poster chrome wraps editor shells for custom split / PSD / images split', () => {
+    const classes = ['ComfyTV.CustomSplitStage', 'ComfyTV.PsdLayerTreeStage', 'ComfyTV.ImagesSplitStage', 'ComfyTV.ImageMergeStage']
+    for (const cls of classes) {
+      const meta = SHELL_META[cls]
+      const node = makeNode(cls)
+      V2_SHELLS[cls](node as any, meta.kind, meta.variant ?? 'generator')
+      const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+      expect(card.hasAttribute('data-v2-lod-media'), cls).toBe(true)
+      expect(card.querySelector('.v2-preview.v2-ed-preview'), cls).toBeTruthy()
+      expect(card.querySelector('.v2-lod-poster'), cls).toBeTruthy()
+      expect(card.querySelector('.v2-ed-host')?.parentElement?.classList.contains('v2-preview'), cls).toBe(true)
+      node.onRemoved?.()
+    }
   })
 
   it('stacks preview cards by the real item count', async () => {

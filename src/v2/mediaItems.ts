@@ -31,3 +31,37 @@ export function pickedMediaItem(state: MediaState, source: MediaSource): MediaIt
   const items = mediaItems(state, source)
   return items[pickedMediaIndex(state, items.length) - 1] ?? null
 }
+
+/** First displayable still from a slot payload (plain URL or `{ images: [...] }` batch). */
+export function previewUrlFromPayload(raw: string | null | undefined): string | null {
+  return mediaItems({ output: raw ?? null, pool: null }, 'batch')[0]?.url ?? null
+}
+
+function slotContent(state: Pick<StageState, 'inputs'>, slot: string): string {
+  const raw = state.inputs?.find(i => i.slot === slot)?.content
+  return typeof raw === 'string' ? raw.trim() : ''
+}
+
+export interface LodPosterOpts {
+  /** Custom Split: keep the full source, not the first crop after execute. */
+  preferImageInput?: boolean
+}
+
+/** Poster URL when zoomed out: output/pool, else connected still, else first image-group cell. */
+export function lodPosterUrl(
+  state: StageState,
+  source: MediaSource,
+  opts?: LodPosterOpts,
+): string {
+  if (opts?.preferImageInput) {
+    const imageIn = slotContent(state, 'image')
+    if (imageIn && !imageIn.startsWith('{')) return imageIn
+  }
+  const picked = pickedMediaItem(state, source)?.url ?? ''
+  if (picked) return picked
+  const imageIn = slotContent(state, 'image')
+  if (imageIn && !imageIn.startsWith('{')) return imageIn
+  const group = slotContent(state, 'images')
+  if (!group) return ''
+  return mediaItems({ output: group, pool: null }, 'batch')[0]?.url ?? ''
+}

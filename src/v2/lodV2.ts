@@ -5,7 +5,7 @@ import { app } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
 import { THUMB_CELL, thumbUrl } from '@/utils/thumbUrl'
 import { openLightbox } from '@/composables/useLightbox'
-import { pickedMediaItem, type MediaSource } from '@/v2/mediaItems'
+import { lodPosterUrl, type LodPosterOpts, type MediaSource } from '@/v2/mediaItems'
 
 export const LOD_ATTR = 'data-v2-lod'
 const FAR_HYSTERESIS = 0.08
@@ -178,6 +178,7 @@ export function bindLodPoster(
   state: StageState,
   source: MediaSource,
   nodeScope: EffectScope,
+  opts?: LodPosterOpts,
 ): void {
   card.setAttribute('data-v2-lod-media', '')
   const mk = (cls: string) => {
@@ -197,13 +198,13 @@ export function bindLodPoster(
   open.addEventListener('pointerdown', (e) => e.stopPropagation())
   open.addEventListener('click', (e) => {
     e.stopPropagation()
-    const url = pickedMediaItem(state, source)?.url
+    const url = lodPosterUrl(state, source, opts)
     if (url) openLightbox([{ url, kind: isVideo ? 'video' : 'image' }])
   })
   preview.appendChild(open)
   nodeScope.run(() => {
     watch(
-      () => pickedMediaItem(state, source)?.url ?? '',
+      () => lodPosterUrl(state, source, opts),
       (url) => {
         const src = url ? thumbUrl(url, POSTER_MAX) : ''
         for (const img of imgs) {

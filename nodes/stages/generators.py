@@ -155,7 +155,7 @@ class Model3DStage(io.ComfyNode):
                                        "The workflow must end in a SaveGLB (or compatible) node."),
                 _main_prompt_input(tooltip="Primary prompt — the user's intent for this stage. Upstream text inputs are treated as additional context."),
                 io.Autogrow.Input("texts",  template=_text_template(4)),
-                io.Autogrow.Input("images", template=_image_template(4)),
+                io.Autogrow.Input("images", template=_face_image_template()),
                 io.Autogrow.Input("models", template=_model_template(4)),
                 io.String.Input("captured_image", default="",
                                 socketless=True, extra_dict={"hidden": True},

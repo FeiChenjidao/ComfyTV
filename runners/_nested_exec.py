@@ -169,11 +169,13 @@ async def _run_subprompt(sub_prompt: dict, sub_prompt_id: str,
 
         server.send_sync = wrapped_send_sync
         try:
+            from .auth_extra import nested_extra_data
+            extra_data = nested_extra_data(outer_client_id)
             await loop.run_in_executor(
                 None,
-                lambda: executor.execute(
+                lambda extra=extra_data: executor.execute(
                     sub_prompt, sub_prompt_id,
-                    extra_data={"client_id": outer_client_id},
+                    extra_data=extra,
                     execute_outputs=execute_outputs,
                 ),
             )

@@ -28,6 +28,7 @@
     "animation-timeline-js": "^2.3.5",
     "dollycurve": "^0.3.0",
     "dompurify": "^3.4.12",
+    "jsonata": "^2.2.2",
     "marked": "^18.0.6",
     "mediabunny": "^1.53.1",
     "opensheetmusicdisplay": "^2.1.0",

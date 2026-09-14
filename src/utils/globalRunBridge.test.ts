@@ -206,6 +206,30 @@ describe('installGlobalRunBridge (end-to-end via api.queuePrompt)', () => {
     expect(toast.mock.calls[0][0].detail).toBe('run.stagesRunPerNode')
   })
 
+  it('attaches comfy.org auth before the real queuePrompt, then restores', async () => {
+    const { app, origQueue, store, toast } = makeApp()
+    origQueue.mockImplementation(async () => {
+      expect(app.api.authToken).toBe('jwt')
+      expect(app.api.apiKey).toBe('key')
+      return { prompt_id: 'p-123', node_errors: {} }
+    })
+    const attachAuth = vi.fn(async (api: any) => {
+      api.authToken = 'jwt'
+      api.apiKey = 'key'
+    })
+    installGlobalRunBridge(app, { ...deps(store, toast), attachAuth })
+
+    await app.api.queuePrompt(0, {
+      output: { '9': { class_type: 'KSampler', inputs: {} } },
+      workflow: {},
+    }, {})
+
+    expect(attachAuth).toHaveBeenCalledTimes(1)
+    expect(origQueue).toHaveBeenCalledTimes(1)
+    expect(app.api.authToken).toBeUndefined()
+    expect(app.api.apiKey).toBeUndefined()
+  })
+
   it('is idempotent — second install is a no-op', () => {
     const { app, store, toast } = makeApp()
     const first = app.api.queuePrompt

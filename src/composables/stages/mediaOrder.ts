@@ -21,7 +21,7 @@ export const MEDIA_PROP = 'comfytv_media'
 export const LEGACY_REFS_PROP = 'comfytv_image_refs'
 
 export const AUTOGROW_KEY_RE: Record<MediaType, RegExp> = {
-  image: /^images\.image(\d+)$/,
+  image: /^(?:images\.)?image(\d+)$/,
   video: /^videos\.video(\d+)$/,
   audio: /^audio\.audio(\d+)$/,
 }

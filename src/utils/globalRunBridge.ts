@@ -65,6 +65,7 @@ export interface InstallGlobalRunBridgeDeps {
   resolveStore: () => StageSnapshotSource
   toast: (opts: { severity: string; summary: string; detail: string; life: number }) => void
   t: (key: string, params?: Record<string, unknown>) => string
+  attachAuth?: (api: any) => Promise<void>
 }
 
 export function installGlobalRunBridge(app: any, deps: InstallGlobalRunBridgeDeps): boolean {
@@ -72,10 +73,23 @@ export function installGlobalRunBridge(app: any, deps: InstallGlobalRunBridgeDep
   app.__comfytvQueuePatched = true
 
   const origQueue = app.api.queuePrompt.bind(app.api)
+  const attachAuth = deps.attachAuth
+  const withAuth = async (number: number, data: any, options: any) => {
+    const api = app.api
+    const prevToken = api.authToken
+    const prevKey = api.apiKey
+    try {
+      await attachAuth?.(api)
+      return origQueue(number, data, options)
+    } finally {
+      api.authToken = prevToken
+      api.apiKey = prevKey
+    }
+  }
   app.api.queuePrompt = async (number: number, data: any, options: any = {}) => {
     if (data?.__comfytvOwnRun) {
       if (data && typeof data === 'object') delete data.__comfytvOwnRun
-      return origQueue(number, data, options)
+      return withAuth(number, data, options)
     }
     const isGlobalRun = !options?.partialExecutionTargets?.length
     if (isGlobalRun && data?.output) {
@@ -115,7 +129,7 @@ export function installGlobalRunBridge(app: any, deps: InstallGlobalRunBridgeDep
 
       data = { ...data, output: rewritten }
     }
-    return origQueue(number, data, options)
+    return withAuth(number, data, options)
   }
   return true
 }

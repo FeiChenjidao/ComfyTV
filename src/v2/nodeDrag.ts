@@ -79,6 +79,12 @@ function selectForPointer(node: ComfyNode, canvas: any, e: PointerEvent) {
   else canvas?.selectNode(node, e.shiftKey || e.ctrlKey || e.metaKey)
 }
 
+/** Select the LiteGraph node without starting a canvas drag (for stopPropagation surfaces). */
+export function selectNodeFromPointer(node: ComfyNode, e: PointerEvent) {
+  if ((node as any).selected) return
+  selectForPointer(node, (app as any).canvas, e)
+}
+
 export function bindNodeDrag(node: ComfyNode, surface: HTMLElement) {
   let drag: { x: number; y: number; moved: boolean } | null = null
   surface.addEventListener('pointerdown', (e) => {
