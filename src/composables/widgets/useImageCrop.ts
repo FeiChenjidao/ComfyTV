@@ -422,6 +422,8 @@ export function useImageCrop(options: UseImageCropOptions) {
   return {
     imageUrl, isLoading,
     naturalWidth, naturalHeight,
+    displayedWidth, displayedHeight,
+    scaleFactor, imageOffsetX, imageOffsetY,
     cropX, cropY, cropWidth, cropHeight,
     selectedRatio, isLockEnabled,
     cropBoxStyle, resizeHandles,

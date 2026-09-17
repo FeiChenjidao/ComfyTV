@@ -66,14 +66,20 @@ export function customExposedOutputs(config: Pick<ConfigPayload, 'kind' | 'meta'
     .map((o: any) => ({ kind: String(o.kind ?? ''), label: String(o.label ?? o.kind ?? '') }))
 }
 
-export type ResultType = 'graph_output_first' | 'ui_save_batch' | 'ui_save_url'
+export type ResultType =
+  | 'graph_output_first'
+  | 'ui_save_batch'
+  | 'ui_save_url'
+  | 'ui_save_layered'
 
 const TEXT_RESULT_KINDS = new Set(['text', 'storyboard'])
 const BATCH_RESULT_KINDS = new Set(['image', 'shot-images', 'multiview', 'sequence'])
+const LAYERED_RESULT_KINDS = new Set(['layer-separation'])
 
 export function resultTypesForKind(kind: string | null | undefined): ResultType[] {
-  if (!kind) return ['graph_output_first', 'ui_save_batch', 'ui_save_url']
+  if (!kind) return ['graph_output_first', 'ui_save_batch', 'ui_save_url', 'ui_save_layered']
   if (TEXT_RESULT_KINDS.has(kind)) return ['graph_output_first']
+  if (LAYERED_RESULT_KINDS.has(kind)) return ['ui_save_layered', 'ui_save_batch', 'ui_save_url']
   if (BATCH_RESULT_KINDS.has(kind)) return ['ui_save_batch', 'ui_save_url']
   return ['ui_save_url']
 }

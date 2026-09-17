@@ -20,7 +20,7 @@
           :alt="$t('imageCrop.cropPreviewAlt')"
           class="ctv:absolute ctv:inset-0 ctv:size-full ctv:object-contain ctv:pointer-events-none ctv:select-none"
           draggable="false"
-          @load="handleImageLoad"
+          @load="onImageLoad"
           @error="handleImageError"
           @dragstart.prevent
         />
@@ -31,19 +31,34 @@
           {{ $t('imageCrop.loading') }}
         </div>
 
+        <!-- Inactive boxes: border only -->
+        <button
+          v-for="box in inactiveBoxes"
+          :key="box.id"
+          type="button"
+          class="crop-box crop-box--idle"
+          :style="boxStyle(box)"
+          :title="boxLabel(box)"
+          @pointerdown.stop="emit('select', box.id)"
+        >
+          <span class="crop-box__tag">{{ boxIndex(box) }}</span>
+        </button>
+
+        <!-- Active box: dim overlay + drag/resize -->
         <div
-          v-if="!isLoading"
-          class="ctv:absolute ctv:box-content ctv:border-2 ctv:border-white ctv:cursor-move ctv:select-none
-                 ctv:shadow-[0_0_0_9999px_rgb(0_0_0/0.5)]"
+          v-if="!isLoading && hasActive"
+          class="crop-box crop-box--active"
           :style="cropBoxStyle"
           @pointerdown="handleDragStart"
           @pointermove="handleDragMove"
           @pointerup="handleDragEnd"
-        />
+        >
+          <span class="crop-box__tag">{{ activeIndex }}</span>
+        </div>
 
         <div
           v-for="handle in resizeHandles"
-          v-show="!isLoading"
+          v-show="!isLoading && hasActive"
           :key="handle.direction"
           :class="['ctv:absolute', handle.isCorner ? 'ctv:bg-white/85 ctv:rounded-sm' : 'ctv:bg-transparent']"
           :style="{ ...handle.style, cursor: handle.cursor }"
@@ -76,6 +91,24 @@
           :title="isLockEnabled ? $t('imageCrop.unlockRatio') : $t('imageCrop.lockRatio')"
           @click="isLockEnabled = !isLockEnabled"
         ><i :class="['pi', isLockEnabled ? 'pi-lock' : 'pi-lock-open']" /></button>
+
+        <span class="ctv:flex-1" />
+        <button
+          type="button"
+          class="ctv:h-6 ctv:px-2 ctv:text-[11px] ctv:rounded ctv:border ctv:border-border-subtle
+                 ctv:bg-secondary-background ctv:text-base-foreground ctv:disabled:opacity-40"
+          :disabled="!canAdd"
+          :title="$t('imageCrop.addBox')"
+          @click="onAdd"
+        >{{ $t('imageCrop.addBox') }}</button>
+        <button
+          type="button"
+          class="ctv:h-6 ctv:px-2 ctv:text-[11px] ctv:rounded ctv:border ctv:border-border-subtle
+                 ctv:bg-secondary-background ctv:text-base-foreground ctv:disabled:opacity-40"
+          :disabled="!canRemove"
+          :title="$t('imageCrop.removeBox')"
+          @click="emit('remove')"
+        >{{ $t('imageCrop.removeBox') }}</button>
       </div>
 
       <div class="ctv:flex ctv:items-center ctv:gap-1 ctv:text-[11px]">
@@ -97,19 +130,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
-import { ASPECT_RATIOS, useImageCrop, type Bounds } from '@/composables/widgets/useImageCrop'
+import {
+  ASPECT_RATIOS,
+  useImageCrop,
+  type Bounds,
+} from '@/composables/widgets/useImageCrop'
+import type { CropBox } from '@/composables/stages/useCropStage'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   sourceImageUrl: string | null
   bounds: Bounds
-}>()
+  boxes?: CropBox[]
+  selectedId?: string
+  canAdd?: boolean
+  canRemove?: boolean
+}>(), {
+  boxes: () => [],
+  selectedId: '',
+  canAdd: true,
+  canRemove: false,
+})
 
 const emit = defineEmits<{
   'update:bounds': [v: Bounds]
+  select: [id: string]
+  add: [natW: number, natH: number]
+  remove: []
 }>()
 
 const imageEl = ref<HTMLImageElement | null>(null)
@@ -117,7 +167,6 @@ const containerEl = ref<HTMLDivElement | null>(null)
 
 const boundsRef = ref<Bounds>({ ...props.bounds })
 function syncFromProp() { boundsRef.value = { ...props.bounds } }
-import { watch } from 'vue'
 watch(() => props.bounds, syncFromProp, { deep: true })
 watch(boundsRef, (v) => {
   if (
@@ -130,11 +179,12 @@ watch(boundsRef, (v) => {
   }
 }, { deep: true })
 
-import { computed } from 'vue'
 const sourceImageUrlRef = computed(() => props.sourceImageUrl)
 
 const {
   imageUrl, isLoading,
+  naturalWidth, naturalHeight,
+  scaleFactor, imageOffsetX, imageOffsetY,
   cropX, cropY, cropWidth, cropHeight,
   selectedRatio, isLockEnabled,
   cropBoxStyle, resizeHandles,
@@ -147,6 +197,44 @@ const {
   sourceImageUrl: sourceImageUrlRef,
   modelValue: boundsRef,
 })
+
+const hasActive = computed(() =>
+  props.bounds.width > 0 && props.bounds.height > 0)
+
+const inactiveBoxes = computed(() =>
+  (props.boxes ?? []).filter(b => b.id !== props.selectedId && b.width > 0 && b.height > 0))
+
+const activeIndex = computed(() => {
+  const i = (props.boxes ?? []).findIndex(b => b.id === props.selectedId)
+  return i >= 0 ? i + 1 : 1
+})
+
+function boxIndex(box: CropBox): number {
+  const i = (props.boxes ?? []).findIndex(b => b.id === box.id)
+  return i >= 0 ? i + 1 : 0
+}
+
+function boxLabel(box: CropBox): string {
+  return `Crop ${boxIndex(box)}`
+}
+
+function boxStyle(box: CropBox): Record<string, string> {
+  const s = scaleFactor.value
+  return {
+    left: `${imageOffsetX.value + box.x * s - 2}px`,
+    top: `${imageOffsetY.value + box.y * s - 2}px`,
+    width: `${box.width * s}px`,
+    height: `${box.height * s}px`,
+  }
+}
+
+function onImageLoad() {
+  handleImageLoad()
+}
+
+function onAdd() {
+  emit('add', naturalWidth.value, naturalHeight.value)
+}
 
 const { t } = useI18n()
 const ratioOptions = Object.keys(ASPECT_RATIOS).map((key) => ({
@@ -186,6 +274,38 @@ function boundFieldSet(b: BoundField, raw: string) {
 .crop-canvas-backdrop {
   background: var(--v2-checker, #1d1d22 repeating-conic-gradient(#25252b 0% 25%, #1d1d22 0% 50%));
   background-size: 18px 18px;
+}
+.crop-box {
+  position: absolute;
+  box-sizing: content-box;
+  border: 2px solid #fff;
+  user-select: none;
+}
+.crop-box--active {
+  cursor: move;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.5);
+  z-index: 2;
+}
+.crop-box--idle {
+  cursor: pointer;
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.75);
+  background: transparent;
+  padding: 0;
+  z-index: 1;
+}
+.crop-box--idle:hover { border-color: #fff; background: rgb(255 255 255 / 0.06); }
+.crop-box__tag {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  min-width: 16px;
+  padding: 1px 4px;
+  border-radius: 0 0 4px 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font: 600 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  pointer-events: none;
 }
 .ctv-crop-select :deep(button) {
   height: 24px;

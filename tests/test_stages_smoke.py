@@ -53,7 +53,7 @@ class TestSchemaDefinitions:
         "Model3DStage",
         # Edits
         "UpscaleStage", "InpaintStage", "OutpaintStage", "EraseStage",
-        "ImageEditStage", "ImageVariationsStage", "RelightStage",
+        "ImageEditStage", "ImageVariationsStage", "LayerSeparationStage", "RelightStage",
         "MultiangleStage", "CutoutStage", "CropStage", "RotateStage",
         "MirrorStage", "CompareStage", "GridSplitStage", "CustomSplitStage",
         "ImagesSplitStage", "ImageMergeStage",
@@ -358,6 +358,23 @@ class TestEditStageExecute:
         assert out.values[0]
 
     @pytest.mark.asyncio
+    async def test_erase_empty_mask_passthrough(self, reset_db):
+        from ComfyTV.nodes.stages.edits import EraseStage
+        out = await EraseStage.execute(project_id="default",
+                                       image="/view?filename=a.png",
+                                       mask_data="")
+        assert out.values[0] == "/view?filename=a.png"
+
+    @pytest.mark.asyncio
+    async def test_inpaint_empty_mask_passthrough(self, reset_db):
+        from ComfyTV.nodes.stages.edits import InpaintStage
+        out = await InpaintStage.execute(project_id="default",
+                                         main_prompt="x",
+                                         image="/view?filename=b.png",
+                                         mask_data="")
+        assert out.values[0] == "/view?filename=b.png"
+
+    @pytest.mark.asyncio
     async def test_image_edit(self, reset_db):
         from ComfyTV.nodes.stages.edits import ImageEditStage
         out = await ImageEditStage.execute(project_id="default", main_prompt="x",
@@ -416,7 +433,8 @@ class TestTransformStageExecute:
         from ComfyTV.nodes.stages.edits import CropStage
         out = CropStage.execute(project_id="default",
                                 image="/view?filename=a.png",
-                                crop_x=0, crop_y=0, crop_w=100, crop_h=100)
+                                crop_x=0, crop_y=0, crop_w=100, crop_h=100,
+                                crop_boxes="[]")
         assert out.values[0]
 
     def test_rotate(self, reset_db):

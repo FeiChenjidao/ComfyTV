@@ -3,7 +3,14 @@
     <CropCanvas
       :source-image-url="sourceImageUrl"
       :bounds="bounds"
-      @update:bounds="onBoundsUpdate"
+      :boxes="boxes"
+      :selected-id="selectedId"
+      :can-add="canAdd"
+      :can-remove="canRemove"
+      @update:bounds="setBounds"
+      @select="selectBox"
+      @add="(w, h) => addBox(w, h)"
+      @remove="removeSelected"
     />
 
     <div class="ctv:text-2xs ctv:text-center ctv:py-0.5 ctv:tracking-wide">
@@ -30,7 +37,6 @@ import type { StageState } from '@/stores/stageStore'
 import StageCard from '@/components/stages/StageCard.vue'
 import CropCanvas from '@/components/widgets/CropCanvas.vue'
 import { useCropStage } from '@/composables/stages/useCropStage'
-import type { Bounds } from '@/composables/widgets/useImageCrop'
 
 const props = defineProps<{
   state: StageState
@@ -41,9 +47,9 @@ const props = defineProps<{
   node: LGraphNode
 }>()
 
-const { sourceImageUrl, bounds, setBounds, computing } = useCropStage(props.node, props.state)
-
-function onBoundsUpdate(v: Bounds) {
-  setBounds(v)
-}
+const {
+  sourceImageUrl, bounds, boxes, selectedId,
+  setBounds, selectBox, addBox, removeSelected,
+  canAdd, canRemove, computing,
+} = useCropStage(props.node, props.state)
 </script>

@@ -1,26 +1,31 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick, reactive, ref } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, reactive } from 'vue'
 
 import type { ResolvedInput, StageState } from '@/stores/stageStore'
+import { useStageStore } from '@/stores/stageStore'
 
-const pipelineState = vi.hoisted(() => ({
-  requestRecompute: vi.fn(),
-  lastOptions: null as any,
-}))
-vi.mock('@/composables/widgets/useTransformPipeline', () => ({
-  useTransformPipeline: vi.fn((options: unknown) => {
-    pipelineState.lastOptions = options
-    return { computing: ref(false), requestRecompute: pipelineState.requestRecompute }
-  }),
+const uploadCanvas = vi.hoisted(() => vi.fn(async (_c: unknown, opts: { filename: string }) =>
+  `/view?filename=${opts.filename}&subfolder=comfytv/cropper&type=input`))
+
+vi.mock('@/utils/uploadCanvas', () => ({
+  uploadCanvas: (...a: unknown[]) => uploadCanvas(...a),
 }))
 
-import { clampCropRect, cropToCanvas, useCropStage } from './useCropStage'
+import {
+  clampCropRect,
+  cropToCanvas,
+  defaultCropBox,
+  parseCropBoxes,
+  serializeCropBoxes,
+  useCropStage,
+} from './useCropStage'
 
 function makeWidget(name: string, value: unknown = 0) {
   return { name, value, callback: vi.fn() }
 }
 
-function makeNode(b: Partial<{ x: number; y: number; w: number; h: number }> = {}): any {
+function makeNode(b: Partial<{ x: number; y: number; w: number; h: number; boxes: string }> = {}): any {
   return {
     id: 5,
     widgets: [
@@ -28,6 +33,8 @@ function makeNode(b: Partial<{ x: number; y: number; w: number; h: number }> = {
       makeWidget('crop_y', b.y ?? 0),
       makeWidget('crop_w', b.w ?? 0),
       makeWidget('crop_h', b.h ?? 0),
+      makeWidget('crop_boxes', b.boxes ?? '[]'),
+      makeWidget('selected_index', 1),
     ],
     onConfigure: null as any,
   }
@@ -38,16 +45,21 @@ function makeState(image: string | null = '/img.png'): StageState {
     ? [{ slot: 'image', type: 'COMFYTV_IMAGE', source: 'empty', content: null }]
     : [{ slot: 'image', type: 'COMFYTV_IMAGE', source: 'upstream', content: image }]
   return reactive({
-    kind: 'image', variant: 'crop',
-    outputType: 'COMFYTV_IMAGE',
-    output: null, outputs: [null],
+    kind: 'image-batch', variant: 'transform',
+    outputType: 'COMFYTV_IMAGES',
+    output: null, outputs: [null, null],
     running: false, inputs, mainPrompt: '',
   }) as unknown as StageState
 }
 
 beforeEach(() => {
-  pipelineState.requestRecompute.mockClear()
-  pipelineState.lastOptions = null
+  setActivePinia(createPinia())
+  uploadCanvas.mockClear()
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('clampCropRect', () => {
@@ -84,95 +96,111 @@ describe('cropToCanvas', () => {
       spy.mockRestore()
     }
   })
+})
 
-  it('throws when the 2d context is unavailable', () => {
-    const spy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
-    try {
-      const img = { naturalWidth: 640, naturalHeight: 480 } as HTMLImageElement
-      expect(() => cropToCanvas(img, { x: 0, y: 0, width: 10, height: 10 })).toThrow()
-    } finally {
-      spy.mockRestore()
-    }
+describe('parse/serialize crop boxes', () => {
+  it('round-trips boxes', () => {
+    const raw = serializeCropBoxes([
+      { id: 'a', x: 1, y: 2, width: 3, height: 4 },
+      { id: 'b', x: 5, y: 6, width: 7, height: 8 },
+    ])
+    expect(parseCropBoxes(raw)).toEqual([
+      { id: 'a', x: 1, y: 2, width: 3, height: 4 },
+      { id: 'b', x: 5, y: 6, width: 7, height: 8 },
+    ])
+  })
+
+  it('accepts width/height aliases', () => {
+    expect(parseCropBoxes('[{"id":"z","x":0,"y":0,"width":10,"height":20}]'))
+      .toEqual([{ id: 'z', x: 0, y: 0, width: 10, height: 20 }])
+  })
+
+  it('builds a centered default box', () => {
+    const b = defaultCropBox(100, 100)
+    expect(b.width).toBe(70)
+    expect(b.height).toBe(70)
+    expect(b.x).toBe(15)
+    expect(b.y).toBe(15)
   })
 })
 
 describe('useCropStage', () => {
-  it('seeds bounds from the crop widgets', () => {
+  it('seeds a single box from legacy crop widgets', () => {
     const api = useCropStage(makeNode({ x: 1, y: 2, w: 3, h: 4 }), makeState())
+    expect(api.boxes.value).toHaveLength(1)
     expect(api.bounds.value).toEqual({ x: 1, y: 2, width: 3, height: 4 })
   })
 
-  it('exposes the upstream image url', () => {
-    expect(useCropStage(makeNode(), makeState('/a.png')).sourceImageUrl.value).toBe('/a.png')
-    expect(useCropStage(makeNode(), makeState(null)).sourceImageUrl.value).toBeNull()
+  it('seeds multiple boxes from crop_boxes JSON', () => {
+    const boxes = serializeCropBoxes([
+      { id: 'a', x: 0, y: 0, width: 10, height: 10 },
+      { id: 'b', x: 20, y: 20, width: 30, height: 30 },
+    ])
+    const api = useCropStage(makeNode({ boxes }), makeState())
+    expect(api.boxes.value.map(b => b.id)).toEqual(['a', 'b'])
+    expect(api.selectedId.value).toBe('a')
   })
 
-  it('writes bounds changes to widgets and schedules a recompute', async () => {
-    const node = makeNode()
+  it('writes boxes JSON and legacy widgets when bounds change', async () => {
+    const node = makeNode({ w: 10, h: 10 })
     const api = useCropStage(node, makeState())
     api.setBounds({ x: 5, y: 6, width: 7, height: 8 })
     await nextTick()
-    expect(node.widgets.map((w: any) => w.value)).toEqual([5, 6, 7, 8])
-    expect(pipelineState.requestRecompute).toHaveBeenCalled()
+    expect(node.widgets.find((w: any) => w.name === 'crop_x').value).toBe(5)
+    expect(node.widgets.find((w: any) => w.name === 'crop_w').value).toBe(7)
+    const parsed = parseCropBoxes(String(node.widgets.find((w: any) => w.name === 'crop_boxes').value))
+    expect(parsed[0]).toMatchObject({ x: 5, y: 6, width: 7, height: 8 })
   })
 
-  it('syncs external widget callbacks into bounds', () => {
-    const node = makeNode()
-    const api = useCropStage(node, makeState())
-    node.widgets[2].callback(120)
-    expect(api.bounds.value.width).toBe(120)
-    node.widgets[0].callback(15)
-    expect(api.bounds.value.x).toBe(15)
+  it('adds and removes boxes', async () => {
+    const api = useCropStage(makeNode({ w: 40, h: 40 }), makeState())
+    expect(api.canRemove.value).toBe(false)
+    api.addBox(200, 200)
+    expect(api.boxes.value).toHaveLength(2)
+    expect(api.canRemove.value).toBe(true)
+    api.removeSelected()
+    expect(api.boxes.value).toHaveLength(1)
+    expect(api.canRemove.value).toBe(false)
   })
 
-  it('restores bounds on node configure only when they differ', async () => {
-    const node = makeNode({ x: 1, y: 1, w: 10, h: 10 })
-    const api = useCropStage(node, makeState())
-    await nextTick()
-    pipelineState.requestRecompute.mockClear()
-    node.onConfigure?.({})
-    await nextTick()
-    expect(pipelineState.requestRecompute).not.toHaveBeenCalled()
-    node.widgets[0].value = 42
-    node.onConfigure?.({})
-    expect(api.bounds.value.x).toBe(42)
-  })
-
-  it('recomputes immediately when a source arrives with valid bounds', () => {
-    useCropStage(makeNode({ w: 10, h: 10 }), makeState('/img.png'))
-    expect(pipelineState.requestRecompute).toHaveBeenCalled()
-  })
-
-  it('skips the initial recompute without valid bounds or source', () => {
-    useCropStage(makeNode(), makeState('/img.png'))
-    expect(pipelineState.requestRecompute).not.toHaveBeenCalled()
-    useCropStage(makeNode({ w: 10, h: 10 }), makeState(null))
-    expect(pipelineState.requestRecompute).not.toHaveBeenCalled()
-  })
-
-  it('passes a compute function that crops with the current bounds', () => {
+  it('uploads each box and emits a batch payload', async () => {
     const drawImage = vi.fn()
     const spy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
       .mockReturnValue({ drawImage } as never)
+    // Fake Image so getSourceImage resolves
+    class FakeImage {
+      crossOrigin = ''
+      complete = true
+      naturalWidth = 100
+      naturalHeight = 100
+      onload: (() => void) | null = null
+      onerror: ((e: unknown) => void) | null = null
+      set src(_v: string) { queueMicrotask(() => this.onload?.()) }
+    }
+    vi.stubGlobal('Image', FakeImage as any)
+
     try {
-      const api = useCropStage(makeNode({ w: 10, h: 10 }), makeState())
-      api.setBounds({ x: 2, y: 3, width: 20, height: 30 })
-      const img = { naturalWidth: 100, naturalHeight: 100 } as HTMLImageElement
-      const canvas = pipelineState.lastOptions.compute(img) as HTMLCanvasElement
-      expect(canvas.width).toBe(20)
-      expect(canvas.height).toBe(30)
-      expect(drawImage).toHaveBeenCalledWith(img, 2, 3, 20, 30, 0, 0, 20, 30)
+      const boxes = serializeCropBoxes([
+        { id: 'a', x: 0, y: 0, width: 20, height: 20 },
+        { id: 'b', x: 30, y: 30, width: 20, height: 20 },
+      ])
+      const node = makeNode({ boxes })
+      const state = makeState('/img.png')
+      const store = useStageStore()
+      const apply = vi.spyOn(store, 'applyExecutedPayload')
+      useCropStage(node, state)
+      await vi.advanceTimersByTimeAsync(300)
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(uploadCanvas).toHaveBeenCalledTimes(2)
+      expect(apply).toHaveBeenCalled()
+      const payload = apply.mock.calls.at(-1)![1] as any
+      const batch = JSON.parse(payload.output[0])
+      expect(batch.images).toHaveLength(2)
+      expect(payload.picked[0]).toContain('comfytv-crop')
     } finally {
       spy.mockRestore()
+      vi.unstubAllGlobals()
     }
-  })
-
-  it('configures the pipeline for the cropper subfolder', () => {
-    useCropStage(makeNode(), makeState())
-    expect(pipelineState.lastOptions).toMatchObject({
-      nodeId: 5,
-      filenamePrefix: 'comfytv-crop',
-      subfolder: 'comfytv/cropper',
-    })
   })
 })

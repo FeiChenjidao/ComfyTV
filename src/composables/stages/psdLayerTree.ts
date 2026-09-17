@@ -2,8 +2,8 @@ import type { GroupData, RasterData, SceneNode } from '@jtydhr88/pentrado'
 
 export const PSD_ROOT_ID = '__root__'
 
-/** Same cap as Layer Editor — one full-doc bitmap per composite, not per layer. */
-export const MAX_COMPOSITE_DIM = 4096
+/** Soft browser safety only — used by OOM retry, not a proactive downscale cap. */
+export const MAX_COMPOSITE_DIM = 16384
 
 export interface PsdTreeRow {
   id: string
@@ -448,15 +448,11 @@ export function shrinkCanvasInPlace(src: HTMLCanvasElement, scale: number): HTML
 }
 
 export function fitCompositeSize(width: number, height: number): FitSize {
+  // Always prefer native document pixels. Downscale only happens reactively in
+  // compositeSubtree when the browser throws a canvas memory error.
   const w = Math.max(1, Math.round(width))
   const h = Math.max(1, Math.round(height))
-  const scale = Math.min(1, MAX_COMPOSITE_DIM / w, MAX_COMPOSITE_DIM / h)
-  if (scale >= 1) return { width: w, height: h, scale: 1 }
-  return {
-    width: Math.max(1, Math.round(w * scale)),
-    height: Math.max(1, Math.round(h * scale)),
-    scale,
-  }
+  return { width: w, height: h, scale: 1 }
 }
 
 export function isMemoryError(e: unknown): boolean {

@@ -4,7 +4,14 @@
       <CropCanvas
         :source-image-url="sourceImageUrl"
         :bounds="bounds"
+        :boxes="boxes"
+        :selected-id="selectedId"
+        :can-add="canAdd"
+        :can-remove="canRemove"
         @update:bounds="setBounds"
+        @select="selectBox"
+        @add="(w, h) => addBox(w, h)"
+        @remove="removeSelected"
       />
       <div v-if="!sourceImageUrl" class="v2-crop__empty">{{ $t('v2.cropHint') }}</div>
     </div>
@@ -31,11 +38,18 @@ const props = defineProps<{
   state: StageState
 }>()
 
-const { sourceImageUrl, bounds, setBounds, computing } = useCropStage(props.node, props.state)
+const {
+  sourceImageUrl, bounds, boxes, selectedId,
+  setBounds, selectBox, addBox, removeSelected,
+  canAdd, canRemove, computing,
+} = useCropStage(props.node, props.state)
 
 const dims = computed(() => {
+  const n = boxes.value.length
   const b = bounds.value
-  return b.width > 0 && b.height > 0 ? `${Math.round(b.width)} × ${Math.round(b.height)}` : '—'
+  if (!(b.width > 0 && b.height > 0)) return n > 1 ? `${n}` : '—'
+  const size = `${Math.round(b.width)} × ${Math.round(b.height)}`
+  return n > 1 ? `${n} · ${size}` : size
 })
 </script>
 

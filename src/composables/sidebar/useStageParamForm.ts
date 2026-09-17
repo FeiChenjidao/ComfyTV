@@ -8,7 +8,7 @@ import { useStageParamStore } from '@/stores/stageParamStore'
 
 export const FALLBACK_STAGE_KINDS = [
   'text', 'image', 'video', 'audio', 'speech', 'panorama',
-  'multiangle', 'multiview',
+  'multiangle', 'multiview', 'layer-separation',
   'upscale', 'outpaint', 'inpaint', 'image-edit', 'erase', 'cutout',
 ]
 

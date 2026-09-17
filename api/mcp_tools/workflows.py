@@ -23,15 +23,15 @@ _BIND_CASTS = ("int", "float", "str")
 _META_KEYS = ("description", "result_type", "result_node", "sizing",
               "prune_when_missing", "meta")
 
-_RESULT_TYPES = ("ui_save_url", "ui_save_batch", "graph_output_first")
+_RESULT_TYPES = ("ui_save_url", "ui_save_batch", "ui_save_layered", "graph_output_first")
 
 def _validate_result_type(value) -> None:
     if value and str(value) not in _RESULT_TYPES:
         raise ValueError(
             f"result_type must be one of {_RESULT_TYPES} — 'ui_save_batch' "
             f"for image batches from a SaveImage-style node, 'ui_save_url' "
-            f"for a single saved file, 'graph_output_first' for a node's "
-            f"first graph output value")
+            f"for a single saved file, 'ui_save_layered' for a layered PSD/PSB "
+            f"save, 'graph_output_first' for a node's first graph output value")
 
 _VALUE_CAP = 200
 

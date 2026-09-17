@@ -368,12 +368,18 @@ class RemoteComfyUIRunner(Runner):
             / uuid.uuid4().hex[:8]
         )
 
-        if rtype == "ui_save_url":
+        if rtype in ("ui_save_url", "ui_save_layered"):
             items = _save_files_from(outputs.get(node_id) or {})
             if not items:
                 raise RuntimeError(
                     f"remote save node {node_id!r} produced no files"
                 )
+            if rtype == "ui_save_layered":
+                layered = [
+                    it for it in items
+                    if str(it.get("filename", "")).lower().endswith((".psd", ".psb"))
+                ]
+                items = layered or items
             return await self._download_file(session, items[0], dest_dir)
 
         if rtype == "ui_save_batch":

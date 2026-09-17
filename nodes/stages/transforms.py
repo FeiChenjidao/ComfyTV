@@ -49,17 +49,24 @@ class CropStage(io.ComfyNode):
                              socketless=True, extra_dict={"hidden": True}),
                 io.Int.Input("crop_h", default=0, min=0, max=8192,
                              socketless=True, extra_dict={"hidden": True}),
+                io.String.Input("crop_boxes", default="[]", multiline=False,
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="JSON array of crop rectangles "
+                                        "[{id,x,y,w,h}, …]. Hidden — driven by the Vue panel."),
                 COMFYTV_IMAGE.Input("image", optional=True),
+                _selected_index_input(),
             ],
-            outputs=[COMFYTV_IMAGE.Output("image")],
+            outputs=[COMFYTV_IMAGES.Output("images"), COMFYTV_IMAGE.Output("image")],
             is_output_node=True,
             hidden=[io.Hidden.unique_id],
         )
 
     @classmethod
     def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
-                crop_x=0, crop_y=0, crop_w=0, crop_h=0, image=""):
-        return io.NodeOutput(image)
+                crop_x=0, crop_y=0, crop_w=0, crop_h=0, crop_boxes="[]",
+                image="", selected_index=1):
+        import json as _json
+        return io.NodeOutput(_json.dumps({"images": [image] if image else []}), image)
 
 
 class RotateStage(io.ComfyNode):
