@@ -421,42 +421,69 @@ class RemoteComfyUIRunner(Runner):
 
         raise RuntimeError(f"unsupported result.type for remote run: {rtype!r}")
 
+    async def _invoke_once(self, session: aiohttp.ClientSession, workflow: dict,
+                           result_meta: dict, client_id: str):
+        try:
+            await self._upload_local_files(session, workflow)
+            self._check_cancel()
+            prompt_id = await self._queue_prompt(session, workflow, client_id)
+        except aiohttp.ClientError as e:
+            raise RuntimeError(
+                f"can't reach remote {self.server['label']!r} "
+                f"({self.server['host']}:{self.server['port']}): {e}"
+            ) from e
+
+        if self.job is not None:
+            self.job.remote_prompt_id = prompt_id
+        _log.info("[ComfyTV/remote] %s queued on %s as %s",
+                  self.id, self.server["label"], prompt_id)
+
+        try:
+            finished = await self._wait_via_ws(
+                session, prompt_id, client_id, float(len(workflow) or 1))
+            if not finished:
+                await self._wait_via_poll(session, prompt_id)
+        except JobCancelled:
+            await self._cancel_on_remote(session, prompt_id)
+            raise
+
+        entry = await self._fetch_history(session, prompt_id)
+        if entry is None:
+            raise RuntimeError(
+                f"remote {self.server['label']!r} finished but has no "
+                f"history for {prompt_id} — was it restarted mid-run?"
+            )
+        self._raise_history_error(entry, self.server["label"])
+        return await self._extract_result(session, entry, result_meta)
+
     async def invoke(self, ctx: RunnerContext):
-        workflow, result_meta = prepare_workflow(self.id, self.kinds, ctx)
+        from ._batch_loop import (
+            batch_loop_iterations,
+            merge_loop_payloads,
+            prepare_iteration,
+        )
+
+        workflow, result_meta, config = prepare_workflow(self.id, self.kinds, ctx)
+        n = batch_loop_iterations(config, ctx.options)
         client_id = f"comfytv-remote-{uuid.uuid4().hex[:12]}"
 
         timeout = aiohttp.ClientTimeout(total=JOB_TIMEOUT_S,
                                         sock_connect=CONNECT_TIMEOUT_S)
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            try:
-                await self._upload_local_files(session, workflow)
+            if n <= 1:
+                return await self._invoke_once(
+                    session, workflow, result_meta, client_id)
+
+            _log.info("[ComfyTV/remote] BatchLoop x%d on %s  stage_prompt=%r",
+                      n, self.server["label"], (ctx.main_prompt or "")[:80])
+            payloads: list = []
+            for i in range(n):
                 self._check_cancel()
-                prompt_id = await self._queue_prompt(session, workflow, client_id)
-            except aiohttp.ClientError as e:
-                raise RuntimeError(
-                    f"can't reach remote {self.server['label']!r} "
-                    f"({self.server['host']}:{self.server['port']}): {e}"
-                ) from e
-
-            if self.job is not None:
-                self.job.remote_prompt_id = prompt_id
-            _log.info("[ComfyTV/remote] %s queued on %s as %s",
-                      self.id, self.server["label"], prompt_id)
-
-            try:
-                finished = await self._wait_via_ws(
-                    session, prompt_id, client_id, float(len(workflow) or 1))
-                if not finished:
-                    await self._wait_via_poll(session, prompt_id)
-            except JobCancelled:
-                await self._cancel_on_remote(session, prompt_id)
-                raise
-
-            entry = await self._fetch_history(session, prompt_id)
-            if entry is None:
-                raise RuntimeError(
-                    f"remote {self.server['label']!r} finished but has no "
-                    f"history for {prompt_id} — was it restarted mid-run?"
-                )
-            self._raise_history_error(entry, self.server["label"])
-            return await self._extract_result(session, entry, result_meta)
+                if i > 0:
+                    workflow, result_meta, config = prepare_workflow(
+                        self.id, self.kinds, ctx)
+                wf = prepare_iteration(workflow, config, i)
+                iter_client = f"{client_id}-b{i + 1}"
+                payloads.append(await self._invoke_once(
+                    session, wf, result_meta, iter_client))
+            return merge_loop_payloads(payloads, result_meta)

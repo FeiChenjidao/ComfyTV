@@ -157,7 +157,8 @@ def test_prepare_workflow_uses_multi(monkeypatch):
         "inputs": {}, "sizing": {}, "prune_when_missing": [],
         "meta": {"custom_io": n},
     })
-    wf, meta = lc.prepare_workflow("custom/x", {"custom"}, RunnerContext(kind="custom"))
+    wf, meta, _cfg = lc.prepare_workflow(
+        "custom/x", {"custom"}, RunnerContext(kind="custom"))
     assert meta["type"] == "multi" and meta["node"] == "92"
     assert lc._execute_node_ids(wf, meta) == ["92", "115"]
     only_text = cio.result_meta_for(cio.normalize_custom_io({"outputs": [{"node": "115", "kind": "image"}]}))

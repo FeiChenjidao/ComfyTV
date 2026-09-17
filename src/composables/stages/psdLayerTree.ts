@@ -5,6 +5,12 @@ export const PSD_ROOT_ID = '__root__'
 /** Soft browser safety only — used by OOM retry, not a proactive downscale cap. */
 export const MAX_COMPOSITE_DIM = 16384
 
+/**
+ * Cap for the on-screen preview only. Full-resolution composite is still uploaded
+ * to `captured_image` / stage outputs for downstream nodes.
+ */
+export const PREVIEW_DISPLAY_MAX_DIM = 2048
+
 export interface PsdTreeRow {
   id: string
   name: string
@@ -447,12 +453,78 @@ export function shrinkCanvasInPlace(src: HTMLCanvasElement, scale: number): HTML
   return tmp
 }
 
+/** Like shrinkCanvasInPlace but never destroys `src` (for cached full-res layers). */
+export function shrinkCanvasCopy(src: HTMLCanvasElement, scale: number): HTMLCanvasElement {
+  if (!(scale > 0) || scale >= 0.999) return src
+  const w = Math.max(1, Math.round(src.width * scale))
+  const h = Math.max(1, Math.round(src.height * scale))
+  if (w >= src.width && h >= src.height) return src
+  const tmp = document.createElement('canvas')
+  tmp.width = w
+  tmp.height = h
+  tmp.getContext('2d')?.drawImage(src, 0, 0, w, h)
+  return tmp
+}
+
+/** Build a scale-matched content map for a display/composite pass. */
+export function scaleContentsMap(src: ContentMap, scale: number): ContentMap {
+  if (!(scale > 0) || scale >= 0.999) return src
+  const out: ContentMap = new Map()
+  for (const [id, canvas] of src) {
+    out.set(id, shrinkCanvasCopy(canvas, scale))
+  }
+  return out
+}
+
+/** Free canvases in `map` that are not shared with `keep`. */
+export function releaseScaledContents(map: ContentMap, keep: ContentMap): void {
+  if (map === keep) return
+  for (const [id, canvas] of map) {
+    if (keep.get(id) === canvas) continue
+    canvas.width = 0
+    canvas.height = 0
+  }
+  map.clear()
+}
+
 export function fitCompositeSize(width: number, height: number): FitSize {
   // Always prefer native document pixels. Downscale only happens reactively in
   // compositeSubtree when the browser throws a canvas memory error.
   const w = Math.max(1, Math.round(width))
   const h = Math.max(1, Math.round(height))
   return { width: w, height: h, scale: 1 }
+}
+
+/** Fit a canvas into the preview budget without mutating the source. */
+export function fitDisplaySize(
+  width: number,
+  height: number,
+  maxDim = PREVIEW_DISPLAY_MAX_DIM,
+): FitSize {
+  const w = Math.max(1, Math.round(width))
+  const h = Math.max(1, Math.round(height))
+  const long = Math.max(w, h)
+  if (!(maxDim > 0) || long <= maxDim) return { width: w, height: h, scale: 1 }
+  const scale = maxDim / long
+  return {
+    width: Math.max(1, Math.round(w * scale)),
+    height: Math.max(1, Math.round(h * scale)),
+    scale,
+  }
+}
+
+/** Returns a new canvas when downscaling; otherwise returns `src` unchanged. */
+export function scaleCanvasToMaxDim(
+  src: HTMLCanvasElement,
+  maxDim = PREVIEW_DISPLAY_MAX_DIM,
+): HTMLCanvasElement {
+  const fit = fitDisplaySize(src.width, src.height, maxDim)
+  if (fit.scale >= 0.999) return src
+  const out = document.createElement('canvas')
+  out.width = fit.width
+  out.height = fit.height
+  out.getContext('2d')?.drawImage(src, 0, 0, fit.width, fit.height)
+  return out
 }
 
 export function isMemoryError(e: unknown): boolean {
@@ -677,9 +749,10 @@ export function compositeSubtree(
   contents: ContentMap,
   skipHidden = true,
   forest?: SceneNode[],
+  fitOverride?: FitSize,
 ): HTMLCanvasElement {
   const clipForest = forest ?? nodes
-  let fit = fitCompositeSize(width, height)
+  let fit = fitOverride ?? fitCompositeSize(width, height)
   const pool = new ScratchPool()
   try {
     for (let attempt = 0; attempt < 5; attempt++) {

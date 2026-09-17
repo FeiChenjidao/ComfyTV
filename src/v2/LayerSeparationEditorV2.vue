@@ -50,7 +50,14 @@
         </button>
       </div>
       <div class="v2-ed__fit v2-psd__preview">
-        <img v-if="previewUrl" :src="previewUrl" draggable="false" @dragstart.prevent />
+        <ThumbImg
+          v-if="previewUrl"
+          class="v2-psd__img"
+          :src="previewUrl"
+          :thumb-max="THUMB_PREVIEW"
+          draggable="false"
+          @dragstart.prevent
+        />
         <div v-else class="v2-ed__empty">{{ $t('layerSeparation.previewHint') }}</div>
       </div>
     </div>
@@ -83,11 +90,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+import ThumbImg from '@/components/widgets/ThumbImg.vue'
 import { spawnOrFocusImagesSplit } from '@/composables/stages/spawnFollowUp'
 import { useLayerSeparation } from '@/composables/stages/useLayerSeparation'
 import { t } from '@/i18n'
 import type { LGraphNode } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
+import { THUMB_PREVIEW } from '@/utils/thumbUrl'
 
 const props = defineProps<{
   node: LGraphNode
@@ -216,6 +225,14 @@ function expandImages() {
 .v2-psd__clip { font-size: 9px; opacity: 0.8; flex: none; }
 .v2-psd__warn { font-size: 9px; color: #fbbf24; flex: none; }
 .v2-psd__preview { position: relative; flex: 1; min-width: 0; }
+.v2-psd__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
 .v2-psd--drag {
   outline: 2px dashed rgba(167, 139, 250, 0.75);
   outline-offset: -2px;

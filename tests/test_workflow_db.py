@@ -219,6 +219,60 @@ class TestNodeWidgetMeta:
         comfy_nodes.NODE_CLASS_MAPPINGS["Foo"] = Foo
         assert wdb._node_widget_meta("Foo") == []
 
+    def test_dynamic_combo_expands_dotted_sub_widgets(self, comfy_nodes):
+        # Nano Banana 2 shape: knobs live under COMFY_DYNAMICCOMBO_V3 ``model``.
+        class GeminiNanoBanana2V2:
+            @classmethod
+            def INPUT_TYPES(cls):
+                return {"required": {
+                    "prompt": ("STRING", {"multiline": True}),
+                    "model": [
+                        "COMFY_DYNAMICCOMBO_V3",
+                        {
+                            "options": [
+                                {
+                                    "key": "nb2",
+                                    "inputs": {
+                                        "required": {
+                                            "aspect_ratio": (["auto", "16:9"], {}),
+                                            "resolution": (["1K", "2K"], {}),
+                                            "thinking_level": (["MINIMAL", "HIGH"], {}),
+                                            "images": ("IMAGE", {}),
+                                        }
+                                    },
+                                }
+                            ]
+                        },
+                    ],
+                    "seed": ("INT", {}),
+                }}
+        comfy_nodes.NODE_CLASS_MAPPINGS["GeminiNanoBanana2V2"] = GeminiNanoBanana2V2
+        meta = wdb._node_widget_meta("GeminiNanoBanana2V2")
+        by_name = {m["name"]: m for m in meta}
+        assert set(by_name) == {
+            "prompt", "model", "model.aspect_ratio", "model.resolution",
+            "model.thinking_level", "seed",
+        }
+        assert "model.images" not in by_name  # connection-only
+        assert by_name["model"]["options"]["values"] == ["nb2"]
+        assert by_name["model.aspect_ratio"]["options"]["values"] == ["auto", "16:9"]
+        assert by_name["model.thinking_level"]["type"] == "COMBO"
+
+    def test_force_input_dynamic_combo_skipped(self, comfy_nodes):
+        class Foo:
+            @classmethod
+            def INPUT_TYPES(cls):
+                return {"required": {
+                    "model": [
+                        "COMFY_DYNAMICCOMBO_V3",
+                        {"forceInput": True, "options": [{"key": "a", "inputs": {
+                            "required": {"x": ("INT", {})},
+                        }}]},
+                    ],
+                }}
+        comfy_nodes.NODE_CLASS_MAPPINGS["Foo"] = Foo
+        assert wdb._node_widget_meta("Foo") == []
+
 
 # ─── _extract_gui_view ───────────────────────────────────────────────────────
 
@@ -380,6 +434,52 @@ class TestExposedWidgets:
         assert seed_row["stage_binding"] == "option:seed"
         assert seed_row["override_value"] == "42"
         assert seed_row["cast"] == "int"
+
+    def test_dynamic_combo_dotted_keys_appear(self, comfy_nodes, tmp_path):
+        class GeminiNanoBanana2V2:
+            @classmethod
+            def INPUT_TYPES(cls):
+                return {"required": {
+                    "model": [
+                        "COMFY_DYNAMICCOMBO_V3",
+                        {"options": [{
+                            "key": "nb2",
+                            "inputs": {"required": {
+                                "aspect_ratio": (["auto", "1:1"], {}),
+                                "resolution": (["1K", "2K"], {}),
+                                "thinking_level": (["MINIMAL", "HIGH"], {}),
+                                "images": ("IMAGE", {}),
+                            }},
+                        }]},
+                    ],
+                    "seed": ("INT", {}),
+                }}
+        comfy_nodes.NODE_CLASS_MAPPINGS["GeminiNanoBanana2V2"] = GeminiNanoBanana2V2
+        doc = {
+            "nodes": [{
+                "id": 1, "type": "GeminiNanoBanana2V2", "title": "Nano Banana 2",
+                "pos": [0, 0],
+            }],
+            "groups": [],
+        }
+        path = tmp_path / "nb2.json"
+        path.write_text(json.dumps(doc), encoding="utf-8")
+        api = {"1": {"class_type": "GeminiNanoBanana2V2", "inputs": {
+            "model": "nb2",
+            "model.aspect_ratio": "auto",
+            "model.resolution": "1K",
+            "model.thinking_level": "HIGH",
+            "seed": 0,
+        }}}
+        out = wdb._exposed_widgets(1, str(path), [], api)
+        names = [r["widget_name"] for r in out]
+        assert names == [
+            "model", "model.aspect_ratio", "model.resolution",
+            "model.thinking_level", "seed",
+        ]
+        ar = next(r for r in out if r["widget_name"] == "model.aspect_ratio")
+        assert ar["current_value"] == "auto"
+        assert ar["widget_type"] == "COMBO"
 
 
 # ─── DB-touching: seed_workflows_from_disk + get/upsert/delete ───────────────

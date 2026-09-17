@@ -28,18 +28,18 @@ _UPSTREAM_BUCKET_BY_KIND = {
 }
 
 
+_SHORT_SIDE_BY_TIER = {
+    "480P": 480, "720P": 720, "1K": 1024, "1080P": 1080,
+    "1440P": 1440, "2K": 2048, "2160P": 2160, "4K": 4096,
+}
+
+
 def _aspect_ratio_value(s: str) -> float:
     try:
         a, b = s.split(":")
         return int(a) / int(b)
     except (ValueError, ZeroDivisionError, AttributeError):
         return 1.0
-
-
-_SHORT_SIDE_BY_TIER = {
-    "480P": 480, "720P": 720, "1K": 1024, "1080P": 1080,
-    "1440P": 1440, "2K": 2048, "2160P": 2160, "4K": 4096,
-}
 
 
 def _resolve_wh(sizing: dict, options: dict) -> tuple[int, int]:

@@ -5,6 +5,7 @@ import { askConfirm } from '@/composables/dialog/useConfirmDialog'
 import { tryOpenWorkflowInComfy } from '@/composables/useOpenInComfy'
 import { invalidateWorkflowInfo } from '@/composables/stages/useWorkflowValidator'
 import { prepareWorkflow } from '@/composables/stages/useWorkflowPrep'
+import { clearBoundOptionEnumsCache } from '@/composables/stages/boundOptionEnums'
 import { removeOptionEverywhere } from '@/composables/stages/workflowCombo'
 import { app } from '@/lib/comfyApp'
 import { useSelectionStore } from '@/stores/selectionStore'
@@ -179,6 +180,12 @@ export function useWorkflowConfig(t: (key: string, args?: Record<string, unknown
 
   function notifyValidatorOfBindingChange() {
     invalidateWorkflowInfo()
+    const sel = selection.selected
+    if (sel?.workflowKind && sel?.workflowLabel) {
+      clearBoundOptionEnumsCache(sel.workflowKind, sel.workflowLabel)
+    } else {
+      clearBoundOptionEnumsCache()
+    }
     selection.bumpBindings()
   }
 

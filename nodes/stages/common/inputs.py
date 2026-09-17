@@ -88,14 +88,16 @@ def _image_template(max_n: int = 12) -> 'io.Autogrow.TemplatePrefix':
 
 
 # Turnaround / multi-view faces for 3D Model Stage (and Custom Split wiring).
-FACE_IMAGE_NAMES = ["正", "左", "背", "右"]
+# 辅 = optional 5th ref for Rodin Gen-2.5 (accepts up to 5 images).
+FACE_IMAGE_NAMES = ["正", "左", "背", "右", "辅"]
 
 
 def _face_image_template() -> 'io.Autogrow.TemplateNames':
     return io.Autogrow.TemplateNames(
         COMFYTV_IMAGE.Input("image", optional=True),
         names=list(FACE_IMAGE_NAMES),
-        min=len(FACE_IMAGE_NAMES),
+        # Keep the four turnaround slots always present; 辅 may stay empty.
+        min=4,
     )
 
 

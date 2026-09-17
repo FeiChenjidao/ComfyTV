@@ -10,6 +10,11 @@ import {
   defaultCollapsedIds,
   findSceneNode,
   fitCompositeSize,
+  fitDisplaySize,
+  PREVIEW_DISPLAY_MAX_DIM,
+  scaleCanvasToMaxDim,
+  scaleContentsMap,
+  releaseScaledContents,
   flattenPsdTree,
   isolateSelected,
   isolateSubtree,
@@ -286,6 +291,44 @@ describe('fitCompositeSize / memory', () => {
 
   it('keeps native document size even above the old 4K soft cap', () => {
     expect(fitCompositeSize(8192, 4096)).toEqual({ width: 8192, height: 4096, scale: 1 })
+  })
+
+  it('caps preview display size without changing the full composite fit', () => {
+    expect(fitDisplaySize(120, 80)).toEqual({ width: 120, height: 80, scale: 1 })
+    const fit = fitDisplaySize(8192, 4096)
+    expect(Math.max(fit.width, fit.height)).toBe(PREVIEW_DISPLAY_MAX_DIM)
+    expect(fit.scale).toBeCloseTo(PREVIEW_DISPLAY_MAX_DIM / 8192)
+    expect(fitCompositeSize(8192, 4096).scale).toBe(1)
+  })
+
+  it('scaleCanvasToMaxDim leaves small canvases alone', () => {
+    const src = document.createElement('canvas')
+    src.width = 64
+    src.height = 48
+    expect(scaleCanvasToMaxDim(src)).toBe(src)
+  })
+
+  it('scaleContentsMap shares the source map at scale 1', () => {
+    const c = document.createElement('canvas')
+    c.width = 4
+    c.height = 4
+    const src = new Map([['a', c]])
+    expect(scaleContentsMap(src, 1)).toBe(src)
+  })
+
+  it('scaleContentsMap copies canvases when downscaling', () => {
+    const c = document.createElement('canvas')
+    c.width = 100
+    c.height = 50
+    const src = new Map([['a', c]])
+    const out = scaleContentsMap(src, 0.5)
+    expect(out).not.toBe(src)
+    expect(out.get('a')!.width).toBe(50)
+    expect(out.get('a')!.height).toBe(25)
+    expect(c.width).toBe(100)
+    releaseScaledContents(out, src)
+    expect(out.size).toBe(0)
+    expect(c.width).toBe(100)
   })
 
   it('detects Chrome canvas memory errors', () => {

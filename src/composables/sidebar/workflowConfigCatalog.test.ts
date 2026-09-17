@@ -35,6 +35,7 @@ import {
   groupExposedWidgets,
   isResultNodeCandidate,
   loadCaps,
+  reloadCaps,
   resultTypesForKind,
   type ExposedWidget,
 } from './workflowConfigCatalog'
@@ -127,6 +128,16 @@ describe('buildBindingOptions', () => {
     expect(vals.some(v => v.startsWith('upstream_video:'))).toBe(true)
     expect(vals.some(v => v.startsWith('upstream_audio:'))).toBe(true)
     expect(vals.some(v => v.startsWith('upstream_text:'))).toBe(true)
+  })
+
+  it('promotes matching Stage option for aspect_ratio / resolution widgets', async () => {
+    CAPS.caps_by_kind.image.option_keys.push('option:aspect_ratio', 'option:resolution')
+    CAPS.option_labels['option:aspect_ratio'] = 'Stage aspect ratio'
+    CAPS.option_labels['option:resolution'] = 'Stage resolution'
+    await reloadCaps()
+    const opts = buildBindingOptions([], 'image', { widget_name: 'model.aspect_ratio' })
+    expect(opts[1]?.value).toBe('option:aspect_ratio')
+    expect(opts[1]?.label).toContain('★')
   })
 
   it('every kind from caps produces a valid options list', () => {

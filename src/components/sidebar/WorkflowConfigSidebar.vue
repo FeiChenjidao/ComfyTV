@@ -188,7 +188,7 @@
                   <span class="ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground">{{ $t('configSidebar.bindTo') }}</span>
                   <ComfyTVSelect
                     :model-value="dropdownValueFor(w)"
-                    :options="bindingOptions"
+                    :options="bindingOptionsFor(w)"
                     @update:model-value="onBindingChange(w, $event as string)"
                   />
                 </div>
@@ -388,12 +388,13 @@ const { isCollapsed, toggle: toggleCollapsed } = useCollapsedNodeIds(workflowId)
 const { collapsed: notesCollapsed, toggle: toggleNotesCollapsed } =
   useCollapsedFlag(workflowId, 'comfytv:sidebar:notes-collapsed:')
 
-const bindingOptions = computed(() =>
-  buildBindingOptions(
+function bindingOptionsFor(w: ExposedWidget) {
+  return buildBindingOptions(
     config.value?.exposed_widgets ?? [],
     selected.value?.workflowKind,
-  ),
-)
+    w,
+  )
+}
 
 const {
   searchQuery,

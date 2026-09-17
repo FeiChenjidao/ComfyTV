@@ -331,6 +331,20 @@ body[data-v2-panel-on-select] .lg-node[data-v2-shell]:not([data-v2-selected]) .v
 body[data-v2-panel-on-select] .lg-node[data-v2-shell]:not([data-v2-selected]) .v2-ed__status {
   display: none !important;
 }
+/* Temporary reveal for height sampling — must beat the rule above */
+.v2-panel-measuring,
+.v2-fx-footer.v2-panel-measuring,
+.v2-ed__panel.v2-panel-measuring,
+.v2-ed__status.v2-panel-measuring {
+  display: flex !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
 .v2-toolbar:empty { display: none !important; }
 .v2-toolbar__btn {
   display: flex;

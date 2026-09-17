@@ -29,9 +29,12 @@ describe('sizing constants', () => {
     expect(sides).toEqual([...sides].sort((a, b) => a - b))
   })
 
-  it('aspect ratios are the 10-entry superset', () => {
+  it('aspect ratios include Stage defaults plus partner extras (auto, ultra-wide)', () => {
+    expect(ASPECT_RATIOS).toContain('auto')
     expect(ASPECT_RATIOS).toContain('3:2')
     expect(ASPECT_RATIOS).toContain('2:3')
-    expect(ASPECT_RATIOS.length).toBe(10)
+    expect(ASPECT_RATIOS).toContain('1:4')
+    expect(ASPECT_RATIOS).toContain('8:1')
+    expect(ASPECT_RATIOS.length).toBe(15)
   })
 })

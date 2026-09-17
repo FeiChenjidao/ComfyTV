@@ -50,6 +50,16 @@ HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
   globalCompositeOperation: 'source-over',
 })) as any
 
+HTMLCanvasElement.prototype.toBlob = function (cb: BlobCallback) {
+  cb(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }))
+}
+
+vi.stubGlobal('URL', {
+  ...URL,
+  createObjectURL: vi.fn(() => 'blob:mock-preview'),
+  revokeObjectURL: vi.fn(),
+})
+
 function makeWidget(name: string, value = '') {
   return { name, value, callback: vi.fn() }
 }

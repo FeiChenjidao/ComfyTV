@@ -121,10 +121,24 @@ export function useBindingWriter(
       cast = 'int'
       defaultValue = 'random_int31'
     } else if (newBinding === 'option:batch_size' ||
+               newBinding === 'option:face_limit' ||
                newBinding === 'computed:width' ||
                newBinding === 'computed:height' ||
                newBinding === 'computed:length') {
       cast = 'int'
+    } else if (
+      newBinding === 'option:texture' ||
+      newBinding === 'option:pbr' ||
+      newBinding === 'option:quad' ||
+      newBinding === 'option:smart_low_poly' ||
+      newBinding === 'option:auto_size' ||
+      newBinding === 'option:tapose' ||
+      newBinding === 'option:hd_texture' ||
+      newBinding === 'option:texture_delight' ||
+      newBinding === 'option:addon_highpack' ||
+      newBinding === 'option:generate_audio'
+    ) {
+      cast = 'bool'
     }
     const isUpstream = newBinding.startsWith('upstream_')
     w.stage_binding  = newBinding

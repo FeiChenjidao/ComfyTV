@@ -1,6 +1,7 @@
 import { apiFetch, WorkflowInfoSchema } from '@/api'
 import { missingRequiredPositions } from '@/composables/stages/assetSlots'
 import { currentMediaTable, type MediaEntry, nodeAcceptsMedia } from '@/composables/stages/mediaOrder'
+import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
 
 export type SlotWarningStatus = 'wired_but_unused' | 'required_but_missing'
 
@@ -49,6 +50,8 @@ export function loadWorkflowInfo(): Promise<WorkflowInfo> {
 
 export function invalidateWorkflowInfo() {
   _infoPromise = null
+  // Bound-option panels (StageControls / ParamsPanel) watch this.
+  comboOptionsVersion.value++
 }
 
 function slotKind(type: string | undefined | null): Kind | null {

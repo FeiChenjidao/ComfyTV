@@ -1,4 +1,4 @@
-import { AUTOGROW_KEY_RE } from '@/composables/stages/mediaOrder'
+import { isMediaSocketName, liveLinks } from '@/composables/stages/mediaOrder'
 
 export interface SlotEl { slot?: number; bind?: string }
 export interface SlotOverride { slot?: number }
@@ -15,11 +15,13 @@ export function curSlot(el: SlotEl, override?: SlotOverride | null): number {
   return Number.isInteger(o.slot) ? (o.slot as number) : defaultSlot(el)
 }
 
+/** Wired image sockets on the node (autogrow + plain image / image_a|b). */
 export function connectedImageCount(inputs: NodeInput[]): number {
-  let maxIdx = -1
-  for (const inp of inputs || []) {
-    const m = AUTOGROW_KEY_RE.image.exec(inp.name || '')
-    if (m && inp.link != null) maxIdx = Math.max(maxIdx, parseInt(m[1]!, 10))
+  const node = { inputs }
+  if (!inputs?.some(i => typeof i?.name === 'string' && isMediaSocketName(i.name, 'image'))) {
+    return 0
   }
-  return maxIdx + 1
+  const links = liveLinks(node, 'image')
+  if (links.length === 0) return 0
+  return Math.max(...links.map(l => l.slot)) + 1
 }
