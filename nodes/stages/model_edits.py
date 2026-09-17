@@ -129,6 +129,15 @@ class InpaintStage(io.ComfyNode):
     @classmethod
     async def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
                       workflow="", mask_data="", main_prompt="", image="", custom_params="{}"):
+        # Queue-all / Preview runs every is_output_node. Empty mask → pass through
+        # so unfinished Inpaint/Erase cards don't fail the whole graph.
+        if not str(mask_data or "").strip():
+            return _stage_emit_auto(
+                cls,
+                project_id=project_id,
+                payload_str=image or "",
+                parent_output_id=parent_output_id,
+            )
         return await run_stage_workflow(
             cls,
             custom_params=custom_params,
@@ -207,6 +216,15 @@ class EraseStage(io.ComfyNode):
     @classmethod
     async def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
                       workflow="", mask_data="", image="", custom_params="{}"):
+        # Same as Inpaint: empty mask must not abort a full-graph Queue Prompt
+        # (e.g. Preview Image on another branch). Pass the upstream image through.
+        if not str(mask_data or "").strip():
+            return _stage_emit_auto(
+                cls,
+                project_id=project_id,
+                payload_str=image or "",
+                parent_output_id=parent_output_id,
+            )
         return await run_stage_workflow(
             cls,
             custom_params=custom_params,

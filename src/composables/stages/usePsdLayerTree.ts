@@ -235,6 +235,13 @@ export function usePsdLayerTree(node: LGraphNode, state: StageState) {
     }
   }
 
+  async function loadFromUrl(url: string) {
+    const next = String(url || '').trim()
+    if (!next) return
+    writeWidget(node, 'psd_file', next, { fireCallback: false })
+    await loadFromWidgetUrl()
+  }
+
   function schedule() {
     if (timer != null) {
       window.clearTimeout(timer)
@@ -376,6 +383,6 @@ export function usePsdLayerTree(node: LGraphNode, state: StageState) {
     fileName, width, height, outWidth, outHeight,
     rows, displayedRows, selectedId, selectedIds, selectedSet, selectedRow,
     warnings, loading, compositing, error, previewUrl,
-    collapsed, toggleCollapsed, selectId, selectRow, pickFiles,
+    collapsed, toggleCollapsed, selectId, selectRow, pickFiles, loadFromUrl,
   }
 }

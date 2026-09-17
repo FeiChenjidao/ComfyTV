@@ -284,11 +284,8 @@ describe('fitCompositeSize / memory', () => {
     expect(fitCompositeSize(120, 80)).toEqual({ width: 120, height: 80, scale: 1 })
   })
 
-  it(`caps the long edge at ${MAX_COMPOSITE_DIM}`, () => {
-    const fit = fitCompositeSize(8192, 4096)
-    expect(fit.width).toBe(MAX_COMPOSITE_DIM)
-    expect(fit.height).toBe(MAX_COMPOSITE_DIM / 2)
-    expect(fit.scale).toBeCloseTo(0.5)
+  it('keeps native document size even above the old 4K soft cap', () => {
+    expect(fitCompositeSize(8192, 4096)).toEqual({ width: 8192, height: 4096, scale: 1 })
   })
 
   it('detects Chrome canvas memory errors', () => {

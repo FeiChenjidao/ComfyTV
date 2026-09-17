@@ -41,6 +41,8 @@ CAPS_BY_KIND: dict[str, dict] = {
                            []),
     'sequence':      _caps(['image'],                      ['option:seed'],
                            []),
+    'layer-separation': _caps(['image'],                   ['option:seed'],
+                           []),
     'timeline':      _caps([],                             [],
                            []),
     'audio-vocal':   _caps(['video'],                      [],

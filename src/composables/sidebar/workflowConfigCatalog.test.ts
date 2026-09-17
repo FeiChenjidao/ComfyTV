@@ -328,9 +328,15 @@ describe('resultTypesForKind', () => {
 
   it('falls back to all types for unknown/empty kind', () => {
     expect(resultTypesForKind(undefined)).toEqual(
-      ['graph_output_first', 'ui_save_batch', 'ui_save_url'],
+      ['graph_output_first', 'ui_save_batch', 'ui_save_url', 'ui_save_layered'],
     )
-    expect(resultTypesForKind('')).toHaveLength(3)
+    expect(resultTypesForKind('')).toHaveLength(4)
+  })
+
+  it('offers layered for layer-separation', () => {
+    expect(resultTypesForKind('layer-separation')).toEqual([
+      'ui_save_layered', 'ui_save_batch', 'ui_save_url',
+    ])
   })
 })
 

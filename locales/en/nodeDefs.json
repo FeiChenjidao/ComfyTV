@@ -108,6 +108,9 @@
     "ImageVariationsStage": {
       "display_name": "Image Variations"
     },
+    "LayerSeparationStage": {
+      "display_name": "Layer Separation"
+    },
     "ImagesSplitStage": {
       "display_name": "Split Images"
     },
@@ -808,6 +811,9 @@
   "ComfyTV_CropStage": {
     "display_name": "Crop",
     "inputs": {
+      "crop_boxes": {
+        "name": "Crop boxes"
+      },
       "crop_h": {
         "name": "Crop height"
       },
@@ -822,10 +828,16 @@
       },
       "image": {
         "name": "Image"
+      },
+      "selected_index": {
+        "name": "Selected"
       }
     },
     "outputs": {
       "0": {
+        "name": "Images"
+      },
+      "1": {
         "name": "Image"
       }
     }
@@ -1191,6 +1203,28 @@
       },
       "1": {
         "name": "Image"
+      }
+    }
+  },
+  "ComfyTV_LayerSeparationStage": {
+    "display_name": "Layer Separation",
+    "inputs": {
+      "image": {
+        "name": "Image"
+      },
+      "workflow": {
+        "name": "Workflow"
+      },
+      "main_prompt": {
+        "name": "Prompt"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Image"
+      },
+      "1": {
+        "name": "Images"
       }
     }
   },

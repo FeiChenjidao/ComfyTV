@@ -39,6 +39,7 @@
       "imagesSplit": "图像组分离",
       "imageMerge": "图片合并",
       "psdLayerTree": "PSD 图层树",
+      "layerSeparation": "图层分离",
       "compareHint": "接入 A、B 两张图开始对比",
       "wired": "已接入",
       "empty": "未接入"
@@ -897,7 +898,8 @@
       "label": "类型",
       "text": "文本 / 值 (slot 0)",
       "file": "保存的文件 (图片 / 视频 / 音频)",
-      "batch": "保存的图片批次"
+      "batch": "保存的图片批次",
+      "layered": "分层图像"
     },
     "bindingRequired": "必填",
     "mentionStyle": {
@@ -1097,6 +1099,10 @@
       "storyboard-25": {
         "label": "25 宫格连贯分镜",
         "tooltip": "25 张连贯分镜"
+      },
+      "layer-separation": {
+        "label": "图层分离",
+        "tooltip": "把图拆成可合成的分层结果"
       },
       "cinematic-light": {
         "label": "电影级光影校正",
@@ -1639,7 +1645,9 @@
     "unlockRatio": "解锁纵横比",
     "applying": "应用裁剪中…",
     "applied": "裁剪已应用 — 下游可直接使用",
-    "adjustToApply": "拖动矩形或选择比例以应用"
+    "adjustToApply": "拖动矩形或选择比例以应用",
+    "addBox": "加框",
+    "removeBox": "删框"
   },
   "panorama": {
     "empty": "暂无全景图 — 上传 HDRI / 等距柱状投影图，或接入上游图后点 Run",
@@ -1833,6 +1841,11 @@
     "clickHint": "单击选择 · Ctrl/⌘ 加选 · Shift 范围选择",
     "clipping": "剪切蒙版",
     "expand": "展开"
+  },
+  "layerSeparation": {
+    "emptyHint": "运行工作流或拖入 PSD 以加载图层",
+    "previewHint": "合成预览",
+    "loadPsd": "加载 PSD"
   },
   "imagesSplit": {
     "connect": "请接入图像组",

@@ -211,11 +211,17 @@ async def _extract_result(executor, result_meta: dict) -> str:
             "result.node is required (id of the save / output node to read)"
         )
 
-    if rtype == "ui_save_url":
+    if rtype in ("ui_save_url", "ui_save_layered"):
         outputs = (executor.history_result or {}).get("outputs", {})
         items = _save_files_from(outputs.get(node_id) or {})
         if not items:
             raise RuntimeError(f"save node {node_id!r} produced no files")
+        if rtype == "ui_save_layered":
+            layered = [
+                it for it in items
+                if str(it.get("filename", "")).lower().endswith((".psd", ".psb"))
+            ]
+            items = layered or items
         first = items[0]
         return _view_url(
             filename=first.get("filename", ""),

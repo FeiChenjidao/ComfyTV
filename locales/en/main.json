@@ -39,6 +39,7 @@
       "imagesSplit": "Split Images",
       "imageMerge": "Merge Images",
       "psdLayerTree": "PSD Layer Tree",
+      "layerSeparation": "Layer Separation",
       "compareHint": "Wire two images into A and B to compare",
       "wired": "wired",
       "empty": "empty"
@@ -897,7 +898,8 @@
       "label": "As",
       "text": "Text / value (slot 0)",
       "file": "Saved file (image / video / audio)",
-      "batch": "Saved image batch"
+      "batch": "Saved image batch",
+      "layered": "Layered image"
     },
     "bindingRequired": "Required",
     "mentionStyle": {
@@ -1097,6 +1099,10 @@
       "storyboard-25": {
         "label": "25-grid Storyboard",
         "tooltip": "25 consecutive storyboard shots"
+      },
+      "layer-separation": {
+        "label": "Layer Separation",
+        "tooltip": "Separate the image into composable layers"
       },
       "cinematic-light": {
         "label": "Cinematic Lighting",
@@ -1639,7 +1645,9 @@
     "unlockRatio": "Unlock aspect ratio",
     "applying": "Applying crop…",
     "applied": "Crop applied — ready for downstream",
-    "adjustToApply": "Drag the rectangle or pick a ratio to apply"
+    "adjustToApply": "Drag the rectangle or pick a ratio to apply",
+    "addBox": "Add box",
+    "removeBox": "Remove"
   },
   "panorama": {
     "empty": "No panorama yet — upload an HDRI / equirect image or click Run with an upstream image",
@@ -1833,6 +1841,11 @@
     "clickHint": "Click to select · Ctrl/⌘ click to add · Shift click for a range",
     "clipping": "Clipping mask",
     "expand": "Expand"
+  },
+  "layerSeparation": {
+    "emptyHint": "Run a workflow or drop a PSD to load layers",
+    "previewHint": "Composite preview",
+    "loadPsd": "Load PSD"
   },
   "imagesSplit": {
     "connect": "Connect an image group",

@@ -22,6 +22,7 @@ const RESULT_TYPE_LABEL_KEY: Record<string, string> = {
   graph_output_first: 'configSidebar.resultType.text',
   ui_save_url:        'configSidebar.resultType.file',
   ui_save_batch:      'configSidebar.resultType.batch',
+  ui_save_layered:    'configSidebar.resultType.layered',
 }
 
 export function useResultMeta(

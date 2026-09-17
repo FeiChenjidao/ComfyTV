@@ -108,6 +108,9 @@
     "ImageVariationsStage": {
       "display_name": "图像变体"
     },
+    "LayerSeparationStage": {
+      "display_name": "图层分离"
+    },
     "ImagesSplitStage": {
       "display_name": "图像组分离"
     },
@@ -808,6 +811,9 @@
   "ComfyTV_CropStage": {
     "display_name": "裁剪",
     "inputs": {
+      "crop_boxes": {
+        "name": "裁剪框"
+      },
       "crop_h": {
         "name": "裁剪高度"
       },
@@ -822,10 +828,16 @@
       },
       "image": {
         "name": "图像"
+      },
+      "selected_index": {
+        "name": "选中项"
       }
     },
     "outputs": {
       "0": {
+        "name": "图像组"
+      },
+      "1": {
         "name": "图像"
       }
     }
@@ -1191,6 +1203,28 @@
       },
       "1": {
         "name": "图像"
+      }
+    }
+  },
+  "ComfyTV_LayerSeparationStage": {
+    "display_name": "图层分离",
+    "inputs": {
+      "image": {
+        "name": "图像"
+      },
+      "workflow": {
+        "name": "工作流"
+      },
+      "main_prompt": {
+        "name": "提示词"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像"
+      },
+      "1": {
+        "name": "图像组"
       }
     }
   },

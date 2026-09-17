@@ -42,9 +42,12 @@ _TEXT_OUTPUT_NODES = (
 
 
 def _auto_detect_result(workflow: dict, ctx_kind: str | None = None) -> dict:
-    image_default = (
-        'ui_save_batch' if ctx_kind in _BATCH_OUTPUT_KINDS else 'ui_save_url'
-    )
+    if ctx_kind == 'layer-separation':
+        image_default = 'ui_save_layered'
+    elif ctx_kind in _BATCH_OUTPUT_KINDS:
+        image_default = 'ui_save_batch'
+    else:
+        image_default = 'ui_save_url'
     save_node_result = {
         'SaveImage':        image_default,
         'SaveAnimatedWEBP': image_default,
