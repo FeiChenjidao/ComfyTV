@@ -26,6 +26,16 @@ export const AUTOGROW_KEY_RE: Record<MediaType, RegExp> = {
   audio: /^audio\.audio(\d+)$/,
 }
 
+/**
+ * TemplateNames autogrow sockets (e.g. Model3DStage faces: images.正 / images.左 / …).
+ * Excludes numeric TemplatePrefix keys already covered by AUTOGROW_KEY_RE.
+ */
+export const NAMED_AUTOGROW_RE: Record<MediaType, RegExp> = {
+  image: /^images\.(?!image\d+$)(.+)$/,
+  video: /^videos\.(?!video\d+$)(.+)$/,
+  audio: /^audio\.(?!audio\d+$)(.+)$/,
+}
+
 const AUTOGROW_GROUP: Record<MediaType, string> = { image: 'images', video: 'videos', audio: 'audio' }
 const AUTOGROW_PREFIX: Record<MediaType, string> = { image: 'image', video: 'video', audio: 'audio' }
 const DEFAULT_MAX: Record<MediaType, number> = { image: 12, video: 6, audio: 3 }
@@ -158,15 +168,70 @@ export interface LiveLink {
   from: [number, number] | null
 }
 
+/**
+ * Fixed (non-autogrow) socket names that feed the shared media strip / Upstream list.
+ * Specialized sockets (mask_image, depth_image, …) stay out on purpose.
+ */
+const FIXED_MEDIA_NAMES: Record<MediaType, ReadonlySet<string>> = {
+  image: new Set(['image', 'image_a', 'image_b']),
+  video: new Set(['video']),
+  audio: new Set(['audio']),
+}
+
+export function isFixedMediaName(name: string, type: MediaType): boolean {
+  return FIXED_MEDIA_NAMES[type].has(name)
+}
+
+export function isNamedAutogrowName(name: string, type: MediaType): boolean {
+  return NAMED_AUTOGROW_RE[type].test(name)
+}
+
+export function isMediaSocketName(name: string, type: MediaType): boolean {
+  return (
+    AUTOGROW_KEY_RE[type].test(name)
+    || isFixedMediaName(name, type)
+    || isNamedAutogrowName(name, type)
+  )
+}
+
 export function hasPlainAudioInput(node: unknown): boolean {
   return !!(node as AnyNode)?.inputs?.some(i => i?.name === 'audio')
+}
+
+/** Node uses only fixed image sockets (no images.imageN / imageN / TemplateNames autogrow). */
+export function hasPlainImageInput(node: unknown): boolean {
+  const inputs = (node as AnyNode)?.inputs
+  if (!Array.isArray(inputs)) return false
+  if (inputs.some(i => typeof i?.name === 'string' && (
+    AUTOGROW_KEY_RE.image.test(i.name) || isNamedAutogrowName(i.name, 'image')
+  ))) {
+    return false
+  }
+  return inputs.some(i => typeof i?.name === 'string' && isFixedMediaName(i.name, 'image'))
+}
+
+/** TemplateNames sockets in declaration order (empty when the node uses numeric autogrow / fixed). */
+export function namedAutogrowSocketNames(node: unknown, type: MediaType): string[] {
+  const inputs = (node as AnyNode)?.inputs
+  if (!Array.isArray(inputs)) return []
+  if (inputs.some(i => typeof i?.name === 'string' && AUTOGROW_KEY_RE[type].test(i.name))) {
+    return []
+  }
+  const names: string[] = []
+  const seen = new Set<string>()
+  for (const inp of inputs) {
+    if (typeof inp?.name !== 'string' || !isNamedAutogrowName(inp.name, type)) continue
+    if (seen.has(inp.name)) continue
+    seen.add(inp.name)
+    names.push(inp.name)
+  }
+  return names
 }
 
 export function nodeAcceptsMedia(node: unknown, type: MediaType): boolean {
   const inputs = (node as AnyNode)?.inputs
   if (!Array.isArray(inputs)) return false
-  return inputs.some(i => typeof i?.name === 'string'
-    && (AUTOGROW_KEY_RE[type].test(i.name) || (type === 'audio' && i.name === 'audio')))
+  return inputs.some(i => typeof i?.name === 'string' && isMediaSocketName(i.name, type))
 }
 
 function lookupLink(graph: AnyGraph, id: number): any {
@@ -176,30 +241,74 @@ function lookupLink(graph: AnyGraph, id: number): any {
   return links[id] ?? null
 }
 
+/** Every wired media socket on the node, slots assigned stably for the Upstream / strip list. */
 export function liveLinks(node: unknown, type: MediaType, graph?: AnyGraph): LiveLink[] {
   const inputs = (node as AnyNode)?.inputs
   if (!Array.isArray(inputs)) return []
-  const out: LiveLink[] = []
+
+  type Cand = Omit<LiveLink, 'slot'> & { slot: number | null; order: number }
+  const cands: Cand[] = []
+
   inputs.forEach((inp, inputIndex) => {
     if (typeof inp?.name !== 'string' || inp.link == null) return
-    let slot: number | null = null
+    if (!isMediaSocketName(inp.name, type)) return
     const m = AUTOGROW_KEY_RE[type].exec(inp.name)
-    if (m) slot = Number(m[1])
-    else if (type === 'audio' && inp.name === 'audio') slot = 0
-    if (slot == null) return
     const link = Number(inp.link)
     const info = graph ? lookupLink(graph, link) : null
     const from: [number, number] | null = info && info.origin_id != null
       ? [Number(info.origin_id), Number(info.origin_slot) || 0]
       : null
-    out.push({ link, slot, inputName: inp.name, inputIndex, from })
+    cands.push({
+      link,
+      slot: m ? Number(m[1]) : null,
+      inputName: inp.name,
+      inputIndex,
+      from,
+      order: inputIndex,
+    })
   })
-  return out.sort((a, b) => a.slot - b.slot)
+
+  const used = new Set(cands.filter(c => c.slot != null).map(c => c.slot!))
+  let next = 0
+  for (const c of [...cands].sort((a, b) => a.order - b.order)) {
+    if (c.slot != null) continue
+    while (used.has(next)) next++
+    c.slot = next
+    used.add(next)
+    next++
+  }
+
+  return cands
+    .map(({ order: _o, ...rest }) => rest as LiveLink)
+    .sort((a, b) => a.slot - b.slot || a.inputIndex - b.inputIndex)
+}
+
+/** Fixed media socket names in declaration order (empty when the node uses autogrow). */
+export function fixedMediaSocketNames(node: unknown, type: MediaType): string[] {
+  const inputs = (node as AnyNode)?.inputs
+  if (!Array.isArray(inputs)) return []
+  if (inputs.some(i => typeof i?.name === 'string' && AUTOGROW_KEY_RE[type].test(i.name))) {
+    return []
+  }
+  const names: string[] = []
+  const seen = new Set<string>()
+  for (const inp of inputs) {
+    if (typeof inp?.name !== 'string' || !isFixedMediaName(inp.name, type)) continue
+    if (seen.has(inp.name)) continue
+    seen.add(inp.name)
+    names.push(inp.name)
+  }
+  return names
 }
 
 export function mediaMax(node: unknown, type: MediaType): number {
   const max = (node as AnyNode)?.comfyDynamic?.autogrow?.[AUTOGROW_GROUP[type]]?.max
-  return typeof max === 'number' && max > 0 ? max : DEFAULT_MAX[type]
+  if (typeof max === 'number' && max > 0) return max
+  const fixed = fixedMediaSocketNames(node, type)
+  if (fixed.length > 0) return Math.max(fixed.length, DEFAULT_MAX[type])
+  const named = namedAutogrowSocketNames(node, type)
+  if (named.length > 0) return named.length
+  return DEFAULT_MAX[type]
 }
 
 export function positionRemap(prev: MediaEntry[], next: MediaEntry[]): Map<number, number | null> {
@@ -211,30 +320,21 @@ export function positionRemap(prev: MediaEntry[], next: MediaEntry[]): Map<numbe
   return map
 }
 
+/**
+ * Architecture: wired sockets always occupy the front of the strip in slot order;
+ * manually added asset/batch refs append after (user can still drag until next wire sync).
+ */
 function reconcileType(prev: MediaEntry[], live: LiveLink[]): MediaEntry[] {
-  const claimed = new Set<number>()
-  const next: MediaEntry[] = []
-  const seen = new Set<string>()
+  const links = live.map(l => linkEntry(l))
+  const seen = new Set(links.map(e => e.key))
+  const others: MediaEntry[] = []
   for (const e of prev) {
-    if (e.src !== 'link') {
-      if (!seen.has(e.key)) { seen.add(e.key); next.push(e) }
-      continue
-    }
-    let match = live.find(l => l.link === e.link && !claimed.has(l.link))
-    if (!match && e.from) {
-      match = live.find(l => !claimed.has(l.link) && l.from != null
-        && l.from[0] === e.from![0] && l.from[1] === e.from![1])
-    }
-    if (!match) continue
-    claimed.add(match.link)
-    next.push(linkEntry(match))
+    if (e.src === 'link') continue
+    if (seen.has(e.key)) continue
+    seen.add(e.key)
+    others.push(e)
   }
-  for (const l of live) {
-    if (claimed.has(l.link)) continue
-    claimed.add(l.link)
-    next.push(linkEntry(l))
-  }
-  return next
+  return [...links, ...others]
 }
 
 interface LegacyRef { slot: number; type: MediaType; entry: MediaEntry }
@@ -371,7 +471,8 @@ export function materializeMedia(
   const nodeInputs = (node as AnyNode)?.inputs ?? []
   for (const type of MEDIA_TYPES) {
     if (!nodeAcceptsMedia(node, type)) continue
-    const plainAudio = type === 'audio' && hasPlainAudioInput(node)
+    const fixedNames = fixedMediaSocketNames(node, type)
+    const namedNames = namedAutogrowSocketNames(node, type)
     const values: unknown[] = []
     table[type].forEach((e, i) => {
       if (e.src === 'link') {
@@ -393,11 +494,34 @@ export function materializeMedia(
       values.push(url)
     })
     for (const k of Object.keys(inputs)) {
-      if (AUTOGROW_KEY_RE[type].test(k) || (plainAudio && k === 'audio')) delete inputs[k]
+      if (
+        AUTOGROW_KEY_RE[type].test(k)
+        || fixedNames.includes(k)
+        || namedNames.includes(k)
+      ) delete inputs[k]
     }
-    if (plainAudio) {
-      if (values.length > 0) inputs.audio = values[0]
-      if (values.length > 1) warnings.push('this stage takes a single audio input — only audio 1 is sent')
+    if (fixedNames.length > 0) {
+      fixedNames.forEach((name, i) => {
+        if (i < values.length) inputs[name] = values[i]
+      })
+      if (values.length > fixedNames.length) {
+        warnings.push(
+          `this stage takes ${fixedNames.length} ${type} input(s) — `
+          + `${values.length - fixedNames.length} extra strip item(s) not sent`,
+        )
+      }
+      continue
+    }
+    if (namedNames.length > 0) {
+      namedNames.forEach((name, i) => {
+        if (i < values.length) inputs[name] = values[i]
+      })
+      if (values.length > namedNames.length) {
+        warnings.push(
+          `this stage takes ${namedNames.length} ${type} input(s) — `
+          + `${values.length - namedNames.length} extra strip item(s) not sent`,
+        )
+      }
       continue
     }
     const max = mediaMax(node, type)

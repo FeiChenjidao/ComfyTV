@@ -12,11 +12,17 @@ export async function sizingWarnings(node: any, widgets: unknown): Promise<strin
   const label = String(getWidget(node, 'workflow')?.value ?? '')
   if (!kind || !label) return []
   const info = await loadWorkflowInfo()
-  const computed = (info as any)?.[kind]?.[label]?.uses_computed
+  const entry = (info as any)?.[kind]?.[label]
+  const computed = entry?.uses_computed
+  const options = entry?.uses_options
+  // API-style nodes (Nano Banana 2, …) bind Stage resolution/aspect_ratio as
+  // option:* onto the model's own COMBO — that still drives output size.
+  if (options?.aspect_ratio || options?.resolution) return []
   if (!computed || computed.width || computed.height) return []
   return [
     `${touched.join('/')} will not affect workflow '${label}' — it binds neither `
-    + 'computed:width nor computed:height, so the output size comes from the '
-    + "workflow's own nodes (for image-to-image workflows, the input image)",
+    + 'computed:width/height nor option:aspect_ratio/resolution, so the output '
+    + "size comes from the workflow's own nodes (for image-to-image workflows, "
+    + 'the input image)',
   ]
 }

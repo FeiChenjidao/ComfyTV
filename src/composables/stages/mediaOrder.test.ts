@@ -83,6 +83,45 @@ describe('liveLinks / nodeAcceptsMedia', () => {
     expect(liveLinks(n, 'audio', graph)[0]).toMatchObject({ link: 13, slot: 0 })
     expect(nodeAcceptsMedia(n, 'audio')).toBe(true)
   })
+
+  it('treats plain image / image_a / image_b as strip sockets in input order', () => {
+    const n = node([['image', 11]])
+    expect(nodeAcceptsMedia(n, 'image')).toBe(true)
+    expect(liveLinks(n, 'image', graph)).toEqual([
+      { link: 11, slot: 0, inputName: 'image', inputIndex: 0, from: [3, 0] },
+    ])
+
+    // Fixed sockets get slots in declaration order (not name sort).
+    const merge = node([['image_b', 12], ['image_a', 11]])
+    expect(liveLinks(merge, 'image', graph).map(l => [l.inputName, l.slot])).toEqual([
+      ['image_b', 0],
+      ['image_a', 1],
+    ])
+  })
+
+  it('ignores specialized image sockets like mask_image', () => {
+    const n = node([['mask_image', 11], ['depth_image', 12]])
+    expect(nodeAcceptsMedia(n, 'image')).toBe(false)
+    expect(liveLinks(n, 'image', graph)).toEqual([])
+  })
+
+  it('treats Model3D TemplateNames face sockets as strip images', () => {
+    const n = node([
+      ['images.正', 11],
+      ['images.左', null],
+      ['images.背', 12],
+      ['images.右', null],
+      ['images.辅', 13],
+    ])
+    expect(nodeAcceptsMedia(n, 'image')).toBe(true)
+    expect(liveLinks(n, 'image', graph)).toEqual([
+      { link: 11, slot: 0, inputName: 'images.正', inputIndex: 0, from: [3, 0] },
+      { link: 12, slot: 1, inputName: 'images.背', inputIndex: 2, from: [4, 1] },
+      { link: 13, slot: 2, inputName: 'images.辅', inputIndex: 4, from: [5, 0] },
+    ])
+    const r = reconcileTable(n, graph)
+    expect(r.table.image.map(e => e.key)).toEqual(['l11', 'l12', 'l13'])
+  })
 })
 
 describe('reconcileTable', () => {
@@ -94,7 +133,7 @@ describe('reconcileTable', () => {
     expect(r.table.image[0]!.from).toEqual([3, 0])
   })
 
-  it('keeps table order when autogrow bubbles links down', () => {
+  it('orders wires by socket slot, then keeps manual refs after', () => {
     const n = node([['images.image0', 11], ['images.image1', 12], ['images.image2', 13]])
     writeMediaTable(n, { image: [
       { key: 'l13', src: 'link', link: 13 }, { key: 'l11', src: 'link', link: 11 }, { key: 'l12', src: 'link', link: 12 },
@@ -102,17 +141,22 @@ describe('reconcileTable', () => {
     n.inputs = [{ name: 'images.image0', link: 12 }, { name: 'images.image1', link: 13 }]
     const r = reconcileTable(n, graph)
     expect(r.changed).toBe(true)
-    expect(r.table.image.map(e => e.key)).toEqual(['l13', 'l12'])
-    expect([...r.remap.image!.entries()]).toEqual([[2, null], [3, 2]])
+    expect(r.table.image.map(e => e.key)).toEqual(['l12', 'l13'])
   })
 
-  it('appends new links after existing entries and keeps assets', () => {
+  it('puts every wired socket before manually added refs', () => {
     const n = node([['images.image0', 11]])
     writeMediaTable(n, { image: [assetEntry(7), { key: 'l11', src: 'link', link: 11 }], video: [], audio: [] })
     n.inputs.push({ name: 'images.image1', link: 12 })
     const r = reconcileTable(n, graph)
-    expect(r.table.image.map(e => e.key)).toEqual(['a7', 'l11', 'l12'])
-    expect(r.remap).toEqual({})
+    expect(r.table.image.map(e => e.key)).toEqual(['l11', 'l12', 'a7'])
+  })
+
+  it('promotes a newly wired plain image ahead of existing asset refs', () => {
+    const n = node([['image', 11]])
+    writeMediaTable(n, { image: [assetEntry(7), assetEntry(8)], video: [], audio: [] })
+    const r = reconcileTable(n, graph)
+    expect(r.table.image.map(e => e.key)).toEqual(['l11', 'a7', 'a8'])
   })
 
   it('re-attaches an entry whose link id changed but origin matches', () => {
@@ -220,7 +264,52 @@ describe('materializeMedia', () => {
       audio: ['5', 0],
     })
     expect(warnings).toHaveLength(1)
-    expect(warnings[0]).toMatch(/single audio/)
+    expect(warnings[0]).toMatch(/1 audio input/)
+  })
+
+  it('writes plain image / image_a+b sockets from the strip in order', () => {
+    const single = node([['image', null]])
+    const inputs1: Record<string, unknown> = {}
+    materializeMedia(inputs1, single, { image: [assetEntry(1), assetEntry(2)], video: [], audio: [] }, urlOf)
+    expect(inputs1).toEqual({ image: '/asset/1' })
+
+    const merge = node([['image_a', null], ['image_b', null]])
+    const inputs2: Record<string, unknown> = {}
+    const warnings = materializeMedia(
+      inputs2, merge,
+      { image: [assetEntry(1), assetEntry(2), assetEntry(3)], video: [], audio: [] },
+      urlOf,
+    )
+    expect(inputs2).toEqual({ image_a: '/asset/1', image_b: '/asset/2' })
+    expect(warnings[0]).toMatch(/extra strip/)
+  })
+
+  it('writes Model3D face sockets from the strip in declaration order', () => {
+    const n = node([
+      ['images.正', 11],
+      ['images.左', null],
+      ['images.背', null],
+      ['images.右', null],
+      ['images.辅', null],
+    ])
+    const table = {
+      image: [
+        { key: 'l11', src: 'link' as const, link: 11 },
+        assetEntry(7),
+        assetEntry(8),
+      ],
+      video: [],
+      audio: [],
+    }
+    const inputs: Record<string, unknown> = { 'images.正': ['3', 0], main_prompt: 'x' }
+    const warnings = materializeMedia(inputs, n, table, urlOf)
+    expect(warnings).toEqual([])
+    expect(inputs).toEqual({
+      'images.正': ['3', 0],
+      'images.左': '/asset/7',
+      'images.背': '/asset/8',
+      main_prompt: 'x',
+    })
   })
 
   it('skips unresolved entries with a warning and compacts', () => {

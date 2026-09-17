@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, getCurrentInstance, onUnmounted, ref } from 'vue'
 
 import type { LGraphNode } from '@/lib/comfyApp'
 import { t } from '@/i18n'
@@ -10,21 +10,20 @@ import {
   collectClipMaskSources,
   collectRasters,
   compositeSubtree,
-  fitCompositeSize,
+  cropToBounds,
   defaultCollapsedIds,
   flattenPsdTree,
   isolateSelected,
   isMemoryError,
   opaqueBounds,
-  cropToBounds,
   parseSelectedIds,
   PSD_ROOT_ID,
   rangeSelectIds,
   releaseContents,
+  scaleCanvasToMaxDim,
   sceneFromPsdLayers,
   serializeSelectedIds,
   shouldAutoComposite,
-  shrinkCanvasInPlace,
   visibleTreeRows,
   type ContentMap,
   type PsdLayerLike,
@@ -98,6 +97,46 @@ export function usePsdLayerTree(node: LGraphNode, state: StageState) {
   const collapsed = ref<Set<string>>(new Set())
 
   let contents: ContentMap = new Map()
+  let displayObjectUrl = ''
+
+  function revokeDisplayPreview() {
+    if (!displayObjectUrl) return
+    URL.revokeObjectURL(displayObjectUrl)
+    displayObjectUrl = ''
+  }
+
+  function canvasToObjectUrl(
+    canvas: HTMLCanvasElement,
+    type = 'image/jpeg',
+    quality = 0.85,
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('preview encode failed'))
+          return
+        }
+        resolve(URL.createObjectURL(blob))
+      }, type, quality)
+    })
+  }
+
+  /** Show a downscaled blob in the editor; widgets/slots keep full document PNG. */
+  async function publishDisplayPreview(source: HTMLCanvasElement) {
+    revokeDisplayPreview()
+    const scaled = scaleCanvasToMaxDim(source)
+    const owned = scaled !== source
+    try {
+      const url = await canvasToObjectUrl(scaled)
+      displayObjectUrl = url
+      previewUrl.value = url
+    } finally {
+      if (owned) {
+        scaled.width = 0
+        scaled.height = 0
+      }
+    }
+  }
   let layerMap = new Map<string, PsdLayerLike>()
   let timer: number | null = null
   let seq = 0
@@ -118,9 +157,11 @@ export function usePsdLayerTree(node: LGraphNode, state: StageState) {
   }
 
   function restoreOutputs() {
-    previewUrl.value = readWidgetStr(node, 'captured_image', '')
+    revokeDisplayPreview()
+    const imageUrl = readWidgetStr(node, 'captured_image', '')
+    previewUrl.value = imageUrl
     const batch = readWidgetStr(node, 'captured_images', '')
-    store.setOutputSlot(state, 0, previewUrl.value || null)
+    store.setOutputSlot(state, 0, imageUrl || null)
     store.setOutputSlot(state, 1, batch || null)
   }
 
@@ -251,39 +292,45 @@ export function usePsdLayerTree(node: LGraphNode, state: StageState) {
     timer = window.setTimeout(() => { timer = null; void run() }, SCHEDULE_DELAY_MS)
   }
 
-  async function decodeIsolated(isolated: typeof nodes.value) {
+  function yieldToMain(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0))
+  }
+
+  /** Decode missing rasters into the persistent full-res cache (no proactive shrink). */
+  async function ensureDecoded(isolated: typeof nodes.value) {
     const { getLayerCanvas, getLayerMaskCanvas } = await import('ag-psd')
-    releaseContents(contents)
-    const fit = fitCompositeSize(width.value, height.value)
     const extra = collectClipMaskSources(nodes.value, isolated)
+    const extraIds = new Set(collectRasters(extra).map(r => r.id))
     const rasters = [
       ...collectRasters(isolated),
       ...collectRasters(extra),
     ]
     const seen = new Set<string>()
+    let n = 0
     for (const raster of rasters) {
       if (seen.has(raster.id)) continue
       seen.add(raster.id)
-      const extraRasters = new Set(collectRasters(extra).map(r => r.id))
-      if (!raster.visible && !extraRasters.has(raster.id)) continue
+      if (!raster.visible && !extraIds.has(raster.id)) continue
+      const needPixels = !contents.has(raster.contentId)
+      const needMask = !!(raster.mask?.enabled && !contents.has(raster.mask.contentId))
+      if (!needPixels && !needMask) continue
       const layer = layerMap.get(raster.id)
       if (!layer) continue
       try {
-        let canvas = getLayerCanvas(layer as never)
-        if (!canvas) continue
-        canvas = shrinkCanvasInPlace(canvas, fit.scale)
-        contents.set(raster.contentId, canvas)
-        if (raster.mask?.enabled) {
-          let mask = getLayerMaskCanvas(layer as never)
-          if (mask) {
-            mask = shrinkCanvasInPlace(mask, fit.scale)
-            contents.set(raster.mask.contentId, mask)
-          }
+        if (needPixels) {
+          const canvas = getLayerCanvas(layer as never)
+          if (canvas) contents.set(raster.contentId, canvas)
+        }
+        if (needMask) {
+          const mask = getLayerMaskCanvas(layer as never)
+          if (mask) contents.set(raster.mask!.contentId, mask)
         }
       } catch (e) {
         if (isMemoryError(e)) throw e
         console.warn('[ComfyTV/psdlayer] layer decode skipped', raster.name, e)
       }
+      n++
+      if (n % 3 === 0) await yieldToMain()
     }
   }
 
@@ -294,12 +341,14 @@ export function usePsdLayerTree(node: LGraphNode, state: StageState) {
     try {
       const isolated = isolateSelected(nodes.value, selectedIds.value)
       if (!isolated.length && !selectedIds.value.includes(PSD_ROOT_ID)) return
-      await decodeIsolated(isolated)
+      await ensureDecoded(isolated)
       if (mySeq !== seq) return
+
       const canvas = compositeSubtree(width.value, height.value, isolated, contents, true, nodes.value)
       if (mySeq !== seq) return
       const unionW = canvas.width
       const unionH = canvas.height
+      // Trim to opaque union so encode/upload stays small; pixels stay native density.
       const used = opaqueBounds(canvas)
       const preview = cropToBounds(canvas, used)
       outWidth.value = preview.width
@@ -310,6 +359,18 @@ export function usePsdLayerTree(node: LGraphNode, state: StageState) {
         subfolder: OUT_SUBFOLDER,
         filename: `comfytv-psdlayer-${nodeId}-${stamp}.png`,
       })
+      if (mySeq !== seq) {
+        preview.width = 0
+        preview.height = 0
+        return
+      }
+      try {
+        await publishDisplayPreview(preview)
+      } catch (e) {
+        console.warn('[ComfyTV/psdlayer] display preview failed; using full upload URL', e)
+        revokeDisplayPreview()
+        previewUrl.value = imageUrl
+      }
       preview.width = 0
       preview.height = 0
       if (mySeq !== seq) return
@@ -339,12 +400,10 @@ export function usePsdLayerTree(node: LGraphNode, state: StageState) {
           })
         }
       }
-      releaseContents(contents)
       if (mySeq !== seq) return
       const batch = JSON.stringify({ images: items })
       writeWidget(node, 'captured_image', imageUrl)
       writeWidget(node, 'captured_images', batch)
-      previewUrl.value = imageUrl
       store.applyExecutedPayload(state, { output: [imageUrl], picked: [batch] })
       error.value = null
     } catch (e) {
@@ -378,6 +437,14 @@ export function usePsdLayerTree(node: LGraphNode, state: StageState) {
 
   if (readWidgetStr(node, 'psd_file', '')) void loadFromWidgetUrl()
   restoreOutputs()
+
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      if (timer != null) window.clearTimeout(timer)
+      revokeDisplayPreview()
+      releaseContents(contents)
+    })
+  }
 
   return {
     fileName, width, height, outWidth, outHeight,

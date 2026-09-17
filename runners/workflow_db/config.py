@@ -119,7 +119,120 @@ def get_workflow_for_invoke(kind: str, label: str) -> Optional[dict]:
         }
 
 
-def _node_widget_meta(class_type: str) -> dict:
+_WIDGET_TYPES = frozenset({"INT", "FLOAT", "STRING", "BOOLEAN"})
+_MAX_DYNAMIC_COMBO_DEPTH = 4
+
+
+def _widgets_from_input_spec(
+    name: str, spec: Any, depth: int = 0, *, selected: Any = None,
+) -> list[dict]:
+    """Widget meta rows for one INPUT_TYPES entry (expands ``COMFY_*COMBO*``).
+
+    Dynamic-combo nodes (Nano Banana 2, Seedream, …) store nested knobs as
+    dotted API keys (``model.aspect_ratio``). The config sidebar only lists
+    what this returns, so we must surface those dotted names — not only the
+    top-level selector.
+
+    When ``selected`` is set (the live API value of this combo), only that
+    option's sub-widgets are expanded so Stage enums match the active model.
+    """
+    if not spec:
+        return []
+    if isinstance(spec, str):
+        if spec.upper() in _WIDGET_TYPES:
+            return [{"name": name, "type": spec.upper(), "options": {}}]
+        return []
+    if not isinstance(spec, (list, tuple)) or not spec:
+        return []
+
+    t = spec[0]
+    opts = spec[1] if len(spec) > 1 and isinstance(spec[1], dict) else {}
+    if opts.get("forceInput") or opts.get("defaultInput"):
+        return []
+
+    if isinstance(t, (list, tuple)):
+        return [{
+            "name": name, "type": "COMBO",
+            "options": {"values": list(t), **opts},
+        }]
+
+    if not isinstance(t, str):
+        return []
+    upper = t.upper()
+    if upper == "COMBO":
+        values = opts.get("options")
+        if values is None:
+            values = opts.get("values")
+        return [{
+            "name": name, "type": "COMBO",
+            "options": {**opts, "values": list(values or [])},
+        }]
+    if upper in _WIDGET_TYPES:
+        return [{"name": name, "type": upper, "options": opts}]
+
+    if not (t.startswith("COMFY_") and "COMBO" in t):
+        return []
+    if depth >= _MAX_DYNAMIC_COMBO_DEPTH:
+        return []
+
+    options = opts.get("options") or []
+    keys = [
+        o.get("key") for o in options
+        if isinstance(o, dict) and o.get("key") is not None
+    ]
+    out: list[dict] = [{
+        "name": name, "type": "COMBO",
+        "options": {
+            **{k: v for k, v in opts.items() if k != "options"},
+            "values": keys,
+        },
+    }]
+    matched = [
+        o for o in options
+        if isinstance(o, dict) and (selected is None or o.get("key") == selected)
+    ]
+    # Selected key can skew after model rename / convert — still surface knobs.
+    if not matched:
+        matched = [o for o in options if isinstance(o, dict)]
+    for option in matched:
+        sub_def = option.get("inputs")
+        if not isinstance(sub_def, dict):
+            continue
+        for section in ("required", "optional"):
+            section_def = sub_def.get(section) or {}
+            if not isinstance(section_def, dict):
+                continue
+            for sub_name, sub_spec in section_def.items():
+                out.extend(
+                    _widgets_from_input_spec(
+                        f"{name}.{sub_name}", sub_spec, depth + 1,
+                    )
+                )
+    return out
+
+
+def _merge_widget_meta(entries: list[dict]) -> list[dict]:
+    """Dedupe by name; union COMBO values when several dynamic options share a knob."""
+    order: list[str] = []
+    by_name: dict[str, dict] = {}
+    for entry in entries:
+        name = entry["name"]
+        prev = by_name.get(name)
+        if prev is None:
+            by_name[name] = entry
+            order.append(name)
+            continue
+        if entry["type"] == "COMBO" and prev["type"] == "COMBO":
+            prev_opts = prev.setdefault("options", {})
+            seen = list(prev_opts.get("values") or [])
+            for v in (entry.get("options") or {}).get("values") or []:
+                if v not in seen:
+                    seen.append(v)
+            prev_opts["values"] = seen
+    return [by_name[n] for n in order]
+
+
+def _node_widget_meta(class_type: str, api_inputs: dict | None = None) -> list:
     import nodes
     cls = (
         getattr(nodes, "NODE_CLASS_MAPPINGS", {}).get(class_type)
@@ -134,34 +247,14 @@ def _node_widget_meta(class_type: str) -> dict:
                      class_type, e)
         return []
 
-    out: list[dict] = []
-
-    _WIDGET_TYPES = {"INT", "FLOAT", "STRING", "BOOLEAN"}
+    collected: list[dict] = []
     for section in ("required", "optional"):
         for name, spec in (input_types.get(section) or {}).items():
-            if not spec:
-                continue
-            if isinstance(spec, (list, tuple)):
-                t = spec[0] if spec else None
-                opts = spec[1] if len(spec) > 1 and isinstance(spec[1], dict) else {}
-                if isinstance(t, (list, tuple)):
-                    out.append({
-                        "name": name, "type": "COMBO",
-                        "options": {"values": list(t), **(opts or {})},
-                    })
-                elif isinstance(t, str) and t.upper() == "COMBO":
-                    values = opts.get("options")
-                    if values is None:
-                        values = opts.get("values")
-                    out.append({
-                        "name": name, "type": "COMBO",
-                        "options": {**(opts or {}), "values": list(values or [])},
-                    })
-                elif isinstance(t, str) and t.upper() in _WIDGET_TYPES:
-                    out.append({"name": name, "type": t.upper(), "options": opts})
-            elif isinstance(spec, str) and spec.upper() in _WIDGET_TYPES:
-                out.append({"name": name, "type": spec.upper(), "options": {}})
-    return out
+            selected = (api_inputs or {}).get(name)
+            collected.extend(
+                _widgets_from_input_spec(name, spec, selected=selected),
+            )
+    return _merge_widget_meta(collected)
 
 
 def _exposed_widgets(workflow_id: int, file_path: str,
@@ -247,7 +340,7 @@ def _exposed_widgets(workflow_id: int, file_path: str,
         api_inputs = api_node.get("inputs") or {}
 
         title       = n.get("title") or class_type
-        widget_meta = _node_widget_meta(class_type)
+        widget_meta = _node_widget_meta(class_type, api_inputs)
 
         for wm in widget_meta:
             wname = wm["name"]

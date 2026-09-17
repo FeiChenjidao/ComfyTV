@@ -11,7 +11,12 @@ import { bindClusterHoverIntent, nudgeSlotAnchors } from '@/v2/nodeDrag'
 import { observeProperty } from '@/v2/observeProps'
 import { bindLodPoster, registerCull } from '@/v2/lodV2'
 import { cancelMeasure, scheduleMeasure } from '@/v2/measureBatch'
-import { bindCardHeight, el, stopNativeAutoGrow } from '@/v2/shellCommon'
+import {
+  bindPanelOnSelectSize,
+  panelOnSelectAfterShow,
+  panelOnSelectBeforeHide,
+} from '@/v2/panelOnSelect'
+import { el } from '@/v2/shellCommon'
 
 export function bindShellChrome(node: ComfyNode, opts: {
   scope: EffectScope
@@ -21,18 +26,10 @@ export function bindShellChrome(node: ComfyNode, opts: {
   state?: StageState
   media?: { source: MediaSource; host?: HTMLElement; preferImageInput?: boolean }
   lod?: boolean
-  manageHeight?: { min: number }
 }) {
   const anyNode = node as any
   const { scope, card, socketAnchor } = opts
   const socketY = opts.socketY ?? 'center'
-
-  stopNativeAutoGrow(node)
-  if (opts.manageHeight) {
-    anyNode.__comfytvSyncHeight = bindCardHeight(node, {
-      scope, card, flexible: socketAnchor, min: opts.manageHeight.min,
-    })
-  }
 
   const warnStrip = el('div', 'v2-warn')
   socketAnchor.after(warnStrip)
@@ -147,7 +144,12 @@ export function bindShellChrome(node: ComfyNode, opts: {
   const syncSelected = () => {
     const root = card.closest('[data-node-id]') as HTMLElement | null
     if (!root) return
-    root.toggleAttribute('data-v2-selected', !!anyNode.selected)
+    const next = !!anyNode.selected
+    const was = root.hasAttribute('data-v2-selected')
+    // Sample panel height while it is still laid out, then shrink before CSS hides it.
+    if (was && !next) panelOnSelectBeforeHide(anyNode)
+    root.toggleAttribute('data-v2-selected', next)
+    if (!was && next) panelOnSelectAfterShow(anyNode)
     queueMicrotask(() => {
       document.body.toggleAttribute(
         'data-v2-toolbar',
@@ -215,6 +217,8 @@ export function bindShellChrome(node: ComfyNode, opts: {
     useResizeObserver(card, syncAll)
     useResizeObserver(socketAnchor, syncSocketY)
   })
+
+  bindPanelOnSelectSize(node, card, scope)
 
   const disposers = [
     observeProperty(anyNode, 'selected', syncSelected),

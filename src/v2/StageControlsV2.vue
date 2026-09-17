@@ -54,9 +54,11 @@ export interface ControlSpec {
 </script>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { useBoundOptionKeys } from '@/composables/stages/useBoundOptionKeys'
+import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
 import ComfyTVNumber from '@/components/widgets/ComfyTVNumber.vue'
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import ComfyTVSlider from '@/components/widgets/ComfyTVSlider.vue'
@@ -67,17 +69,38 @@ import { useWidgetValues } from '@/v2/useWidgetValues'
 
 const { t } = useI18n()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   getNode: () => LGraphNode | undefined
   controls: ControlSpec[]
-}>()
+  /** When true, only show controls whose option:<name> is bound on the workflow. */
+  boundOnly?: boolean
+  /** Workflow kind for binding lookup (e.g. model / image). */
+  workflowKind?: string | null
+}>(), {
+  boundOnly: false,
+  workflowKind: null,
+})
 
+const trackedNames = props.controls.map(c => c.name).concat(['workflow'])
 const { values, widgetOf, write: writeRaw } = useWidgetValues(
   props.getNode,
-  props.controls.map(c => c.name),
+  trackedNames,
 )
 
-const present = computed(() => props.controls.filter(c => !!widgetOf(c.name)))
+const { keys: boundKeys } = useBoundOptionKeys(
+  props.getNode,
+  toRef(props, 'workflowKind'),
+)
+
+const present = computed(() => {
+  void comboOptionsVersion.value
+  void boundKeys.value
+  return props.controls.filter(c => {
+    if (!widgetOf(c.name)) return false
+    if (!props.boundOnly) return true
+    return boundKeys.value.has(c.name)
+  })
+})
 
 function numVal(name: string): number | null {
   const n = Number(values[name])
@@ -88,6 +111,7 @@ function strVal(name: string): string {
   return v == null ? '' : String(v)
 }
 function optionsOf(name: string): string[] {
+  void comboOptionsVersion.value
   const vals = widgetOf(name)?.options?.values
   return Array.isArray(vals) ? vals.map(String) : []
 }
@@ -129,8 +153,8 @@ function write(name: string, v: unknown) {
 .v2-ctl__label {
   color: var(--v2-text-muted);
   font: 500 10px/1 system-ui, sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0.02em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

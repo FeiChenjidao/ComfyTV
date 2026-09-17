@@ -11,7 +11,7 @@ import {
 } from '@/composables/stages/spawnFollowUp'
 import {
   assetEntry,
-  AUTOGROW_KEY_RE,
+  isMediaSocketName,
   type MediaEntry,
   type MediaType,
   MEDIA_TYPES,
@@ -192,7 +192,7 @@ function applyStageFields(node: any, cmd: any, graph?: any): string[] {
 
 function mediaTypeOfInput(name: string): MediaType | null {
   for (const type of MEDIA_TYPES) {
-    if (AUTOGROW_KEY_RE[type].test(name) || (type === 'audio' && name === 'audio')) return type
+    if (isMediaSocketName(name, type)) return type
   }
   return null
 }

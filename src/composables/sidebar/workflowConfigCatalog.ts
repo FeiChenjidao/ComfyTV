@@ -261,6 +261,7 @@ function maxUsedUpstreamIndex(widgets: ExposedWidget[], kind: string): number {
 export function buildBindingOptions(
   widgets: ExposedWidget[],
   workflowKind: string | null | undefined,
+  forWidget?: Pick<ExposedWidget, 'widget_name'> | null,
 ): Array<{ value: string; label: string }> {
   void loadCaps().catch(() => {})
   const caps = (workflowKind ? capsState.byKind[workflowKind] : null) ?? capsState.fallback
@@ -293,5 +294,62 @@ export function buildBindingOptions(
       })
     }
   }
-  return out
+  return markRecommendedBindings(out, forWidget?.widget_name)
+}
+
+/** Leaf widget names that line up with a Stage option:key. */
+const WIDGET_TO_OPTION: Record<string, string> = {
+  aspect_ratio: 'option:aspect_ratio',
+  resolution: 'option:resolution',
+  seed: 'option:seed',
+  Seed: 'option:seed',
+  model_seed: 'option:seed',
+  image_seed: 'option:seed',
+  texture_seed: 'option:seed',
+  batch_size: 'option:batch_size',
+  negative: 'option:negative',
+  negative_prompt: 'option:negative',
+  texture: 'option:texture',
+  pbr: 'option:pbr',
+  texture_quality: 'option:texture_quality',
+  geometry_quality: 'option:geometry_quality',
+  model_version: 'option:model_version',
+  face_limit: 'option:face_limit',
+  quad: 'option:quad',
+  smart_low_poly: 'option:smart_low_poly',
+  auto_size: 'option:auto_size',
+  orientation: 'option:orientation',
+  texture_alignment: 'option:texture_alignment',
+  material: 'option:material',
+  Material_Type: 'option:material',
+  mode: 'option:mode',
+  polygon_count: 'option:polygon_count',
+  Polygon_count: 'option:polygon_count',
+  geometry_file_format: 'option:geometry_file_format',
+  texture_mode: 'option:texture_mode',
+  TAPose: 'option:tapose',
+  tapose: 'option:tapose',
+  hd_texture: 'option:hd_texture',
+  texture_delight: 'option:texture_delight',
+  addon_highpack: 'option:addon_highpack',
+}
+
+export function recommendedOptionForWidget(widgetName: string | null | undefined): string | null {
+  if (!widgetName) return null
+  const leaf = widgetName.includes('.') ? widgetName.slice(widgetName.lastIndexOf('.') + 1) : widgetName
+  return WIDGET_TO_OPTION[leaf] ?? null
+}
+
+function markRecommendedBindings(
+  options: Array<{ value: string; label: string }>,
+  widgetName?: string | null,
+): Array<{ value: string; label: string }> {
+  const rec = recommendedOptionForWidget(widgetName)
+  if (!rec) return options
+  const idx = options.findIndex(o => o.value === rec)
+  if (idx < 0) return options
+  const next = options.slice()
+  const [hit] = next.splice(idx, 1)
+  next.splice(1, 0, { ...hit!, label: `${hit!.label} ★` })
+  return next
 }

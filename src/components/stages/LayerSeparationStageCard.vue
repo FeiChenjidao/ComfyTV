@@ -67,9 +67,10 @@
       </div>
 
       <div class="ls-preview ctv:rounded-md ctv:border ctv:border-border-subtle ctv:overflow-hidden">
-        <img
+        <ThumbImg
           v-if="previewUrl"
           :src="previewUrl"
+          :thumb-max="THUMB_PREVIEW"
           class="ctv:size-full ctv:object-contain"
           draggable="false"
           @dragstart.prevent
@@ -119,11 +120,13 @@
 import { ref } from 'vue'
 
 import StageCard from '@/components/stages/StageCard.vue'
+import ThumbImg from '@/components/widgets/ThumbImg.vue'
 import { spawnOrFocusImagesSplit } from '@/composables/stages/spawnFollowUp'
 import { useLayerSeparation } from '@/composables/stages/useLayerSeparation'
 import { t } from '@/i18n'
 import type { LGraphNode } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
+import { THUMB_PREVIEW } from '@/utils/thumbUrl'
 
 const props = defineProps<{
   state: StageState

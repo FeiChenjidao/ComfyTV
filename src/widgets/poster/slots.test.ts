@@ -36,6 +36,13 @@ describe('connectedImageCount', () => {
     ]
     expect(connectedImageCount(inputs)).toBe(2)
   })
+  it('counts plain image / image_a+b sockets', () => {
+    expect(connectedImageCount([{ name: 'image', link: 1 }])).toBe(1)
+    expect(connectedImageCount([
+      { name: 'image_a', link: 1 },
+      { name: 'image_b', link: 2 },
+    ])).toBe(2)
+  })
   it('ignores non-image inputs', () => {
     expect(connectedImageCount([{ name: 'mask', link: 1 }])).toBe(0)
   })

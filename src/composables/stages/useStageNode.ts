@@ -38,6 +38,10 @@ import { createStageRun } from '@/composables/stages/stageRun'
 import { bindStageWidgets } from '@/composables/stages/stageWidgetSync'
 import { postPickedIndex } from '@/composables/stages/stageApi'
 import { syncMediaTable } from '@/composables/stages/mediaOrderSync'
+import {
+  clearBoundOptionEnumsCache,
+  syncBoundOptionEnums,
+} from '@/composables/stages/boundOptionEnums'
 import { useSelectionStore } from '@/stores/selectionStore'
 import { app } from '@/lib/comfyApp'
 import { onNodeConfigure } from '@/utils/widget'
@@ -93,14 +97,16 @@ export function useStageNode(
       })
   }
 
-  const _selectionStore = useSelectionStore()
-  const stopBindingsWatch = watch(
-    () => _selectionStore.bindingsVersion,
-    () => { if (variant === 'generator') queueMicrotask(reValidate) },
-  )
   let _prepUnsub: (() => void) | null = null
   const meta = getStageMeta(node.comfyClass)
   const workflowKind = meta?.workflow_kind || null
+
+  function syncOptionEnums(): void {
+    if (!workflowKind) return
+    const wfWidget = node.widgets?.find((w: any) => w.name === 'workflow')
+    const label = wfWidget ? String(wfWidget.value ?? '') : ''
+    void syncBoundOptionEnums(node, workflowKind, label)
+  }
 
   function triggerPrepForCurrentWorkflow(): void {
     if (!workflowKind) return
@@ -110,9 +116,28 @@ export function useStageNode(
     _prepUnsub?.()
     _prepUnsub = subscribePrepState(workflowKind, label, (ps) => {
       state.preparingWorkflow = ps.busy
+      if (!ps.busy) queueMicrotask(syncOptionEnums)
     })
-    void prepareWorkflow(workflowKind, label).catch(() => { /* error already on state */ })
+    void prepareWorkflow(workflowKind, label)
+      .then(() => { queueMicrotask(syncOptionEnums) })
+      .catch(() => { /* error already on state */ })
   }
+
+  const _selectionStore = useSelectionStore()
+  const stopBindingsWatch = watch(
+    () => _selectionStore.bindingsVersion,
+    () => {
+      if (workflowKind) {
+        const wfWidget = node.widgets?.find((w: any) => w.name === 'workflow')
+        const label = wfWidget ? String(wfWidget.value ?? '') : ''
+        if (label) clearBoundOptionEnumsCache(workflowKind, label)
+      }
+      if (variant === 'generator') {
+        queueMicrotask(reValidate)
+        queueMicrotask(syncOptionEnums)
+      }
+    },
+  )
 
   if (variant === 'generator') {
     const wfWidget = node.widgets?.find((w: any) => w.name === 'workflow')

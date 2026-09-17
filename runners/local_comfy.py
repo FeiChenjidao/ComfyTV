@@ -29,11 +29,16 @@ from ._nested_exec import (  # noqa: F401
     _translate_subprompt_event,
     _view_url,
 )
+from ._batch_loop import (
+    batch_loop_iterations,
+    merge_loop_payloads,
+    prepare_iteration,
+)
 
 _log = logging.getLogger(__name__)
 
 
-def prepare_workflow(runner_id: str, kinds, ctx: RunnerContext) -> tuple[dict, dict]:
+def prepare_workflow(runner_id: str, kinds, ctx: RunnerContext) -> tuple[dict, dict, dict]:
     from . import workflow_db
     kind, label = _split_runner_id(runner_id)
 
@@ -67,7 +72,7 @@ def prepare_workflow(runner_id: str, kinds, ctx: RunnerContext) -> tuple[dict, d
             f"open the ComfyTV sidebar, and pick a node under 'Result' "
             f"(or ship a `_preset.json` declaring `result`)."
         )
-    return workflow, result_meta
+    return workflow, result_meta, config
 
 
 def _custom_multi_result(config: dict) -> dict:
@@ -88,14 +93,37 @@ def _execute_node_ids(workflow: dict, result_meta: dict) -> list[str]:
 class LocalComfyUIRunner(Runner):
 
     async def invoke(self, ctx: RunnerContext):
-        workflow, result_meta = prepare_workflow(self.id, self.kinds, ctx)
-        result_node = result_meta.get("node")
+        workflow, result_meta, config = prepare_workflow(self.id, self.kinds, ctx)
+        n = batch_loop_iterations(config, ctx.options)
 
-        sub_prompt_id = str(uuid.uuid4())
-        _log.info("[ComfyTV/%s] comfytv-%s  nodes=%d",
-                  self.id, sub_prompt_id[:8], len(workflow))
+        if n <= 1:
+            sub_prompt_id = f"comfytv-{uuid.uuid4().hex[:8]}"
+            _log.info("[ComfyTV/%s] %s  nodes=%d", self.id, sub_prompt_id, len(workflow))
+            execute_outputs = _execute_node_ids(workflow, result_meta)
+            executor = await _run_subprompt(workflow, sub_prompt_id,
+                                            execute_outputs=execute_outputs)
+            return await _extract_result(executor, result_meta)
 
-        execute_outputs = _execute_node_ids(workflow, result_meta)
-        executor = await _run_subprompt(workflow, sub_prompt_id,
-                                        execute_outputs=execute_outputs)
-        return await _extract_result(executor, result_meta)
+        _log.info("[ComfyTV/%s] BatchLoop x%d  stage_prompt=%r",
+                  self.id, n, (ctx.main_prompt or "")[:80])
+        payloads: list = []
+        for i in range(n):
+            # Re-prepare every pass so main_prompt / upstream bindings are
+            # freshly written (never rely on a stale mutated graph).
+            if i > 0:
+                workflow, result_meta, config = prepare_workflow(
+                    self.id, self.kinds, ctx)
+            wf = prepare_iteration(workflow, config, i)
+            execute_outputs = _execute_node_ids(wf, result_meta)
+            sub_prompt_id = f"comfytv-{uuid.uuid4().hex[:8]}-b{i + 1}"
+            _log.info("[ComfyTV/%s] %s  iter=%d/%d nodes=%d",
+                      self.id, sub_prompt_id, i + 1, n, len(wf))
+            executor = await _run_subprompt(wf, sub_prompt_id,
+                                            execute_outputs=execute_outputs)
+            payloads.append(await _extract_result(executor, result_meta))
+            # Shared nested executor caches across invokes — clear so the next
+            # pass cannot reuse identical API / sampler outputs.
+            if hasattr(executor, "history_result"):
+                executor.history_result = None
+            executor.reset()
+        return merge_loop_payloads(payloads, result_meta)

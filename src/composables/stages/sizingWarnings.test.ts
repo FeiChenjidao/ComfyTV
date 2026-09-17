@@ -20,6 +20,19 @@ describe('sizingWarnings', () => {
     const out = await sizingWarnings(node(), { resolution: '480P', aspect_ratio: '1:1' })
     expect(out).toHaveLength(1)
     expect(out[0]).toContain("resolution/aspect_ratio will not affect workflow 'I2I'")
+    expect(out[0]).toMatch(/computed:width\/height|option:aspect_ratio\/resolution/)
+  })
+
+  it('stays quiet when option:aspect_ratio or option:resolution is bound', async () => {
+    infoMock.info = {
+      image: {
+        NB2: {
+          uses_computed: { width: false, height: false, length: false },
+          uses_options: { aspect_ratio: true, resolution: true },
+        },
+      },
+    }
+    expect(await sizingWarnings(node('NB2'), { resolution: '1K', aspect_ratio: '16:9' })).toEqual([])
   })
 
   it('stays quiet when computed:width or height is bound, or nothing sizing-related was set', async () => {
