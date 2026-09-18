@@ -17346,7 +17346,7 @@ const _export_sfc = (sfc, props) => {
   }
   return target;
 };
-const AssetGridCard = /* @__PURE__ */ _export_sfc(_sfc_main$4G, [["__scopeId", "data-v-84adc6d2"]]);
+const AssetGridCard = /* @__PURE__ */ _export_sfc(_sfc_main$4G, [["__scopeId", "data-v-1cd6c0c8"]]);
 const _hoisted_1$6w = { class: "ctv:relative ctv:flex ctv:size-8 ctv:shrink-0 ctv:items-center ctv:justify-center ctv:overflow-hidden ctv:rounded-sm ctv:bg-secondary-background" };
 const _hoisted_2$4g = ["title"];
 const _hoisted_3$48 = {
@@ -17486,7 +17486,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const AssetListItem = /* @__PURE__ */ _export_sfc(_sfc_main$4F, [["__scopeId", "data-v-3073fa9a"]]);
+const AssetListItem = /* @__PURE__ */ _export_sfc(_sfc_main$4F, [["__scopeId", "data-v-dae33513"]]);
 const _hoisted_1$6v = { class: "ctv:shrink-0 ctv:flex ctv:items-center ctv:gap-1.5 ctv:py-1.5 ctv:px-2.5 ctv:bg-interface-panel-surface ctv:border-b ctv:border-border-subtle" };
 const _hoisted_2$4f = ["checked", "title"];
 const _hoisted_3$47 = { class: "ctv:flex-1 ctv:truncate ctv:text-xs ctv:font-semibold" };
@@ -58953,7 +58953,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-CIuyxlAe.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-BQcS-Xti.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -60209,7 +60209,7 @@ const _sfc_main$4A = /* @__PURE__ */ defineComponent({
               onDragover: _cache2[11] || (_cache2[11] = withModifiers(() => {
               }, ["prevent"])),
               onDrop: withModifiers(($event) => unref(onChipDrop)(cat2.id, $event), ["prevent", "stop"]),
-              onClick: ($event) => activeFilter.value = cat2.id
+              onClick: ($event) => activeFilter.value = unref(activeFilter) === cat2.id ? "all" : cat2.id
             }, [
               createTextVNode(toDisplayString$1(cat2.name) + " ", 1),
               createBaseVNode("span", {
@@ -77436,7 +77436,7 @@ const _sfc_main$4l = /* @__PURE__ */ defineComponent({
     batchGroups: {},
     addedBatchKeys: {}
   },
-  emits: ["select", "select-batch", "refresh-batch", "unpin-batch", "close"],
+  emits: ["select", "deselect", "select-batch", "deselect-batch", "refresh-batch", "unpin-batch", "close"],
   setup(__props, { emit: __emit }) {
     const props = __props;
     const emit2 = __emit;
@@ -77605,7 +77605,7 @@ const _sfc_main$4l = /* @__PURE__ */ defineComponent({
                       isBatchAdded(group.id, i) ? "ctv:border-primary-background" : "ctv:border-border-subtle ctv:hover:border-primary-background/60"
                     ]),
                     title: _ctx.$t("imageRefs.batchItem", { n: i + 1 }),
-                    onClick: ($event) => _ctx.$emit("select-batch", group.id, i)
+                    onClick: ($event) => isBatchAdded(group.id, i) ? _ctx.$emit("deselect-batch", group.id, i) : _ctx.$emit("select-batch", group.id, i)
                   }, [
                     createVNode(_sfc_main$4H, {
                       src: url,
@@ -77701,7 +77701,7 @@ const _sfc_main$4l = /* @__PURE__ */ defineComponent({
                   unref(isAdded)(asset.id) ? "ctv:border-primary-background" : "ctv:border-border-subtle ctv:hover:border-primary-background/60"
                 ]),
                 title: asset.name,
-                onClick: ($event) => _ctx.$emit("select", asset)
+                onClick: ($event) => unref(isAdded)(asset.id) ? _ctx.$emit("deselect", asset) : _ctx.$emit("select", asset)
               }, [
                 asset.media_type === "video" ? (openBlock(), createElementBlock("div", {
                   key: 0,
@@ -78509,7 +78509,8 @@ const _sfc_main$4k = /* @__PURE__ */ defineComponent({
           "added-ids": pending2.value.map((a2) => a2.asset_id),
           "media-types": ["image", "video", "audio"],
           onSelect: addAsset,
-          onClose: _cache2[0] || (_cache2[0] = ($event) => pickerOpen.value = false)
+          onDeselect: _cache2[0] || (_cache2[0] = (a2) => removePending(a2.id)),
+          onClose: _cache2[1] || (_cache2[1] = ($event) => pickerOpen.value = false)
         }, null, 8, ["added-ids"])) : createCommentVNode("", true),
         unref(slashOpen) && unref(slashMatches).length ? (openBlock(), createElementBlock("div", _hoisted_2$3$, [
           (openBlock(true), createElementBlock(Fragment$1, null, renderList(unref(slashMatches), (s) => {
@@ -78553,7 +78554,7 @@ const _sfc_main$4k = /* @__PURE__ */ defineComponent({
                   class: "ctv-bot-skill-x",
                   title: _ctx.$t("bot.removeRef"),
                   onClick: ($event) => unref(removeRef)(unref(refKey)(r))
-                }, [..._cache2[5] || (_cache2[5] = [
+                }, [..._cache2[6] || (_cache2[6] = [
                   createBaseVNode("i", { class: "pi pi-times ctv:text-[9px]" }, null, -1)
                 ])], 8, _hoisted_12$1d)
               ]);
@@ -78561,13 +78562,13 @@ const _sfc_main$4k = /* @__PURE__ */ defineComponent({
           ])) : createCommentVNode("", true),
           unref(selectedSkill) ? (openBlock(), createElementBlock("div", _hoisted_13$16, [
             createBaseVNode("span", _hoisted_14$_, [
-              _cache2[7] || (_cache2[7] = createBaseVNode("i", { class: "pi pi-bolt ctv:text-[9px]" }, null, -1)),
+              _cache2[8] || (_cache2[8] = createBaseVNode("i", { class: "pi pi-bolt ctv:text-[9px]" }, null, -1)),
               createTextVNode(" /" + toDisplayString$1(unref(selectedSkill).name) + " ", 1),
               createBaseVNode("button", {
                 class: "ctv-bot-skill-x",
                 title: _ctx.$t("bot.removeSkill"),
-                onClick: _cache2[1] || (_cache2[1] = ($event) => unref(clearSkill)())
-              }, [..._cache2[6] || (_cache2[6] = [
+                onClick: _cache2[2] || (_cache2[2] = ($event) => unref(clearSkill)())
+              }, [..._cache2[7] || (_cache2[7] = [
                 createBaseVNode("i", { class: "pi pi-times ctv:text-[9px]" }, null, -1)
               ])], 8, _hoisted_15$S)
             ])
@@ -78597,19 +78598,19 @@ const _sfc_main$4k = /* @__PURE__ */ defineComponent({
                   class: "ctv-bot-chip-x",
                   title: _ctx.$t("bot.removeAttachment"),
                   onClick: ($event) => removePending(att.asset_id)
-                }, [..._cache2[8] || (_cache2[8] = [
+                }, [..._cache2[9] || (_cache2[9] = [
                   createBaseVNode("i", { class: "pi pi-times ctv:text-[9px]" }, null, -1)
                 ])], 8, _hoisted_20$x)
               ], 2);
             }), 128)),
-            uploading.value ? (openBlock(), createElementBlock("div", _hoisted_21$s, [..._cache2[9] || (_cache2[9] = [
+            uploading.value ? (openBlock(), createElementBlock("div", _hoisted_21$s, [..._cache2[10] || (_cache2[10] = [
               createBaseVNode("i", { class: "pi pi-spin pi-spinner ctv:text-xs ctv:text-muted-foreground" }, null, -1)
             ])])) : createCommentVNode("", true)
           ])) : createCommentVNode("", true),
           withDirectives(createBaseVNode("textarea", {
             ref_key: "input",
             ref: input,
-            "onUpdate:modelValue": _cache2[2] || (_cache2[2] = ($event) => draft.value = $event),
+            "onUpdate:modelValue": _cache2[3] || (_cache2[3] = ($event) => draft.value = $event),
             rows: "1",
             class: "ctv:max-h-40 ctv:w-full ctv:resize-none ctv:border-none ctv:bg-transparent ctv:text-sm ctv:text-base-foreground ctv:outline-none ctv:[font-family:inherit]",
             placeholder: _ctx.$t("bot.inputPlaceholder"),
@@ -78625,11 +78626,11 @@ const _sfc_main$4k = /* @__PURE__ */ defineComponent({
                 class: "ctv-bot-attach",
                 title: _ctx.$t("bot.attachImage"),
                 disabled: unref(store2).busy || uploading.value,
-                onClick: _cache2[3] || (_cache2[3] = ($event) => {
+                onClick: _cache2[4] || (_cache2[4] = ($event) => {
                   var _a3;
                   return (_a3 = filePicker.value) == null ? void 0 : _a3.click();
                 })
-              }, [..._cache2[10] || (_cache2[10] = [
+              }, [..._cache2[11] || (_cache2[11] = [
                 createBaseVNode("i", { class: "pi pi-image ctv:text-xs" }, null, -1)
               ])], 8, _hoisted_24$o),
               createBaseVNode("button", {
@@ -78648,7 +78649,7 @@ const _sfc_main$4k = /* @__PURE__ */ defineComponent({
               title: _ctx.$t("bot.insertFromCanvas"),
               disabled: unref(store2).busy,
               onClick: insertFromCanvas
-            }, [..._cache2[11] || (_cache2[11] = [
+            }, [..._cache2[12] || (_cache2[12] = [
               createBaseVNode("i", { class: "pi pi-plus-circle ctv:text-xs" }, null, -1)
             ])], 8, _hoisted_26$l),
             createBaseVNode("input", {
@@ -78660,13 +78661,13 @@ const _sfc_main$4k = /* @__PURE__ */ defineComponent({
               class: "ctv:hidden",
               onChange: onPick
             }, null, 544),
-            _cache2[13] || (_cache2[13] = createBaseVNode("div", { class: "ctv:flex-1" }, null, -1)),
+            _cache2[14] || (_cache2[14] = createBaseVNode("div", { class: "ctv:flex-1" }, null, -1)),
             unref(store2).busy ? (openBlock(), createElementBlock("button", {
               key: 1,
               class: "ctv-bot-send ctv:flex ctv:items-center ctv:gap-1 ctv:rounded-md ctv:border-none ctv:bg-node-stroke-error/80 ctv:px-2.5 ctv:py-1 ctv:text-xs ctv:text-white ctv:cursor-pointer",
-              onClick: _cache2[4] || (_cache2[4] = ($event) => unref(store2).stop())
+              onClick: _cache2[5] || (_cache2[5] = ($event) => unref(store2).stop())
             }, [
-              _cache2[12] || (_cache2[12] = createBaseVNode("i", { class: "pi pi-stop-circle ctv:text-[11px]" }, null, -1)),
+              _cache2[13] || (_cache2[13] = createBaseVNode("i", { class: "pi pi-stop-circle ctv:text-[11px]" }, null, -1)),
               createTextVNode(" " + toDisplayString$1(_ctx.$t("bot.stop")), 1)
             ])) : createCommentVNode("", true),
             createBaseVNode("button", {
@@ -78685,7 +78686,7 @@ const _sfc_main$4k = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const BotComposer = /* @__PURE__ */ _export_sfc(_sfc_main$4k, [["__scopeId", "data-v-7ddc1869"]]);
+const BotComposer = /* @__PURE__ */ _export_sfc(_sfc_main$4k, [["__scopeId", "data-v-f97d3462"]]);
 const _hoisted_1$63 = { class: "ctv:mb-1.5 ctv:flex ctv:items-start ctv:gap-1.5" };
 const _hoisted_2$3_ = { class: "ctv:break-words ctv:whitespace-pre-wrap ctv:font-medium" };
 const _hoisted_3$3T = { class: "ctv:flex ctv:flex-wrap ctv:gap-1.5" };
@@ -86860,6 +86861,14 @@ function useMediaStrip(getNode2, opts) {
     appendMediaEntry(getNode2(), "image", batchEntry(groupId, index2));
     void scheduleWarnings();
   }
+  function onRemoveAsset(asset) {
+    const item = items.value.find((it2) => it2.entry.asset_id === asset.id);
+    if (item) remove2(item);
+  }
+  function onRemoveBatchImage(groupId, index2) {
+    const item = items.value.find((it2) => it2.entry.src === "batch" && it2.entry.batch_id === groupId && it2.entry.batch_index === index2);
+    if (item) remove2(item);
+  }
   async function importFiles(files) {
     try {
       const created = await importAssetFiles(files);
@@ -86933,6 +86942,8 @@ function useMediaStrip(getNode2, opts) {
     onUnpinBatch,
     onAddAsset,
     onAddBatchImage,
+    onRemoveAsset,
+    onRemoveBatchImage,
     importFiles,
     fileDrop,
     remove: remove2,
@@ -86989,6 +87000,8 @@ const _sfc_main$46 = /* @__PURE__ */ defineComponent({
       onUnpinBatch,
       onAddAsset,
       onAddBatchImage,
+      onRemoveAsset,
+      onRemoveBatchImage,
       fileDrop,
       remove: remove2,
       warnings,
@@ -87050,11 +87063,13 @@ const _sfc_main$46 = /* @__PURE__ */ defineComponent({
           "batch-groups": unref(batchGroups),
           "added-batch-keys": unref(addedBatchKeys),
           onSelect: unref(onAddAsset),
+          onDeselect: unref(onRemoveAsset),
           onSelectBatch: unref(onAddBatchImage),
+          onDeselectBatch: unref(onRemoveBatchImage),
           onRefreshBatch: unref(onRefreshBatch),
           onUnpinBatch: unref(onUnpinBatch),
           onClose: _cache2[1] || (_cache2[1] = ($event) => pickerOpen.value = false)
-        }, null, 8, ["added-ids", "media-types", "batch-groups", "added-batch-keys", "onSelect", "onSelectBatch", "onRefreshBatch", "onUnpinBatch"])) : createCommentVNode("", true),
+        }, null, 8, ["added-ids", "media-types", "batch-groups", "added-batch-keys", "onSelect", "onDeselect", "onSelectBatch", "onDeselectBatch", "onRefreshBatch", "onUnpinBatch"])) : createCommentVNode("", true),
         pinned.value.length ? (openBlock(), createElementBlock("div", _hoisted_5$30, [
           (openBlock(true), createElementBlock(Fragment$1, null, renderList(pinned.value, (it2) => {
             return openBlock(), createElementBlock("div", {
@@ -87114,7 +87129,7 @@ const _sfc_main$46 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const ImageReferences = /* @__PURE__ */ _export_sfc(_sfc_main$46, [["__scopeId", "data-v-2053557f"]]);
+const ImageReferences = /* @__PURE__ */ _export_sfc(_sfc_main$46, [["__scopeId", "data-v-cba8936c"]]);
 function OrderedMap(content) {
   this.content = content;
 }
@@ -141649,6 +141664,16 @@ function useAssetLoaderCard(node, getState) {
     writeWidget(node, "asset_id", asset.id);
     setOutputFromUrl(asset.payload_url);
   }
+  function clearAsset() {
+    selectedId.value = null;
+    writeWidget(node, "asset_url", "");
+    writeWidget(node, "asset_id", 0);
+    stageStore.setOutputSlot(getState(), 0, null);
+  }
+  function toggleAsset(asset) {
+    if (selectedId.value === asset.id) clearAsset();
+    else selectAsset(asset);
+  }
   async function selectAssetId(id) {
     if (!Number.isFinite(id) || id <= 0) return false;
     if (id === selectedId.value) return true;
@@ -141716,6 +141741,8 @@ function useAssetLoaderCard(node, getState) {
     selectedAsset,
     setFilter,
     selectAsset,
+    clearAsset,
+    toggleAsset,
     selectAssetId,
     selectRelative,
     importFiles,
@@ -141788,7 +141815,7 @@ const _sfc_main$3j = /* @__PURE__ */ defineComponent({
       mediaCount,
       selectedAsset,
       setFilter,
-      selectAsset,
+      toggleAsset,
       selectRelative,
       importFiles,
       fileDrop
@@ -141870,7 +141897,7 @@ const _sfc_main$3j = /* @__PURE__ */ defineComponent({
             return openBlock(), createElementBlock("button", {
               key: cat2.id,
               class: normalizeClass(chipClass2(unref(activeFilter) === cat2.id)),
-              onClick: ($event) => unref(setFilter)(cat2.id)
+              onClick: ($event) => unref(setFilter)(unref(activeFilter) === cat2.id ? "all" : cat2.id)
             }, [
               createTextVNode(toDisplayString$1(cat2.name) + " ", 1),
               createBaseVNode("span", {
@@ -141929,7 +141956,7 @@ const _sfc_main$3j = /* @__PURE__ */ defineComponent({
                     item.asset.id === unref(selectedId) ? "ctv:border-primary-background ctv:ring-2 ctv:ring-primary-background/50" : "ctv:border-border-subtle ctv:hover:border-border-default"
                   ]),
                   title: unref(assetTooltipOf)(item.asset),
-                  onClick: ($event) => unref(selectAsset)(item.asset)
+                  onClick: ($event) => unref(toggleAsset)(item.asset)
                 }, [
                   unref(mediaType) === "video" ? (openBlock(), createElementBlock("div", _hoisted_7$1M, [
                     createVNode(_sfc_main$4H, {
@@ -142018,7 +142045,7 @@ const _sfc_main$3j = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const AssetLoaderCard = /* @__PURE__ */ _export_sfc(_sfc_main$3j, [["__scopeId", "data-v-477ef7fa"]]);
+const AssetLoaderCard = /* @__PURE__ */ _export_sfc(_sfc_main$3j, [["__scopeId", "data-v-2e96101a"]]);
 const KHR_mesh_quantization_ExtraAttrTypes = {
   POSITION: [
     "byte",
@@ -144051,7 +144078,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-CiDXfyhU.mjs");
+    const { STLLoader } = await import("./STLLoader-BiwrAcqh.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -144059,7 +144086,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-DYeQC0ir.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-B7rHsKxS.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -144168,8 +144195,16 @@ function useModelLoader(node, opts) {
     selectedPart.value = key;
   }
   function bindSelected(slot) {
-    if (!selectedPart.value) return;
-    bindings.value = { ...bindings.value, [selectedPart.value]: slot };
+    const part = selectedPart.value;
+    if (!part) return;
+    if (bindings.value[part] === slot) {
+      unbind(part);
+      return;
+    }
+    bindings.value = { ...bindings.value, [part]: slot };
+  }
+  function togglePart(part) {
+    selectedPart.value = selectedPart.value === part ? null : part;
   }
   function unbind(part) {
     const next = { ...bindings.value };
@@ -144291,6 +144326,7 @@ function useModelLoader(node, opts) {
     onPartsChanged,
     onPartPick,
     bindSelected,
+    togglePart,
     unbind,
     onPick,
     registerFile,
@@ -144417,6 +144453,7 @@ const _sfc_main$3i = /* @__PURE__ */ defineComponent({
       onPartsChanged,
       onPartPick,
       bindSelected,
+      togglePart,
       unbind,
       onPick,
       uploadModelFiles,
@@ -144619,7 +144656,7 @@ const _sfc_main$3i = /* @__PURE__ */ defineComponent({
                 type: "button",
                 class: normalizeClass(chipClass2(part === unref(selectedPart))),
                 title: `${part} ← ${slot}`,
-                onClick: ($event) => selectedPart.value = part
+                onClick: ($event) => unref(togglePart)(part)
               }, [
                 createBaseVNode("span", {
                   class: "ctv:size-2 ctv:rounded-full",
@@ -149272,6 +149309,18 @@ const _sfc_main$37 = /* @__PURE__ */ defineComponent({
       const kind = a2.media_type === "video" ? "videos" : a2.media_type === "audio" ? "audio" : "images";
       addRef(selectedClip.value.id, kind, a2.payload_url);
     }
+    function onUnpickAsset(a2) {
+      const clip = selectedClip.value;
+      if (!clip) return;
+      const entry = allRefs.value.find((r) => r.url === a2.payload_url);
+      if (entry) removeRef(clip.id, entry.kind, entry.url);
+    }
+    function onUnpickBatchImage(groupId, index2) {
+      var _a3;
+      const clip = selectedClip.value;
+      const url = (_a3 = pinnedStore.byId(projectId.value, groupId)) == null ? void 0 : _a3.urls[index2];
+      if (clip && url && clip.images.includes(url)) removeRef(clip.id, "images", url);
+    }
     const refSlotPicker = /* @__PURE__ */ ref(null);
     function openRefSlotPicker(entry, e) {
       var _a3;
@@ -149623,7 +149672,9 @@ const _sfc_main$37 = /* @__PURE__ */ defineComponent({
               "batch-groups": batchGroups.value,
               "added-batch-keys": pickerAddedBatchKeys.value,
               onSelect: onPickAsset,
+              onDeselect: onUnpickAsset,
               onSelectBatch: onPickBatchImage,
+              onDeselectBatch: onUnpickBatchImage,
               onRefreshBatch,
               onUnpinBatch,
               onClose: _cache2[16] || (_cache2[16] = ($event) => pickerOpen.value = false)
@@ -149728,7 +149779,7 @@ const _sfc_main$37 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const DirectorStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$37, [["__scopeId", "data-v-07736a87"]]);
+const DirectorStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$37, [["__scopeId", "data-v-818d9271"]]);
 function useChainCallback(originalCallback, ...callbacks) {
   return function(...args) {
     if (typeof originalCallback === "function") {
@@ -165847,6 +165898,9 @@ function useScene3dStage(node, opts) {
     writeEditorProps({ selectedId: id });
     viewport2 == null ? void 0 : viewport2.setSelected(id);
   }
+  function toggleSelectObject(id) {
+    selectObject(selectedId.value === id ? null : id);
+  }
   function setPipCamera(id) {
     if (pipCameraId.value === id) return;
     pipCameraId.value = id;
@@ -166675,6 +166729,7 @@ function useScene3dStage(node, opts) {
     canUndo,
     canRedo,
     selectObject,
+    toggleSelectObject,
     addCharacter,
     addPrimitive,
     addModelFromAsset,
@@ -167092,6 +167147,7 @@ const _sfc_main$2W = /* @__PURE__ */ defineComponent({
       canUndo,
       canRedo,
       selectObject,
+      toggleSelectObject,
       fitSelectedModel,
       removeSelected,
       renameObject,
@@ -167367,7 +167423,7 @@ const _sfc_main$2W = /* @__PURE__ */ defineComponent({
                   color: unref(characterColor)(index2),
                   selected: character.id === unref(selectedId),
                   hidden: !!character.hidden,
-                  onSelect: ($event) => unref(selectObject)(character.id),
+                  onSelect: ($event) => unref(toggleSelectObject)(character.id),
                   onRename: (name) => unref(renameObject)(character.id, name),
                   onToggleHide: ($event) => unref(toggleObjectHidden)(character.id),
                   onRemove: unref(removeSelected)
@@ -167409,7 +167465,7 @@ const _sfc_main$2W = /* @__PURE__ */ defineComponent({
                   color: primitive.color,
                   selected: primitive.id === unref(selectedId),
                   hidden: !!primitive.hidden,
-                  onSelect: ($event) => unref(selectObject)(primitive.id),
+                  onSelect: ($event) => unref(toggleSelectObject)(primitive.id),
                   onRename: (name) => unref(renameObject)(primitive.id, name),
                   onToggleHide: ($event) => unref(toggleObjectHidden)(primitive.id),
                   onRemove: unref(removeSelected)
@@ -167448,7 +167504,7 @@ const _sfc_main$2W = /* @__PURE__ */ defineComponent({
                     color: unref(modelColor)(index2),
                     selected: model.id === unref(selectedId),
                     hidden: !!model.hidden,
-                    onSelect: ($event) => unref(selectObject)(model.id),
+                    onSelect: ($event) => unref(toggleSelectObject)(model.id),
                     onRename: (name) => unref(renameObject)(model.id, name),
                     onToggleHide: ($event) => unref(toggleObjectHidden)(model.id),
                     onRemove: unref(removeSelected)
@@ -167509,7 +167565,7 @@ const _sfc_main$2W = /* @__PURE__ */ defineComponent({
                   name: light.name ?? "",
                   selected: light.id === unref(selectedId),
                   hidden: !!light.hidden,
-                  onSelect: ($event) => unref(selectObject)(light.id),
+                  onSelect: ($event) => unref(toggleSelectObject)(light.id),
                   onRename: (name) => unref(renameObject)(light.id, name),
                   onToggleHide: ($event) => unref(toggleObjectHidden)(light.id),
                   onRemove: unref(removeSelected)
@@ -167543,7 +167599,7 @@ const _sfc_main$2W = /* @__PURE__ */ defineComponent({
                   color: cameraEntry.preset ? unref(cameraColor)(index2) : void 0,
                   selected: cameraEntry.id === unref(selectedId),
                   hidden: !!cameraEntry.hidden,
-                  onSelect: ($event) => unref(selectObject)(cameraEntry.id),
+                  onSelect: ($event) => unref(toggleSelectObject)(cameraEntry.id),
                   onRename: (name) => unref(renameObject)(cameraEntry.id, name),
                   onToggleHide: ($event) => unref(toggleObjectHidden)(cameraEntry.id),
                   onRemove: unref(removeSelected)
@@ -167586,7 +167642,7 @@ const _sfc_main$2W = /* @__PURE__ */ defineComponent({
                   color: shotColor(shot),
                   selected: shot.id === unref(selectedId),
                   hidden: false,
-                  onSelect: ($event) => unref(selectObject)(shot.id),
+                  onSelect: ($event) => unref(toggleSelectObject)(shot.id),
                   onRename: (name) => unref(renameObject)(shot.id, name),
                   onRemove: unref(removeSelected)
                 }, {
@@ -167629,7 +167685,7 @@ const _sfc_main$2W = /* @__PURE__ */ defineComponent({
                   name: "",
                   selected: strip.id === unref(selectedId),
                   hidden: false,
-                  onSelect: ($event) => unref(selectObject)(strip.id),
+                  onSelect: ($event) => unref(toggleSelectObject)(strip.id),
                   onRemove: unref(removeSelected)
                 }, {
                   icon: withCtx(() => [
@@ -167816,7 +167872,7 @@ const _sfc_main$2W = /* @__PURE__ */ defineComponent({
               onTogglePlay: unref(handleTimelineTogglePlay),
               onCameraSpeed: unref(setCameraSpeedById),
               onCharacterPatch: unref(updateCharacterAnimationById),
-              onTrackSelect: unref(selectObject),
+              onTrackSelect: unref(toggleSelectObject),
               onShotDuration: unref(setShotDurationById),
               onShotMove: unref(moveShotToIndex)
             }, null, 8, ["loop", "data", "legend", "frame", "playing", "selected-id", "onSeek", "onTogglePlay", "onCameraSpeed", "onCharacterPatch", "onTrackSelect", "onShotDuration", "onShotMove"])
@@ -200357,7 +200413,7 @@ const _sfc_main$2l = /* @__PURE__ */ defineComponent({
                 background: p2.id === unref(activePartId) ? `${unref(partColor)(p2.id)}33` : "transparent",
                 color: "var(--base-foreground, #ddd)"
               }),
-              onClick: ($event) => activePartId.value = p2.id
+              onClick: ($event) => activePartId.value = unref(activePartId) === p2.id ? null : p2.id
             }, [
               createBaseVNode("span", {
                 class: "ctv:size-2 ctv:rounded-full",
@@ -230984,16 +231040,18 @@ const _sfc_main$i = /* @__PURE__ */ defineComponent({
           "batch-groups": unref(strip).batchGroups.value,
           "added-batch-keys": unref(strip).addedBatchKeys.value,
           onSelect: unref(strip).onAddAsset,
+          onDeselect: unref(strip).onRemoveAsset,
           onSelectBatch: unref(strip).onAddBatchImage,
+          onDeselectBatch: unref(strip).onRemoveBatchImage,
           onRefreshBatch: unref(strip).onRefreshBatch,
           onUnpinBatch: unref(strip).onUnpinBatch,
           onClose: _cache2[10] || (_cache2[10] = ($event) => open.value = false)
-        }, null, 8, ["added-ids", "media-types", "batch-groups", "added-batch-keys", "onSelect", "onSelectBatch", "onRefreshBatch", "onUnpinBatch"])) : createCommentVNode("", true)
+        }, null, 8, ["added-ids", "media-types", "batch-groups", "added-batch-keys", "onSelect", "onDeselect", "onSelectBatch", "onDeselectBatch", "onRefreshBatch", "onUnpinBatch"])) : createCommentVNode("", true)
       ], 64);
     };
   }
 });
-const MediaStripV2 = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["__scopeId", "data-v-48a84db7"]]);
+const MediaStripV2 = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["__scopeId", "data-v-e1e94857"]]);
 const _sfc_main$h = /* @__PURE__ */ defineComponent({
   __name: "ServerSelectV2",
   props: {
@@ -236678,7 +236736,7 @@ const _sfc_main$5 = /* @__PURE__ */ defineComponent({
     }
     const open = /* @__PURE__ */ ref(false);
     const fileInput = /* @__PURE__ */ ref(null);
-    const { mediaType, selectedAsset, selectAsset, importFiles, fileDrop } = useAssetLoaderCard(props.node, () => props.state);
+    const { mediaType, selectedAsset, selectAsset, clearAsset, importFiles, fileDrop } = useAssetLoaderCard(props.node, () => props.state);
     const addedIds = computed(() => selectedAsset.value ? [selectedAsset.value.id] : []);
     const previewUrl = computed(() => {
       const a2 = selectedAsset.value;
@@ -236790,13 +236848,14 @@ const _sfc_main$5 = /* @__PURE__ */ defineComponent({
           "added-ids": addedIds.value,
           "media-types": [unref(mediaType)],
           onSelect,
+          onDeselect: unref(clearAsset),
           onClose: _cache2[9] || (_cache2[9] = ($event) => open.value = false)
-        }, null, 8, ["added-ids", "media-types"])) : createCommentVNode("", true)
+        }, null, 8, ["added-ids", "media-types", "onDeselect"])) : createCommentVNode("", true)
       ], 64);
     };
   }
 });
-const AssetLoaderV2 = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-e873087f"]]);
+const AssetLoaderV2 = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-6823134e"]]);
 const _hoisted_1$4 = ["title"];
 const _sfc_main$4 = /* @__PURE__ */ defineComponent({
   __name: "LoaderActionsV2",
@@ -239234,4 +239293,4 @@ export {
   LinearFilter as y,
   LinearMipMapLinearFilter as z
 };
-//# sourceMappingURL=main-CWRgovv-.mjs.map
+//# sourceMappingURL=main-D-BXMIh9.mjs.map

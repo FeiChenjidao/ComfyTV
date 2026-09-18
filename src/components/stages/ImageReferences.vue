@@ -30,7 +30,9 @@
       :batch-groups="batchGroups"
       :added-batch-keys="addedBatchKeys"
       @select="onAddAsset"
+      @deselect="onRemoveAsset"
       @select-batch="onAddBatchImage"
+      @deselect-batch="onRemoveBatchImage"
       @refresh-batch="onRefreshBatch"
       @unpin-batch="onUnpinBatch"
       @close="pickerOpen = false"
@@ -136,6 +138,8 @@ const {
   onUnpinBatch,
   onAddAsset,
   onAddBatchImage,
+  onRemoveAsset,
+  onRemoveBatchImage,
   fileDrop,
   remove,
   warnings,

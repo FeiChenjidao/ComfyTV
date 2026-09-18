@@ -71,6 +71,18 @@ export function useAssetLoaderCard(node: LGraphNode, getState: () => StageState)
     setOutputFromUrl(asset.payload_url)
   }
 
+  function clearAsset(): void {
+    selectedId.value = null
+    writeWidget(node, 'asset_url', '')
+    writeWidget(node, 'asset_id', 0)
+    stageStore.setOutputSlot(getState(), 0, null)
+  }
+
+  function toggleAsset(asset: Asset): void {
+    if (selectedId.value === asset.id) clearAsset()
+    else selectAsset(asset)
+  }
+
   async function selectAssetId(id: number): Promise<boolean> {
     if (!Number.isFinite(id) || id <= 0) return false
     if (id === selectedId.value) return true
@@ -148,6 +160,8 @@ export function useAssetLoaderCard(node: LGraphNode, getState: () => StageState)
     selectedAsset,
     setFilter,
     selectAsset,
+    clearAsset,
+    toggleAsset,
     selectAssetId,
     selectRelative,
     importFiles,

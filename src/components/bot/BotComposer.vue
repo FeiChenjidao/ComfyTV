@@ -6,6 +6,7 @@
       :added-ids="pending.map(a => a.asset_id)"
       :media-types="['image', 'video', 'audio']"
       @select="addAsset"
+      @deselect="a => removePending(a.id)"
       @close="pickerOpen = false"
     />
     <div

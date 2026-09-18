@@ -495,6 +495,10 @@ export function useScene3dStage(
     viewport?.setSelected(id)
   }
 
+  function toggleSelectObject(id: string): void {
+    selectObject(selectedId.value === id ? null : id)
+  }
+
   function setPipCamera(id: string | null): void {
     if (pipCameraId.value === id) return
     pipCameraId.value = id
@@ -1461,6 +1465,7 @@ export function useScene3dStage(
     canUndo,
     canRedo,
     selectObject,
+    toggleSelectObject,
     addCharacter,
     addPrimitive,
     addModelFromAsset,

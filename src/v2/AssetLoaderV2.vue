@@ -39,6 +39,7 @@
     :added-ids="addedIds"
     :media-types="[mediaType]"
     @select="onSelect"
+    @deselect="clearAsset"
     @close="open = false"
   />
 </template>
@@ -70,7 +71,7 @@ function onModelCaptured(url: string) {
 const open = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
-const { mediaType, selectedAsset, selectAsset, importFiles, fileDrop } =
+const { mediaType, selectedAsset, selectAsset, clearAsset, importFiles, fileDrop } =
   useAssetLoaderCard(props.node, () => props.state)
 
 const addedIds = computed(() => (selectedAsset.value ? [selectedAsset.value.id] : []))

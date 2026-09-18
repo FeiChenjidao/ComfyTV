@@ -53,7 +53,7 @@
           background: p.id === activePartId ? `${partColor(p.id)}33` : 'transparent',
           color: 'var(--base-foreground, #ddd)',
         }"
-        @click="activePartId = p.id"
+        @click="activePartId = activePartId === p.id ? null : p.id"
       >
         <span class="ctv:size-2 ctv:rounded-full" :style="{ background: partColor(p.id) }" />
         {{ p.kind === 'box' ? $t('splitPart.chipBox', { n: p.id }) : $t('splitPart.chipPoints', { n: p.id, count: p.points.length }) }}

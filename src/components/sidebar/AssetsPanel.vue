@@ -97,7 +97,7 @@
         :class="chipClass(activeFilter === cat.id)"
         @dragover.prevent
         @drop.prevent.stop="onChipDrop(cat.id, $event)"
-        @click="activeFilter = cat.id"
+        @click="activeFilter = activeFilter === cat.id ? 'all' : cat.id"
       >
         {{ cat.name }}
         <span :class="chipCountClass">{{ store.countByCategory(cat.id) }}</span>
