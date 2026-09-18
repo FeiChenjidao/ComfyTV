@@ -741,6 +741,16 @@
     "tagPopover": {
       "empty": "还没有分类。",
       "create": "新建分类"
+    },
+    "select": {
+      "enter": "多选资产（Ctrl+点击也可以）",
+      "exit": "退出多选",
+      "all": "全选当前显示",
+      "count": "已选 {count} 个",
+      "tags": "编辑所选的标签",
+      "loadNodes": "把所选作为节点添加到画布",
+      "remove": "从资产库移除所选",
+      "removeConfirm": "把这 {count} 个资产从资产库移除？磁盘上的文件保留。"
     }
   },
   "assetLoader": {

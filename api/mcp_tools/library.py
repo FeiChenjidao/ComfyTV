@@ -126,6 +126,22 @@ async def _asset_edit(args: dict) -> dict:
         row = _with_file_missing(row)
         broadcast_asset_event("create", {"asset": row})
         return {"asset": row}
+    if action == "update" and args.get("asset_ids") is not None:
+        rows = storage.bulk_update_asset_categories(
+            _asset_ids(args),
+            add=_category_ids(args.get("categories")),
+            remove=_category_ids(args.get("remove_categories")),
+        )
+        if rows is None:
+            raise ValueError("bad category")
+        rows = [_with_file_missing(r) for r in rows]
+        broadcast_asset_event("bulk-update", {"assets": rows})
+        return {"assets": rows}
+    if action == "delete" and args.get("asset_ids") is not None:
+        deleted = storage.delete_assets(_asset_ids(args))
+        if deleted:
+            broadcast_asset_event("bulk-delete", {"ids": deleted})
+        return {"ok": True, "deleted": deleted}
     if action == "update":
         aid = args.get("asset_id")
         if not isinstance(aid, int):
@@ -151,6 +167,13 @@ async def _asset_edit(args: dict) -> dict:
         return {"ok": True}
     raise ValueError(f"unknown action {action!r} — valid: create, update, "
                      "delete, create_category, rename_category, delete_category")
+
+def _asset_ids(args: dict) -> list[int]:
+    raw = args.get("asset_ids")
+    if not isinstance(raw, list) or not raw or len(raw) > 500 \
+            or not all(isinstance(i, int) for i in raw):
+        raise ValueError("asset_ids must be 1..500 integers")
+    return raw
 
 def _category_ids(raw) -> list[int]:
     if raw is None:
@@ -281,7 +304,10 @@ TOOLS: dict[str, dict] = {
             "name and categories (array of category names — created on the "
             "fly — or ids). action 'update' renames an asset (name) and/or "
             "replaces its categories. action 'delete' removes the DB entry "
-            "(the underlying file is never deleted). action 'create_category' "
+            "(the underlying file is never deleted). Batch: pass asset_ids "
+            "(array) instead of asset_id — 'update' then adds categories "
+            "and removes remove_categories on every listed asset; 'delete' "
+            "removes them all. action 'create_category' "
             "adds an empty category; 'rename_category' (category_id or name, "
             "plus new_name) and 'delete_category' (category_id or name — "
             "assets in it are kept, just uncategorised) manage existing ones. "
@@ -298,12 +324,14 @@ TOOLS: dict[str, dict] = {
                                     "create_category", "rename_category",
                                     "delete_category"]},
                 "asset_id": {"type": "integer"},
+                "asset_ids": {"type": "array", "items": {"type": "integer"}},
                 "category_id": {"type": "integer"},
                 "name": {"type": "string"},
                 "new_name": {"type": "string"},
                 "payload_url": {"type": "string"},
                 "media_type": {"type": "string"},
                 "categories": {"type": "array"},
+                "remove_categories": {"type": "array"},
             },
             "required": ["action"],
             "additionalProperties": False,

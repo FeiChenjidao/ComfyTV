@@ -3,6 +3,7 @@ import { nextTick, ref } from 'vue'
 
 const store = {
   categories: [{ id: 1, name: 'people' }, { id: 2, name: 'bg' }],
+  assets: [] as any[],
   byId: vi.fn(),
   listByCategory: vi.fn(() => []),
   ensureHydrated: vi.fn(),
@@ -15,6 +16,8 @@ const store = {
   remove: vi.fn(),
   addTag: vi.fn(),
   removeTag: vi.fn(),
+  bulkUpdateTags: vi.fn(async () => []),
+  bulkRemove: vi.fn(async () => []),
   create: vi.fn(async () => ({ id: 1 })),
 }
 
@@ -141,6 +144,43 @@ describe('useAssetsPanel', () => {
     expect(store.addTag).toHaveBeenCalledWith(7, 2)
   })
 
+  it('onChipDrop with several ids goes through the bulk endpoint', () => {
+    const p = useAssetsPanel(() => false)
+    p.onChipDrop(2, dragEvent('7,8'))
+    expect(store.addTag).not.toHaveBeenCalled()
+    expect(store.bulkUpdateTags).toHaveBeenCalledWith([7, 8], { add: [2] })
+  })
+
+  it('onAssetDragStart carries the whole selection when the card is selected', () => {
+    store.assets = [{ id: 7 }, { id: 8 }, { id: 9 }]
+    const p = useAssetsPanel(() => false)
+    p.selection.enterSelectMode()
+    p.selection.toggleSelected(7)
+    p.selection.toggleSelected(9)
+    const dt = { setData: vi.fn(), effectAllowed: '' }
+    p.onAssetDragStart({ id: 7 } as any, { dataTransfer: dt } as any)
+    expect(dt.setData).toHaveBeenCalledWith(ASSET_MIME, '7,9')
+    p.onAssetDragStart({ id: 8 } as any, { dataTransfer: dt } as any)
+    expect(dt.setData).toHaveBeenLastCalledWith(ASSET_MIME, '8')
+    store.assets = []
+  })
+
+  it('openSelectionTagEditor targets every selected asset', () => {
+    store.assets = [{ id: 7, category_ids: [1] }, { id: 8, category_ids: [] }]
+    store.byId.mockImplementation((id: number) => store.assets.find(a => a.id === id))
+    const p = useAssetsPanel(() => false)
+    p.selection.enterSelectMode()
+    p.selection.toggleSelected(7)
+    p.selection.toggleSelected(8)
+    const target = { getBoundingClientRect: () => ({ right: 300, bottom: 40 }) }
+    p.openSelectionTagEditor({ currentTarget: target } as any)
+    expect(p.tagEditor.value?.assetIds).toEqual([7, 8])
+    expect(p.editorTagState(1)).toBe('some')
+    p.toggleTag(1)
+    expect(store.bulkUpdateTags).toHaveBeenCalledWith([7, 8], { add: [1] })
+    store.assets = []
+  })
+
   it('onChipDrop ignores a drop with no asset payload', () => {
     const p = useAssetsPanel(() => false)
     p.onChipDrop(2, dragEvent(''))
@@ -183,8 +223,9 @@ describe('useAssetsPanel', () => {
     expect(p.assetMenu.value?.assetId).toBe(5)
     p.menuEditTags()
     expect(p.assetMenu.value).toBeNull()
-    expect(p.tagEditor.value?.assetId).toBe(5)
-    expect(p.editorHas(1)).toBe(true)
+    expect(p.tagEditor.value?.assetIds).toEqual([5])
+    expect(p.editorTagState(1)).toBe('all')
+    expect(p.editorTagState(2)).toBe('none')
     p.toggleTag(1)
     expect(store.removeTag).toHaveBeenCalledWith(5, 1)
     p.toggleTag(2)

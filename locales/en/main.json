@@ -741,6 +741,16 @@
     "tagPopover": {
       "empty": "No categories yet.",
       "create": "New category"
+    },
+    "select": {
+      "enter": "Select assets (Ctrl+click also works)",
+      "exit": "Exit selection",
+      "all": "Select all shown",
+      "count": "{count} selected",
+      "tags": "Edit tags of selected",
+      "loadNodes": "Add selected as nodes to canvas",
+      "remove": "Remove selected from library",
+      "removeConfirm": "Remove {count} assets from the library? The files on disk stay."
     }
   },
   "assetLoader": {

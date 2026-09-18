@@ -259,6 +259,28 @@ class TestReadTools:
         result = await _call_tool(client, "assets", {"category": "weird"})
         assert result["isError"] is True
 
+    async def test_asset_edit_batch_update_and_delete(self, client):
+        from ComfyTV import storage
+        a = storage.create_asset(name="a", payload_url="/view?filename=a.png&type=input")
+        b = storage.create_asset(name="b", payload_url="/view?filename=b.png&type=input")
+        data = _tool_json(await _call_tool(client, "asset_edit", {
+            "action": "update", "asset_ids": [a["id"], b["id"]], "categories": ["refs"],
+        }))
+        cid = storage.list_asset_categories()[0]["id"]
+        assert sorted(r["id"] for r in data["assets"]) == sorted([a["id"], b["id"]])
+        assert all(r["category_ids"] == [cid] for r in data["assets"])
+        data = _tool_json(await _call_tool(client, "asset_edit", {
+            "action": "update", "asset_ids": [a["id"]], "remove_categories": [cid],
+        }))
+        assert data["assets"][0]["category_ids"] == []
+        data = _tool_json(await _call_tool(client, "asset_edit", {
+            "action": "delete", "asset_ids": [a["id"], b["id"], 9999],
+        }))
+        assert sorted(data["deleted"]) == sorted([a["id"], b["id"]])
+        assert storage.list_assets() == []
+        result = await _call_tool(client, "asset_edit", {"action": "delete", "asset_ids": []})
+        assert result["isError"] is True
+
     async def test_jobs_empty_and_bad_status(self, client):
         data = _tool_json(await _call_tool(client, "jobs"))
         assert data["jobs"] == []

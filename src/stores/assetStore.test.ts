@@ -211,6 +211,66 @@ describe('assetStore', () => {
     expect(deletePaths).toContain('/comfytv/assets/1')
   })
 
+  it('bulkUpdateTags posts once and replaces every returned row', async () => {
+    const fetchApi = (app as any).api.fetchApi as ReturnType<typeof vi.fn>
+    mockHydrate(fetchApi, [category()], [asset({ id: 2 }), asset({ id: 1 })])
+    const s = useAssetStore()
+    await s.hydrate()
+    fetchApi.mockResolvedValueOnce(jsonResp({
+      ok: true,
+      assets: [asset({ id: 2, category_ids: [1] }), asset({ id: 1, category_ids: [1] })],
+    }))
+    const rows = await s.bulkUpdateTags([1, 2], { add: [1] })
+    expect(rows).toHaveLength(2)
+    expect(fetchApi).toHaveBeenLastCalledWith('/comfytv/assets/bulk', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ ids: [1, 2], add_category_ids: [1], remove_category_ids: [] }),
+    }))
+    expect(s.assets.map(a => a.category_ids)).toEqual([[1], [1]])
+  })
+
+  it('bulkUpdateTags short-circuits with nothing to change and returns null on failure', async () => {
+    const fetchApi = (app as any).api.fetchApi as ReturnType<typeof vi.fn>
+    mockHydrate(fetchApi, [], [asset()])
+    const s = useAssetStore()
+    await s.hydrate()
+    const calls = fetchApi.mock.calls.length
+    expect(await s.bulkUpdateTags([1], {})).toEqual([])
+    expect(fetchApi.mock.calls.length).toBe(calls)
+    fetchApi.mockResolvedValueOnce(new Response('boom', { status: 500 }))
+    expect(await s.bulkUpdateTags([1], { add: [9] })).toBeNull()
+    expect(s.assets[0].category_ids).toEqual([])
+  })
+
+  it('bulkRemove only drops the ids the server confirms and keeps rows on failure', async () => {
+    const fetchApi = (app as any).api.fetchApi as ReturnType<typeof vi.fn>
+    mockHydrate(fetchApi, [], [asset({ id: 3 }), asset({ id: 2 }), asset({ id: 1 })])
+    const s = useAssetStore()
+    await s.hydrate()
+    fetchApi.mockResolvedValueOnce(jsonResp({ ok: true, deleted: [3] }))
+    expect(await s.bulkRemove([3, 2])).toEqual([3])
+    expect(s.assets.map(a => a.id)).toEqual([2, 1])
+    fetchApi.mockResolvedValueOnce(new Response('boom', { status: 500 }))
+    expect(await s.bulkRemove([2])).toBeNull()
+    expect(s.assets.map(a => a.id)).toEqual([2, 1])
+  })
+
+  it('ws bulk-update and bulk-delete events apply without refetching', async () => {
+    const fetchApi = (app as any).api.fetchApi as ReturnType<typeof vi.fn>
+    mockHydrate(fetchApi, [], [asset({ id: 2 }), asset({ id: 1 })])
+    const s = useAssetStore()
+    await s.hydrate()
+    s.installWebSocketSync()
+    const listener = ((app as any).api.addEventListener as ReturnType<typeof vi.fn>).mock.calls.at(-1)![1]
+    const calls = fetchApi.mock.calls.length
+    listener({ detail: { event: 'bulk-update', assets: [asset({ id: 1, category_ids: [4] }), asset({ id: 5 })] } })
+    expect(s.assets.map(a => a.id)).toEqual([5, 2, 1])
+    expect(s.byId(1)?.category_ids).toEqual([4])
+    listener({ detail: { event: 'bulk-delete', ids: [2, 5] } })
+    expect(s.assets.map(a => a.id)).toEqual([1])
+    expect(fetchApi.mock.calls.length).toBe(calls)
+  })
+
   it('installWebSocketSync registers exactly one listener', () => {
     const addEventListener = (app as any).api.addEventListener as ReturnType<typeof vi.fn>
     addEventListener.mockClear()

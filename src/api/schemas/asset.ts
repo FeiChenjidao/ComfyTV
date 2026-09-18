@@ -41,6 +41,14 @@ export const MutateAssetSchema = z.object({
 export const DeleteAssetSchema = z.object({
   ok: z.literal(true),
 })
+export const BulkAssetsSchema = z.object({
+  ok: z.literal(true),
+  assets: z.array(AssetSchema),
+})
+export const BulkDeleteAssetsSchema = z.object({
+  ok: z.literal(true),
+  deleted: z.array(z.number()),
+})
 export const AdoptAssetsSchema = z.object({
   ok: z.boolean(),
   adopted: z.number(),

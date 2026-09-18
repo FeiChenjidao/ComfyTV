@@ -8,8 +8,10 @@ import type { Asset } from '@/api/schemas'
 import { app } from '@/lib/comfyApp'
 import { requestProxyBuild } from '@/composables/widgets/useProxiedVideoUrl'
 import { type LightboxItem, openLightbox } from '@/composables/useLightbox'
-import { ASSET_DRAG_MIME } from '@/composables/sidebar/assetCanvasDrop'
+import { ASSET_DRAG_MIME, parseAssetDragIds } from '@/composables/sidebar/assetCanvasDrop'
 import { importAssetFiles } from '@/composables/sidebar/assetImport'
+import { useAssetSelection } from '@/composables/sidebar/useAssetSelection'
+import { TAG_EDITOR_WIDTH, useAssetTagEditor } from '@/composables/sidebar/useAssetTagEditor'
 import { canvasCenter, createAssetLoaderNode } from '@/composables/stages/assetLoaderNode'
 import { askConfirm } from '@/composables/dialog/useConfirmDialog'
 import { askText } from '@/composables/dialog/useTextInputDialog'
@@ -25,7 +27,6 @@ export const ASSET_MEDIA_FILTERS: AssetMediaFilter[] = ['all', 'image', 'video',
 export { MODEL_FILE_EXTENSIONS } from '@/widgets/three/modelFormats'
 
 const ASSET_MENU_WIDTH = 192
-const TAG_EDITOR_WIDTH = 176
 const SETTINGS_MENU_WIDTH = 176
 
 export function useAssetsPanel(isActive: () => boolean | undefined) {
@@ -63,33 +64,17 @@ export function useAssetsPanel(isActive: () => boolean | undefined) {
     typeof activeFilter.value === 'number' ? [activeFilter.value] : [],
   )
 
-  const tagEditor = ref<{ assetId: number; x: number; y: number } | null>(null)
-  const editorAsset = computed(() =>
-    tagEditor.value ? store.byId(tagEditor.value.assetId) ?? null : null,
-  )
-  const tagEditorStyle = computed(() =>
-    tagEditor.value
-      ? { left: `${tagEditor.value.x}px`, top: `${tagEditor.value.y}px` }
-      : {},
-  )
+  const selection = useAssetSelection(visibleAssets)
+  const tagEditorApi = useAssetTagEditor()
+  const { openTagEditor } = tagEditorApi
 
   function catName(id: number): string {
     return store.categories.find(c => c.id === id)?.name ?? `#${id}`
   }
 
-  function closeTagEditor() {
-    tagEditor.value = null
-  }
-
-  function editorHas(catId: number): boolean {
-    return editorAsset.value?.category_ids.includes(catId) ?? false
-  }
-
-  function toggleTag(catId: number) {
-    const a = editorAsset.value
-    if (!a) return
-    if (a.category_ids.includes(catId)) void store.removeTag(a.id, catId)
-    else void store.addTag(a.id, catId)
+  function openSelectionTagEditor(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    openTagEditor(selection.selectedAssets.value.map(a => a.id), r.right - TAG_EDITOR_WIDTH, r.bottom + 4)
   }
 
   function assetTooltip(asset: Asset): string {
@@ -171,11 +156,7 @@ export function useAssetsPanel(isActive: () => boolean | undefined) {
     const a = menuAsset.value
     closeAssetMenu()
     if (!m || !a) return
-    tagEditor.value = {
-      assetId: a.id,
-      x: Math.min(Math.max(8, m.x), window.innerWidth - TAG_EDITOR_WIDTH - 8),
-      y: m.y,
-    }
+    openTagEditor([a.id], m.x, m.y)
   }
 
   function menuRenameAsset() {
@@ -319,16 +300,15 @@ export function useAssetsPanel(isActive: () => boolean | undefined) {
 
   function onAssetDragStart(asset: Asset, e: DragEvent) {
     if (!e.dataTransfer) return
-    e.dataTransfer.setData(ASSET_DRAG_MIME, String(asset.id))
+    e.dataTransfer.setData(ASSET_DRAG_MIME, selection.dragIds(asset).join(','))
     e.dataTransfer.effectAllowed = 'copy'
   }
 
   function onChipDrop(categoryId: number, e: DragEvent) {
-    const raw = e.dataTransfer?.getData(ASSET_DRAG_MIME)
-    if (!raw) return
-    const id = Number(raw)
-    if (!Number.isFinite(id)) return
-    void store.addTag(id, categoryId)
+    const ids = parseAssetDragIds(e.dataTransfer?.getData(ASSET_DRAG_MIME) ?? '')
+    if (!ids.length) return
+    if (ids.length === 1) void store.addTag(ids[0], categoryId)
+    else void store.bulkUpdateTags(ids, { add: [categoryId] })
   }
 
   function isFileDrag(e: DragEvent): boolean {
@@ -407,12 +387,10 @@ export function useAssetsPanel(isActive: () => boolean | undefined) {
     scanning,
     scanMediaFolder,
     menuScanFolder,
-    tagEditor,
-    tagEditorStyle,
+    ...tagEditorApi,
+    selection,
+    openSelectionTagEditor,
     catName,
-    closeTagEditor,
-    editorHas,
-    toggleTag,
     assetTooltip,
     assetMeta,
     assetMenu,

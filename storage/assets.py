@@ -285,6 +285,67 @@ def delete_asset(asset_id: int) -> bool:
         return True
 
 
+def bulk_update_asset_categories(
+    asset_ids: list[int],
+    *,
+    add: Optional[list[int]] = None,
+    remove: Optional[list[int]] = None,
+) -> Optional[list[dict]]:
+    ids = _normalize_category_ids(asset_ids)
+    add_ids = _normalize_category_ids(add)
+    remove_ids = _normalize_category_ids(remove)
+    if not ids:
+        return []
+    with db.get_session() as s:
+        if _existing_category_ids(s, add_ids) is None:
+            return None
+        assets = s.execute(
+            select(Asset).where(Asset.id.in_(ids)).order_by(desc(Asset.id))
+        ).scalars().all()
+        found = [a.id for a in assets]
+        if found and remove_ids:
+            s.query(AssetCategoryLink) \
+                .filter(
+                    AssetCategoryLink.asset_id.in_(found),
+                    AssetCategoryLink.category_id.in_(remove_ids),
+                ) \
+                .delete(synchronize_session=False)
+        if found and add_ids:
+            have = set(s.execute(
+                select(AssetCategoryLink.asset_id, AssetCategoryLink.category_id)
+                    .where(
+                        AssetCategoryLink.asset_id.in_(found),
+                        AssetCategoryLink.category_id.in_(add_ids),
+                    )
+            ).all())
+            for aid in found:
+                for cid in add_ids:
+                    if (aid, cid) not in have:
+                        s.add(AssetCategoryLink(asset_id=aid, category_id=cid))
+        s.commit()
+        cmap = _category_map(s, found)
+        return [_asset_to_dict(a, cmap.get(a.id, [])) for a in assets]
+
+
+def delete_assets(asset_ids: list[int]) -> list[int]:
+    ids = _normalize_category_ids(asset_ids)
+    if not ids:
+        return []
+    with db.get_session() as s:
+        found = list(s.execute(
+            select(Asset.id).where(Asset.id.in_(ids))
+        ).scalars().all())
+        if found:
+            s.query(AssetCategoryLink) \
+                .filter(AssetCategoryLink.asset_id.in_(found)) \
+                .delete(synchronize_session=False)
+            s.query(Asset) \
+                .filter(Asset.id.in_(found)) \
+                .delete(synchronize_session=False)
+            s.commit()
+        return found
+
+
 def asset_payload_urls() -> set:
     with db.get_session() as s:
         rows = s.execute(select(Asset.payload_url)).scalars().all()
