@@ -459,6 +459,37 @@ describe('V2 shell smoke', () => {
     node.onRemoved?.()
   })
 
+  it('a chrome jump that squeezes the preview to zero still restores it', () => {
+    const node = makeNode('ComfyTV.VideoStage')
+    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+    const panel = card.querySelector('.v2-panel') as HTMLElement
+    const preview = card.querySelector('.v2-preview') as HTMLElement
+    const bar = panel.querySelector('.v2-collapse') as HTMLElement
+    let panelH = 220
+    let previewH = 300
+    Object.defineProperty(preview, 'offsetHeight', { get: () => previewH })
+    Object.defineProperty(card, 'offsetHeight', { get: () => previewH + panelH })
+    const press = () => bar.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+
+    press()
+    const h0 = node.size[1]
+    panelH = 40
+    bar.click()
+    expect(node.size[1]).toBe(h0 - 180)
+
+    press()
+    panelH = 520
+    previewH = 0
+    bar.click()
+    expect(node.size[1]).toBe(h0 + 300)
+
+    previewH = 300
+    card.dispatchEvent(new Event('resize'))
+    expect(node.size[1]).toBe(h0 + 300)
+    node.onRemoved?.()
+  })
+
   it('a chrome change the shell never hears about still lands', () => {
     const node = makeNode('ComfyTV.VideoStage')
     V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')

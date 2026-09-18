@@ -58953,7 +58953,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-BQcS-Xti.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-DKXDiNvd.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -144078,7 +144078,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-BiwrAcqh.mjs");
+    const { STLLoader } = await import("./STLLoader-BTc8sYmh.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -144086,7 +144086,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-B7rHsKxS.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-Bu8mrlhq.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -229472,7 +229472,8 @@ function stopNativeAutoGrow(node) {
 function bindCardHeight(node, opts) {
   const anyNode = node;
   const { card, flexible, min: min2 } = opts;
-  const laidOut = () => card.offsetHeight > 0 && flexible.offsetHeight > 0;
+  const laidOut = () => card.offsetHeight > 0;
+  const measurable = () => laidOut() && flexible.offsetHeight > 0;
   const chromeOf = () => card.offsetHeight - flexible.offsetHeight;
   let chrome2 = -1;
   let applied = -1;
@@ -229486,7 +229487,7 @@ function bindCardHeight(node, opts) {
     applied = node.size[1];
   };
   const goLive = () => {
-    if (live || !laidOut()) return;
+    if (live || !measurable()) return;
     live = true;
     sample2();
   };
@@ -229516,7 +229517,7 @@ function bindCardHeight(node, opts) {
         return;
       }
       if (chromeOf() !== chrome2) apply2();
-      else if (Math.abs(node.size[1] - applied) >= 1) sample2();
+      else if (measurable() && Math.abs(node.size[1] - applied) >= 1) sample2();
     };
     useResizeObserver(card, onResize);
     useResizeObserver(flexible, onResize);
@@ -239293,4 +239294,4 @@ export {
   LinearFilter as y,
   LinearMipMapLinearFilter as z
 };
-//# sourceMappingURL=main-D-BXMIh9.mjs.map
+//# sourceMappingURL=main-DpLjv1K9.mjs.map

@@ -43,7 +43,8 @@ export function bindCardHeight(node: ComfyNode, opts: {
 }): () => void {
   const anyNode = node as any
   const { card, flexible, min } = opts
-  const laidOut = () => card.offsetHeight > 0 && flexible.offsetHeight > 0
+  const laidOut = () => card.offsetHeight > 0
+  const measurable = () => laidOut() && flexible.offsetHeight > 0
   const chromeOf = () => card.offsetHeight - flexible.offsetHeight
 
   let chrome = -1
@@ -65,7 +66,7 @@ export function bindCardHeight(node: ComfyNode, opts: {
   }
 
   const goLive = () => {
-    if (live || !laidOut()) return
+    if (live || !measurable()) return
     live = true
     sample()
   }
@@ -95,7 +96,7 @@ export function bindCardHeight(node: ComfyNode, opts: {
       if (!live) { chrome = chromeOf(); return }
       // chrome moved: we drive the node. chrome steady but the card moved: the user did.
       if (chromeOf() !== chrome) apply()
-      else if (Math.abs(node.size[1] - applied) >= 1) sample()
+      else if (measurable() && Math.abs(node.size[1] - applied) >= 1) sample()
     }
     useResizeObserver(card, onResize)
     useResizeObserver(flexible, onResize)
