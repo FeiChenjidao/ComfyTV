@@ -1,0 +1,111 @@
+{
+  "_comment": "Shipped preset for Tripo Multiview-to-Model. Chain: LoadImage #55-58 -> TripoMultiviewToModelNode #47 -> File3DFirst #62 (GLB then FBX) -> SaveGLB #43.",
+  "label": "Tripo",
+  "description": "Tripo Multiview-to-Model (API). Front + optional left/back/right images. File3DFirst picks GLB or FBX so Stage quad on/off both work.",
+  "result": {
+    "type": "ui_save_url",
+    "node": "43"
+  },
+  "inputs": {
+    "47": {
+      "auto_size": {
+        "from": "option:auto_size"
+      },
+      "face_limit": {
+        "from": "option:face_limit",
+        "cast": "int"
+      },
+      "geometry_quality": {
+        "from": "option:geometry_quality"
+      },
+      "model_seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      },
+      "model_version": {
+        "from": "option:model_version"
+      },
+      "orientation": {
+        "from": "option:orientation"
+      },
+      "pbr": {
+        "from": "option:pbr"
+      },
+      "quad": {
+        "from": "option:quad",
+        "default": "false",
+        "cast": "bool"
+      },
+      "smart_low_poly": {
+        "from": "option:smart_low_poly"
+      },
+      "texture": {
+        "from": "option:texture",
+        "cast": "bool"
+      },
+      "texture_alignment": {
+        "from": "option:texture_alignment"
+      },
+      "texture_quality": {
+        "from": "option:texture_quality"
+      },
+      "texture_seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      }
+    },
+    "55": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    },
+    "56": {
+      "image": {
+        "from": "upstream_image:annotated[1]"
+      }
+    },
+    "57": {
+      "image": {
+        "from": "upstream_image:annotated[2]"
+      }
+    },
+    "58": {
+      "image": {
+        "from": "upstream_image:annotated[3]"
+      }
+    }
+  },
+  "order": 25,
+  "prune_when_missing": [
+    {
+      "when": "upstream_image:value[1]",
+      "drop_upstream_of": [
+        {
+          "node": "47",
+          "input": "image_left"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[2]",
+      "drop_upstream_of": [
+        {
+          "node": "47",
+          "input": "image_back"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[3]",
+      "drop_upstream_of": [
+        {
+          "node": "47",
+          "input": "image_right"
+        }
+      ]
+    }
+  ]
+}

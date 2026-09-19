@@ -39,6 +39,8 @@
 !model/hunyuan3d-21_preset.json
 !model/moge2-mesh.json
 !model/moge2-mesh_preset.json
+!model/tripo.json
+!model/tripo_preset.json
 !model/triposplat-gaussian.json
 !model/triposplat-gaussian_preset.json
 !multiangle/qwen-edit-2511-multiangle.json

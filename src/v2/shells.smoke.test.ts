@@ -430,6 +430,37 @@ describe('V2 shell smoke', () => {
     }
   })
 
+  it('custom split canvas is separate from the panel (socket align target)', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const node = makeNode('ComfyTV.CustomSplitStage')
+    V2_SHELLS['ComfyTV.CustomSplitStage'](node as any, 'image-batch', 'transform')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+
+    const host = createApp(ComfyTVMountHost)
+    host.config.errorHandler = () => {}
+    host.config.warnHandler = () => {}
+    host.use(pinia)
+    host.use(i18n)
+    const rootEl = document.createElement('div')
+    document.body.appendChild(rootEl)
+    host.mount(rootEl)
+    await nextTick()
+    await new Promise(r => setTimeout(r, 0))
+    await nextTick()
+
+    const canvas = card.querySelector('.v2-ed__canvas') as HTMLElement | null
+    const panel = card.querySelector('.v2-ed__panel') as HTMLElement | null
+    expect(canvas).toBeTruthy()
+    expect(panel).toBeTruthy()
+    expect(canvas!.contains(panel!)).toBe(false)
+    expect(panel!.contains(canvas!)).toBe(false)
+
+    host.unmount()
+    rootEl.remove()
+    node.onRemoved?.()
+  })
+
   it('neither litegraph auto-size path can resize a V2 card', () => {
     const node = makeNode('ComfyTV.VideoStage')
     expect(node.computeSize()[1]).toBe(999)

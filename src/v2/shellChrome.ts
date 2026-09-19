@@ -23,6 +23,8 @@ export function bindShellChrome(node: ComfyNode, opts: {
   scope: EffectScope
   card: HTMLElement
   socketAnchor: HTMLElement
+  /** When set, socket Y tracks this box (e.g. `.v2-ed__canvas`) instead of `socketAnchor`. */
+  socketBox?: () => HTMLElement | null | undefined
   socketY?: 'center' | { frac: number; cap: number }
   state?: StageState
   media?: { source: MediaSource; host?: HTMLElement; preferImageInput?: boolean }
@@ -32,6 +34,7 @@ export function bindShellChrome(node: ComfyNode, opts: {
   const anyNode = node as any
   const { scope, card, socketAnchor } = opts
   const socketY = opts.socketY ?? 'center'
+  const boxEl = () => opts.socketBox?.() || socketAnchor
 
   stopNativeAutoGrow(node)
   let syncHeight: (() => void) | null = null
@@ -194,7 +197,8 @@ export function bindShellChrome(node: ComfyNode, opts: {
       const r = root
       if (!r || !card.isConnected) return null
       const rootBox = r.getBoundingClientRect()
-      const box = socketAnchor.getBoundingClientRect()
+      const align = boxEl()
+      const box = align.getBoundingClientRect()
       if (!(rootBox.height > 0 && box.height > 0)) return null
       const scale = rootBox.height / (r.offsetHeight || rootBox.height)
       const mid = socketY === 'center'

@@ -303,6 +303,7 @@
       "batchSize": "数量"
     },
     "toolbar": {
+      "generate": "生图",
       "hd": "高清",
       "expand": "扩图",
       "angles": "多角度",

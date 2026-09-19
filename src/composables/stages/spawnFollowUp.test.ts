@@ -482,6 +482,22 @@ describe('spawnFollowUpStage image handlers', () => {
     expect(src.connect).toHaveBeenCalledWith(0, created[0], 0)
   })
 
+  it('generate spawns ImageStage and wires into images.*', () => {
+    inputsByClass['ComfyTV.ImageStage'] = ['images.image0']
+    const src = makeNode()
+    spawnFollowUpStage(src, 'image', 'generate')
+    expect(created[0].comfyClass).toBe('ComfyTV.ImageStage')
+    expect(src.connect).toHaveBeenCalledWith(0, created[0], 0)
+  })
+
+  it('generate from image-batch uses output slot 1', () => {
+    inputsByClass['ComfyTV.ImageStage'] = ['images.image0']
+    const src = makeNode()
+    spawnFollowUpStage(src, 'image-batch', 'generate')
+    expect(created[0].comfyClass).toBe('ComfyTV.ImageStage')
+    expect(src.connect).toHaveBeenCalledWith(1, created[0], 0)
+  })
+
   it('warns when preset target has no matching slot', () => {
     inputsByClass['ComfyTV.ImageVariationsStage'] = ['other']
     const src = makeNode()
