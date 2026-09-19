@@ -445,8 +445,18 @@ export async function spawnAssetImageLoader(srcNode: any, url: string, label?: s
 
 type SpawnHandler = (srcNode: any, context?: ImagePickContext) => void
 
+/** Toolbar「生图」→ Image Stage, wire current image into images.* autogrow. */
+const GENERATE_IMAGE_PRESET: ImagePreset = {
+  id: 'generate',
+  icon: 'pi pi-image',
+  category: 'imageVariant',
+  targetClass: 'ComfyTV.ImageStage',
+  inputAutogrowGroup: 'images',
+}
+
 function makeImageActionHandlers(srcSlot: number): Record<string, SpawnHandler> {
   return {
+    'generate':   src => spawnImagePreset(src, GENERATE_IMAGE_PRESET, srcSlot),
     'panorama':   src => spawnConsumingNode(src, 'ComfyTV.PanoramaStage',   'image', srcSlot),
     'multiangle': src => spawnConsumingNode(src, 'ComfyTV.MultiangleStage', 'image', srcSlot),
     'relight':    src => spawnRelightPair(src, srcSlot),

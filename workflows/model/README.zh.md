@@ -24,6 +24,7 @@
 
 - **Hunyuan3D 2.1**（`hunyuan3d-21.json` + `_preset.json`）— 图 → 无贴图**网格** GLB。官方 `3d_hunyuan3d-v2.1` 模板默认值：30 步、cfg 5、euler/normal、latent 分辨率 4096、解码 num_chunks 8000 / octree_resolution 256、surface-net 阈值 0.6。自定义参数：`seed`、`steps`、`guidance`。模型：`checkpoints/hunyuan_3d_v2.1.safetensors`。
 - **TripoSplat Gaussian**（`triposplat-gaussian.json` + `_preset.json`）— 图 → **3D 高斯泼溅**（`.spz`）。预处理前固定走 BiRefNet 自动去背景（erode 1、size 1024——模型的训练分辨率）。采样默认：20 步、cfg 3、dpmpp_2m/simple；解码产出 262144 个高斯（八叉树密度——调高只是过采样，不会有新细节）。自定义参数：`seed`、`steps`、`guidance`、`num_gaussians`。模型：`diffusion_models/triposplat_fp16.safetensors`、`clip_vision/dino_v3_vit_h.safetensors`、`vae/triposplat_vae_decoder_fp16.safetensors`、`vae/flux2-vae.safetensors`、`background_removal/birefnet.safetensors`。
+- **Tripo**（`tripo.json` + `_preset.json`）— 正/左/后/右多视图 → **网格**（GLB 或 FBX）。走 Comfy Org Tripo API；`File3DFirst` 自动取有数据的那一侧，Stage `quad` 开/关都可。正面必填，侧面可选。
 - **MoGe-2 Depth Mesh**（`moge2-mesh.json` + `_preset.json`）— 图 → 可见表面的带贴图**点图网格** GLB（单目几何估计的场景浮雕，不是封闭物体）。确定性算法，无 seed。默认值：resolution_level 9、fov 自动恢复、decimation 1、断裂阈值 0.04、贴图开。自定义参数：`resolution_level`（0 最快 … 9 最细）。模型：`geometry_estimation/moge_2_vitl_normal_fp16.safetensors`。
 
 ## 引用的模型

@@ -297,6 +297,7 @@
       "batchSize": "Count"
     },
     "toolbar": {
+      "generate": "Generate",
       "hd": "HD",
       "expand": "Expand",
       "angles": "Angles",

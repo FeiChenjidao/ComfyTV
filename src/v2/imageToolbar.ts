@@ -3,6 +3,7 @@ import { app } from '@/lib/comfyApp'
 import { I, el } from '@/v2/shellCommon'
 import type { StageKind, StageState } from '@/stores/stageStore'
 
+const ICON_GENERATE = I(`<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M8 14l2.2-3 1.8 2.2L15 10l3 4"/><path d="M17.5 3.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z" fill="currentColor" stroke="none"/>`)
 const ICON_HD = I(`<rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M7 9v6M7 12h3.4M10.4 9v6M14 9v6h1.8a3 3 0 000-6z"/>`)
 const ICON_EXPAND = I(`<path d="M9 4H5.5A1.5 1.5 0 004 5.5V9M15 4h3.5A1.5 1.5 0 0120 5.5V9M9 20H5.5A1.5 1.5 0 014 18.5V15M15 20h3.5a1.5 1.5 0 001.5-1.5V15"/><rect x="9" y="9" width="6" height="6" rx="1"/>`)
 const ICON_ANGLES = I(`<path d="M12 3a9 9 0 109 9"/><path d="M21 3l-4.5.5L21 8z" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="3.4"/>`)
@@ -44,6 +45,8 @@ export function downloadUrl(url: string) {
 export function buildToolbar(dispatch: (actionId: string) => void) {
   const bar = el('div', 'v2-toolbar')
   const items: Array<[string, string, string] | null> = [
+    [ICON_GENERATE, t('v2.toolbar.generate'), 'generate'],
+    null,
     [ICON_HD, t('v2.toolbar.hd'), 'edit:hd'],
     [ICON_EXPAND, t('v2.toolbar.expand'), 'edit:outpaint'],
     [ICON_ANGLES, t('v2.toolbar.angles'), 'multiangle'],

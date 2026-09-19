@@ -333,6 +333,9 @@ export function makeEditorShell(config: EditorShellConfig) {
     bindShellChrome(node, {
       scope, card,
       socketAnchor: preview ?? editorAnchor,
+      // Align sockets to the image canvas, not the whole editor (panel/status would shift Y
+      // every time panel-on-select toggles). Re-query after Vue remounts.
+      socketBox: () => editorAnchor.querySelector('.v2-ed__canvas') as HTMLElement | null,
       state: stageState,
       media: config.lod
         ? { source: 'batch', preferImageInput: !!config.lodPreferImageInput }
