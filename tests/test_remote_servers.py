@@ -102,6 +102,20 @@ class TestBuildExecuteKwargs:
         assert kwargs["images"] == {"image0": "/view?filename=a.png"}
         assert "unknown_key" not in kwargs
 
+    def test_groups_dotted_autogrow_keys_from_the_frontend(self, reset_db):
+        from ComfyTV.api.servers import build_execute_kwargs
+        kwargs = build_execute_kwargs(_fake_stage_cls(), {
+            "workflow": "Local SD1.5 I2I",
+            "images.image0": "/view?filename=asset.png&type=input",
+            "images.image1": "/view?filename=wired.png&type=output",
+            "texts.text1": "t1",
+        })
+        assert kwargs["images"] == {
+            "image0": "/view?filename=asset.png&type=input",
+            "image1": "/view?filename=wired.png&type=output",
+        }
+        assert kwargs["texts"] == {"text1": "t1"}
+
     def test_missing_inputs_yield_empty_group(self, reset_db):
         from ComfyTV.api.servers import build_execute_kwargs
         kwargs = build_execute_kwargs(_fake_stage_cls(), {"workflow": "X"})
