@@ -3,7 +3,6 @@ import { markRaw } from 'vue'
 
 import Scene3DStageCard from '@/components/stages/Scene3DStageCard.vue'
 import { useStageNode } from '@/composables/stages/useStageNode'
-import { t } from '@/i18n'
 import { type ComfyNode } from '@/lib/comfyApp'
 import { bindNodeDrag } from '@/v2/nodeDrag'
 import { bindShellChrome } from '@/v2/shellChrome'
@@ -53,7 +52,7 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
   const card = el('div', 'v2-card v2-scene-card')
   bindWheelCapture(card)
   const handle = el('div', 'v2-label v2-handle',
-    `${ICON_GRIP}${ICON_SCENE}<span>${t('v2.scene3dTitle')}</span>`)
+    `${ICON_GRIP}${ICON_SCENE}<span>${String((node.constructor as any)?.title ?? node.comfyClass ?? '')}</span>`)
   card.appendChild(handle)
   bindNodeDrag(node, handle)
 

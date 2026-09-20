@@ -56,7 +56,7 @@ function makeImageBatchShell(shellCfg: ImageBatchShellConfig = {}) {
   const anyNode = node as any
   const title = shellCfg.title !== undefined
     ? (shellCfg.title ?? String((node.constructor as any)?.title ?? node.comfyClass ?? ''))
-    : t('v2.imageStageTitle')
+    : String((node.constructor as any)?.title ?? node.comfyClass ?? '')
 
   const card = el('div', 'v2-card')
   bindWheelCapture(card)

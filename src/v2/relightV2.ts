@@ -4,7 +4,6 @@ import MainPromptInput from '@/components/stages/MainPromptInput.vue'
 import StagePresetBar from '@/components/stages/StagePresetBar.vue'
 import RelightStageCard from '@/components/stages/RelightStageCard.vue'
 import { useStageNode } from '@/composables/stages/useStageNode'
-import { t } from '@/i18n'
 import { type ComfyNode } from '@/lib/comfyApp'
 import { bindNodeDrag } from '@/v2/nodeDrag'
 import { bindShellChrome } from '@/v2/shellChrome'
@@ -69,7 +68,7 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
   const card = el('div', 'v2-card v2-relight-card')
   bindWheelCapture(card)
   const handle = el('div', 'v2-label v2-handle',
-    `${ICON_GRIP}${ICON_LIGHT}<span>${t('v2.relightTitle')}</span>`)
+    `${ICON_GRIP}${ICON_LIGHT}<span>${String((node.constructor as any)?.title ?? node.comfyClass ?? '')}</span>`)
   card.appendChild(handle)
   bindNodeDrag(node, handle)
 

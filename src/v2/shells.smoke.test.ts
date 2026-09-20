@@ -541,6 +541,75 @@ describe('V2 shell smoke', () => {
     node.onRemoved?.()
   })
 
+  it('panel-on-select after corner-resize keeps the dragged preview height', () => {
+    document.body.setAttribute('data-v2-panel-on-select', '')
+    const node = makeNode('ComfyTV.VideoStage')
+    node.selected = false
+    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+    const root = document.createElement('div')
+    root.setAttribute('data-node-id', String(node.id))
+    root.setAttribute('data-v2-shell', '')
+    root.appendChild(card)
+    document.body.appendChild(root)
+
+    let panelH = 0
+    const PREVIEW = 280
+    const preview = card.querySelector('.v2-preview') as HTMLElement
+    Object.defineProperty(preview, 'offsetHeight', { get: () => PREVIEW })
+    Object.defineProperty(card, 'offsetHeight', { get: () => PREVIEW + panelH })
+
+    // User corner-resized while unselected (compact).
+    const dragH = PREVIEW + 40
+    node.setSize([320, dragH])
+    card.dispatchEvent(new PointerEvent('pointerdown'))
+    // RO-style sample after drag (chrome steady, size moved).
+    const sync = (node as any).__comfytvSyncHeight as () => void
+    // Force sample path: size already set; sync apply with current chrome.
+    sync()
+    const afterDrag = node.size[1]
+
+    // Select → panel chrome appears → apply once grows by panel, keeps preview wanted.
+    panelH = 180
+    root.setAttribute('data-v2-selected', '')
+    sync()
+    expect(node.size[1]).toBe(afterDrag + 180)
+
+    // Deselect → chrome drops → apply shrinks back; no drift.
+    panelH = 0
+    root.removeAttribute('data-v2-selected')
+    sync()
+    expect(node.size[1]).toBe(afterDrag)
+
+    root.remove()
+    document.body.removeAttribute('data-v2-panel-on-select')
+    node.onRemoved?.()
+  })
+
+  it('corner-resize with the panel already open does not keep growing height', () => {
+    const node = makeNode('ComfyTV.VideoStage')
+    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+    const preview = card.querySelector('.v2-preview') as HTMLElement
+    let panelH = 180
+    let previewH = 300
+    Object.defineProperty(preview, 'offsetHeight', { get: () => previewH })
+    Object.defineProperty(card, 'offsetHeight', { get: () => previewH + panelH })
+    card.dispatchEvent(new PointerEvent('pointerdown'))
+    const h0 = node.size[1]
+
+    // Simulate LiteGraph corner-drag: size follows the pointer; preview flexes with the card.
+    previewH = 360
+    node.setSize([node.size[0], h0 + 60])
+    card.dispatchEvent(new Event('resize'))
+    expect(node.size[1]).toBe(h0 + 60)
+
+    // Another layout pass must not keep adding chrome on top of the user size.
+    card.dispatchEvent(new Event('resize'))
+    expect(node.size[1]).toBe(h0 + 60)
+    node.onRemoved?.()
+  })
+
   it('stacks preview cards by the real item count', async () => {
     const pool = (n: number) => JSON.stringify({
       images: Array.from({ length: n }, (_, i) => ({ image_url: `/view?filename=${i}.png` })),

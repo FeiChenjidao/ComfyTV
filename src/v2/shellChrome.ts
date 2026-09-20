@@ -13,6 +13,7 @@ import { bindLodPoster, registerCull } from '@/v2/lodV2'
 import { cancelMeasure, scheduleMeasure } from '@/v2/measureBatch'
 import {
   bindPanelOnSelectSize,
+  isPanelOnSelectEnabled,
   panelOnSelectAfterShow,
   panelOnSelectBeforeHide,
 } from '@/v2/panelOnSelect'
@@ -33,10 +34,12 @@ export function bindShellChrome(node: ComfyNode, opts: {
   const socketY = opts.socketY ?? 'center'
 
   stopNativeAutoGrow(node)
+  let syncHeight: (() => void) | null = null
   if (opts.manageHeight) {
-    anyNode.__comfytvSyncHeight = bindCardHeight(node, {
+    syncHeight = bindCardHeight(node, {
       scope, card, flexible: socketAnchor, min: opts.manageHeight.min,
     })
+    anyNode.__comfytvSyncHeight = syncHeight
   }
 
   const warnStrip = el('div', 'v2-warn')
@@ -154,10 +157,15 @@ export function bindShellChrome(node: ComfyNode, opts: {
     if (!root) return
     const next = !!anyNode.selected
     const was = root.hasAttribute('data-v2-selected')
-    // Sample panel height while it is still laid out, then shrink before CSS hides it.
+    // Delta hooks no-op when bindPanelOnSelectSize was not registered (manageHeight cards).
     if (was && !next) panelOnSelectBeforeHide(anyNode)
     root.toggleAttribute('data-v2-selected', next)
     if (!was && next) panelOnSelectAfterShow(anyNode)
+    // manageHeight: after CSS shows/hides the panel, let bindCardHeight re-read chrome once.
+    // Do not ±panel deltas here — that raced corner-resize and select flicker.
+    if (syncHeight && isPanelOnSelectEnabled() && was !== next) {
+      requestAnimationFrame(() => syncHeight?.())
+    }
     queueMicrotask(() => {
       document.body.toggleAttribute(
         'data-v2-toolbar',
@@ -226,7 +234,9 @@ export function bindShellChrome(node: ComfyNode, opts: {
     useResizeObserver(socketAnchor, syncSocketY)
   })
 
-  bindPanelOnSelectSize(node, card, scope)
+  // manageHeight cards already size via bindCardHeight (chrome + wanted). Delta-based
+  // bindPanelOnSelectSize must not also run — the two fought on corner-resize release.
+  if (!opts.manageHeight) bindPanelOnSelectSize(node, card, scope)
 
   const disposers = [
     observeProperty(anyNode, 'selected', syncSelected),

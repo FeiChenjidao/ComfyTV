@@ -1,6 +1,5 @@
 ﻿
 import { useStageNode } from '@/composables/stages/useStageNode'
-import { t } from '@/i18n'
 import { type ComfyNode } from '@/lib/comfyApp'
 import { bindNodeDrag } from '@/v2/nodeDrag'
 import { bindShellChrome } from '@/v2/shellChrome'
@@ -48,10 +47,11 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
 
   const card = el('div', 'v2-card v2-crop-card')
   bindWheelCapture(card)
-  const label = el('div', 'v2-label v2-handle', `${ICON_GRIP}${ICON_CROP}<span>${t('v2.cropTitle')}</span>`)
+  const handle = el('div', 'v2-label v2-handle',
+    `${ICON_GRIP}${ICON_CROP}<span>${String((node.constructor as any)?.title ?? node.comfyClass ?? '')}</span>`)
   const editorAnchor = el('div', 'v2-crop-host')
   editorAnchor.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;'
-  card.append(label, editorAnchor)
+  card.append(handle, editorAnchor)
 
   node.addDOMWidget('v2_shell', 'v2', card, {
     getMinHeight: () => 300,
