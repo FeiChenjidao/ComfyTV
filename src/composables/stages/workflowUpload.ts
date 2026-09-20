@@ -42,6 +42,11 @@ export function addWorkflowUploadButton(node: any, wfWidget: any, kind: string):
   if (!node?.addWidget || !wfWidget) return
   if (node.widgets?.some((w: any) => w.__comfytvUpload)) return
 
+  // addWidget expands the node to fit; a restored node keeps its saved size
+  const saved = node.__comfytvFromSave && node.size?.length >= 2
+    ? [node.size[0], node.size[1]]
+    : null
+
   const btn = node.addWidget(
     'button',
     i18n.global.t('workflow.uploadButton'),
@@ -84,6 +89,8 @@ export function addWorkflowUploadButton(node: any, wfWidget: any, kind: string):
       widgets.splice(bi2 + 1, 0, linkBtn)
     }
   }
+
+  if (saved) node.setSize?.(saved)
 
   if (!node.__comfytvCompactWidgets) {
     node.__comfytvCompactWidgets = true

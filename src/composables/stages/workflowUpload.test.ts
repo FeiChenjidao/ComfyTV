@@ -109,6 +109,36 @@ describe('addWorkflowUploadButton', () => {
     expect(node.widgets.length).toBe(count)
   })
 
+  function makeSizedNode(fromSave: boolean) {
+    const node = makeNode()
+    node.size = [400, 290]
+    node.__comfytvFromSave = fromSave
+    node.setSize = (s: number[]) => { node.size = [...s] }
+    const addWidget = node.addWidget.bind(node)
+    node.addWidget = (...args: any[]) => {
+      const w = addWidget(...args)
+      node.setSize([Math.max(node.size[0], 400), Math.max(node.size[1], 686)])
+      return w
+    }
+    return node
+  }
+
+  it('keeps a restored node at its saved height', () => {
+    const node = makeSizedNode(true)
+    const wf = node.addWidget('combo', 'workflow', 'A', null)
+    node.setSize([400, 290]) // the saved (collapsed) height, applied by configure
+    addWorkflowUploadButton(node, wf, 'image')
+    expect(node.size).toEqual([400, 290])
+  })
+
+  it('lets a fresh node grow to fit the buttons', () => {
+    const node = makeSizedNode(false)
+    const wf = node.addWidget('combo', 'workflow', 'A', null)
+    node.setSize([400, 290])
+    addWorkflowUploadButton(node, wf, 'image')
+    expect(node.size).toEqual([400, 686])
+  })
+
   it('installs a compacting onSerialize hook', () => {
     const node = makeNode()
     const wf = node.addWidget('combo', 'workflow', 'A', null)

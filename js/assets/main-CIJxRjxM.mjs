@@ -58953,7 +58953,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-DKXDiNvd.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-uD1N_R0Y.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -144078,7 +144078,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-BTc8sYmh.mjs");
+    const { STLLoader } = await import("./STLLoader-CreA6xJc.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -144086,7 +144086,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-Bu8mrlhq.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-CB4xl04d.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -226781,9 +226781,10 @@ async function doUpload(node, wfWidget, kind) {
   input.click();
 }
 function addWorkflowUploadButton(node, wfWidget, kind) {
-  var _a3;
+  var _a3, _b2, _c;
   if (!(node == null ? void 0 : node.addWidget) || !wfWidget) return;
   if ((_a3 = node.widgets) == null ? void 0 : _a3.some((w2) => w2.__comfytvUpload)) return;
+  const saved = node.__comfytvFromSave && ((_b2 = node.size) == null ? void 0 : _b2.length) >= 2 ? [node.size[0], node.size[1]] : null;
   const btn2 = node.addWidget(
     "button",
     i18n.global.t("workflow.uploadButton"),
@@ -226801,11 +226802,11 @@ function addWorkflowUploadButton(node, wfWidget, kind) {
     () => {
       openLinkWorkflow(kind, {
         onLinked: ({ label }) => {
-          var _a4, _b2, _c;
+          var _a4, _b3, _c3;
           addOptionEverywhere(kind, label);
           wfWidget.value = label;
           (_a4 = wfWidget.callback) == null ? void 0 : _a4.call(wfWidget, label);
-          (_c = (_b2 = app == null ? void 0 : app.graph) == null ? void 0 : _b2.setDirtyCanvas) == null ? void 0 : _c.call(_b2, true, true);
+          (_c3 = (_b3 = app == null ? void 0 : app.graph) == null ? void 0 : _b3.setDirtyCanvas) == null ? void 0 : _c3.call(_b3, true, true);
         }
       });
     }
@@ -226827,6 +226828,7 @@ function addWorkflowUploadButton(node, wfWidget, kind) {
       widgets.splice(bi2 + 1, 0, linkBtn);
     }
   }
+  if (saved) (_c = node.setSize) == null ? void 0 : _c.call(node, saved);
   if (!node.__comfytvCompactWidgets) {
     node.__comfytvCompactWidgets = true;
     const prevOnSerialize = node.onSerialize;
@@ -239294,4 +239296,4 @@ export {
   LinearFilter as y,
   LinearMipMapLinearFilter as z
 };
-//# sourceMappingURL=main-DpLjv1K9.mjs.map
+//# sourceMappingURL=main-CIJxRjxM.mjs.map
