@@ -24,6 +24,7 @@
 
 - **Flux Canny Edit**(`flux-canny-edit.json` + `_preset.json`) , 把上游图作 Canny 边缘图,按提示词重画。只保轮廓,颜色由提示词决定。测试通过。
 - **Qwen Edit 2511**(`qwen-edit-2511.json` + `_preset.json`) , Qwen-Image-Edit 2511 + Lightning 4 步指令编辑。保留主体颜色和材质,指令负责改背景/打光/加元素 —— 描述改动,不用描述整张图。3D 模型节点的**生成产品图**按钮会带默认"渲染图转产品照"指令生成这个工作流。测试通过。
+- **Qwen Image 2.1 Edit**(`qwen-image-2.1-edit.json` + `_preset.json`) , 官方 Qwen Image 2.1 单图编辑:`LoadImage` → `TextEncodeQwenImage21`(Qwen3-VL-8B 编码器),它的 `latent` 输出自带源图尺寸,所以没有 `VAEEncode`。提示词里用 `<image1>` 指代源图(图像编辑 stage 只有一个 image 接口,ComfyTV 的 `@image_N` 提及在这里不生效,多参考图那个才用);输出尺寸跟随输入(建议 ≤ 2K)。25 步,cfg 1,`QwenImage21Cache` 走 auto。多张参考图用图像 stage 的 **Qwen Image 2.1 Multi-Ref Edit**。测试通过(5090 上 1K 约 27 秒)。
 
 ## 需要的模型
 
@@ -31,4 +32,5 @@
 - `clip_l.safetensors` + `t5xxl_fp16.safetensors` , 放进 `models/clip/`
 - `ae.safetensors` , 放进 `models/vae/`
 - Qwen Edit 2511:`qwen_image_edit_2511_fp8mixed.safetensors`(diffusion_models)、`Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors`(loras)、`qwen_2.5_vl_7b_fp8_scaled.safetensors`(clip)、`qwen_image_vae.safetensors`(vae)
+- Qwen Image 2.1 Edit:`qwen_image_2.1_int8_convrot.safetensors`(diffusion_models)、`qwen3vl_8b_int8_convrot.safetensors`(text_encoders)、`qwen_image_2.1_vae_bf16.safetensors`(vae), <https://huggingface.co/Comfy-Org/Qwen-Image-2.1>;需要 ComfyUI v0.37+(`TextEncodeQwenImage21`)
 

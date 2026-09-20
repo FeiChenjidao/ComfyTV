@@ -36,6 +36,9 @@ All four use Qwen-Image-Edit 2511 + fal Multiple-Angles LoRA + Lightning 4-step 
 | **Product 3-View** | `qwen-3view-product.json` | 3 (front/3-quarter/back of a product) | "a product" |
 | **Character 3-View** | `qwen-3view-character.json` | 3 (full-body front/side/back) | "a character" |
 | **Multi-cam 9** | `qwen-9cam.json` | 9 (8 azimuths every 45° + center) | "a person" |
+| **Character 3-View (Qwen 2.1)** | `qwen-image-2.1-3view-character.json` | 3 (front / side / back), plain white background | "a character" |
+
+**Character 3-View (Qwen 2.1)** is the same turnaround with no LoRA at all: Qwen Image 2.1 cannot load the 2511 Multiple-Angles LoRA (different latent layout), so each branch is a plain `TextEncodeQwenImage21` instruction edit whose prefix asks for the view and names the source as `<image1>`; the encoder's own `latent` output feeds each `KSampler`, so there is no shared `VAEEncode` / `ImageScale`. On the same source the front and back views are true turnarounds and the outfit / props stay more consistent than with the LoRA; the side view leans 3/4 when the source pose is angled. ~75 s for the three views on a 5090 (the LoRA graph takes ~87 s). Tested working.
 
 ## Models referenced
 
@@ -45,6 +48,7 @@ Same set as the [Multiangle workflow](../multiangle/README.md):
 - `qwen_image_vae.safetensors` → `models/vae/`
 - `qwen-image-edit-2511-multiple-angles-lora.safetensors` → `models/loras/`
 - `Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors` → `models/loras/`
+- Character 3-View (Qwen 2.1) only: `qwen_image_2.1_int8_convrot.safetensors` → `models/diffusion_models/`, `qwen3vl_8b_int8_convrot.safetensors` → `models/text_encoders/`, `qwen_image_2.1_vae_bf16.safetensors` → `models/vae/` (<https://huggingface.co/Comfy-Org/Qwen-Image-2.1>, ComfyUI v0.37+)
 
 ## Notes
 

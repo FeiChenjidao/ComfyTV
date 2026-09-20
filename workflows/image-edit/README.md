@@ -24,6 +24,7 @@ To add your own workflow see [docs/custom-workflows.md](../../docs/custom-workfl
 
 - **Flux Canny Edit** (`flux-canny-edit.json` + `_preset.json`) — uses the upstream image as a Canny edge map and repaints per the prompt. Only the silhouette survives; colors come from the prompt. Tested working.
 - **Qwen Edit 2511** (`qwen-edit-2511.json` + `_preset.json`) — instruction editing via Qwen-Image-Edit 2511 + Lightning 4-step. Preserves the subject's colors and materials while the instruction changes background/lighting or adds elements — describe the change, not the whole scene. The 3D-model-stage **Product Shot** action spawns this workflow with a seeded render-to-product-photo instruction. Tested working.
+- **Qwen Image 2.1 Edit** (`qwen-image-2.1-edit.json` + `_preset.json`) — the official Qwen Image 2.1 edit graph with one reference: `LoadImage` → `TextEncodeQwenImage21` (Qwen3-VL-8B encoder), whose `latent` output already matches the source size, so there is no `VAEEncode`. Refer to the source as `<image1>` — the image-edit stage has a single image socket, so ComfyTV's `@image_N` mentions do not apply here (they do on the Image stage's Multi-Ref Edit); output follows the input size (keep it ≤ 2K). 25 steps, cfg 1, `QwenImage21Cache` on auto. For several references use the Image stage's **Qwen Image 2.1 Multi-Ref Edit**. Tested working (~27 s at 1K on a 5090).
 
 ## Models referenced
 
@@ -31,3 +32,4 @@ To add your own workflow see [docs/custom-workflows.md](../../docs/custom-workfl
 - `clip_l.safetensors` + `t5xxl_fp16.safetensors` → `models/clip/`
 - `ae.safetensors` → `models/vae/`
 - Qwen Edit 2511: `qwen_image_edit_2511_fp8mixed.safetensors` (diffusion_models), `Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors` (loras), `qwen_2.5_vl_7b_fp8_scaled.safetensors` (clip), `qwen_image_vae.safetensors` (vae)
+- Qwen Image 2.1 Edit: `qwen_image_2.1_int8_convrot.safetensors` (diffusion_models), `qwen3vl_8b_int8_convrot.safetensors` (text_encoders), `qwen_image_2.1_vae_bf16.safetensors` (vae) — <https://huggingface.co/Comfy-Org/Qwen-Image-2.1>; needs ComfyUI v0.37+ (`TextEncodeQwenImage21`)

@@ -1,0 +1,41 @@
+{
+  "label":       "Character 3-View (Qwen 2.1)",
+  "order":       31,
+  "description": "Qwen Image 2.1, no LoRA. Front / side / back full-body character turnaround on a plain white background, three instruction edits of the same source in one run. Identity, outfit and props stay consistent; side view tends toward 3/4 when the source pose is angled.",
+
+  "result": { "type": "ui_save_batch", "node": "40" },
+
+  "inputs": {
+    "5": {
+      "image": {
+        "from": "upstream_image:annotated",
+        "required": true,
+        "error": "Character 3-View needs an upstream image."
+      }
+    },
+    "10": {
+      "prompt": {
+        "from": "main_prompt",
+        "prefix": "Show the same character from <image1> from the front view, eye-level shot, wide shot, full body, character reference sheet on a plain white background. Keep the identity, face, outfit, materials and style exactly the same. ",
+        "default": "a character"
+      }
+    },
+    "11": {
+      "prompt": {
+        "from": "main_prompt",
+        "prefix": "Show the same character from <image1> from the right side view (profile), eye-level shot, wide shot, full body, character reference sheet on a plain white background. Keep the identity, face, outfit, materials and style exactly the same. ",
+        "default": "a character"
+      }
+    },
+    "12": {
+      "prompt": {
+        "from": "main_prompt",
+        "prefix": "Show the same character from <image1> from the back view, eye-level shot, wide shot, full body, character reference sheet on a plain white background. Keep the identity, outfit, materials and style exactly the same. ",
+        "default": "a character"
+      }
+    },
+    "20": { "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" } },
+    "21": { "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" } },
+    "22": { "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" } }
+  }
+}

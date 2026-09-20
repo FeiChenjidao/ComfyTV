@@ -427,6 +427,7 @@ const mentionStyleModel = computed(() =>
 const mentionStyleOptions = computed(() => [
   { value: 'natural', label: t('configSidebar.mentionStyle.natural') },
   { value: 'minimax_tags', label: t('configSidebar.mentionStyle.minimaxTags') },
+  { value: 'qwen_tags', label: t('configSidebar.mentionStyle.qwenTags') },
 ])
 async function onMentionStyleChange(style: string) {
   const meta = { ...(config.value?.meta ?? {}) }

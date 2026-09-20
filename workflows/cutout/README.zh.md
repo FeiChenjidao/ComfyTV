@@ -20,7 +20,9 @@
 ## 当前内置
 
 - **BiRefNet Cutout**(`birefnet-cutout.json` + `_preset.json`) , 改自 ComfyUI 的 `utility_birefnet_remove_background` 模板。顶层:`LoadImage` → BiRefNet 子图 → `SaveImage`。子图封装 `RemoveBackground` / `LoadBackgroundRemovalModel` / `InvertMask` / `JoinImageWithAlpha`。
+- **Qwen Image 2.1 Cutout**(`qwen-image-2.1-cutout.json` + `_preset.json`) , 生成式抠图,来自官方 `image_qwen_image_2_1_background_removal` 模板:`LoadImage` → `TextEncodeQwenImage21`(固定指令 *"Remove the background, and output a PNG image"*)→ `KSampler` → 2.1 的 VAE 直接解出 alpha 通道,`SaveImage` 存 RGBA PNG,不经过分割模型和 `JoinImageWithAlpha`。复杂 / 图形化背景上比 BiRefNet 干净(波普拼贴源图上 BiRefNet 把头顶一块半调网点当成前景、头发边缘留绿色溢色,2.1 都没有),但主体是重新生成的,不是蒙版,细节可能有微小变化;5090 上 1K 模型加载后约 10 秒(冷启动约 45 秒,BiRefNet 约 7 秒)。需要有明确的前景主体:喂一张没有主体的风景图,它会整张返回全透明。要像素级保真的产品抠图仍用 BiRefNet。测试通过。
 
 ## 需要的模型
 
 - `birefnet.safetensors` , 放进 `models/background_removal/`,约 900 MB。下载:<https://huggingface.co/Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors>
+- Qwen Image 2.1 Cutout:`qwen_image_2.1_int8_convrot.safetensors` → `models/diffusion_models/`、`qwen3vl_8b_int8_convrot.safetensors` → `models/text_encoders/`、`qwen_image_2.1_vae_bf16.safetensors` → `models/vae/`(约 17 GB,<https://huggingface.co/Comfy-Org/Qwen-Image-2.1>,ComfyUI v0.37+)
