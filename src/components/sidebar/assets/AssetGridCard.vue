@@ -3,6 +3,7 @@
     class="ctv-asset-card ctv:relative ctv:flex ctv:flex-col ctv:gap-2 ctv:overflow-hidden ctv:rounded-lg ctv:p-2
            ctv:cursor-grab ctv:select-none ctv:transition-colors ctv:duration-200
            ctv:hover:bg-secondary-background-hover/60"
+    :class="selected && 'ctv:bg-secondary-background-selected ctv:ring-2 ctv:ring-primary-background ctv:ring-inset'"
     draggable="true"
   >
     <div class="ctv:relative ctv:aspect-square ctv:overflow-hidden ctv:rounded-lg ctv:bg-secondary-background">
@@ -110,7 +111,18 @@
         @pointerdown.stop
       >{{ $t('fx.makeProxy') }}</button>
 
-      <div class="ctv-asset-actions ctv:absolute ctv:top-2 ctv:left-2 ctv:flex ctv:gap-1">
+      <button
+        v-if="selectable"
+        class="ctv:absolute ctv:top-2 ctv:left-2 ctv:flex ctv:size-6 ctv:items-center ctv:justify-center ctv:cursor-pointer ctv:appearance-none
+               ctv:rounded-md ctv:border-none ctv:shadow-sm ctv:bg-white/90 ctv:text-black/80 ctv:hover:bg-white"
+        :class="selected && 'ctv:text-primary-background'"
+        @click.stop="emit('toggle-select', $event)"
+        @pointerdown.stop
+      >
+        <IconSquareCheck v-if="selected" class="ctv:size-4" />
+        <IconSquare v-else class="ctv:size-4" />
+      </button>
+      <div v-else class="ctv-asset-actions ctv:absolute ctv:top-2 ctv:left-2 ctv:flex ctv:gap-1">
         <button
           class="ctv:flex ctv:size-6 ctv:items-center ctv:justify-center ctv:cursor-pointer ctv:appearance-none
                  ctv:rounded-md ctv:border-none ctv:shadow-sm ctv:bg-white/90 ctv:text-black/80 ctv:hover:bg-white"
@@ -158,6 +170,8 @@ import IconFileText from '~icons/lucide/file-text'
 import IconMaximize from '~icons/lucide/maximize-2'
 import IconPause from '~icons/lucide/pause'
 import IconPlay from '~icons/lucide/play'
+import IconSquare from '~icons/lucide/square'
+import IconSquareCheck from '~icons/lucide/square-check'
 import IconVolume2 from '~icons/lucide/volume-2'
 
 import type { Asset } from '@/api/schemas'
@@ -171,6 +185,8 @@ const props = defineProps<{
   meta: string
   categoryNames: string[]
   tooltip: string
+  selectable?: boolean
+  selected?: boolean
 }>()
 
 const { playingUrl, toggle: toggleAudio } = useAudioPreview()
@@ -185,6 +201,7 @@ const {
 const emit = defineEmits<{
   'open-menu': [e: MouseEvent]
   'view-full': []
+  'toggle-select': [e: MouseEvent]
 }>()
 
 const videoHover = ref(false)

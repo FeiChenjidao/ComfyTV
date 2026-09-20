@@ -3,8 +3,20 @@
     class="ctv-asset-row ctv:relative ctv:flex ctv:items-center ctv:gap-2 ctv:overflow-hidden ctv:rounded-lg ctv:p-2
            ctv:cursor-grab ctv:select-none ctv:transition-colors ctv:duration-200
            ctv:hover:bg-secondary-background-hover/60"
+    :class="selected && 'ctv:bg-secondary-background-selected ctv:ring-2 ctv:ring-primary-background ctv:ring-inset'"
     draggable="true"
   >
+    <button
+      v-if="selectable"
+      class="ctv:flex ctv:size-6 ctv:shrink-0 ctv:items-center ctv:justify-center ctv:cursor-pointer ctv:appearance-none
+             ctv:rounded-md ctv:border-none ctv:bg-transparent ctv:text-base-foreground"
+      :class="selected && 'ctv:text-primary-background'"
+      @click.stop="emit('toggle-select', $event)"
+      @pointerdown.stop
+    >
+      <IconSquareCheck v-if="selected" class="ctv:size-4" />
+      <IconSquare v-else class="ctv:size-4" />
+    </button>
     <div
       class="ctv:relative ctv:flex ctv:size-8 ctv:shrink-0 ctv:items-center ctv:justify-center ctv:overflow-hidden
              ctv:rounded-sm ctv:bg-secondary-background"
@@ -72,7 +84,7 @@
       >{{ secondary }}</span>
     </div>
 
-    <div class="ctv-asset-actions ctv:flex ctv:shrink-0 ctv:items-center ctv:gap-1">
+    <div v-if="!selectable" class="ctv-asset-actions ctv:flex ctv:shrink-0 ctv:items-center ctv:gap-1">
       <button
         v-if="asset.media_type === 'image'"
         class="ctv:flex ctv:size-6 ctv:items-center ctv:justify-center ctv:cursor-pointer ctv:appearance-none
@@ -107,6 +119,8 @@ import IconFileText from '~icons/lucide/file-text'
 import IconMaximize from '~icons/lucide/maximize-2'
 import IconPause from '~icons/lucide/pause'
 import IconPlay from '~icons/lucide/play'
+import IconSquare from '~icons/lucide/square'
+import IconSquareCheck from '~icons/lucide/square-check'
 
 import type { Asset } from '@/api/schemas'
 import ModelThumb from '@/components/widgets/ModelThumb.vue'
@@ -118,11 +132,14 @@ const props = defineProps<{
   meta: string
   categoryNames: string[]
   tooltip: string
+  selectable?: boolean
+  selected?: boolean
 }>()
 
 const emit = defineEmits<{
   'open-menu': [e: MouseEvent]
   'view-full': []
+  'toggle-select': [e: MouseEvent]
 }>()
 
 const secondary = computed(() =>

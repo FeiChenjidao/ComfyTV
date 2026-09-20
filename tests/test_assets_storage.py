@@ -147,3 +147,38 @@ class TestAssetDelete:
         assert storage.list_assets() == []
 
         assert storage.list_assets(category_id=c["id"]) == []
+
+
+class TestAssetBulk:
+    def test_bulk_add_and_remove_categories(self, reset_db):
+        from ComfyTV import storage
+        c1 = storage.create_asset_category("c1")
+        c2 = storage.create_asset_category("c2")
+        a = _img(storage, "a", category_ids=[c1["id"]])
+        b = _img(storage, "b")
+        rows = storage.bulk_update_asset_categories(
+            [a["id"], b["id"], 9999], add=[c2["id"]], remove=[c1["id"]])
+        assert [r["id"] for r in rows] == [b["id"], a["id"]]
+        assert all(r["category_ids"] == [c2["id"]] for r in rows)
+
+    def test_bulk_add_is_idempotent(self, reset_db):
+        from ComfyTV import storage
+        c = storage.create_asset_category("c")
+        a = _img(storage, "a", category_ids=[c["id"]])
+        rows = storage.bulk_update_asset_categories([a["id"]], add=[c["id"]])
+        assert rows[0]["category_ids"] == [c["id"]]
+
+    def test_bulk_unknown_category_rejected(self, reset_db):
+        from ComfyTV import storage
+        a = _img(storage, "a")
+        assert storage.bulk_update_asset_categories([a["id"]], add=[42]) is None
+        assert storage.bulk_update_asset_categories([], add=[42]) == []
+
+    def test_delete_assets_returns_only_found(self, reset_db):
+        from ComfyTV import storage
+        c = storage.create_asset_category("c")
+        a = _img(storage, "a", category_ids=[c["id"]])
+        b = _img(storage, "b")
+        assert sorted(storage.delete_assets([a["id"], b["id"], 9999])) == sorted([a["id"], b["id"]])
+        assert storage.list_assets() == []
+        assert storage.delete_assets([a["id"]]) == []

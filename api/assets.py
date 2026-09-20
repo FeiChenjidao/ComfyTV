@@ -250,6 +250,57 @@ async def create_asset(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "asset": row})
 
 
+BULK_LIMIT = 500
+
+
+def _bulk_ids(body: dict) -> list[int] | None:
+    ok, ids = _int_list(body.get("ids"))
+    if not ok or not ids or len(ids) > BULK_LIMIT:
+        return None
+    return ids
+
+
+@routes.post("/comfytv/assets/bulk")
+async def bulk_update_assets(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception as e:
+        return web.json_response({"error": f"invalid json: {e}"}, status=400)
+    ids = _bulk_ids(body)
+    if ids is None:
+        return web.json_response(
+            {"error": f"ids must be 1..{BULK_LIMIT} integers"}, status=400)
+    ok_add, add = _int_list(body.get("add_category_ids"))
+    ok_rm, remove = _int_list(body.get("remove_category_ids"))
+    if not ok_add or not ok_rm:
+        return web.json_response({"error": "invalid category ids"}, status=400)
+    if not add and not remove:
+        return web.json_response(
+            {"error": "add_category_ids or remove_category_ids is required"}, status=400)
+    rows = storage.bulk_update_asset_categories(ids, add=add, remove=remove)
+    if rows is None:
+        return web.json_response({"error": "category not found"}, status=404)
+    rows = [_with_file_missing(r) for r in rows]
+    broadcast_asset_event("bulk-update", {"assets": rows})
+    return web.json_response({"ok": True, "assets": rows})
+
+
+@routes.post("/comfytv/assets/bulk_delete")
+async def bulk_delete_assets(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception as e:
+        return web.json_response({"error": f"invalid json: {e}"}, status=400)
+    ids = _bulk_ids(body)
+    if ids is None:
+        return web.json_response(
+            {"error": f"ids must be 1..{BULK_LIMIT} integers"}, status=400)
+    deleted = storage.delete_assets(ids)
+    if deleted:
+        broadcast_asset_event("bulk-delete", {"ids": deleted})
+    return web.json_response({"ok": True, "deleted": deleted})
+
+
 @routes.patch("/comfytv/assets/{aid}")
 async def update_asset(request: web.Request) -> web.Response:
     try:

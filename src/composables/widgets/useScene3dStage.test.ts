@@ -577,6 +577,17 @@ describe('useScene3dStage: edge cases', () => {
     expect(batch.images).toHaveLength(2)
   })
 
+  it('toggleSelectObject deselects the current object and selects another', async () => {
+    const { s } = await withScene()
+    s.addPrimitive('cube')
+    const id = s.selectedId.value!
+    s.toggleSelectObject(id)
+    expect(s.selectedId.value).toBeNull()
+    expect(viewport.setSelected).toHaveBeenLastCalledWith(null)
+    s.toggleSelectObject(id)
+    expect(s.selectedId.value).toBe(id)
+  })
+
   it('selecting the same object is a no-op', async () => {
     const { s } = await withScene()
     s.addPrimitive('cube')

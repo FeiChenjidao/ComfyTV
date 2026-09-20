@@ -360,9 +360,13 @@ def build_execute_kwargs(stage_cls, prompt_inputs: dict) -> dict:
         if names is not None:
             group: dict = {}
             for name in names:
-                known.add(name)
-                if name in prompt_inputs and prompt_inputs[name] is not None:
-                    group[name] = prompt_inputs[name]
+                dotted = f"{inp_id}.{name}"
+                known.update((name, dotted))
+                value = prompt_inputs.get(dotted)
+                if value is None:
+                    value = prompt_inputs.get(name)
+                if value is not None:
+                    group[name] = value
             kwargs[inp_id] = group
         elif inp_id in prompt_inputs:
             kwargs[inp_id] = prompt_inputs[inp_id]

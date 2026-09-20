@@ -138,8 +138,17 @@ export function useModelLoader(node: LGraphNode, opts: UseModelLoaderOptions) {
   }
 
   function bindSelected(slot: string): void {
-    if (!selectedPart.value) return
-    bindings.value = { ...bindings.value, [selectedPart.value]: slot }
+    const part = selectedPart.value
+    if (!part) return
+    if (bindings.value[part] === slot) {
+      unbind(part)
+      return
+    }
+    bindings.value = { ...bindings.value, [part]: slot }
+  }
+
+  function togglePart(part: string): void {
+    selectedPart.value = selectedPart.value === part ? null : part
   }
 
   function unbind(part: string): void {
@@ -271,6 +280,7 @@ export function useModelLoader(node: LGraphNode, opts: UseModelLoaderOptions) {
     onPartsChanged,
     onPartPick,
     bindSelected,
+    togglePart,
     unbind,
     onPick,
     registerFile,

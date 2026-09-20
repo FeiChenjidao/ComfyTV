@@ -71,7 +71,9 @@
                 : 'ctv:border-border-subtle ctv:hover:border-primary-background/60',
             ]"
             :title="$t('imageRefs.batchItem', { n: i + 1 })"
-            @click="$emit('select-batch', group.id, i)"
+            @click="isBatchAdded(group.id, i)
+              ? $emit('deselect-batch', group.id, i)
+              : $emit('select-batch', group.id, i)"
           >
             <ThumbImg
               :src="url"
@@ -171,7 +173,7 @@
               : 'ctv:border-border-subtle ctv:hover:border-primary-background/60',
           ]"
           :title="asset.name"
-          @click="$emit('select', asset)"
+          @click="isAdded(asset.id) ? $emit('deselect', asset) : $emit('select', asset)"
         >
           <div
             v-if="asset.media_type === 'video'"
@@ -252,7 +254,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [asset: Asset]
+  deselect: [asset: Asset]
   'select-batch': [groupId: string, index: number]
+  'deselect-batch': [groupId: string, index: number]
   'refresh-batch': [id: string]
   'unpin-batch': [id: string]
   close: []

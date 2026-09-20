@@ -238,7 +238,9 @@
           :batch-groups="batchGroups"
           :added-batch-keys="pickerAddedBatchKeys"
           @select="onPickAsset"
+          @deselect="onUnpickAsset"
           @select-batch="onPickBatchImage"
+          @deselect-batch="onUnpickBatchImage"
           @refresh-batch="onRefreshBatch"
           @unpin-batch="onUnpinBatch"
           @close="pickerOpen = false"
@@ -698,6 +700,19 @@ function onPickAsset(a: { payload_url: string; media_type: string }) {
     : a.media_type === 'audio' ? 'audio'
     : 'images'
   addRef(selectedClip.value.id, kind, a.payload_url)
+}
+
+function onUnpickAsset(a: { payload_url: string }) {
+  const clip = selectedClip.value
+  if (!clip) return
+  const entry = allRefs.value.find(r => r.url === a.payload_url)
+  if (entry) removeRef(clip.id, entry.kind, entry.url)
+}
+
+function onUnpickBatchImage(groupId: string, index: number) {
+  const clip = selectedClip.value
+  const url = pinnedStore.byId(projectId.value, groupId)?.urls[index]
+  if (clip && url && clip.images.includes(url)) removeRef(clip.id, 'images', url)
 }
 
 const refSlotPicker = ref<{

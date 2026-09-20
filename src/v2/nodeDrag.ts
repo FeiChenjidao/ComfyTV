@@ -5,28 +5,27 @@ import { app, type ComfyNode } from '@/lib/comfyApp'
 
 const nudgeScope = effectScope(true)
 const nudgePending = new Set<HTMLElement>()
-let nudged: any[] = []
-const resize = (nodes: any[], delta: number) => {
-  for (const n of nodes) n.setSize([n.size[0], n.size[1] + delta])
-  ;(app as any).graph?.setDirtyCanvas(true, true)
+let nudged: HTMLElement[] = []
+const poke = (roots: HTMLElement[], on: boolean) => {
+  for (const root of roots) {
+    const grid = root.querySelector<HTMLElement>('[data-widgets-grid-node-id]')
+    const card = root.querySelector<HTMLElement>('.v2-card')
+    if (!grid || !card) continue
+    grid.style.paddingBottom = on ? '1px' : ''
+    card.style.marginBottom = on ? '-1px' : ''
+  }
 }
 const nudgeRevert = nudgeScope.run(() => useTimeoutFn(() => {
-  resize(nudged, -1)
+  poke(nudged, false)
   nudged = []
 }, 40, { immediate: false }))!
 const nudgeTimer = nudgeScope.run(() => useTimeoutFn(() => {
   if (nudged.length) { nudgeTimer.start(); return }
-  const graph: any = (app as any).graph
-  const nodes: any[] = []
-  for (const root of nudgePending) {
-    const id = root.getAttribute('data-node-id')
-    const n = id == null ? null : graph?.getNodeById?.(id) ?? graph?.getNodeById?.(Number(id))
-    if (n?.setSize) nodes.push(n)
-  }
+  const roots = [...nudgePending].filter((r) => r.isConnected)
   nudgePending.clear()
-  if (!nodes.length) return
-  nudged = nodes
-  resize(nodes, 1)
+  if (!roots.length) return
+  nudged = roots
+  poke(roots, true)
   nudgeRevert.start()
 }, 60, { immediate: false }))!
 export function nudgeSlotAnchors(root: HTMLElement) {
@@ -48,6 +47,7 @@ export function bindClusterHoverIntent(root: HTMLElement, scope: EffectScope) {
     if (!leave) continue
     c.addEventListener('pointerenter', () => {
       leave.stop()
+      document.body.toggleAttribute('data-v2-slot-hover', true)
       if (!c.classList.contains('v2-open')) {
         c.classList.add('v2-open')
         nudgeSlotAnchors(root)
@@ -56,6 +56,7 @@ export function bindClusterHoverIntent(root: HTMLElement, scope: EffectScope) {
     c.addEventListener('pointerleave', () => {
       leave.stop()
       leave.start()
+      document.body.toggleAttribute('data-v2-slot-hover', false)
     })
   }
 }

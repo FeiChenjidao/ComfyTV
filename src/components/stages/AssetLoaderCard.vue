@@ -24,7 +24,7 @@
         v-for="cat in store.categories"
         :key="cat.id"
         :class="chipClass(activeFilter === cat.id)"
-        @click="setFilter(cat.id)"
+        @click="setFilter(activeFilter === cat.id ? 'all' : cat.id)"
       >
         {{ cat.name }}
         <span :class="chipCountClass">{{ mediaCount(cat.id) }}</span>
@@ -77,7 +77,7 @@
                   : 'ctv:border-border-subtle ctv:hover:border-border-default',
               ]"
               :title="assetTooltip(item.asset)"
-              @click="selectAsset(item.asset)"
+              @click="toggleAsset(item.asset)"
             >
               <div
                 v-if="mediaType === 'video'"
@@ -222,7 +222,7 @@ const {
   mediaCount,
   selectedAsset,
   setFilter,
-  selectAsset,
+  toggleAsset,
   selectRelative,
   importFiles,
   fileDrop,

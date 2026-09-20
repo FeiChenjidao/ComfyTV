@@ -1,16 +1,29 @@
 import { computed, reactive } from 'vue'
 
+export type LightboxKind = 'image' | 'video' | 'audio' | 'model'
+
 export interface LightboxItem {
   url: string
   label?: string
-  kind?: 'image' | 'video'
+  kind?: LightboxKind
 }
 
-const VIDEO_URL_RE = /\.(3g2|3gp|avi|m4v|mkv|mov|mp4|mpe?g|ogv|webm)(?=$|[?&#])/i
+// a trailing " [output]" annotation can follow the extension, hence \s in the lookahead
+const VIDEO_URL_RE = /\.(3g2|3gp|avi|m4v|mkv|mov|mp4|mpe?g|ogv|webm)(?=$|[\s?&#])/i
+const AUDIO_URL_RE = /\.(aac|flac|m4a|mp3|oga|ogg|opus|wav|weba)(?=$|[\s?&#])/i
+const MODEL_URL_RE = /\.(glb|gltf|obj|fbx|ply|stl)(?=$|[\s?&#])/i
+
+export function lightboxKind(item: LightboxItem): LightboxKind {
+  if (item.kind) return item.kind
+  const url = decodeURIComponent(item.url)
+  if (VIDEO_URL_RE.test(url)) return 'video'
+  if (AUDIO_URL_RE.test(url)) return 'audio'
+  if (MODEL_URL_RE.test(url)) return 'model'
+  return 'image'
+}
 
 export function isVideoLightboxItem(item: LightboxItem): boolean {
-  if (item.kind) return item.kind === 'video'
-  return VIDEO_URL_RE.test(decodeURIComponent(item.url))
+  return lightboxKind(item) === 'video'
 }
 
 const state = reactive<{ items: LightboxItem[]; index: number }>({

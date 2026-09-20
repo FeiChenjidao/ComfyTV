@@ -9,7 +9,9 @@ vi.mock('@/composables/stages/assetLoaderNode', () => ({
 
 import { clientToCanvasPos, createAssetLoaderNode } from '@/composables/stages/assetLoaderNode'
 
-import { ASSET_DRAG_MIME, handleAssetDragOver, handleAssetDrop } from './assetCanvasDrop'
+import {
+  ASSET_DRAG_MIME, handleAssetDragOver, handleAssetDrop, parseAssetDragIds,
+} from './assetCanvasDrop'
 
 function dragEvent(types: string[], data = ''): DragEvent {
   return {
@@ -76,6 +78,16 @@ describe('handleAssetDrop', () => {
     })
   })
 
+  it('creates one node per dropped id, stepped so they do not stack', () => {
+    const second = { ...asset, id: 8 }
+    const resolve = vi.fn((id: number) => (id === 7 ? asset : id === 8 ? second : null))
+    const e = dragEvent([ASSET_DRAG_MIME], '7,999,8')
+    handleAssetDrop(e, resolve)
+    expect(createAssetLoaderNode).toHaveBeenCalledTimes(2)
+    expect(createAssetLoaderNode).toHaveBeenNthCalledWith(1, asset, [100, 200], expect.anything())
+    expect(createAssetLoaderNode).toHaveBeenNthCalledWith(2, second, [140, 240], expect.anything())
+  })
+
   it('still claims the event but creates nothing when the id is bad or unknown', () => {
     for (const data of ['not-a-number', '999']) {
       const e = dragEvent([ASSET_DRAG_MIME], data)
@@ -84,6 +96,14 @@ describe('handleAssetDrop', () => {
       expect(e.stopPropagation).toHaveBeenCalled()
     }
     expect(createAssetLoaderNode).not.toHaveBeenCalled()
+  })
+})
+
+describe('parseAssetDragIds', () => {
+  it('accepts a single id, a list, and drops junk and duplicates', () => {
+    expect(parseAssetDragIds('7')).toEqual([7])
+    expect(parseAssetDragIds('7, 8,x,,8')).toEqual([7, 8])
+    expect(parseAssetDragIds('')).toEqual([])
   })
 })
 

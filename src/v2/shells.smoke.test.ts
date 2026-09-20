@@ -324,6 +324,7 @@ function makeNode(cls: string) {
     size: [420, 460],
     flags: {},
     setSize(v: [number, number]) { this.size = v },
+    computeSize: () => [210, 999],
     setDirtyCanvas: () => {},
     addDOMWidget(name: string, type: string, element: HTMLElement, options: Record<string, unknown>) {
       const w = { name, type, element, options, value: undefined }
@@ -427,6 +428,117 @@ describe('V2 shell smoke', () => {
       expect(card.querySelector('.v2-ed-host')?.parentElement?.classList.contains('v2-preview'), cls).toBe(true)
       node.onRemoved?.()
     }
+  })
+
+  it('neither litegraph auto-size path can resize a V2 card', () => {
+    const node = makeNode('ComfyTV.VideoStage')
+    expect(node.computeSize()[1]).toBe(999)
+    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
+    const [w, h] = node.size
+
+    // what dynamicWidgets does when an autogrow group changes
+    node.size[1] = node.computeSize([...node.size])[1]
+    expect(node.size[1]).toBe(h)
+
+    // what LGraphNode.expandToFitContent does when a slot is added
+    const grown = node.computeSize()
+    node.setSize([Math.max(w, grown[0]), Math.max(h, grown[1])])
+    expect(node.size).toEqual([w, h])
+    node.onRemoved?.()
+  })
+
+  it('the card derives node height from chrome, so the preview never moves', () => {
+    const node = makeNode('ComfyTV.VideoStage')
+    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+    const panel = card.querySelector('.v2-panel') as HTMLElement
+    const preview = card.querySelector('.v2-preview') as HTMLElement
+    const bar = panel.querySelector('.v2-collapse') as HTMLElement
+
+    // happy-dom has no layout: stand in for one. Chrome is everything but the preview.
+    let panelH = 220
+    const PREVIEW = 300
+    Object.defineProperty(preview, 'offsetHeight', { get: () => PREVIEW })
+    Object.defineProperty(card, 'offsetHeight', { get: () => PREVIEW + panelH })
+    Object.defineProperty(panel, 'offsetHeight', { get: () => panelH })
+    const sync = (node as any).__comfytvSyncHeight as () => void
+    expect(sync).toBeTypeOf('function')
+
+    // hydration is absorbed: chrome grows before any user intent, node keeps its saved height
+    const h0 = node.size[1]
+    panelH = 260
+    card.dispatchEvent(new Event('resize'))
+    expect(node.size[1]).toBe(h0)
+    panelH = 220
+
+    // collapsing is just a chrome change; the shell does no height arithmetic of its own
+    const press = () => bar.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    press()
+    panelH = 40
+    bar.click()
+    expect(node.size[1]).toBe(h0 - 180)
+
+    press()
+    panelH = 220
+    bar.click()
+    expect(node.size[1]).toBe(h0)
+
+    // and it is idempotent, so no trigger can ever double-count
+    sync(); sync(); sync()
+    expect(node.size[1]).toBe(h0)
+    node.onRemoved?.()
+  })
+
+  it('a chrome jump that squeezes the preview to zero still restores it', () => {
+    const node = makeNode('ComfyTV.VideoStage')
+    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+    const panel = card.querySelector('.v2-panel') as HTMLElement
+    const preview = card.querySelector('.v2-preview') as HTMLElement
+    const bar = panel.querySelector('.v2-collapse') as HTMLElement
+    let panelH = 220
+    let previewH = 300
+    Object.defineProperty(preview, 'offsetHeight', { get: () => previewH })
+    Object.defineProperty(card, 'offsetHeight', { get: () => previewH + panelH })
+    const press = () => bar.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+
+    press()
+    const h0 = node.size[1]
+    panelH = 40
+    bar.click()
+    expect(node.size[1]).toBe(h0 - 180)
+
+    press()
+    panelH = 520
+    previewH = 0
+    bar.click()
+    expect(node.size[1]).toBe(h0 + 300)
+
+    previewH = 300
+    card.dispatchEvent(new Event('resize'))
+    expect(node.size[1]).toBe(h0 + 300)
+    node.onRemoved?.()
+  })
+
+  it('a chrome change the shell never hears about still lands', () => {
+    const node = makeNode('ComfyTV.VideoStage')
+    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+    const preview = card.querySelector('.v2-preview') as HTMLElement
+    let chrome = 200
+    const PREVIEW = 300
+    Object.defineProperty(preview, 'offsetHeight', { get: () => PREVIEW })
+    Object.defineProperty(card, 'offsetHeight', { get: () => PREVIEW + chrome })
+    const sync = (node as any).__comfytvSyncHeight as () => void
+    card.dispatchEvent(new PointerEvent('pointerdown'))
+    const h = node.size[1]
+    chrome += 43 // an upstream-text banner appears inside the prompt host
+    sync()
+    expect(node.size[1]).toBe(h + 43)
+    chrome -= 43
+    sync()
+    expect(node.size[1]).toBe(h)
+    node.onRemoved?.()
   })
 
   it('stacks preview cards by the real item count', async () => {

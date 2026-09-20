@@ -1,13 +1,29 @@
 <template>
   <div
-    class="ctv:relative ctv:flex ctv:flex-col ctv:size-full ctv:box-border ctv:overflow-hidden ctv:text-xs ctv:text-base-foreground"
+    class="ctv:relative ctv:flex ctv:flex-col ctv:size-full ctv:box-border ctv:overflow-hidden ctv:text-xs ctv:text-base-foreground ctv:outline-none"
+    tabindex="-1"
     @dragenter="onDragEnter"
     @dragover.prevent
     @dragleave="onDragLeave"
     @drop.prevent="onDrop"
+    @keydown.esc="selection.exitSelectMode()"
   >
-    <div class="ctv:shrink-0 ctv:flex ctv:items-center ctv:gap-2 ctv:py-1.5 ctv:px-2.5
-                ctv:bg-interface-panel-surface ctv:border-b ctv:border-border-subtle">
+    <AssetSelectionBar
+      v-if="selection.selectMode.value"
+      :count="selection.selectedCount.value"
+      :all-selected="selection.allVisibleSelected.value"
+      :busy="selection.removing.value"
+      @toggle-all="selection.toggleSelectAll()"
+      @edit-tags="openSelectionTagEditor"
+      @load-nodes="selection.loadSelectedNodes()"
+      @remove="selection.removeSelected()"
+      @exit="selection.exitSelectMode()"
+    />
+    <div
+      v-else
+      class="ctv:shrink-0 ctv:flex ctv:items-center ctv:gap-2 ctv:py-1.5 ctv:px-2.5
+             ctv:bg-interface-panel-surface ctv:border-b ctv:border-border-subtle"
+    >
       <span class="ctv:flex-1 ctv:font-semibold ctv:text-sm">{{ $t('assets.title') }}</span>
       <button
         :class="addBtnClass"
@@ -45,6 +61,13 @@
         />
       </div>
       <button
+        :class="[iconBtnClass, selection.selectMode.value && 'ctv:bg-secondary-background-selected ctv:border-primary-background/60']"
+        :title="$t(selection.selectMode.value ? 'assets.select.exit' : 'assets.select.enter')"
+        @click="selection.toggleSelectMode()"
+      >
+        <IconSquareCheck class="ctv:size-4" />
+      </button>
+      <button
         :class="iconBtnClass"
         :title="$t('assets.view.settings')"
         @click="openSettingsMenu"
@@ -74,7 +97,7 @@
         :class="chipClass(activeFilter === cat.id)"
         @dragover.prevent
         @drop.prevent.stop="onChipDrop(cat.id, $event)"
-        @click="activeFilter = cat.id"
+        @click="activeFilter = activeFilter === cat.id ? 'all' : cat.id"
       >
         {{ cat.name }}
         <span :class="chipCountClass">{{ store.countByCategory(cat.id) }}</span>
@@ -137,27 +160,20 @@
       class="ctv:flex-1 ctv:min-h-0 ctv:p-1.5"
     >
       <template #item="{ item }">
-        <AssetGridCard
-          v-if="viewMode === 'grid'"
+        <component
+          :is="viewMode === 'grid' ? AssetGridCard : AssetListItem"
           :asset="item.asset"
           :meta="assetMeta(item.asset)"
           :category-names="item.asset.category_ids.map(catName)"
           :tooltip="assetTooltip(item.asset)"
+          :selectable="selection.selectMode.value"
+          :selected="selection.isSelected(item.asset.id)"
+          @click="selection.onCardClick(item.asset, $event)"
           @dragstart="onAssetDragStart(item.asset, $event)"
           @contextmenu.prevent.stop="openAssetMenu(item.asset, $event, 'pointer')"
           @open-menu="openAssetMenu(item.asset, $event, 'element')"
           @view-full="viewFullAsset(item.asset)"
-        />
-        <AssetListItem
-          v-else
-          :asset="item.asset"
-          :meta="assetMeta(item.asset)"
-          :category-names="item.asset.category_ids.map(catName)"
-          :tooltip="assetTooltip(item.asset)"
-          @dragstart="onAssetDragStart(item.asset, $event)"
-          @contextmenu.prevent.stop="openAssetMenu(item.asset, $event, 'pointer')"
-          @open-menu="openAssetMenu(item.asset, $event, 'element')"
-          @view-full="viewFullAsset(item.asset)"
+          @toggle-select="selection.onCardClick(item.asset, $event)"
         />
       </template>
     </VirtualGrid>
@@ -208,68 +224,13 @@
       </div>
     </div>
 
-    <div
-      v-if="assetMenu"
-      class="ctv:fixed ctv:inset-0 ctv:z-20"
-      @click="closeAssetMenu()"
-      @contextmenu.prevent="closeAssetMenu()"
-    >
-      <div
-        class="ctv:absolute ctv:w-48 ctv:p-1 ctv:rounded-lg ctv:shadow-md
-               ctv:bg-interface-menu-surface ctv:border ctv:border-interface-menu-stroke"
-        :style="assetMenuStyle"
-        @click.stop
-      >
-        <button
-          v-if="menuAsset?.media_type === 'image'"
-          :class="menuItemClass"
-          @click="menuViewFull"
-        >
-          <IconMaximize class="ctv:size-4 ctv:shrink-0" />
-          <span class="ctv:flex-1 ctv:truncate">{{ $t('stage.action.viewFull') }}</span>
-        </button>
-        <button
-          v-if="menuAsset?.media_type !== 'model'"
-          :class="menuItemClass"
-          @click="menuLoadNode"
-        >
-          <IconDownload class="ctv:size-4 ctv:shrink-0" />
-          <span class="ctv:flex-1 ctv:truncate">{{ $t('assets.card.loadNode') }}</span>
-        </button>
-        <button
-          v-if="menuAsset?.media_type === 'video'"
-          :class="menuItemClass"
-          @click="menuMakeProxy"
-        >
-          <IconClapperboard class="ctv:size-4 ctv:shrink-0" />
-          <span class="ctv:flex-1 ctv:truncate">{{ $t('assets.card.makeProxy') }}</span>
-        </button>
-        <button
-          v-if="menuAsset?.media_type !== 'model'"
-          :class="menuItemClass"
-          @click="menuSendToEagle"
-        >
-          <IconSend class="ctv:size-4 ctv:shrink-0" />
-          <span class="ctv:flex-1 ctv:truncate">{{ $t('eagle.send.action') }}</span>
-        </button>
-        <button :class="menuItemClass" @click="menuEditTags">
-          <IconTag class="ctv:size-4 ctv:shrink-0" />
-          <span class="ctv:flex-1 ctv:truncate">{{ $t('assets.card.tags') }}</span>
-        </button>
-        <button :class="menuItemClass" @click="menuRenameAsset">
-          <IconPencil class="ctv:size-4 ctv:shrink-0" />
-          <span class="ctv:flex-1 ctv:truncate">{{ $t('assets.card.rename') }}</span>
-        </button>
-        <div class="ctv:my-1 ctv:border-b ctv:border-border-subtle" />
-        <button
-          :class="`${menuItemClass} ctv:hover:text-destructive-background`"
-          @click="menuDeleteAsset"
-        >
-          <IconTrash2 class="ctv:size-4 ctv:shrink-0" />
-          <span class="ctv:flex-1 ctv:truncate">{{ $t('assets.card.delete') }}</span>
-        </button>
-      </div>
-    </div>
+    <AssetContextMenu
+      v-if="assetMenu && menuAsset"
+      :asset="menuAsset"
+      :style="assetMenuStyle"
+      @close="closeAssetMenu()"
+      @action="menuActions[$event]()"
+    />
 
     <div v-if="tagEditor" class="ctv:fixed ctv:inset-0 ctv:z-20" @click="closeTagEditor()">
       <div
@@ -278,6 +239,10 @@
         :style="tagEditorStyle"
         @click.stop
       >
+        <div
+          v-if="editorAssets.length > 1"
+          class="ctv:px-1.5 ctv:py-1 ctv:text-2xs ctv:font-semibold ctv:text-muted-foreground"
+        >{{ $t('assets.select.count', { count: editorAssets.length }) }}</div>
         <div v-if="store.categories.length === 0"
              class="ctv:py-2 ctv:px-1.5 ctv:text-center ctv:italic ctv:text-muted-foreground/60 ctv:text-2xs">
           {{ $t('assets.tagPopover.empty') }}
@@ -290,7 +255,10 @@
                  ctv:hover:bg-secondary-background-hover"
           @click="toggleTag(cat.id)"
         >
-          <span class="ctv:w-3 ctv:inline-flex ctv:text-primary-background"><IconCheck v-if="editorHas(cat.id)" class="ctv:size-3" /></span>
+          <span class="ctv:w-3 ctv:inline-flex ctv:text-primary-background">
+            <IconCheck v-if="editorTagState(cat.id) === 'all'" class="ctv:size-3" />
+            <IconMinus v-else-if="editorTagState(cat.id) === 'some'" class="ctv:size-3" />
+          </span>
           <span class="ctv:flex-1 ctv:truncate">{{ cat.name }}</span>
         </button>
       </div>
@@ -303,23 +271,21 @@ import { computed, ref } from 'vue'
 import type { CSSProperties } from 'vue'
 
 import IconCheck from '~icons/lucide/check'
-import IconDownload from '~icons/lucide/download'
-import IconClapperboard from '~icons/lucide/clapperboard'
 import IconFolderSearch from '~icons/lucide/folder-search'
 import IconLayoutGrid from '~icons/lucide/layout-grid'
-import IconMaximize from '~icons/lucide/maximize-2'
+import IconMinus from '~icons/lucide/minus'
 import IconPencil from '~icons/lucide/pencil'
 import IconPlus from '~icons/lucide/plus'
 import IconSearch from '~icons/lucide/search'
-import IconSend from '~icons/lucide/send'
 import IconSettings2 from '~icons/lucide/settings-2'
+import IconSquareCheck from '~icons/lucide/square-check'
 import IconTableOfContents from '~icons/lucide/table-of-contents'
-import IconTag from '~icons/lucide/tag'
-import IconTrash2 from '~icons/lucide/trash-2'
 import IconX from '~icons/lucide/x'
 
+import AssetContextMenu, { type AssetMenuAction } from '@/components/sidebar/assets/AssetContextMenu.vue'
 import AssetGridCard from '@/components/sidebar/assets/AssetGridCard.vue'
 import AssetListItem from '@/components/sidebar/assets/AssetListItem.vue'
+import AssetSelectionBar from '@/components/sidebar/assets/AssetSelectionBar.vue'
 import VirtualGrid from '@/components/widgets/VirtualGrid.vue'
 import { MODEL_FILE_EXTENSIONS, useAssetsPanel } from '@/composables/sidebar/useAssetsPanel'
 
@@ -355,10 +321,13 @@ const {
   menuScanFolder,
   tagEditor,
   tagEditorStyle,
-  catName,
+  editorAssets,
   closeTagEditor,
-  editorHas,
+  editorTagState,
   toggleTag,
+  selection,
+  openSelectionTagEditor,
+  catName,
   assetTooltip,
   assetMeta,
   assetMenu,
@@ -384,6 +353,16 @@ const {
   onDragLeave,
   onDrop,
 } = useAssetsPanel(() => props.active)
+
+const menuActions: Record<AssetMenuAction, () => void> = {
+  'view-full': menuViewFull,
+  'load-node': menuLoadNode,
+  'make-proxy': menuMakeProxy,
+  'send-eagle': menuSendToEagle,
+  'edit-tags': menuEditTags,
+  rename: menuRenameAsset,
+  delete: menuDeleteAsset,
+}
 
 const virtualItems = computed(() =>
   visibleAssets.value.map(a => ({ key: a.id, asset: a })))

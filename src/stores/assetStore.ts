@@ -8,6 +8,8 @@ import {
   type AssetCategory,
   AssetCategorySchema,
   AssetSchema,
+  BulkAssetsSchema,
+  BulkDeleteAssetsSchema,
   DeleteAssetSchema,
   ListAssetCategoriesSchema,
   ListAssetsSchema,
@@ -225,6 +227,53 @@ export const useAssetStore = defineStore('assets', () => {
     }
   }
 
+  async function bulkUpdateTags(
+    ids: number[],
+    opts: { add?: number[]; remove?: number[] },
+  ): Promise<Asset[] | null> {
+    const add = opts.add ?? []
+    const remove = opts.remove ?? []
+    if (!ids.length || (!add.length && !remove.length)) return []
+    try {
+      const data = await apiSend('/comfytv/assets/bulk', 'POST', BulkAssetsSchema, {
+        ids, add_category_ids: add, remove_category_ids: remove,
+      })
+      upsertMany(data.assets)
+      return data.assets
+    } catch (e) {
+      console.warn('[ComfyTV/assets] bulk tag update failed', ids.length, e)
+      return null
+    }
+  }
+
+  async function bulkRemove(ids: number[]): Promise<number[] | null> {
+    if (!ids.length) return []
+    try {
+      const data = await apiSend(
+        '/comfytv/assets/bulk_delete', 'POST', BulkDeleteAssetsSchema, { ids },
+      )
+      dropMany(data.deleted)
+      return data.deleted
+    } catch (e) {
+      console.warn('[ComfyTV/assets] bulk remove failed', ids.length, e)
+      return null
+    }
+  }
+
+  function upsertMany(rows: Asset[]): void {
+    const byRow = new Map(rows.map(r => [r.id, r]))
+    const next = assets.value.map(a => byRow.get(a.id) ?? a)
+    for (const a of next) byRow.delete(a.id)
+    assets.value = next
+    for (const row of byRow.values()) upsertAsset(row)
+  }
+
+  function dropMany(ids: number[]): void {
+    const gone = new Set(ids)
+    if (!gone.size) return
+    assets.value = assets.value.filter(a => !gone.has(a.id))
+  }
+
   function upsertAsset(row: Asset): void {
     const next = assets.value.slice()
     const idx = next.findIndex(a => a.id === row.id)
@@ -254,6 +303,18 @@ export const useAssetStore = defineStore('assets', () => {
         const id = d.id
         if (typeof id !== 'number') return false
         assets.value = assets.value.filter(a => a.id !== id)
+        return true
+      }
+      case 'bulk-update': {
+        const parsed = AssetSchema.array().safeParse((d as { assets?: unknown }).assets)
+        if (!parsed.success) return false
+        upsertMany(parsed.data)
+        return true
+      }
+      case 'bulk-delete': {
+        const ids = (d as { ids?: unknown }).ids
+        if (!Array.isArray(ids) || !ids.every(i => typeof i === 'number')) return false
+        dropMany(ids)
         return true
       }
       case 'category-create':
@@ -312,6 +373,8 @@ export const useAssetStore = defineStore('assets', () => {
     addTag,
     removeTag,
     remove,
+    bulkUpdateTags,
+    bulkRemove,
     installWebSocketSync,
   }
 })

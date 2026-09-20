@@ -99,7 +99,7 @@
           type="button"
           :class="chipClass(part === selectedPart)"
           :title="`${part} ← ${slot}`"
-          @click="selectedPart = part"
+          @click="togglePart(part)"
         >
           <span class="ctv:size-2 ctv:rounded-full" :style="{ background: slotColor(slot) }" />
           <span class="ctv:max-w-24 ctv:truncate">{{ part }}</span>
@@ -324,6 +324,7 @@ const {
   onPartsChanged,
   onPartPick,
   bindSelected,
+  togglePart,
   unbind,
   onPick,
   uploadModelFiles,

@@ -279,6 +279,18 @@ describe('useModelLoader', () => {
     expect(w.value).toBe('')
   })
 
+  it('binding the already-bound slot unbinds it; togglePart flips the selection', async () => {
+    const { loader } = makeLoader()
+    loader.togglePart('body')
+    expect(loader.selectedPart.value).toBe('body')
+    loader.bindSelected('m.a')
+    expect(loader.bindings.value).toEqual({ body: 'm.a' })
+    loader.bindSelected('m.a')
+    expect(loader.bindings.value).toEqual({})
+    loader.togglePart('body')
+    expect(loader.selectedPart.value).toBeNull()
+  })
+
   it('reloads bindings and clears the selection on node configure', () => {
     const node = makeNode({ bindings: '{"body":"m.a"}' })
     const { loader } = makeLoader({ node })

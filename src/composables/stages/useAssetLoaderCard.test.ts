@@ -130,6 +130,17 @@ describe('useAssetLoaderCard — selection', () => {
     expect(fakeStageStore.setOutputSlot).toHaveBeenCalledWith(state, 0, '/a/pic.png')
   })
 
+  it('toggleAsset clears the selection when the same asset is clicked again', async () => {
+    const { api, node, state } = await setup()
+    api.toggleAsset(IMG_ASSET)
+    expect(api.selectedId.value).toBe(1)
+    api.toggleAsset(IMG_ASSET)
+    expect(api.selectedId.value).toBeNull()
+    expect(widgetValue(node, 'asset_url')).toBe('')
+    expect(widgetValue(node, 'asset_id')).toBe(0)
+    expect(fakeStageStore.setOutputSlot).toHaveBeenLastCalledWith(state, 0, null)
+  })
+
   it('selectedAsset resolves through the store', async () => {
     fakeAssetStore.byId.mockImplementation((id: number) => (id === 1 ? IMG_ASSET : undefined))
     const { api } = await setup()

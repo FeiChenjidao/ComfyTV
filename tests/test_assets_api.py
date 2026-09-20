@@ -115,6 +115,45 @@ class TestTagRoutes:
         assert r.status == 404
 
 
+class TestBulkRoutes:
+    async def test_bulk_add_remove(self, client):
+        c1 = await _mk_category(client, "c1")
+        c2 = await _mk_category(client, "c2")
+        a = (await (await _mk_asset(client, name="a", category_ids=[c1["id"]])).json())["asset"]
+        b = (await (await _mk_asset(client, name="b")).json())["asset"]
+        r = await client.post("/comfytv/assets/bulk", json={
+            "ids": [a["id"], b["id"]],
+            "add_category_ids": [c2["id"]],
+            "remove_category_ids": [c1["id"]],
+        })
+        assert r.status == 200
+        rows = (await r.json())["assets"]
+        assert {row["id"] for row in rows} == {a["id"], b["id"]}
+        assert all(row["category_ids"] == [c2["id"]] for row in rows)
+        assert all("file_missing" in row for row in rows)
+
+    async def test_bulk_validation(self, client):
+        r = await client.post("/comfytv/assets/bulk", json={"ids": [], "add_category_ids": [1]})
+        assert r.status == 400
+        r = await client.post("/comfytv/assets/bulk", json={"ids": ["x"], "add_category_ids": [1]})
+        assert r.status == 400
+        r = await client.post("/comfytv/assets/bulk", json={"ids": [1]})
+        assert r.status == 400
+        r = await client.post("/comfytv/assets/bulk", json={"ids": [1], "add_category_ids": [4242]})
+        assert r.status == 404
+
+    async def test_bulk_delete(self, client):
+        a = (await (await _mk_asset(client, name="a")).json())["asset"]
+        b = (await (await _mk_asset(client, name="b")).json())["asset"]
+        r = await client.post("/comfytv/assets/bulk_delete", json={"ids": [a["id"], 9999]})
+        assert r.status == 200
+        assert (await r.json())["deleted"] == [a["id"]]
+        listed = (await (await client.get("/comfytv/assets")).json())["assets"]
+        assert [row["id"] for row in listed] == [b["id"]]
+        r = await client.post("/comfytv/assets/bulk_delete", json={"ids": []})
+        assert r.status == 400
+
+
 class TestAssetFileMissing:
     async def test_flags_present_missing_and_remote(self, client):
         import os

@@ -50,6 +50,7 @@ export function bindPanelCollapse(node: ComfyNode, opts: {
     anyNode.properties = anyNode.properties ?? {}
     anyNode.properties[COLLAPSED_PROP] = !isCollapsed()
     apply()
+    anyNode.__comfytvSyncHeight?.()
   })
 
   opts.scope.run(() => {

@@ -13,7 +13,7 @@
         @click.stop
       >
         <video
-          v-if="isVideo"
+          v-if="kind === 'video'"
           :key="current.url"
           :src="current.url"
           class="ctv:block ctv:max-w-[80vw] ctv:max-h-[80vh] ctv:object-contain ctv:cursor-default
@@ -23,6 +23,40 @@
           playsinline
           @pointerdown.stop
         />
+        <div
+          v-else-if="kind === 'audio'"
+          class="ctv:flex ctv:w-[min(560px,80vw)] ctv:flex-col ctv:items-center ctv:gap-5 ctv:rounded-xl ctv:bg-white/5 ctv:px-8 ctv:py-10
+                 ctv:shadow-[0_8px_40px_rgb(0_0_0/0.6)]"
+          @pointerdown.stop
+        >
+          <svg
+            class="ctv:size-16 ctv:text-white/55"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          >
+            <path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 8v8" />
+          </svg>
+          <audio
+            :key="current.url"
+            :src="current.url"
+            class="ctv:w-full"
+            controls
+            autoplay
+            preload="metadata"
+          />
+        </div>
+        <div
+          v-else-if="kind === 'model'"
+          class="ctv:h-[70vh] ctv:w-[min(70vw,70vh)] ctv:overflow-hidden ctv:rounded-xl ctv:bg-white/5
+                 ctv:shadow-[0_8px_40px_rgb(0_0_0/0.6)]"
+          @pointerdown.stop
+          @wheel.stop
+        >
+          <ModelPreview :key="current.url" :src="current.url" />
+        </div>
         <img
           v-else
           ref="img"
@@ -85,11 +119,12 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { useImagePanZoom } from '@/composables/widgets/useImagePanZoom'
-import { isVideoLightboxItem, useLightbox } from '@/composables/useLightbox'
+import { lightboxKind, useLightbox } from '@/composables/useLightbox'
+import ModelPreview from '@/components/stages/ModelPreview.vue'
 
 const { isOpen, current, count, index, hasPrev, hasNext, close, prev, next } =
   useLightbox()
-const isVideo = computed(() => !!current.value && isVideoLightboxItem(current.value))
+const kind = computed(() => (current.value ? lightboxKind(current.value) : 'image'))
 
 const container = ref<HTMLElement | null>(null)
 const img = ref<HTMLImageElement | null>(null)

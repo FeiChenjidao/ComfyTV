@@ -126,7 +126,7 @@
             :color="characterColor(index)"
             :selected="character.id === selectedId"
             :hidden="!!character.hidden"
-            @select="selectObject(character.id)"
+            @select="toggleSelectObject(character.id)"
             @rename="(name) => renameObject(character.id, name)"
             @toggle-hide="toggleObjectHidden(character.id)"
             @remove="removeSelected"
@@ -158,7 +158,7 @@
             :color="primitive.color"
             :selected="primitive.id === selectedId"
             :hidden="!!primitive.hidden"
-            @select="selectObject(primitive.id)"
+            @select="toggleSelectObject(primitive.id)"
             @rename="(name) => renameObject(primitive.id, name)"
             @toggle-hide="toggleObjectHidden(primitive.id)"
             @remove="removeSelected"
@@ -190,7 +190,7 @@
               :color="modelColor(index)"
               :selected="model.id === selectedId"
               :hidden="!!model.hidden"
-              @select="selectObject(model.id)"
+              @select="toggleSelectObject(model.id)"
               @rename="(name) => renameObject(model.id, name)"
               @toggle-hide="toggleObjectHidden(model.id)"
               @remove="removeSelected"
@@ -234,7 +234,7 @@
             :name="light.name ?? ''"
             :selected="light.id === selectedId"
             :hidden="!!light.hidden"
-            @select="selectObject(light.id)"
+            @select="toggleSelectObject(light.id)"
             @rename="(name) => renameObject(light.id, name)"
             @toggle-hide="toggleObjectHidden(light.id)"
             @remove="removeSelected"
@@ -262,7 +262,7 @@
             :color="cameraEntry.preset ? cameraColor(index) : undefined"
             :selected="cameraEntry.id === selectedId"
             :hidden="!!cameraEntry.hidden"
-            @select="selectObject(cameraEntry.id)"
+            @select="toggleSelectObject(cameraEntry.id)"
             @rename="(name) => renameObject(cameraEntry.id, name)"
             @toggle-hide="toggleObjectHidden(cameraEntry.id)"
             @remove="removeSelected"
@@ -293,7 +293,7 @@
             :color="shotColor(shot)"
             :selected="shot.id === selectedId"
             :hidden="false"
-            @select="selectObject(shot.id)"
+            @select="toggleSelectObject(shot.id)"
             @rename="(name) => renameObject(shot.id, name)"
             @remove="removeSelected"
           >
@@ -328,7 +328,7 @@
             :name="''"
             :selected="strip.id === selectedId"
             :hidden="false"
-            @select="selectObject(strip.id)"
+            @select="toggleSelectObject(strip.id)"
             @remove="removeSelected"
           >
             <template #icon><IconMessageSquareText class="ctv:size-3 ctv:shrink-0" />
@@ -533,7 +533,7 @@
           @toggle-play="handleTimelineTogglePlay"
           @camera-speed="setCameraSpeedById"
           @character-patch="updateCharacterAnimationById"
-          @track-select="selectObject"
+          @track-select="toggleSelectObject"
           @shot-duration="setShotDurationById"
           @shot-move="moveShotToIndex"
         />
@@ -645,6 +645,7 @@ const {
   canUndo,
   canRedo,
   selectObject,
+  toggleSelectObject,
   fitSelectedModel,
   removeSelected,
   renameObject,

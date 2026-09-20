@@ -10,6 +10,17 @@ export const EAGLE_DRAG_MIME = 'application/x-comfytv-eagle-item'
 
 export type ResolveAsset = (id: number) => Asset | null
 
+const MULTI_DROP_STEP = 40
+
+export function parseAssetDragIds(raw: string): number[] {
+  const out: number[] = []
+  for (const part of raw.split(',')) {
+    const id = Number(part.trim())
+    if (part.trim() && Number.isFinite(id) && !out.includes(id)) out.push(id)
+  }
+  return out
+}
+
 function hasMime(e: DragEvent, mime: string): boolean {
   const types = e.dataTransfer?.types
   return !!types && Array.from(types).includes(mime)
@@ -47,16 +58,17 @@ export function handleAssetDrop(e: DragEvent, resolveAsset: ResolveAsset): void 
   e.stopPropagation()
 
   const raw = e.dataTransfer?.getData(ASSET_DRAG_MIME) ?? ''
-  const id = Number(raw)
-  if (!Number.isFinite(id)) return
-  const asset = resolveAsset(id)
-  if (!asset) {
+  const assets = parseAssetDragIds(raw).map(resolveAsset).filter((a): a is Asset => !!a)
+  if (!assets.length) {
     console.warn('[ComfyTV/assets] dropped asset not found:', raw)
     return
   }
-  createAssetLoaderNode(asset, clientToCanvasPos(e.clientX, e.clientY), {
-    anchor: 'center',
-    select: true,
+  const [x, y] = clientToCanvasPos(e.clientX, e.clientY)
+  assets.forEach((asset, i) => {
+    createAssetLoaderNode(asset, [x + i * MULTI_DROP_STEP, y + i * MULTI_DROP_STEP], {
+      anchor: 'center',
+      select: true,
+    })
   })
 }
 

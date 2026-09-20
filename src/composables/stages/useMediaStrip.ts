@@ -183,6 +183,17 @@ export function useMediaStrip(
     void scheduleWarnings()
   }
 
+  function onRemoveAsset(asset: Asset) {
+    const item = items.value.find(it => it.entry.asset_id === asset.id)
+    if (item) remove(item)
+  }
+
+  function onRemoveBatchImage(groupId: string, index: number) {
+    const item = items.value.find(it =>
+      it.entry.src === 'batch' && it.entry.batch_id === groupId && it.entry.batch_index === index)
+    if (item) remove(item)
+  }
+
   async function importFiles(files: File[]): Promise<void> {
     try {
       const created = await importAssetFiles(files)
@@ -264,6 +275,8 @@ export function useMediaStrip(
     onUnpinBatch,
     onAddAsset,
     onAddBatchImage,
+    onRemoveAsset,
+    onRemoveBatchImage,
     importFiles,
     fileDrop,
     remove,
