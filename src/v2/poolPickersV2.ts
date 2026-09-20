@@ -100,9 +100,7 @@ function makePoolPicker(previewKind: 'image' | 'video' | 'audio') {
     installCss()
     const anyNode = node as any
     const getW = (name: string) => node.widgets?.find((w: any) => w.name === name) as any
-    const title = previewKind === 'image'
-      ? t('v2.pickerTitle')
-      : String((node.constructor as any)?.title ?? node.comfyClass ?? '')
+    const title = String((node.constructor as any)?.title ?? node.comfyClass ?? '')
 
     const card = el('div', 'v2-card')
     bindWheelCapture(card)

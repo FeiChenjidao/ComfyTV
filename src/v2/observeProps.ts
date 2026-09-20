@@ -32,7 +32,9 @@ export function observeProperty(obj: any, key: string, listener: () => void): ()
         enumerable: desc.enumerable ?? true,
         get: desc.get ? () => desc.get!.call(obj) : undefined,
         set: (v: unknown) => {
+          const prev = desc.get ? desc.get.call(obj) : obj[key]
           desc.set?.call(obj, v)
+          if (Object.is(prev, v)) return
           notify()
         },
       })
@@ -43,6 +45,7 @@ export function observeProperty(obj: any, key: string, listener: () => void): ()
         enumerable: desc?.enumerable ?? true,
         get: () => backing,
         set: (v: unknown) => {
+          if (Object.is(backing, v)) return
           backing = v
           notify()
         },
