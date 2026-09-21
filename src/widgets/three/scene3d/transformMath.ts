@@ -30,3 +30,24 @@ export function eulerDegreesToQuat(degrees: Vec3): Quat {
     w: quaternion.w
   }
 }
+
+export function cameraPose(camera: THREE.Camera): {
+  position: Vec3
+  quaternion: Quat
+  fov: number
+} {
+  return {
+    position: {
+      x: camera.position.x,
+      y: camera.position.y,
+      z: camera.position.z
+    },
+    quaternion: {
+      x: camera.quaternion.x,
+      y: camera.quaternion.y,
+      z: camera.quaternion.z,
+      w: camera.quaternion.w
+    },
+    fov: camera instanceof THREE.PerspectiveCamera ? camera.fov : 50
+  }
+}

@@ -1,4 +1,8 @@
-import type { CharacterAnimationConfig, SceneCharacterEntry } from './types'
+import type {
+  CharacterAnimationConfig,
+  Scene3DState,
+  SceneCharacterEntry
+} from './types'
 
 export function characterElapsedTime(
   timelineSeconds: number,
@@ -43,4 +47,27 @@ export function sceneFallbackDuration(
     longest = Math.max(longest, duration / character.animation.speed)
   }
   return Math.max(longest, 1)
+}
+
+export function sceneAnimationDuration(
+  state: Pick<Scene3DState, 'characters' | 'models'>,
+  characterClips: ReadonlyMap<string, number>,
+  modelClips: ReadonlyMap<string, number>,
+  pathEndSeconds: number
+): number {
+  const animatedModels = state.models.filter(
+    (model) => model.animation.clip !== ''
+  )
+  if (!state.characters.length && !animatedModels.length) return 0
+  return Math.max(
+    sceneFallbackDuration(state.characters, characterClips),
+    sceneFallbackDuration(
+      animatedModels.map((model) => ({
+        model: model.url,
+        animation: model.animation
+      })),
+      modelClips
+    ),
+    pathEndSeconds
+  )
 }

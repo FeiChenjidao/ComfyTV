@@ -189,13 +189,16 @@ import type { LGraphNode } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
 import { listResources } from '@/api'
 import {
-  HANDLE, MIN_WH, SIZE_PRESETS, SNAP_PX,
-  cursorFor, elementProp, hitTest, rectPx, usePosterStage,
-  type PosterElement, type Rect,
+  SIZE_PRESETS, elementProp, rectPx, usePosterStage, type Rect,
 } from '@/composables/stages/usePosterStage'
-import { angleTo, handlePos, type Transform } from '@/lib/shared2d/transformMath'
-
-const SYSTEM_FONT = '(系统默认 System)'
+import * as opts from '@/composables/widgets/posterCardOptions'
+import {
+  SYSTEM_FONT, btn, miniBtn, rowBtn, sepClass,
+} from '@/composables/widgets/posterCardOptions'
+import { livePatchImg } from '@/composables/widgets/posterLivePatch'
+import { drawPosterOverlay } from '@/composables/widgets/posterOverlay'
+import { usePosterInlineEdit } from '@/composables/widgets/usePosterInlineEdit'
+import { usePosterPointer } from '@/composables/widgets/usePosterPointer'
 
 const props = defineProps<{
   state: StageState
@@ -215,94 +218,29 @@ const stageWrap = ref<HTMLElement | null>(null)
 const frameA = ref<HTMLIFrameElement | null>(null)
 const frameB = ref<HTMLIFrameElement | null>(null)
 const overlay = ref<HTMLCanvasElement | null>(null)
-const inlineTa = ref<HTMLTextAreaElement | null>(null)
 
 const frontIsA = ref(true)
 const view = ref({ scale: 1, offX: 0, offY: 0, cw: 0, ch: 0 })
 const addMenuOpen = ref(false)
 const fonts = ref<string[]>([])
 
-const inline = ref<{
-  el: PosterElement
-  kind: 'literal' | 'data' | 'label'
-  refIndex: number
-  text: string
-  rect: Rect
-} | null>(null)
-
-const marquee = ref<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
-const rotDrag = ref<{ id: string; baseDeg: number; grab: number } | null>(null)
-const guideDrag = ref<{ index: number } | null>(null)
-
-function elTransformPx(el: PosterElement): Transform {
-  const cv = overlay.value!
-  const r = ps.effRect(el)
-  return {
-    x: r.x * cv.width, y: r.y * cv.height,
-    w: r.w * cv.width, h: r.h * cv.height,
-    rotation: ps.elementRot(el) * Math.PI / 180,
-  }
+function drawOverlay() {
+  const cv = overlay.value
+  if (!cv) return
+  drawPosterOverlay(cv, ps, pointer.marquee.value, t('poster.imgDragHint'))
 }
 
-function rotatedCorners(t: Transform): [number, number][] {
-  return (['nw', 'ne', 'se', 'sw'] as const).map(h => {
-    const p = handlePos(t, h)
-    return [p.x, p.y]
-  })
-}
+const edit = usePosterInlineEdit({ ps, overlay, view, t, drawOverlay })
+const { inline, inlineTa, picker, inlineStyle, closeInline, onInlineKeydown } = edit
+const pointer = usePosterPointer({ ps, overlay, stageWrap, frontFrame, drawOverlay, edit })
+const { onPointerDown, onPointerMove, onPointerUp, onDblClick, onKeydown } = pointer
 
-function guideHitIndex(px: number, py: number): number {
-  const cv = overlay.value!
-  const gs = ps.guides.value
-  for (let i = 0; i < gs.length; i++) {
-    const g = gs[i]!
-    const d = g.axis === 'x' ? Math.abs(px - g.pos * cv.width) : Math.abs(py - g.pos * cv.height)
-    if (d <= 4) return i
-  }
-  return -1
-}
-
-function livePatchRotate(id: string, deg: number) {
-  try {
-    const doc = frontFrame()?.contentDocument
-    if (!doc) return
-    const key = (window.CSS && CSS.escape) ? CSS.escape(id) : id
-    const el = doc.querySelector(`.pm-el[data-el="${key}"]`) as HTMLElement | null
-    if (el) el.style.transform = deg ? `rotate(${deg.toFixed(3)}deg)` : ''
-  } catch {}
-}
-
-const picker = ref<{
-  title: string
-  x: number
-  y: number
-  options: Array<{ key: string; label: string; active: boolean; onPick: () => void }>
-} | null>(null)
-
-const colorKeys = computed(() => [
-  { key: 'primary_color', label: t('poster.colorPrimary'), title: t('poster.colorPrimaryTitle') },
-  { key: 'accent_color', label: t('poster.colorAccent'), title: t('poster.colorAccentTitle') },
-  { key: 'bg_color', label: t('poster.colorBg'), title: t('poster.colorBgTitle') },
-])
-
-const aligns = computed(() => [
-  { v: 'left', l: t('poster.alignLeft') },
-  { v: 'center', l: t('poster.alignCenter') },
-  { v: 'right', l: t('poster.alignRight') },
-  { v: 'justify', l: t('poster.alignJustify') },
-])
-
-const elColors = computed(() => [
-  { v: '', l: t('poster.colorPrimary') },
-  { v: 'accent', l: t('poster.colorAccent') },
-  { v: 'muted', l: t('poster.colorMuted') },
-])
-
-const addTypes = computed(() => [
-  { type: 'text', label: t('poster.addText') },
-  { type: 'image', label: t('poster.addImage') },
-  { type: 'shape', label: t('poster.addShape') },
-])
+const colorKeys = computed(() => opts.colorKeys(t))
+const aligns = computed(() => opts.aligns(t))
+const elColors = computed(() => opts.elColors(t))
+const addTypes = computed(() => opts.addTypes(t))
+const alignOps = computed(() => opts.alignOps(t))
+const distOps = computed(() => opts.distOps(t))
 
 const templateOptions = computed(() =>
   ps.templates.value.map(tp => ({ value: tp.name, label: tp.label || tp.name })))
@@ -359,31 +297,17 @@ const selectionRect = computed<Rect | null>(() => {
   return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
 })
 
-const multiToolbarStyle = computed(() => {
-  const r = selectionRect.value
+function floatingToolbarStyle(r: Rect | null, maxLeft: number) {
   if (!r) return {}
   const top = r.y + view.value.offY - 32
   return {
-    left: `${Math.max(0, Math.min(r.x + view.value.offX, view.value.cw - 280))}px`,
+    left: `${Math.max(0, Math.min(r.x + view.value.offX, view.value.cw - maxLeft))}px`,
     top: `${top < 0 ? r.y + view.value.offY + r.h + 4 : top}px`,
   }
-})
+}
 
-const alignOps = computed(() => [
-  { op: 'left', l: t('poster.alignEdgeLeft') },
-  { op: 'hcenter', l: t('poster.alignEdgeHCenter') },
-  { op: 'right', l: t('poster.alignEdgeRight') },
-  { op: 'top', l: t('poster.alignEdgeTop') },
-  { op: 'vcenter', l: t('poster.alignEdgeVCenter') },
-  { op: 'bottom', l: t('poster.alignEdgeBottom') },
-] as const)
-
-const distOps = computed(() => [
-  { op: 'hspread', l: t('poster.distHSpread') },
-  { op: 'vspread', l: t('poster.distVSpread') },
-  { op: 'hgap', l: t('poster.distHGap') },
-  { op: 'vgap', l: t('poster.distVGap') },
-] as const)
+const multiToolbarStyle = computed(() => floatingToolbarStyle(selectionRect.value, 280))
+const elToolbarStyle = computed(() => floatingToolbarStyle(activeRect.value, 180))
 
 function onArrange(op: string) {
   ps.applyArrange(op as Parameters<typeof ps.applyArrange>[0])
@@ -395,59 +319,12 @@ const imgScaleValue = computed(() => {
   return el ? ps.elementImageProps(el).scale : 1
 })
 
-const elToolbarStyle = computed(() => {
-  const r = activeRect.value
-  if (!r) return {}
-  const top = r.y + view.value.offY - 32
-  return {
-    left: `${Math.max(0, Math.min(r.x + view.value.offX, view.value.cw - 180))}px`,
-    top: `${top < 0 ? r.y + view.value.offY + r.h + 4 : top}px`,
-  }
-})
-
-const inlineStyle = computed(() => {
-  const box = inline.value
-  if (!box) return {}
-  const h = box.kind === 'label' ? 26 : Math.max(48, box.rect.h)
-  return {
-    left: `${box.rect.x + view.value.offX}px`,
-    top: `${box.kind === 'label' ? box.rect.y + box.rect.h - h + view.value.offY : box.rect.y + view.value.offY}px`,
-    width: `${Math.max(60, box.rect.w)}px`,
-    height: `${h}px`,
-  }
-})
-
 const overlayStyle = computed(() => ({
   left: `${view.value.offX}px`,
   top: `${view.value.offY}px`,
   display: ps.editMode.value && ps.hasElements.value ? 'block' : 'none',
   touchAction: 'none',
 }))
-
-function btn(active: boolean): string {
-  return 'ctv:appearance-none ctv:cursor-pointer ctv:[font-family:inherit] ctv:rounded-sm ' +
-    'ctv:px-2 ctv:py-0.5 ctv:text-2xs ctv:border ctv:focus-visible:outline-none ' +
-    (active
-      ? 'ctv:border-primary-background ctv:text-primary-foreground ctv:bg-primary-background/15'
-      : 'ctv:border-border-default ctv:text-muted-foreground ctv:bg-secondary-background')
-}
-
-function miniBtn(active: boolean): string {
-  return 'ctv:appearance-none ctv:cursor-pointer ctv:[font-family:inherit] ctv:rounded-sm ' +
-    'ctv:px-1.5 ctv:py-0.5 ctv:text-2xs ctv:border ctv:focus-visible:outline-none ' +
-    (active
-      ? 'ctv:border-primary-background ctv:text-primary-foreground ctv:bg-primary-background/15'
-      : 'ctv:border-border-subtle ctv:text-base-foreground ctv:bg-secondary-background')
-}
-
-function rowBtn(active: boolean): string {
-  return 'ctv:appearance-none ctv:cursor-pointer ctv:[font-family:inherit] ctv:text-left ' +
-    'ctv:rounded-sm ctv:border-none ctv:px-1.5 ctv:py-1 ctv:text-2xs ctv:bg-transparent ' +
-    'ctv:hover:bg-secondary-background-hover ' +
-    (active ? 'ctv:text-primary-foreground' : 'ctv:text-base-foreground')
-}
-
-const sepClass = 'ctv:w-px ctv:h-4 ctv:bg-border-subtle ctv:mx-0.5 ctv:shrink-0'
 
 function elProp<T>(key: string, dflt: T): T {
   const el = ps.activeElement.value
@@ -506,497 +383,6 @@ function rescale() {
   drawOverlay()
 }
 
-function drawOverlay() {
-  const cv = overlay.value
-  const ctx = cv?.getContext('2d')
-  if (!cv || !ctx) return
-  ctx.clearRect(0, 0, cv.width, cv.height)
-  if (!(ps.editMode.value && ps.hasElements.value)) return
-  if (ps.gridOn.value) {
-    ctx.strokeStyle = 'rgba(120,140,160,0.18)'
-    ctx.lineWidth = 1
-    for (let i = 1; i < 12; i++) {
-      const X = Math.round(cv.width * i / 12) + 0.5
-      const Y = Math.round(cv.height * i / 12) + 0.5
-      ctx.beginPath(); ctx.moveTo(X, 0); ctx.lineTo(X, cv.height); ctx.stroke()
-      ctx.beginPath(); ctx.moveTo(0, Y); ctx.lineTo(cv.width, Y); ctx.stroke()
-    }
-  }
-  const selected = new Set(ps.selectedIds.value)
-  const single = selected.size === 1
-  ps.elements.value.forEach((el) => {
-    const r = rectPx(ps.effRect(el), cv.width, cv.height)
-    const active = selected.has(el.id)
-    const imgEdit = ps.imgEditId.value === el.id
-    const rot = ps.elementRot(el)
-    ctx.lineWidth = active ? 2 : 1
-    ctx.strokeStyle = imgEdit ? '#3fd6a0' : (active ? '#46b4e6' : 'rgba(70,180,230,0.5)')
-    ctx.fillStyle = imgEdit ? 'rgba(63,214,160,0.08)'
-      : (active ? 'rgba(70,180,230,0.10)' : 'rgba(70,180,230,0.04)')
-    if (rot) {
-      const corners = rotatedCorners(elTransformPx(el))
-      ctx.beginPath()
-      ctx.moveTo(corners[0]![0], corners[0]![1])
-      for (const [cx2, cy2] of corners.slice(1)) ctx.lineTo(cx2, cy2)
-      ctx.closePath()
-      ctx.fill()
-      ctx.stroke()
-    } else {
-      ctx.fillRect(r.x, r.y, r.w, r.h)
-      ctx.strokeRect(r.x, r.y, r.w, r.h)
-    }
-    ctx.fillStyle = imgEdit ? '#3fd6a0' : (active ? '#46b4e6' : 'rgba(200,220,235,0.8)')
-    ctx.font = '11px monospace'
-    ctx.fillText(imgEdit ? t('poster.imgDragHint') : (el.label || el.id), r.x + 4, r.y + 13)
-    if (active && single && !imgEdit) {
-      ctx.fillStyle = '#46b4e6'
-      if (!rot) {
-        for (const [hx, hy] of handlePtsPx(r)) {
-          ctx.fillRect(hx - HANDLE / 2, hy - HANDLE / 2, HANDLE, HANDLE)
-        }
-      }
-      const tpx = elTransformPx(el)
-      const n = handlePos(tpx, 'n')
-      const rp = handlePos(tpx, 'rotate')
-      ctx.strokeStyle = '#46b4e6'
-      ctx.lineWidth = 1
-      ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(rp.x, rp.y); ctx.stroke()
-      ctx.beginPath(); ctx.arc(rp.x, rp.y, HANDLE / 2 + 1, 0, Math.PI * 2)
-      ctx.fill()
-    }
-  })
-  ctx.setLineDash([5, 4])
-  ctx.strokeStyle = '#22d3ee'
-  ctx.lineWidth = 1
-  ps.guides.value.forEach((g) => {
-    ctx.beginPath()
-    if (g.axis === 'x') {
-      const X = Math.round(g.pos * cv.width) + 0.5
-      ctx.moveTo(X, 0); ctx.lineTo(X, cv.height)
-    } else {
-      const Y = Math.round(g.pos * cv.height) + 0.5
-      ctx.moveTo(0, Y); ctx.lineTo(cv.width, Y)
-    }
-    ctx.stroke()
-  })
-  ctx.setLineDash([])
-  for (const g of ps.snapGuides.value) {
-    ctx.strokeStyle = '#ff3b6b'
-    ctx.lineWidth = 1
-    if (g.kind === 'gap' && g.spans && g.cross != null) {
-      const crossPx = g.axis === 'x' ? g.cross * cv.height : g.cross * cv.width
-      for (const [a, b] of g.spans) {
-        const a0 = g.axis === 'x' ? a * cv.width : a * cv.height
-        const b0 = g.axis === 'x' ? b * cv.width : b * cv.height
-        ctx.beginPath()
-        if (g.axis === 'x') {
-          ctx.moveTo(a0, crossPx); ctx.lineTo(b0, crossPx)
-          ctx.moveTo(a0, crossPx - 4); ctx.lineTo(a0, crossPx + 4)
-          ctx.moveTo(b0, crossPx - 4); ctx.lineTo(b0, crossPx + 4)
-        } else {
-          ctx.moveTo(crossPx, a0); ctx.lineTo(crossPx, b0)
-          ctx.moveTo(crossPx - 4, a0); ctx.lineTo(crossPx + 4, a0)
-          ctx.moveTo(crossPx - 4, b0); ctx.lineTo(crossPx + 4, b0)
-        }
-        ctx.stroke()
-      }
-      continue
-    }
-    ctx.beginPath()
-    if (g.axis === 'x') {
-      const X = Math.round(g.pos * cv.width) + 0.5
-      ctx.moveTo(X, 0); ctx.lineTo(X, cv.height)
-    } else {
-      const Y = Math.round(g.pos * cv.height) + 0.5
-      ctx.moveTo(0, Y); ctx.lineTo(cv.width, Y)
-    }
-    ctx.stroke()
-  }
-  const m = marquee.value
-  if (m) {
-    ctx.strokeStyle = '#46b4e6'
-    ctx.lineWidth = 1
-    ctx.setLineDash([4, 3])
-    ctx.strokeRect(
-      Math.min(m.x0, m.x1) + 0.5, Math.min(m.y0, m.y1) + 0.5,
-      Math.abs(m.x1 - m.x0), Math.abs(m.y1 - m.y0),
-    )
-    ctx.setLineDash([])
-  }
-}
-
-function handlePtsPx(r: Rect): [number, number][] {
-  const mx = r.x + r.w / 2
-  const my = r.y + r.h / 2
-  return [
-    [r.x, r.y], [mx, r.y], [r.x + r.w, r.y],
-    [r.x, my], [r.x + r.w, my],
-    [r.x, r.y + r.h], [mx, r.y + r.h], [r.x + r.w, r.y + r.h],
-  ]
-}
-
-function evXY(e: PointerEvent | MouseEvent): [number, number] {
-  const cv = overlay.value!
-  const r = cv.getBoundingClientRect()
-  const sx = r.width ? cv.width / r.width : 1
-  const sy = r.height ? cv.height / r.height : 1
-  return [(e.clientX - r.left) * sx, (e.clientY - r.top) * sy]
-}
-
-function rectsPx(): Rect[] {
-  const cv = overlay.value!
-  return ps.elements.value.map(el => rectPx(ps.effRect(el), cv.width, cv.height))
-}
-
-function livePatchRect(id: string, e: Rect, refit: boolean) {
-  try {
-    const doc = frontFrame()?.contentDocument
-    if (!doc) return
-    const key = (window.CSS && CSS.escape) ? CSS.escape(id) : id
-    const el = doc.querySelector(`.pm-el[data-el="${key}"]`) as HTMLElement | null
-    if (!el) return
-    el.style.left = `${(e.x * 100).toFixed(3)}%`
-    el.style.top = `${(e.y * 100).toFixed(3)}%`
-    el.style.width = `${(e.w * 100).toFixed(3)}%`
-    el.style.height = `${(e.h * 100).toFixed(3)}%`
-    if (refit) {
-      const fit = (frontFrame()?.contentWindow as any)?.__pmFit
-      if (typeof fit === 'function') fit()
-    }
-  } catch {}
-}
-
-function livePatchImg(id: string) {
-  try {
-    const doc = frontFrame()?.contentDocument
-    if (!doc) return
-    const el = ps.elements.value.find(x => x.id === id)
-    if (!el) return
-    const key = (window.CSS && CSS.escape) ? CSS.escape(id) : id
-    const im = doc.querySelector(`.pm-el[data-el="${key}"] img`) as HTMLElement | null
-    if (!im) return
-    const p = ps.elementImageProps(el)
-    im.style.transform =
-      `translate(${(p.x * 100).toFixed(3)}%,${(p.y * 100).toFixed(3)}%) scale(${p.scale})`
-  } catch {}
-}
-
-function onPointerDown(e: PointerEvent) {
-  if (e.button !== 0) return
-  closeInline(true)
-  picker.value = null
-  const cv = overlay.value!
-  const [px, py] = evXY(e)
-  const editEl = ps.imgEditId.value
-    ? ps.elements.value.find(el => el.id === ps.imgEditId.value)
-    : null
-  if (editEl) {
-    const r = rectPx(ps.effRect(editEl), cv.width, cv.height)
-    if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) {
-      e.preventDefault()
-      cv.setPointerCapture(e.pointerId)
-      ps.selectOnly(ps.elements.value.indexOf(editEl))
-      ps.startImgDrag(editEl, r.w, r.h, px, py)
-      cv.style.cursor = 'grabbing'
-      drawOverlay()
-      return
-    }
-  }
-  if (ps.selectedIds.value.length === 1 && ps.activeElement.value) {
-    const t = elTransformPx(ps.activeElement.value)
-    const rp = handlePos(t, 'rotate')
-    if (Math.hypot(px - rp.x, py - rp.y) <= HANDLE + 2) {
-      e.preventDefault()
-      cv.setPointerCapture(e.pointerId)
-      rotDrag.value = {
-        id: ps.activeElement.value.id,
-        baseDeg: ps.elementRot(ps.activeElement.value),
-        grab: angleTo(t, { x: px, y: py }),
-      }
-      return
-    }
-  }
-  const singleActive = ps.selectedIds.value.length === 1 ? ps.activeIdx.value : -1
-  const hit = hitTest(px, py, rectsPx(), singleActive, HANDLE)
-  if (!hit) {
-    ps.imgEditId.value = null
-    const gi = guideHitIndex(px, py)
-    if (gi >= 0 && !e.shiftKey) {
-      e.preventDefault()
-      cv.setPointerCapture(e.pointerId)
-      guideDrag.value = { index: gi }
-      return
-    }
-    if (!e.shiftKey) {
-      ps.clearSelection()
-      e.preventDefault()
-      cv.setPointerCapture(e.pointerId)
-      marquee.value = { x0: px, y0: py, x1: px, y1: py }
-    }
-    drawOverlay()
-    return
-  }
-  if (e.shiftKey) {
-    e.preventDefault()
-    ps.toggleSelect(hit.idx)
-    drawOverlay()
-    return
-  }
-  e.preventDefault()
-  cv.setPointerCapture(e.pointerId)
-  try { stageWrap.value?.focus({ preventScroll: true }) } catch {}
-  ps.startDrag(hit, px / cv.width, py / cv.height)
-  drawOverlay()
-}
-
-function onPointerMove(e: PointerEvent) {
-  const cv = overlay.value!
-  const [px, py] = evXY(e)
-  if (rotDrag.value) {
-    const d = rotDrag.value
-    const el = ps.elements.value.find(x => x.id === d.id)
-    if (!el) return
-    const t = elTransformPx(el)
-    let deg = d.baseDeg + (angleTo(t, { x: px, y: py }) - d.grab) * 180 / Math.PI
-    if (e.shiftKey) deg = Math.round(deg / 15) * 15
-    deg = ((deg % 360) + 360) % 360
-    if (deg > 180) deg -= 360
-    ps.setRect(d.id, { rot: Math.round(deg * 10) / 10 })
-    livePatchRotate(d.id, ps.elementRot(el))
-    drawOverlay()
-    return
-  }
-  if (guideDrag.value) {
-    const g = ps.guides.value[guideDrag.value.index]
-    if (g) {
-      ps.setGuidePos(guideDrag.value.index,
-        g.axis === 'x' ? px / cv.width : py / cv.height)
-      drawOverlay()
-    }
-    return
-  }
-  if (marquee.value) {
-    marquee.value = { ...marquee.value, x1: px, y1: py }
-    drawOverlay()
-    return
-  }
-  if (ps.imgDrag.id) {
-    ps.moveImgDrag(px, py)
-    livePatchImg(ps.imgDrag.id)
-    return
-  }
-  if (!ps.drag.mode) {
-    if (ps.imgEditId.value) {
-      const el = ps.elements.value.find(x => x.id === ps.imgEditId.value)
-      if (el) {
-        const r = rectPx(ps.effRect(el), cv.width, cv.height)
-        if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) {
-          cv.style.cursor = 'grab'
-          return
-        }
-      }
-    }
-    const singleActive = ps.selectedIds.value.length === 1 ? ps.activeIdx.value : -1
-    cv.style.cursor = cursorFor(hitTest(px, py, rectsPx(), singleActive, HANDLE))
-    return
-  }
-  const rects = ps.moveDrag(
-    px / cv.width, py / cv.height, e.altKey,
-    SNAP_PX / cv.width, SNAP_PX / cv.height,
-  )
-  for (const r of rects) livePatchRect(r.id, r.rect, ps.drag.mode !== 'move')
-  drawOverlay()
-}
-
-function onPointerUp(e: PointerEvent) {
-  const cv = overlay.value
-  try { cv?.releasePointerCapture(e.pointerId) } catch {}
-  if (rotDrag.value) {
-    rotDrag.value = null
-    ps.commitLayout()
-    ps.scheduleRefresh(0)
-    drawOverlay()
-    return
-  }
-  if (guideDrag.value) {
-    const idx = guideDrag.value.index
-    guideDrag.value = null
-    const [px, py] = cv ? evXY(e) : [0, 0]
-    if (cv && (px < -8 || py < -8 || px > cv.width + 8 || py > cv.height + 8)) {
-      ps.removeGuide(idx)
-    } else {
-      ps.commitLayout()
-    }
-    drawOverlay()
-    return
-  }
-  if (marquee.value) {
-    const m = marquee.value
-    marquee.value = null
-    if (cv && (Math.abs(m.x1 - m.x0) > 4 || Math.abs(m.y1 - m.y0) > 4)) {
-      ps.selectRegion({
-        x: Math.min(m.x0, m.x1) / cv.width,
-        y: Math.min(m.y0, m.y1) / cv.height,
-        w: Math.abs(m.x1 - m.x0) / cv.width,
-        h: Math.abs(m.y1 - m.y0) / cv.height,
-      })
-    }
-    drawOverlay()
-    return
-  }
-  if (ps.imgDrag.id) {
-    ps.endImgDrag()
-    if (cv) cv.style.cursor = 'grab'
-    return
-  }
-  if (ps.drag.mode) {
-    ps.endDrag()
-    drawOverlay()
-  }
-}
-
-function onDblClick(e: MouseEvent) {
-  const cv = overlay.value!
-  const [px, py] = evXY(e)
-  const hit = hitTest(px, py, rectsPx(), ps.activeIdx.value, HANDLE)
-  if (!hit) return
-  const el = ps.elements.value[hit.idx]
-  if (!el) return
-  ps.selectOnly(hit.idx)
-  if (el.type === 'text') {
-    openInline(el, 'literal', 0)
-  } else if (el.type === 'bars' || el.type === 'tree') {
-    openInline(el, 'data', 0)
-  } else if (el.type === 'cell') {
-    const r = rectPx(ps.effRect(el), cv.width, cv.height)
-    const capZone = Math.max(18, r.h * 0.22)
-    if (py >= r.y + r.h - capZone) {
-      const m = /cell(\d+)/.exec(el.id)
-      openInline(el, 'label', m ? parseInt(m[1]!, 10) : 0)
-    } else {
-      openSlotPicker(el, px, py)
-    }
-  } else if (el.type === 'image') {
-    openSlotPicker(el, px, py)
-  } else if (el.type === 'shape') {
-    openShapePicker(el, px, py)
-  }
-}
-
-function onKeydown(e: KeyboardEvent) {
-  if (inline.value || !ps.selectedIds.value.length) return
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    e.preventDefault()
-    e.stopPropagation()
-    ps.deleteActive()
-    drawOverlay()
-  }
-}
-
-function openInline(el: PosterElement, kind: 'literal' | 'data' | 'label', refIndex: number) {
-  const cv = overlay.value!
-  const r = rectPx(ps.effRect(el), cv.width, cv.height)
-  let initial = ''
-  if (kind === 'literal') {
-    initial = String(elementProp(el, ps.layout.value, 'text', el.text ?? ''))
-  } else if (kind === 'data') {
-    initial = String(elementProp(el, ps.layout.value, 'data', el.data ?? ''))
-  } else {
-    const lines = ps.gridLabels().replace(/\r\n/g, '\n').split('\n')
-    initial = lines[refIndex] ?? (el.label || '')
-  }
-  inline.value = { el, kind, refIndex, text: initial, rect: r }
-  void nextTick(() => {
-    inlineTa.value?.focus()
-    inlineTa.value?.select()
-  })
-}
-
-function closeInline(commit: boolean) {
-  const box = inline.value
-  if (!box) return
-  inline.value = null
-  if (!commit) return
-  if (box.kind === 'literal') {
-    ps.setRect(box.el.id, { text: box.text })
-    ps.commitLayout()
-    ps.scheduleRefresh(0)
-  } else if (box.kind === 'data') {
-    ps.setRect(box.el.id, { data: box.text })
-    ps.commitLayout()
-    ps.scheduleRefresh(0)
-  } else {
-    ps.setGridLabelLine(box.refIndex, box.text)
-  }
-}
-
-function onInlineKeydown(e: KeyboardEvent) {
-  e.stopPropagation()
-  const multi = inline.value?.kind !== 'label'
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    closeInline(false)
-  } else if (e.key === 'Enter' && (!multi || e.ctrlKey || e.metaKey)) {
-    e.preventDefault()
-    closeInline(true)
-  }
-}
-
-function openSlotPicker(el: PosterElement, px: number, py: number) {
-  const cur = ps.slotOf(el)
-  const cellCount = ps.elements.value.filter(e => e.type === 'cell' || e.type === 'image').length
-  const k = Math.min(99, Math.max(ps.connectedImages(), cellCount, cur + 1, 1))
-  const options = []
-  for (let i = 0; i < k; i++) {
-    options.push({
-      key: `s${i}`,
-      label: t('poster.slotN', { n: i }) + (i === cur ? ' ✓' : ''),
-      active: i === cur,
-      onPick: () => { ps.setSlot(el, i); drawOverlay() },
-    })
-  }
-  picker.value = {
-    title: t('poster.slotTitle', { label: el.label || el.id }),
-    x: Math.min(px + view.value.offX, Math.max(0, view.value.cw - 130)),
-    y: Math.min(py + view.value.offY, Math.max(0, view.value.ch - 40)),
-    options,
-  }
-}
-
-function openShapePicker(el: PosterElement, px: number, py: number) {
-  const cur = {
-    shape: String(elementProp(el, ps.layout.value, 'shape', 'rect')),
-    fill: String(elementProp(el, ps.layout.value, 'fill', 'none')),
-    stroke: String(elementProp(el, ps.layout.value, 'stroke', 'primary')),
-  }
-  const mk = (key: string, label: string, active: boolean, patch: Record<string, unknown>) => ({
-    key, label: label + (active ? ' ✓' : ''), active,
-    onPick: () => {
-      ps.setRect(el.id, patch)
-      ps.commitLayout()
-      ps.scheduleRefresh(0)
-      drawOverlay()
-    },
-  })
-  picker.value = {
-    title: t('poster.shapeTitle'),
-    x: Math.min(px + view.value.offX, Math.max(0, view.value.cw - 140)),
-    y: Math.min(py + view.value.offY, Math.max(0, view.value.ch - 40)),
-    options: [
-      mk('rect', t('poster.shapeRect'), cur.shape === 'rect', { shape: 'rect' }),
-      mk('ellipse', t('poster.shapeEllipse'), cur.shape === 'ellipse', { shape: 'ellipse' }),
-      mk('line', t('poster.shapeLine'), cur.shape === 'line', { shape: 'line' }),
-      mk('f-accent', t('poster.fillAccent'), cur.fill === 'accent', { fill: 'accent' }),
-      mk('f-primary', t('poster.fillPrimary'), cur.fill === 'primary', { fill: 'primary' }),
-      mk('f-bg', t('poster.fillBg'), cur.fill === 'bg', { fill: 'bg' }),
-      mk('f-none', t('poster.fillNone'), cur.fill === 'none', { fill: 'none' }),
-      mk('s-accent', t('poster.strokeAccent'), cur.stroke === 'accent', { stroke: 'accent' }),
-      mk('s-primary', t('poster.strokePrimary'), cur.stroke === 'primary', { stroke: 'primary' }),
-      mk('s-none', t('poster.strokeNone'), cur.stroke === 'none', { stroke: 'none' }),
-    ],
-  }
-}
-
 function toggleEdit() {
   ps.editMode.value = !ps.editMode.value
   drawOverlay()
@@ -1022,7 +408,7 @@ function onImgScale(v: number) {
   const el = ps.activeElement.value
   if (!el) return
   ps.setImgScale(el, v)
-  livePatchImg(el.id)
+  livePatchImg(frontFrame(), el.id, ps.elementImageProps(el))
 }
 
 function onImgScaleCommit() {
