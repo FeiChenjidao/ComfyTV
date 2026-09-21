@@ -58953,7 +58953,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-CJtZweG5.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-YDoW6Pxu.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -65555,7 +65555,7 @@ const ComfyTV_CutoutStage$1 = { "display_name": "Cutout", "inputs": { "image": {
 const ComfyTV_DirectorTimelineStage$1 = { "display_name": "Director Timeline", "inputs": { "audio": { "name": "Audio" }, "frame_rate": { "name": "Frame rate" }, "image0": { "name": "Image #0" }, "image1": { "name": "Image #1" }, "image10": { "name": "Image #10" }, "image11": { "name": "Image #11" }, "image12": { "name": "Image #12" }, "image13": { "name": "Image #13" }, "image14": { "name": "Image #14" }, "image15": { "name": "Image #15" }, "image16": { "name": "Image #16" }, "image17": { "name": "Image #17" }, "image18": { "name": "Image #18" }, "image19": { "name": "Image #19" }, "image2": { "name": "Image #2" }, "image20": { "name": "Image #20" }, "image21": { "name": "Image #21" }, "image22": { "name": "Image #22" }, "image23": { "name": "Image #23" }, "image3": { "name": "Image #3" }, "image4": { "name": "Image #4" }, "image5": { "name": "Image #5" }, "image6": { "name": "Image #6" }, "image7": { "name": "Image #7" }, "image8": { "name": "Image #8" }, "image9": { "name": "Image #9" }, "images": { "name": "Images" }, "timeline_data": { "name": "Timeline data" } }, "outputs": { "0": { "name": "Timeline" } } };
 const ComfyTV_EraseStage$1 = { "display_name": "Erase", "inputs": { "mask_data": { "tooltip": "Annotated path of the mask PNG, written by the painter on Run.", "name": "Mask" }, "image": { "name": "Image" }, "workflow": { "name": "Workflow" } }, "outputs": { "0": { "name": "Image" } } };
 const ComfyTV_GridSplitStage$1 = { "display_name": "Grid Split", "inputs": { "border": { "name": "Border" }, "cols": { "name": "Columns" }, "image": { "name": "Image" }, "outer_border": { "name": "Outer border" }, "rows": { "name": "Rows" } }, "outputs": { "0": { "name": "Images" }, "1": { "name": "Image" } } };
-const ComfyTV_ImageEditStage$1 = { "display_name": "Image Edit", "inputs": { "main_prompt": { "tooltip": "Edit instruction (required). Action-based language: 'remove X', 'change X to Y', 'replace X with Y'. Different from Inpaint — this model doesn't use a mask; the instruction is the whole interface." }, "image": { "name": "Image" }, "workflow": { "name": "Workflow" } }, "outputs": { "0": { "name": "Image" } } };
+const ComfyTV_ImageEditStage$1 = { "display_name": "Image Edit", "inputs": { "main_prompt": { "tooltip": "Edit instruction (required). Action-based language: 'remove X', 'change X to Y', 'replace X with Y'. Different from Inpaint — this model doesn't use a mask; the instruction is the whole interface." }, "images": { "name": "Images" }, "workflow": { "name": "Workflow" } }, "outputs": { "0": { "name": "Image" } } };
 const ComfyTV_ImageLoaderStage$1 = { "display_name": "Load Image", "inputs": {}, "outputs": { "0": { "name": "Image" } } };
 const ComfyTV_ImagePickerStage$1 = { "display_name": "Image Picker", "inputs": { "append_results": { "name": "Append results" }, "batch": { "name": "Batch" }, "pool": { "name": "Pool" }, "selected_index": { "name": "Selected index" } }, "outputs": { "0": { "name": "Image" } } };
 const ComfyTV_ImageStage$1 = { "display_name": "Image Stage", "inputs": { "aspect_ratio": { "name": "Aspect ratio" }, "batch_size": { "name": "Batch size" }, "image0": { "name": "Image #0" }, "image1": { "name": "Image #1" }, "image10": { "name": "Image #10" }, "image11": { "name": "Image #11" }, "image2": { "name": "Image #2" }, "image3": { "name": "Image #3" }, "image4": { "name": "Image #4" }, "image5": { "name": "Image #5" }, "image6": { "name": "Image #6" }, "image7": { "name": "Image #7" }, "image8": { "name": "Image #8" }, "image9": { "name": "Image #9" }, "images": { "name": "Images" }, "resolution": { "name": "Resolution" }, "text0": { "name": "Text #0" }, "text1": { "name": "Text #1" }, "text2": { "name": "Text #2" }, "text3": { "name": "Text #3" }, "text4": { "name": "Text #4" }, "text5": { "name": "Text #5" }, "text6": { "name": "Text #6" }, "text7": { "name": "Text #7" }, "texts": { "name": "Texts" }, "workflow": { "name": "Workflow" } }, "outputs": { "0": { "name": "Images" }, "1": { "name": "Image" } } };
@@ -65907,7 +65907,7 @@ const ComfyTV_CutoutStage = { "display_name": "抠图", "inputs": { "image": { "
 const ComfyTV_DirectorTimelineStage = { "display_name": "导演时间线", "inputs": { "audio": { "name": "音频" }, "frame_rate": { "name": "帧率" }, "image0": { "name": "图像 #0" }, "image1": { "name": "图像 #1" }, "image10": { "name": "图像 #10" }, "image11": { "name": "图像 #11" }, "image12": { "name": "图像 #12" }, "image13": { "name": "图像 #13" }, "image14": { "name": "图像 #14" }, "image15": { "name": "图像 #15" }, "image16": { "name": "图像 #16" }, "image17": { "name": "图像 #17" }, "image18": { "name": "图像 #18" }, "image19": { "name": "图像 #19" }, "image2": { "name": "图像 #2" }, "image20": { "name": "图像 #20" }, "image21": { "name": "图像 #21" }, "image22": { "name": "图像 #22" }, "image23": { "name": "图像 #23" }, "image3": { "name": "图像 #3" }, "image4": { "name": "图像 #4" }, "image5": { "name": "图像 #5" }, "image6": { "name": "图像 #6" }, "image7": { "name": "图像 #7" }, "image8": { "name": "图像 #8" }, "image9": { "name": "图像 #9" }, "images": { "name": "图像" }, "timeline_data": { "name": "时间线数据" } }, "outputs": { "0": { "name": "时间线" } } };
 const ComfyTV_EraseStage = { "display_name": "擦除", "inputs": { "mask_data": { "tooltip": "蒙版的 annotated path,由画笔 UI 上传后写入", "name": "蒙版" }, "image": { "name": "图像" }, "workflow": { "name": "工作流" } }, "outputs": { "0": { "name": "图像" } } };
 const ComfyTV_GridSplitStage = { "display_name": "宫格分割", "inputs": { "border": { "name": "边框" }, "cols": { "name": "列数" }, "image": { "name": "图像" }, "outer_border": { "name": "外边框" }, "rows": { "name": "行数" } }, "outputs": { "0": { "name": "图像组" }, "1": { "name": "图像" } } };
-const ComfyTV_ImageEditStage = { "display_name": "图像编辑", "inputs": { "main_prompt": { "tooltip": "编辑指令(必填)" }, "image": { "name": "图像" }, "workflow": { "name": "工作流" } }, "outputs": { "0": { "name": "图像" } } };
+const ComfyTV_ImageEditStage = { "display_name": "图像编辑", "inputs": { "main_prompt": { "tooltip": "编辑指令(必填)" }, "images": { "name": "图片" }, "workflow": { "name": "工作流" } }, "outputs": { "0": { "name": "图像" } } };
 const ComfyTV_ImageLoaderStage = { "display_name": "加载图片", "inputs": {}, "outputs": { "0": { "name": "图像" } } };
 const ComfyTV_ImagePickerStage = { "display_name": "图片选择器", "inputs": { "append_results": { "name": "追加结果" }, "batch": { "name": "批次" }, "pool": { "name": "池" }, "selected_index": { "name": "选中索引" } }, "outputs": { "0": { "name": "图像" } } };
 const ComfyTV_ImageStage = { "display_name": "图像阶段", "inputs": { "aspect_ratio": { "name": "宽高比" }, "batch_size": { "name": "批次大小" }, "image0": { "name": "图像 #0" }, "image1": { "name": "图像 #1" }, "image10": { "name": "图像 #10" }, "image11": { "name": "图像 #11" }, "image2": { "name": "图像 #2" }, "image3": { "name": "图像 #3" }, "image4": { "name": "图像 #4" }, "image5": { "name": "图像 #5" }, "image6": { "name": "图像 #6" }, "image7": { "name": "图像 #7" }, "image8": { "name": "图像 #8" }, "image9": { "name": "图像 #9" }, "images": { "name": "图像" }, "resolution": { "name": "分辨率" }, "text0": { "name": "文本 #0" }, "text1": { "name": "文本 #1" }, "text2": { "name": "文本 #2" }, "text3": { "name": "文本 #3" }, "text4": { "name": "文本 #4" }, "text5": { "name": "文本 #5" }, "text6": { "name": "文本 #6" }, "text7": { "name": "文本 #7" }, "texts": { "name": "文本" }, "workflow": { "name": "工作流" } }, "outputs": { "0": { "name": "图像组" }, "1": { "name": "图像" } } };
@@ -121067,7 +121067,7 @@ const _sfc_main$3$ = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const ValuePreviewBatch = /* @__PURE__ */ _export_sfc(_sfc_main$3$, [["__scopeId", "data-v-d5a6f924"]]);
+const ValuePreviewBatch = /* @__PURE__ */ _export_sfc(_sfc_main$3$, [["__scopeId", "data-v-f50f5a87"]]);
 const _hoisted_1$5I = {
   key: 0,
   class: "ctv:flex ctv:flex-col ctv:gap-0.5 ctv:size-full ctv:py-[3px] ctv:px-1 ctv:box-border ctv:overflow-hidden"
@@ -125783,7 +125783,7 @@ const _sfc_main$3Z = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const ValuePreview = /* @__PURE__ */ _export_sfc(_sfc_main$3Z, [["__scopeId", "data-v-e2f0e194"]]);
+const ValuePreview = /* @__PURE__ */ _export_sfc(_sfc_main$3Z, [["__scopeId", "data-v-fd7f2cfd"]]);
 function makeCollapsed(storageKey) {
   const expanded = useStorage(storageKey, []);
   return (getNodeId) => computed({
@@ -125879,7 +125879,7 @@ const IMAGE_VARIANT_PRESETS = [
     icon: "pi pi-video",
     category: cat$3,
     targetClass: "ComfyTV.ImageEditStage",
-    inputSocket: "image",
+    inputAutogrowGroup: "images",
     widgets: {
       main_prompt: "cinematic key light, dramatic mood, color graded look; relight the image, preserving identity, geometry, and details"
     }
@@ -125889,7 +125889,7 @@ const IMAGE_VARIANT_PRESETS = [
     icon: "pi pi-clock",
     category: cat$3,
     targetClass: "ComfyTV.ImageEditStage",
-    inputSocket: "image",
+    inputAutogrowGroup: "images",
     widgets: {
       main_prompt: "show the scene 3 seconds later, preserving character, environment, and style; continue the action naturally"
     }
@@ -125899,7 +125899,7 @@ const IMAGE_VARIANT_PRESETS = [
     icon: "pi pi-clock",
     category: cat$3,
     targetClass: "ComfyTV.ImageEditStage",
-    inputSocket: "image",
+    inputAutogrowGroup: "images",
     widgets: {
       main_prompt: "show the scene 5 seconds later, preserving character, environment, and style; continue the action naturally"
     }
@@ -144085,7 +144085,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-Cca_7ScB.mjs");
+    const { STLLoader } = await import("./STLLoader-BRTUbxwI.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -144093,7 +144093,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-CuFSv00P.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-DTsS7QMx.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -148982,7 +148982,7 @@ const _sfc_main$3b = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const DirectorClipRefs = /* @__PURE__ */ _export_sfc(_sfc_main$3b, [["__scopeId", "data-v-3085a48d"]]);
+const DirectorClipRefs = /* @__PURE__ */ _export_sfc(_sfc_main$3b, [["__scopeId", "data-v-b7ec938b"]]);
 const _hoisted_1$4U = {
   key: 0,
   class: "ctv:text-[8px] ctv:text-white/40 ctv:ml-0.5"
@@ -149127,7 +149127,7 @@ const _sfc_main$3a = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const DirectorTrack = /* @__PURE__ */ _export_sfc(_sfc_main$3a, [["__scopeId", "data-v-dda7fbdf"]]);
+const DirectorTrack = /* @__PURE__ */ _export_sfc(_sfc_main$3a, [["__scopeId", "data-v-ad8021f4"]]);
 function buildSegments(clips, statuses) {
   const out = [];
   let px2 = 0;
@@ -149845,7 +149845,7 @@ const _sfc_main$39 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const DirectorStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$39, [["__scopeId", "data-v-1b68f38c"]]);
+const DirectorStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$39, [["__scopeId", "data-v-04f18719"]]);
 function useChainCallback(originalCallback, ...callbacks) {
   return function(...args) {
     if (typeof originalCallback === "function") {
@@ -226715,7 +226715,7 @@ const imageBatchActionHandlers = makeImageActionHandlers(1);
 const PRODUCT_SHOT_PRESET = {
   id: "product-shot",
   targetClass: "ComfyTV.ImageEditStage",
-  inputSocket: "image",
+  inputAutogrowGroup: "images",
   widgets: {
     workflow: "Qwen Edit 2511",
     main_prompt: "Turn this 3D viewport render into a professional product photograph on a clean light-gray studio backdrop with soft diffused lighting and a subtle ground reflection. Keep the subject's colors, materials and pose exactly as they are."
@@ -238118,7 +238118,7 @@ const GENERATORS = {
     corner: true,
     footerExtra: [{ name: "scale" }]
   },
-  "ComfyTV.ImageEditStage": { preview: "image", linkKind: "image-edit", corner: true },
+  "ComfyTV.ImageEditStage": { preview: "image", linkKind: "image-edit", corner: true, refTypes: ["image"] },
   "ComfyTV.CutoutStage": { preview: "image", linkKind: "cutout", corner: true },
   "ComfyTV.VideoStage": {
     preview: "video",
@@ -239792,4 +239792,4 @@ export {
   LinearFilter as y,
   LinearMipMapLinearFilter as z
 };
-//# sourceMappingURL=main-NMqAARTq.mjs.map
+//# sourceMappingURL=main-CvzB8yuI.mjs.map
