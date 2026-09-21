@@ -101,243 +101,7 @@
 
       <div class="ctv:flex ctv:min-h-0 ctv:flex-1 ctv:gap-1">
 
-        <div class="ctv-scroll-thin ctv:flex ctv:w-44 ctv:shrink-0 ctv:flex-col ctv:gap-1 ctv:overflow-y-auto ctv:rounded-lg ctv:bg-node-background ctv:p-1.5" @wheel.stop>
-
-          <div :class="groupHeaderClass">
-            <span class="ctv:flex-1">{{ $t('scene3d.addCharacter') }}</span>
-            <select
-              v-if="availableModels.length > 0"
-              value=""
-              :class="addSelectClass"
-              :aria-label="$t('scene3d.addCharacter')"
-              @change="onAddCharacter"
-            >
-              <option value="" disabled>+</option>
-              <option v-for="model in availableModels" :key="model.id" :value="model.id">
-                {{ model.name }}
-              </option>
-            </select>
-          </div>
-          <Scene3DOutlinerRow
-            v-for="(character, index) in state.characters"
-            :key="character.id"
-            :label="characterDisplayLabel(character)"
-            :name="character.name ?? ''"
-            :color="characterColor(index)"
-            :selected="character.id === selectedId"
-            :hidden="!!character.hidden"
-            @select="toggleSelectObject(character.id)"
-            @rename="(name) => renameObject(character.id, name)"
-            @toggle-hide="toggleObjectHidden(character.id)"
-            @remove="removeSelected"
-          >
-            <template #icon><IconPersonStanding class="ctv:size-3 ctv:shrink-0" />
-</template>
-          </Scene3DOutlinerRow>
-
-          
-          <div :class="groupHeaderClass">
-            <span class="ctv:flex-1">{{ $t('scene3d.addObject') }}</span>
-            <select
-              value=""
-              :class="addSelectClass"
-              :aria-label="$t('scene3d.addObject')"
-              @change="onAddPrimitive"
-            >
-              <option value="" disabled>+</option>
-              <option v-for="shape in PRIMITIVE_SHAPES" :key="shape" :value="shape">
-                {{ $t(`scene3d.${shape}`) }}
-              </option>
-            </select>
-          </div>
-          <Scene3DOutlinerRow
-            v-for="primitive in state.primitives"
-            :key="primitive.id"
-            :label="primitiveDisplayLabel(primitive)"
-            :name="primitive.name ?? ''"
-            :color="primitive.color"
-            :selected="primitive.id === selectedId"
-            :hidden="!!primitive.hidden"
-            @select="toggleSelectObject(primitive.id)"
-            @rename="(name) => renameObject(primitive.id, name)"
-            @toggle-hide="toggleObjectHidden(primitive.id)"
-            @remove="removeSelected"
-          />
-
-          
-          <template v-if="modelAssets.length >
- 0 || state.models.length > 0">
-            <div :class="groupHeaderClass">
-              <span class="ctv:flex-1">{{ $t('scene3d.addModel') }}</span>
-              <select
-                v-if="modelAssets.length > 0"
-                value=""
-                :class="addSelectClass"
-                :aria-label="$t('scene3d.addModel')"
-                @change="onAddModel"
-              >
-                <option value="" disabled>+</option>
-                <option v-for="asset in modelAssets" :key="asset.id" :value="String(asset.id)">
-                  {{ asset.name || `#${asset.id}` }}
-                </option>
-              </select>
-            </div>
-            <Scene3DOutlinerRow
-              v-for="(model, index) in state.models"
-              :key="model.id"
-              :label="model.name || model.id"
-              :name="model.name"
-              :color="modelColor(index)"
-              :selected="model.id === selectedId"
-              :hidden="!!model.hidden"
-              @select="toggleSelectObject(model.id)"
-              @rename="(name) => renameObject(model.id, name)"
-              @toggle-hide="toggleObjectHidden(model.id)"
-              @remove="removeSelected"
-            >
-              <template #icon><IconBox class="ctv:size-3 ctv:shrink-0" />
-</template>
-            </Scene3DOutlinerRow>
-          </template>
-
-          
-          <div :class="groupHeaderClass">
-            <span class="ctv:flex-1">{{ $t('scene3d.addLight') }}</span>
-            <select
-              value=""
-              :class="addSelectClass"
-              :aria-label="$t('scene3d.lightPresets')"
-              :title="$t('scene3d.lightPresets')"
-              @change="onApplyLightPreset"
-            >
-              <option value="" disabled>☀</option>
-              <option v-for="preset in LIGHT_PRESET_NAMES" :key="preset" :value="preset">
-                {{ $t(`scene3d.preset_${preset}`) }}
-              </option>
-            </select>
-            <select
-              value=""
-              :class="addSelectClass"
-              :aria-label="$t('scene3d.addLight')"
-              @change="onAddLight"
-            >
-              <option value="" disabled>+</option>
-              <option v-for="type in LIGHT_TYPES" :key="type" :value="type">
-                {{ $t(`scene3d.${type}`) }}
-              </option>
-            </select>
-          </div>
-          <Scene3DOutlinerRow
-            v-for="light in state.lights"
-            :key="light.id"
-            :label="lightDisplayLabel(light)"
-            :name="light.name ?? ''"
-            :selected="light.id === selectedId"
-            :hidden="!!light.hidden"
-            @select="toggleSelectObject(light.id)"
-            @rename="(name) => renameObject(light.id, name)"
-            @toggle-hide="toggleObjectHidden(light.id)"
-            @remove="removeSelected"
-          >
-            <template #icon>
-              <IconLightbulb class="ctv:size-3 ctv:shrink-0" :style="{ color: light.color }" />
-</template>
-          </Scene3DOutlinerRow>
-
-          
-          <div :class="groupHeaderClass">
-            <span class="ctv:flex-1">{{ $t('scene3d.addCamera') }}</span>
-            <button
-              type="button"
-              :class="addSelectClass"
-              :aria-label="$t('scene3d.addCamera')"
-              @click="addCamera"
-            >+</button>
-          </div>
-          <Scene3DOutlinerRow
-            v-for="(cameraEntry, index) in state.cameras"
-            :key="cameraEntry.id"
-            :label="cameraDisplayLabel(cameraEntry)"
-            :name="cameraEntry.name ?? ''"
-            :color="cameraEntry.preset ? cameraColor(index) : undefined"
-            :selected="cameraEntry.id === selectedId"
-            :hidden="!!cameraEntry.hidden"
-            @select="toggleSelectObject(cameraEntry.id)"
-            @rename="(name) => renameObject(cameraEntry.id, name)"
-            @toggle-hide="toggleObjectHidden(cameraEntry.id)"
-            @remove="removeSelected"
-          >
-            <template #icon>
-<IconVideo class="ctv:size-3 ctv:shrink-0" />
-</template>
-            <template v-if="cameraEntry.id === outputCameraId" #badge>
-              <span class="ctv:shrink-0 ctv:text-3xs ctv:opacity-70" :title="$t('scene3d.outputCamera')">REC</span>
-</template>
-          </Scene3DOutlinerRow>
-
-          <div :class="groupHeaderClass">
-            <span class="ctv:flex-1">{{ $t('scene3d.addShot') }}</span>
-            <button
-              type="button"
-              :class="addSelectClass"
-              :aria-label="$t('scene3d.addShot')"
-              :disabled="state.cameras.length === 0"
-              @click="addShot"
-            >+</button>
-          </div>
-          <Scene3DOutlinerRow
-            v-for="(shot, index) in state.shots"
-            :key="shot.id"
-            :label="shot.name || `${index + 1} · ${shot.cameraId || $t('scene3d.freeCamera')}`"
-            :name="shot.name ?? ''"
-            :color="shotColor(shot)"
-            :selected="shot.id === selectedId"
-            :hidden="false"
-            @select="toggleSelectObject(shot.id)"
-            @rename="(name) => renameObject(shot.id, name)"
-            @remove="removeSelected"
-          >
-            <template #icon><IconClapperboard class="ctv:size-3 ctv:shrink-0" />
-</template>
-            <template #badge>
-              <span class="ctv:shrink-0 ctv:text-3xs ctv:opacity-70">{{ shot.durFrames }}f</span>
-</template>
-          </Scene3DOutlinerRow>
-
-          <div :class="groupHeaderClass">
-            <span class="ctv:flex-1">{{ $t('scene3d.addPrompt') }}</span>
-            <button
-              v-if="state.shots.length > 0"
-              type="button"
-              :class="addSelectClass"
-              :aria-label="$t('scene3d.autoPrompts')"
-              :title="$t('scene3d.autoPromptsHint')"
-              @click="autoFillShotPrompts"
-            ><IconWand class="ctv:size-3" /></button>
-            <button
-              type="button"
-              :class="addSelectClass"
-              :aria-label="$t('scene3d.addPrompt')"
-              @click="addPromptStrip"
-            >+</button>
-          </div>
-          <Scene3DOutlinerRow
-            v-for="strip in state.promptTrack"
-            :key="strip.id"
-            :label="strip.text || $t('scene3d.promptEmpty')"
-            :name="''"
-            :selected="strip.id === selectedId"
-            :hidden="false"
-            @select="toggleSelectObject(strip.id)"
-            @remove="removeSelected"
-          >
-            <template #icon><IconMessageSquareText class="ctv:size-3 ctv:shrink-0" />
-</template>
-            <template #badge>
-              <span class="ctv:shrink-0 ctv:text-3xs ctv:opacity-70">{{ strip.range.start }}-{{ strip.range.end }}</span>
-</template>
-          </Scene3DOutlinerRow>
-        </div>
+        <Scene3DOutliner :scene3d="scene3d" :panels="panels" />
 
         
         <div
@@ -388,133 +152,7 @@
         </div>
 
         
-        <div class="ctv-scroll-thin ctv:flex ctv:w-64 ctv:shrink-0 ctv:flex-col ctv:gap-1.5 ctv:overflow-y-auto ctv:rounded-lg ctv:bg-node-background ctv:p-1.5" @wheel.stop>
-          <span :class="inspectorHeaderClass">{{ objectsSummary }}</span>
-          <Scene3DCharacterPanel
-            v-if="selectedCharacter"
-            :character="selectedCharacter"
-            :clip-names="clipNamesForSelected"
-            pathable
-            :has-path="!!selectedCharacter.path"
-            tintable
-            :tint="selectedCharacter.color ?? ''"
-            @update-animation="updateSelectedAnimation"
-            @update-transform="updateSelectedTransform"
-            @add-path="addCharacterPathById(selectedCharacter!.id)"
-            @remove-path="removeCharacterPathById(selectedCharacter!.id)"
-            @update-tint="(color) => setCharacterColorById(selectedCharacter!.id, color)"
-          />
-          <Scene3DPrimitivePanel
-            v-else-if="selectedPrimitive"
-            :primitive="selectedPrimitive"
-            @update-color="(color) => updateSelectedPrimitive({ color })"
-            @update-transform="updateSelectedTransform"
-          />
-          <Scene3DLightPanel
-            v-else-if="selectedLight"
-            :light="selectedLight"
-            @update-light="updateSelectedLight"
-          />
-          <Scene3DCharacterPanel
-            v-else-if="selectedModel"
-            :character="selectedModel"
-            :clip-names="clipNamesForSelected"
-            fittable
-            @update-animation="updateSelectedAnimation"
-            @update-transform="updateSelectedTransform"
-            @fit="fitSelectedModel"
-          />
-          <Scene3DCameraPanel
-            v-else-if="selectedCamera"
-            :camera="selectedCamera"
-            :presets="cameraPresets"
-            :looking-through="lookThroughId === selectedCamera.id"
-            @bind-preset="(id) => bindCameraPreset(selectedCamera!.id, id)"
-            @update-tuning="(tuning) => updateCameraTuning(selectedCamera!.id, tuning)"
-            @set-fov="(fov) => setCameraFov(selectedCamera!.id, fov)"
-            @update-transform="updateSelectedTransform"
-            @toggle-view="toggleLookThrough(selectedCamera!.id)"
-          />
-          <Scene3DPromptPanel
-            v-else-if="selectedPrompt"
-            :strip="selectedPrompt"
-            @patch="(patch) => patchPromptById(selectedPrompt!.id, patch)"
-          />
-          <Scene3DShotPanel
-            v-else-if="selectedShot"
-            :shot="selectedShot"
-            :cameras="shotCameraOptions"
-            :characters="shotLockOptions"
-            :index="state.shots.findIndex((entry) => entry.id === selectedShot!.id)"
-            :count="state.shots.length"
-            @patch="(patch) => patchShotById(selectedShot!.id, patch)"
-            @move="(delta) => moveShotBy(selectedShot!.id, delta)"
-          />
-          <div v-else class="ctv:px-1 ctv:text-2xs ctv:text-muted-foreground">
-            {{ $t('scene3d.noSelection') }}
-          </div>
-
-          <div class="ctv:my-0.5 ctv:border-b ctv:border-border-subtle" />
-
-          
-          <span :class="inspectorHeaderClass">{{ $t('scene3d.environment') }}</span>
-          <div class="ctv:flex ctv:flex-wrap ctv:items-center ctv:gap-x-3 ctv:gap-y-1.5 ctv:px-1">
-            <label class="ctv:flex ctv:cursor-pointer ctv:items-center ctv:gap-1.5">
-              <span class="ctv:text-2xs ctv:text-muted-foreground">{{ $t('scene3d.showGrid') }}</span>
-              <ComfyTVToggle
-                :model-value="state.environment.showGrid"
-                @update:model-value="(v) => updateEnvironment({ showGrid: v })"
-              />
-            </label>
-            <label class="ctv:flex ctv:cursor-pointer ctv:items-center ctv:gap-1.5">
-              <span class="ctv:text-2xs ctv:text-muted-foreground">{{ $t('scene3d.showRoom') }}</span>
-              <ComfyTVToggle
-                :model-value="state.environment.showRoom"
-                @update:model-value="(v) => updateEnvironment({ showRoom: v })"
-              />
-            </label>
-            <label v-if="state.environment.showRoom" class="ctv:flex ctv:cursor-pointer ctv:items-center ctv:gap-1.5">
-              <span class="ctv:text-2xs ctv:text-muted-foreground">{{ $t('scene3d.floorOnly') }}</span>
-              <ComfyTVToggle
-                :model-value="!!state.environment.floorOnly"
-                @update:model-value="(v) => updateEnvironment({ floorOnly: v })"
-              />
-            </label>
-            <label class="ctv:flex ctv:cursor-pointer ctv:items-center ctv:gap-1.5">
-              <span class="ctv:text-2xs ctv:text-muted-foreground">{{ $t('scene3d.background') }}</span>
-              <ComfyTVToggle
-                :model-value="state.environment.background !== ''"
-                @update:model-value="(v) => updateEnvironment({ background: v ? '#222222' : '' })"
-              />
-              <input
-                v-if="state.environment.background"
-                type="color"
-                :value="state.environment.background"
-                class="ctv:h-6 ctv:w-8 ctv:cursor-pointer ctv:rounded-md ctv:border-0 ctv:bg-transparent ctv:p-0"
-                @input="onBackgroundInput"
-              />
-            </label>
-          </div>
-
-          <div class="ctv:my-0.5 ctv:border-b ctv:border-border-subtle" />
-
-          
-          <span :class="inspectorHeaderClass">{{ $t('scene3d.sectionOutput') }}</span>
-          <Scene3DOutputPanel
-            :width="outputWidth"
-            :height="outputHeight"
-            :channel="channel"
-            :fps="state.output.fps"
-            :frame-count="state.output.frameCount"
-            :cameras="outputCameraOptions"
-            :camera-id="outputCameraId || FREE_CAMERA_VALUE"
-            @set-size="setOutputSize"
-            @set-channel="setChannel"
-            @set-fps="setOutputFps"
-            @set-frame-count="setOutputFrameCount"
-            @set-camera="onSetOutputCamera"
-          />
-        </div>
+        <Scene3DInspector :scene3d="scene3d" :panels="panels" />
       </div>
 
       
@@ -557,13 +195,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import IconBan from '~icons/lucide/ban'
-import IconBox from '~icons/lucide/box'
 import IconCamera from '~icons/lucide/camera'
-import IconClapperboard from '~icons/lucide/clapperboard'
-import IconMessageSquareText from '~icons/lucide/message-square-text'
-import IconWand from '~icons/lucide/wand-2'
 import IconEye from '~icons/lucide/eye'
 import IconEyeOff from '~icons/lucide/eye-off'
 import IconLoader from '~icons/lucide/loader-2'
@@ -571,9 +205,7 @@ import IconMap from '~icons/lucide/map'
 import IconMaximize from '~icons/lucide/maximize-2'
 import IconMinimize from '~icons/lucide/minimize-2'
 import IconVideo from '~icons/lucide/video'
-import IconLightbulb from '~icons/lucide/lightbulb'
 import IconMove3d from '~icons/lucide/move-3d'
-import IconPersonStanding from '~icons/lucide/person-standing'
 import IconRedo from '~icons/lucide/redo-2'
 import IconRotate3d from '~icons/lucide/rotate-3d'
 import IconScale3d from '~icons/lucide/scale-3d'
@@ -583,28 +215,17 @@ import IconX from '~icons/lucide/x'
 import type { LGraphNode } from '@/lib/comfyApp'
 import StageCard from '@/components/stages/StageCard.vue'
 import SceneCanvas from '@/components/widgets/SceneCanvas.vue'
-import Scene3DCameraPanel from '@/components/widgets/scene3d/Scene3DCameraPanel.vue'
-import Scene3DCharacterPanel from '@/components/widgets/scene3d/Scene3DCharacterPanel.vue'
-import Scene3DLightPanel from '@/components/widgets/scene3d/Scene3DLightPanel.vue'
-import Scene3DOutlinerRow from '@/components/widgets/scene3d/Scene3DOutlinerRow.vue'
-import Scene3DOutputPanel from '@/components/widgets/scene3d/Scene3DOutputPanel.vue'
-import Scene3DPrimitivePanel from '@/components/widgets/scene3d/Scene3DPrimitivePanel.vue'
-import Scene3DPromptPanel from '@/components/widgets/scene3d/Scene3DPromptPanel.vue'
-import Scene3DShotPanel from '@/components/widgets/scene3d/Scene3DShotPanel.vue'
+import Scene3DInspector from '@/components/widgets/scene3d/Scene3DInspector.vue'
+import Scene3DOutliner from '@/components/widgets/scene3d/Scene3DOutliner.vue'
 import Scene3DTimelineTracks from '@/components/widgets/scene3d/Scene3DTimelineTracks.vue'
-import ComfyTVToggle from '@/components/widgets/ComfyTVToggle.vue'
 import { useScene3dStage } from '@/composables/widgets/useScene3dStage'
 import {
-  FREE_CAMERA_VALUE,
   useScene3dFullscreen,
   useScene3dOutputSlots,
   useScene3dPanels
 } from '@/composables/widgets/useScene3dPanels'
 import type { StageState } from '@/stores/stageStore'
 import type { Scene3dGizmoMode } from '@/widgets/three/scene3d/Scene3dViewport'
-import { LIGHT_PRESET_NAMES } from '@/widgets/three/scene3d/lightPresets'
-import { LIGHT_TYPES, PRIMITIVE_SHAPES } from '@/widgets/three/scene3d/types'
-import type { SceneShotEntry } from '@/widgets/three/scene3d/types'
 
 const props = defineProps<{
   state: StageState
@@ -629,40 +250,15 @@ const {
   cleanup,
   handleMouseEnter,
   handleMouseLeave,
-  state,
   selectedId,
-  selectedCharacter,
-  selectedPrimitive,
-  selectedLight,
-  selectedModel,
-  selectedCamera,
-  availableModels,
-  modelAssets,
-  clipNamesForSelected,
   gizmoMode,
   undo,
   redo,
   canUndo,
   canRedo,
-  selectObject,
   toggleSelectObject,
-  fitSelectedModel,
-  removeSelected,
-  renameObject,
-  toggleObjectHidden,
-  updateSelectedAnimation,
-  updateSelectedTransform,
-  updateSelectedPrimitive,
-  updateSelectedLight,
-  updateEnvironment,
   setGizmoMode,
-  cameraPresets,
-  addCamera,
-  bindCameraPreset,
-  updateCameraTuning,
-  setCameraFov,
   setCameraSpeedById,
-  outputCameraId,
   lookThroughId,
   toggleLookThrough,
   pipCameraId,
@@ -674,81 +270,27 @@ const {
   handleTimelineSeek,
   updateCharacterAnimationById,
   setShotDurationById,
-  selectedShot,
-  addShot,
-  patchShotById,
-  moveShotBy,
   moveShotToIndex,
-  addCharacterPathById,
-  removeCharacterPathById,
-  setCharacterColorById,
-  selectedPrompt,
-  addPromptStrip,
-  patchPromptById,
-  autoFillShotPrompts,
   planView,
   togglePlanView,
-  outputWidth,
-  outputHeight,
-  channel,
   capturing,
   recording,
   recordingSupported,
   hasRecordableDuration,
-  setOutputSize,
-  setChannel,
-  setOutputFps,
-  setOutputFrameCount,
   capture,
   record
 } = scene3d
 
+const panels = useScene3dPanels(scene3d)
 const {
-  characterDisplayLabel,
-  primitiveDisplayLabel,
-  lightDisplayLabel,
-  cameraDisplayLabel,
-  characterColor,
-  modelColor,
-  cameraColor,
   timelineData,
   timelineLegend,
   gizmoModeDisabled,
   allGizmoDisabled,
   gizmoDisabledHint,
-  outputCameraOptions,
-  onSetOutputCamera,
-  objectsSummary,
   recordingLabel,
-  recordTitle,
-  onAddCharacter,
-  onAddModel,
-  onAddPrimitive,
-  onAddLight,
-  onApplyLightPreset,
-  onBackgroundInput
-} = useScene3dPanels(scene3d)
-
-function shotColor(shot: SceneShotEntry): string | undefined {
-  const index = state.value.cameras.findIndex(
-    (camera) => camera.id === shot.cameraId
-  )
-  return index >= 0 ? cameraColor(index) : undefined
-}
-
-const shotCameraOptions = computed(() =>
-  state.value.cameras.map((camera) => ({
-    value: camera.id,
-    label: cameraDisplayLabel(camera)
-  }))
-)
-
-const shotLockOptions = computed(() =>
-  state.value.characters.map((character) => ({
-    value: character.id,
-    label: characterDisplayLabel(character)
-  }))
-)
+  recordTitle
+} = panels
 
 const gizmoOptions = [
   { value: 'none' as Scene3dGizmoMode, labelKey: 'scene3d.gizmoNone', icon: IconBan },
@@ -786,12 +328,6 @@ const historyBtnClass =
   ' ctv:disabled:cursor-not-allowed ctv:disabled:opacity-40 ' +
   'ctv:disabled:hover:bg-secondary-background ctv:disabled:hover:text-muted-foreground'
 
-const groupHeaderClass =
-  'ctv:flex ctv:items-center ctv:gap-1 ctv:pt-1 ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground'
-
-const inspectorHeaderClass =
-  'ctv:px-1 ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground'
-
 function gizmoBtnClass(active: boolean) {
   return (
     'ctv:flex ctv:cursor-pointer ctv:items-center ctv:justify-center ctv:gap-1 ctv:self-stretch ctv:px-2 ' +
@@ -801,9 +337,4 @@ function gizmoBtnClass(active: boolean) {
       : 'ctv:bg-transparent ctv:text-muted-foreground ctv:hover:text-base-foreground')
   )
 }
-
-const addSelectClass =
-  'ctv:h-5 ctv:max-w-16 ctv:shrink-0 ctv:cursor-pointer ctv:rounded-md ctv:border-0 ctv:bg-secondary-background ' +
-  'ctv:px-1 ctv:text-2xs ctv:text-muted-foreground ctv:outline-none ctv:[font-family:inherit] ' +
-  'ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground'
 </script>

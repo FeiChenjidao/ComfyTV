@@ -37,85 +37,23 @@
       </label>
     </div>
 
-    <div ref="trackScrollEl" class="ctv:shrink-0 ctv:overflow-x-auto ctv:overflow-y-hidden ctv:rounded-md ctv:border ctv:border-border-subtle ctv:bg-black">
-      <div class="ctv:relative ctv:m-1" :style="{ width: `${trackWidthPx}px` }">
-        <div
-          class="ctv:relative ctv:h-4 ctv:border-b ctv:border-white/10 ctv:touch-none"
-          :class="previewCanPlay ? 'ctv:cursor-pointer' : ''"
-          @pointerdown="onRulerPointerDown"
-        >
-          <div
-            v-for="(tick, i) in rulerTicks"
-            :key="i"
-            class="ctv:absolute ctv:top-0 ctv:border-l ctv:pointer-events-none"
-            :class="tick.major ? 'ctv:h-4 ctv:border-white/30' : 'ctv:h-1.5 ctv:border-white/15'"
-            :style="{ left: `${tick.px}px` }"
-          >
-            <span v-if="tick.label" class="ctv:text-[8px] ctv:text-white/40 ctv:ml-0.5">{{ tick.label }}</span>
-          </div>
-        </div>
-        <div class="ctv:relative ctv:h-[72px] ctv:mt-0.5">
-        <div
-          v-for="(clip, idx) in clips"
-          :key="clip.id"
-          class="ctv:absolute ctv:top-0.5 ctv:h-16 ctv:rounded ctv:border ctv:overflow-hidden
-                 ctv:flex ctv:flex-col ctv:justify-between ctv:py-0.5 ctv:px-1 ctv:select-none"
-          :class="[
-            clip.enabled ? 'ctv:border-primary-background/50 ctv:bg-primary-background/15'
-                         : 'ctv:border-border-subtle ctv:bg-white/5 ctv:opacity-50',
-            clip.id === selectedId ? 'ctv:border-primary-background ctv:shadow-[0_0_0_1px_var(--primary-background)]' : '',
-            drag?.id === clip.id && drag?.active ? 'ctv:opacity-80 ctv:cursor-grabbing ctv:z-[5]' : 'ctv:cursor-grab',
-          ]"
-          :style="clipStyle(idx)"
-          @pointerdown="onClipPointerDown($event, clip, idx)"
-        >
-          <div class="ctv:flex ctv:items-center ctv:gap-1 ctv:pointer-events-none">
-            <i v-if="idx > 0 && clip.transition !== 'cut'"
-               class="pi pi-arrow-right-arrow-left ctv:text-3xs ctv:text-white/60"
-               :title="clip.transition" />
-            <span class="ctv:text-3xs ctv:font-mono ctv:text-white/50">#{{ idx + 1 }}</span>
-            <span class="ctv:text-3xs ctv:truncate ctv:text-white/80">
-              {{ clip.workflow || $t('director.workflowDefault') }}
-            </span>
-          </div>
-          <div class="ctv:text-2xs ctv:truncate ctv:text-white/60 ctv:pointer-events-none">
-            {{ clip.prompt || $t('director.promptPlaceholder') }}
-          </div>
-          <div class="ctv:flex ctv:items-center ctv:gap-1 ctv:pointer-events-none">
-            <span class="ctv:text-3xs ctv:font-mono ctv:py-0 ctv:px-0.5 ctv:rounded-sm ctv:bg-black/60 ctv:text-white/90">
-              {{ clip.duration_s }}s
-            </span>
-            <i v-if="statuses.get(clip.id)?.cached" class="pi pi-check-circle ctv:text-3xs ctv:text-success-background"
-               :title="$t('director.cached')" />
-            <i v-else-if="statuses.get(clip.id)" class="pi pi-circle-fill ctv:text-3xs ctv:text-primary-background"
-               :title="$t('director.generated')" />
-            <span v-if="refCount(clip)" class="ctv:text-3xs ctv:text-white/50">
-              <i class="pi pi-paperclip ctv:text-3xs" /> {{ refCount(clip) }}
-            </span>
-          </div>
-          <div
-            class="ctv:absolute ctv:top-0 ctv:right-0 ctv:w-2 ctv:h-full ctv:cursor-ew-resize ctv:bg-white/10 clip-resize"
-            @pointerdown.stop="onResizePointerDown($event, clip)"
-          />
-        </div>
-        <button
-          type="button"
-          class="ctv:absolute ctv:top-0.5 ctv:h-16 ctv:w-8 ctv:rounded ctv:border ctv:border-dashed ctv:border-border-subtle
-                 ctv:bg-transparent ctv:text-muted-foreground ctv:cursor-pointer add-clip"
-          :style="{ left: `${trackWidthPx - 36}px` }"
-          :title="$t('director.addClip')"
-          @click="addClip"
-        ><i class="pi pi-plus" /></button>
-        </div>
-        <div
-          v-if="previewActive"
-          class="ctv:absolute ctv:top-0 ctv:bottom-0 ctv:w-px ctv:bg-primary-background ctv:pointer-events-none ctv:z-10"
-          :style="{ left: `${playheadPx}px` }"
-        >
-          <div class="playhead-cap" />
-        </div>
-      </div>
-    </div>
+    <DirectorTrack
+      :clips="clips"
+      :selected-id="selectedId"
+      :drag="drag"
+      :statuses="statuses"
+      :track-width-px="trackWidthPx"
+      :clip-style="clipStyle"
+      :ruler-ticks="rulerTicks"
+      :preview-active="previewActive"
+      :preview-playing="previewPlaying"
+      :preview-can-play="previewCanPlay"
+      :playhead-px="playheadPx"
+      :on-ruler-pointer-down="onRulerPointerDown"
+      :on-clip-pointer-down="onClipPointerDown"
+      :on-resize-pointer-down="onResizePointerDown"
+      :on-add-clip="addClip"
+    />
 
     <div v-if="previewActive" class="ctv:flex ctv:flex-col ctv:gap-1">
       <div class="ctv:flex ctv:items-center ctv:gap-2">
@@ -219,109 +157,15 @@
         ><i class="pi pi-play-circle" /></button>
       </div>
 
-      <div ref="refsEl" class="ctv:relative ctv:flex ctv:flex-col ctv:gap-1">
-        <div class="ctv:flex ctv:items-center ctv:gap-2">
-          <span class="ctv:text-[11px] ctv:font-semibold">{{ $t('imageRefs.title') }}</span>
-          <span class="ctv:text-3xs ctv:text-muted-foreground ctv:font-mono">{{ refCount(selectedClip) || '' }}</span>
-          <button
-            type="button"
-            class="icon-btn ctv:ml-auto"
-            :title="pickerOpen ? $t('stage.action.close') : $t('imageRefs.add')"
-            @click.stop="openPicker()"
-          ><i :class="['pi', pickerOpen ? 'pi-times' : 'pi-plus']" /></button>
-        </div>
-
-        <AssetPickerPopup
-          v-if="pickerOpen"
-          :added-ids="pickerAddedIds"
-          :media-types="['image', 'video', 'audio']"
-          :batch-groups="batchGroups"
-          :added-batch-keys="pickerAddedBatchKeys"
-          @select="onPickAsset"
-          @deselect="onUnpickAsset"
-          @select-batch="onPickBatchImage"
-          @deselect-batch="onUnpickBatchImage"
-          @refresh-batch="onRefreshBatch"
-          @unpin-batch="onUnpinBatch"
-          @close="pickerOpen = false"
-        />
-
-        <div v-if="refCount(selectedClip)" class="ctv:flex ctv:flex-wrap ctv:gap-1.5">
-          <div
-            v-for="entry in allRefs"
-            :key="`${entry.kind}-${entry.url}`"
-            class="imgref-tile ctv-hover-host ctv:relative ctv:w-[76px] ctv:h-[76px] ctv:rounded-sm ctv:overflow-hidden ctv:cursor-pointer
-                   ctv:bg-black/30 ctv:border"
-            :style="{ borderColor: slotColor(entry.m) }"
-            :title="refTooltip(entry.kind, entry.m)"
-            @click="openRefSlotPicker(entry, $event)"
-          >
-            <video
-              v-if="entry.kind === 'videos'"
-              :src="entry.url"
-              muted
-              playsinline
-              preload="metadata"
-              class="ctv:block ctv:size-full ctv:object-cover ctv:bg-black ctv:pointer-events-none"
-            />
-            <div
-              v-else-if="entry.kind === 'audio'"
-              class="ctv:flex ctv:items-center ctv:justify-center ctv:size-full ctv:text-muted-foreground"
-            ><i class="pi pi-volume-up ctv:text-lg" /></div>
-            <img
-              v-else
-              :src="entry.url"
-              class="ctv:block ctv:size-full ctv:object-cover"
-              draggable="false"
-            />
-            <span
-              class="ctv:absolute ctv:bottom-0 ctv:inset-x-0 ctv:py-0.5 ctv:px-1 ctv:text-3xs ctv:font-semibold
-                     ctv:overflow-hidden ctv:whitespace-nowrap ctv:text-ellipsis ctv:pointer-events-none
-                     ctv:bg-linear-to-b ctv:from-transparent ctv:to-black/75"
-              :style="{ color: slotColor(entry.m) }"
-            >{{ entry.kind === 'videos' ? `V${entry.m}` : entry.kind === 'audio' ? `A${entry.m}` : `#${entry.m}` }}</span>
-            <button
-              type="button"
-              class="imgref-remove ctv:absolute ctv:top-0.5 ctv:right-0.5 ctv:flex ctv:items-center ctv:justify-center
-                     ctv:size-4 ctv:rounded-sm ctv:cursor-pointer ctv:text-2xs ctv:leading-none ctv:[font-family:inherit]
-                     ctv:bg-black/60 ctv:text-white ctv:border ctv:border-white/30 ctv:hover:bg-destructive-background/80"
-              :title="$t('imageRefs.remove')"
-              @click.stop="removeRef(selectedClip!.id, entry.kind, entry.url)"
-            ><i class="pi pi-times" /></button>
-            <ViewFullButton
-              v-if="entry.kind !== 'videos' && entry.kind !== 'audio'"
-              class="ctv:top-0.5 ctv:left-0.5"
-              :items="refLightboxItems"
-              :index="refLightboxIndex(entry)"
-            />
-          </div>
-        </div>
-        <div v-else class="ctv:text-2xs ctv:italic ctv:text-muted-foreground/60">
-          {{ $t('imageRefs.empty') }}
-        </div>
-
-        <div
-          v-if="refWarnings.length"
-          class="ctv:flex ctv:flex-col ctv:gap-0.5 ctv:py-1 ctv:px-1.5 ctv:rounded ctv:text-2xs
-                 ctv:bg-warning-background/10 ctv:border ctv:border-warning-background/40 ctv:text-warning-background"
-        >
-          <div v-for="(w, i) in refWarnings" :key="i"><i class="pi pi-exclamation-triangle" /> {{ w }}</div>
-        </div>
-
-        <MentionSlotPopover
-          v-if="refSlotPicker"
-          :x="refSlotPicker.x"
-          :y="refSlotPicker.y"
-          :loading="false"
-          :error="null"
-          :options="refSlotPicker.options"
-          :current-slot="refSlotPicker.current"
-          :wired-slots="[]"
-          :claimed-slots="[]"
-          @pick="onRefSlotPick"
-          @close="refSlotPicker = null"
-        />
-      </div>
+      <DirectorClipRefs
+        :node="node"
+        :clip="selectedClip"
+        :shared-urls="sharedUrls"
+        :workflow-label="clipWorkflowLabel"
+        :on-add-ref="(kind, url) => addRef(selectedClip!.id, kind, url)"
+        :on-remove-ref="(kind, url) => removeRef(selectedClip!.id, kind, url)"
+        :on-move-ref-to="(kind, from, to) => moveRefTo(selectedClip!.id, kind, from, to)"
+      />
     </div>
     <div v-else-if="clips.length === 0" class="ctv:text-xs ctv:text-muted-foreground/70 ctv:p-1">
       {{ $t('director.empty') }}
@@ -354,38 +198,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
-import AssetPickerPopup from '@/components/stages/AssetPickerPopup.vue'
 import ClipPromptEditor from '@/components/stages/ClipPromptEditor.vue'
+import DirectorClipRefs from '@/components/stages/DirectorClipRefs.vue'
+import DirectorTrack from '@/components/stages/DirectorTrack.vue'
 import ImageReferences from '@/components/stages/ImageReferences.vue'
 import MainPromptInput from '@/components/stages/MainPromptInput.vue'
-import MentionSlotPopover from '@/components/stages/MentionSlotPopover.vue'
-import ViewFullButton from '@/components/ViewFullButton.vue'
 import StageCard from '@/components/stages/StageCard.vue'
 import ValuePreview from '@/components/stages/ValuePreview.vue'
-import {
-  fetchImageSlotOptionsCached,
-  type ImageSlotOption,
-} from '@/composables/stages/assetSlots'
-import { citedSlots, clipMentionSource } from '@/composables/stages/directorMentions'
+import { clipMentionSource } from '@/composables/stages/directorMentions'
+import type { SharedUrls } from '@/composables/stages/directorRefs'
 import { useDirectorPlayback } from '@/composables/stages/useDirectorPlayback'
 import { MEDIA_TYPES, readMediaTable } from '@/composables/stages/mediaOrder'
 import { mediaEntryUrl } from '@/composables/stages/mediaOrderSync'
-import { slotColor } from '@/composables/stages/imageSlotMentions'
 import {
   CHAIN_MODES,
   TRANSITIONS,
   useDirectorTimeline,
   type ChainMode,
-  type DirectorClip,
 } from '@/composables/stages/useDirectorTimeline'
-import { loadWorkflowInfo } from '@/composables/stages/useWorkflowValidator'
-import { app, type LGraphNode } from '@/lib/comfyApp'
-import { useAssetStore } from '@/stores/assetStore'
-import { usePinnedBatchStore } from '@/stores/pinnedBatchStore'
-import { useProjectStore } from '@/stores/projectStore'
+import type { LGraphNode } from '@/lib/comfyApp'
 import { useSelectionStore } from '@/stores/selectionStore'
 import { bindWidgetCallback, onNodeConfigure, readWidgetStr } from '@/utils/widget'
 import type { StageState } from '@/stores/stageStore'
@@ -401,8 +234,7 @@ const props = defineProps<{
 
 const rootEl = ref<HTMLElement | null>(null)
 const previewUrl = ref('')
-
-const { t } = useI18n()
+const selectionStore = useSelectionStore()
 
 function rerunClip(id: string) {
   if (props.state.running) return
@@ -468,7 +300,6 @@ const clipSource = clipMentionSource(
   () => sharedUrls.value,
 )
 
-const trackScrollEl = ref<HTMLElement | null>(null)
 const previewWrapEl = ref<HTMLElement | null>(null)
 
 const {
@@ -515,25 +346,6 @@ watch(() => props.state.output, (v) => {
   if (String(v ?? '').trim()) openPreview()
 }, { immediate: true })
 
-watch(playheadPx, (px) => {
-  if (!previewPlaying.value) return
-  const el = trackScrollEl.value
-  if (!el || el.scrollWidth <= el.clientWidth) return
-  const lo = el.scrollLeft + 24
-  const hi = el.scrollLeft + el.clientWidth - 24
-  if (px < lo || px > hi) el.scrollLeft = Math.max(0, px - el.clientWidth / 2)
-})
-
-const REF_KINDS = [
-  { key: 'images' as const, mention: 'image', media: 'image', info: 'image' as const },
-  { key: 'videos' as const, mention: 'video', media: 'video', info: 'video' as const },
-  { key: 'audio' as const, mention: 'audio', media: 'audio', info: 'audio' as const },
-]
-
-function refCount(clip: DirectorClip): number {
-  return clip.images.length + clip.videos.length + clip.audio.length
-}
-
 const defaultWorkflow = ref(readWidgetStr(props.node, 'workflow', ''))
 bindWidgetCallback(props.node, 'workflow', (v) => {
   defaultWorkflow.value = String(v ?? '')
@@ -546,40 +358,9 @@ const clipWorkflowLabel = computed(() =>
   selectedClip.value?.workflow || defaultWorkflow.value,
 )
 
-const imageSlotOptions = ref<ImageSlotOption[]>([])
-const clipUsage = ref<any>(null)
-
-watchEffect(() => {
-  const label = clipWorkflowLabel.value
-  imageSlotOptions.value = []
-  clipUsage.value = null
-  if (!label) return
-  void fetchImageSlotOptionsCached('video', label)
-    .then((opts) => {
-      if (clipWorkflowLabel.value === label) imageSlotOptions.value = opts
-    })
-    .catch(() => {})
-  void loadWorkflowInfo().then((info) => {
-    if (clipWorkflowLabel.value === label) {
-      clipUsage.value = (info as any)?.video?.[label] ?? null
-    }
-  })
-})
-
-function slotAnnotation(kind: 'images' | 'videos' | 'audio', i: number): string {
-  if (kind !== 'images') return ''
-  return imageSlotOptions.value.find(o => o.slot === i - 1)?.nodeTitles.join(', ') ?? ''
-}
-
-function refTooltip(kind: 'images' | 'videos' | 'audio', i: number): string {
-  const mention = REF_KINDS.find(k => k.key === kind)!.mention
-  const note = slotAnnotation(kind, i)
-  return note ? `@${mention}_${i} · ${note}` : `@${mention}_${i}`
-}
-
-const sharedUrls = computed(() => {
+const sharedUrls = computed<SharedUrls>(() => {
   void selectionStore.bindingsVersion
-  const out = { images: [] as string[], videos: [] as string[], audio: [] as string[] }
+  const out: SharedUrls = { images: [], videos: [], audio: [] }
   const bucket = { image: 'images', video: 'videos', audio: 'audio' } as const
   const table = readMediaTable(props.node)
   for (const type of MEDIA_TYPES) {
@@ -591,187 +372,6 @@ const sharedUrls = computed(() => {
   }
   return out
 })
-
-const sharedCounts = computed<Record<'image' | 'video' | 'audio', number>>(() => {
-  void selectionStore.bindingsVersion
-  const out = { image: 0, video: 0, audio: 0 }
-  const table = readMediaTable(props.node)
-  for (const type of MEDIA_TYPES) out[type] = table[type].filter(e => e.src !== 'link').length
-  return out
-})
-
-const refWarnings = computed<string[]>(() => {
-  const clip = selectedClip.value
-  const usage = clipUsage.value
-  if (!clip || !usage) return []
-  const cited = {
-    image: citedSlots(clip.prompt, 'image'),
-    video: citedSlots(clip.prompt, 'video'),
-    audio: citedSlots(clip.prompt, 'audio'),
-  }
-  const manual = cited.image.length + cited.video.length + cited.audio.length > 0
-  const out: string[] = []
-  for (const k of REF_KINDS) {
-    const media = k.media as 'image' | 'video' | 'audio'
-    const poolCount = clip[k.key].length + sharedCounts.value[media]
-    const count = manual
-      ? cited[media].filter(slot => slot >= 1 && slot <= poolCount).length
-      : poolCount
-    if (count === 0) continue
-    const max = usage.max_inputs?.[k.info]
-    if (usage.uses?.[k.info] === false || max === 0) {
-      out.push(t('director.refNotConsumed', {
-        kind: t(`director.kind.${k.mention}`),
-        workflow: clipWorkflowLabel.value,
-      }))
-    } else if (max != null && count > max) {
-      out.push(t('director.refOverLimit', { n: max }))
-    }
-  }
-  return out
-})
-
-const assetStore = useAssetStore()
-const pinnedStore = usePinnedBatchStore()
-const projectStore = useProjectStore()
-const selectionStore = useSelectionStore()
-const projectId = computed(() => projectStore.currentProjectId || '')
-
-const refsEl = ref<HTMLElement | null>(null)
-const pickerOpen = ref(false)
-
-function openPicker() {
-  assetStore.ensureHydrated()
-  pickerOpen.value = !pickerOpen.value
-}
-
-const batchGroups = computed(() =>
-  pinnedStore.list(projectId.value).map(b => ({
-    id: b.id, label: b.label, urls: b.urls, canRefresh: !!b.source_uid,
-  })),
-)
-
-interface ClipRefEntry {
-  kind: 'images' | 'videos' | 'audio'
-  url: string
-  i: number
-  m: number
-}
-
-const allRefs = computed<ClipRefEntry[]>(() => {
-  const clip = selectedClip.value
-  if (!clip) return []
-  return REF_KINDS.flatMap(k =>
-    clip[k.key].map((url, i) => ({
-      kind: k.key, url, i,
-      m: i + sharedUrls.value[k.key].length + 1,
-    })))
-})
-
-const refLightboxItems = computed(() => allRefs.value
-  .filter(e => e.kind !== 'videos' && e.kind !== 'audio')
-  .map(e => ({ url: e.url, label: `#${e.m}` })))
-
-function refLightboxIndex(entry: ClipRefEntry): number {
-  return Math.max(0, refLightboxItems.value.findIndex(it => it.url === entry.url))
-}
-
-const pickerAddedIds = computed<number[]>(() =>
-  allRefs.value
-    .map(r => assetStore.byPayloadUrl(r.url)?.id)
-    .filter((id): id is number => id != null),
-)
-
-const pickerAddedBatchKeys = computed<string[]>(() => {
-  const clip = selectedClip.value
-  if (!clip) return []
-  const out: string[] = []
-  for (const g of batchGroups.value) {
-    g.urls.forEach((url, i) => {
-      if (clip.images.includes(url)) out.push(`${g.id}:${i}`)
-    })
-  }
-  return out
-})
-
-function onPickAsset(a: { payload_url: string; media_type: string }) {
-  if (!selectedClip.value) return
-  const kind = a.media_type === 'video' ? 'videos'
-    : a.media_type === 'audio' ? 'audio'
-    : 'images'
-  addRef(selectedClip.value.id, kind, a.payload_url)
-}
-
-function onUnpickAsset(a: { payload_url: string }) {
-  const clip = selectedClip.value
-  if (!clip) return
-  const entry = allRefs.value.find(r => r.url === a.payload_url)
-  if (entry) removeRef(clip.id, entry.kind, entry.url)
-}
-
-function onUnpickBatchImage(groupId: string, index: number) {
-  const clip = selectedClip.value
-  const url = pinnedStore.byId(projectId.value, groupId)?.urls[index]
-  if (clip && url && clip.images.includes(url)) removeRef(clip.id, 'images', url)
-}
-
-const refSlotPicker = ref<{
-  entry: ClipRefEntry
-  current: number
-  x: number
-  y: number
-  options: ImageSlotOption[]
-} | null>(null)
-
-function openRefSlotPicker(entry: ClipRefEntry, e: MouseEvent) {
-  const clip = selectedClip.value
-  const rootRect = refsEl.value?.getBoundingClientRect()
-  if (!clip || !rootRect) return
-  const tile = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  const count = clip[entry.kind].length
-  const base = sharedUrls.value[entry.kind].length
-  refSlotPicker.value = {
-    entry,
-    current: entry.m,
-    x: Math.max(0, Math.min(tile.left - rootRect.left, rootRect.width - 260)),
-    y: tile.bottom - rootRect.top + 4,
-    options: Array.from({ length: count }, (_, own) => ({
-      slot: base + own + 1,
-      nodeTitles: entry.kind === 'images'
-        ? imageSlotOptions.value.find(o => o.slot === base + own)?.nodeTitles ?? []
-        : [],
-    })),
-  }
-}
-
-function onRefSlotPick(slot: number) {
-  const picker = refSlotPicker.value
-  refSlotPicker.value = null
-  if (!picker || !selectedClip.value) return
-  const base = sharedUrls.value[picker.entry.kind].length
-  moveRefTo(selectedClip.value.id, picker.entry.kind, picker.entry.i, slot - base - 1)
-}
-
-function onPickBatchImage(groupId: string, index: number) {
-  if (!selectedClip.value) return
-  const url = pinnedStore.byId(projectId.value, groupId)?.urls[index]
-  if (url) addRef(selectedClip.value.id, 'images', url)
-}
-
-function onRefreshBatch(id: string) {
-  const ok = pinnedStore.refresh(projectId.value, id, app as any)
-  if (!ok) {
-    ;(app as any)?.extensionManager?.toast?.add?.({
-      severity: 'warn',
-      summary: t('imageRefs.refreshFailed'),
-      life: 4000,
-    })
-  }
-}
-
-function onUnpinBatch(id: string) {
-  pinnedStore.unpin(projectId.value, id)
-}
 </script>
 
 <style scoped>
@@ -793,45 +393,5 @@ function onUnpinBatch(id: string) {
   opacity: 0.4;
   cursor: default;
   pointer-events: none;
-}
-.chip-x {
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  color: inherit;
-  padding: 0 1px;
-}
-.clip-resize:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-.imgref-remove {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-.imgref-tile:hover .imgref-remove,
-.imgref-tile:focus-within .imgref-remove {
-  opacity: 1;
-  pointer-events: auto;
-}
-@media (hover: none), (pointer: coarse) {
-  .imgref-remove {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-.add-clip:hover {
-  color: var(--base-foreground, #eee);
-  border-color: var(--primary-background, #4a9);
-}
-.playhead-cap {
-  position: absolute;
-  top: 0;
-  left: -4px;
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 6px solid var(--primary-background, #4a9);
 }
 </style>

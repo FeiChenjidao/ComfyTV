@@ -26,6 +26,9 @@ Download: <https://huggingface.co/Comfy-Org/flux2-klein/tree/main/split_files/te
 |---|---|---|
 | **Local SD1.5** / **Local SD1.5 I2I** | `v1-5-pruned-emaonly-fp16.safetensors` | `checkpoints/` |
 | **Image Ideogram4 T2I** | `ideogram4_fp8_scaled.safetensors`, `ideogram4_unconditional_fp8_scaled.safetensors`, `qwen3vl_8b_fp8_scaled.safetensors`, `flux2-vae.safetensors` | `diffusion_models/`, `diffusion_models/`, `text_encoders/`, `vae/` |
+| **Qwen Image 2.1 T2I** / **Transparent (RGBA)** / **Multi-Ref Edit** | `qwen_image_2.1_int8_convrot.safetensors`, `qwen3vl_8b_int8_convrot.safetensors`, `qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`, `text_encoders/`, `vae/` |
+
+Qwen Image 2.1 files: <https://huggingface.co/Comfy-Org/Qwen-Image-2.1> (~17 GB for the int8 set; bf16 variants also exist there). Requires ComfyUI v0.37+ for `TextEncodeQwenImage21`.
 
 ---
 
@@ -99,12 +102,14 @@ Download:
 | Workflow | Files | Folder |
 |---|---|---|
 | **Flux Canny Edit** (image-edit) | `flux1-canny-dev.safetensors`, `t5xxl_fp16.safetensors` *(or `t5xxl_fp8_e4m3fn_scaled.safetensors`)*, `clip_l.safetensors`, `ae.safetensors` | `diffusion_models/`, `text_encoders/`, `text_encoders/`, `vae/` |
+| **Qwen Image 2.1 Edit** (image-edit) | `qwen_image_2.1_int8_convrot.safetensors`, `qwen3vl_8b_int8_convrot.safetensors`, `qwen_image_2.1_vae_bf16.safetensors` — same set as the Image-stage Qwen Image 2.1 workflows | `diffusion_models/`, `text_encoders/`, `vae/` |
 | **Flux Fill Inpaint** (inpaint) | `flux1-fill-dev.safetensors`, t5 + clip\_l + ae (same as above) | `diffusion_models/`, `text_encoders/`, `text_encoders/`, `vae/` |
 | **Fooocus SDXL Inpaint** (inpaint) | `juggernautXL_version6Rundiffusion.safetensors`, `fooocus_inpaint_head.pth` | `checkpoints/`, `inpaint/` |
 | **Flux Fill Outpaint** (outpaint) | same as Flux Fill Inpaint | same |
 | **Fooocus SDXL Outpaint** (outpaint) | same as Fooocus SDXL Inpaint | same |
 | **LaMa Erase** (erase) | `big-lama.pt` | `inpaint/` |
 | **BiRefNet Cutout** (cutout) | `birefnet.safetensors` | `background_removal/` |
+| **Qwen Image 2.1 Cutout** (cutout, generative) | `qwen_image_2.1_int8_convrot.safetensors`, `qwen3vl_8b_int8_convrot.safetensors`, `qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`, `text_encoders/`, `vae/` |
 | **Ultrasharp 4x** (upscale) | `4x-UltraSharp.pth` | `upscale_models/` |
 
 Download:
@@ -124,6 +129,7 @@ The "multi-view" (Face / Product / Character / Multi-cam 9) and the "sequence" (
 | Group | Files | Folder |
 |---|---|---|
 | **Multi-cam / 3-view set** | `qwen_image_edit_2511_fp8mixed.safetensors`, `Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors`, `qwen-image-edit-2511-multiple-angles-lora.safetensors`, `qwen_2.5_vl_7b_fp8_scaled.safetensors`, `qwen_image_vae.safetensors` | `diffusion_models/`, `loras/`, `loras/`, `text_encoders/`, `vae/` |
+| **Character 3-View (Qwen 2.1)** (no LoRA) | `qwen_image_2.1_int8_convrot.safetensors`, `qwen3vl_8b_int8_convrot.safetensors`, `qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`, `text_encoders/`, `vae/` |
 | **Story 4 / Storyboard 25** | `qwen_image_edit_2509_bf16.safetensors`, `Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors`, `next-scene-qwen-image-lora-2509.safetensors`, `qwen_2.5_vl_7b_fp8_scaled.safetensors`, `qwen_image_vae.safetensors` | `diffusion_models/`, `loras/`, `loras/`, `text_encoders/`, `vae/` |
 | **Multiangle** (3D-camera-driven) | same as the multi-view set above | same |
 

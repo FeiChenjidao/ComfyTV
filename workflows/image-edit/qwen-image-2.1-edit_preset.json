@@ -1,0 +1,27 @@
+{
+  "label":       "Qwen Image 2.1 Edit",
+  "order":       6,
+  "description": "Instruction editing via Qwen Image 2.1 (Qwen3-VL-8B encoder, 25 steps). Describe the change and refer to the source as <image1> (this stage has a single image socket, so @image_N mentions do not apply). Output size follows the input (keep it ≤ 2K). For several reference images use the Image stage's 'Qwen Image 2.1 Multi-Ref Edit'.",
+
+  "result": { "type": "ui_save_url", "node": "9" },
+
+  "inputs": {
+    "11": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true,
+        "error": "Image edit needs an upstream image — wire one into the stage's image input."
+      }
+    },
+    "6": {
+      "prompt": {
+        "from": "main_prompt",
+        "required": true,
+        "error": "Describe the edit — e.g. 'change the background of <image1> to a light-gray studio backdrop, keep the subject unchanged'."
+      }
+    },
+    "7": {
+      "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" }
+    }
+  }
+}

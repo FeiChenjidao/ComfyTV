@@ -30,6 +30,9 @@
 | **Product 3-View** | `qwen-3view-product.json` | 3（产品前/3/4/后） | "a product" |
 | **Character 3-View** | `qwen-3view-character.json` | 3（角色全身前/侧/后） | "a character" |
 | **Multi-cam 9** | `qwen-9cam.json` | 9（每 45° 一个方位角 + 居中） | "a person" |
+| **Character 3-View (Qwen 2.1)** | `qwen-image-2.1-3view-character.json` | 3（正 / 侧 / 背），纯白背景 | "a character" |
+
+**Character 3-View (Qwen 2.1)** 是完全不用 LoRA 的同款三视图:Qwen Image 2.1 装不了 2511 的多角度 LoRA(latent 布局不同),所以每条分支就是一次普通的 `TextEncodeQwenImage21` 指令编辑,前缀里写明视角并用 `<image1>` 指代源图;编码器自带的 `latent` 输出直接接各自的 `KSampler`,没有共享 `VAEEncode` / `ImageScale`。同一张源图对比:正面和背面是真正的转身,衣服和道具比 LoRA 版更稳定;源图姿势带角度时侧视图偏 3/4。5090 上三张约 75 秒(LoRA 版约 87 秒)。测试通过。
 
 ## 需要的模型
 
@@ -39,4 +42,5 @@
 - `qwen_image_vae.safetensors` → `models/vae/`
 - `qwen-image-edit-2511-multiple-angles-lora.safetensors` → `models/loras/`
 - `Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors` → `models/loras/`
+- 仅 Character 3-View (Qwen 2.1):`qwen_image_2.1_int8_convrot.safetensors` → `models/diffusion_models/`、`qwen3vl_8b_int8_convrot.safetensors` → `models/text_encoders/`、`qwen_image_2.1_vae_bf16.safetensors` → `models/vae/`(<https://huggingface.co/Comfy-Org/Qwen-Image-2.1>,ComfyUI v0.37+)
 

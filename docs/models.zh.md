@@ -26,6 +26,9 @@ ComfyUI 通常会在首次启动时自动建好所有子目录;缺哪个手动�
 |---|---|---|
 | **Local SD1.5** / **Local SD1.5 I2I** | `v1-5-pruned-emaonly-fp16.safetensors` | `checkpoints/` |
 | **Image Ideogram4 T2I** | `ideogram4_fp8_scaled.safetensors`、`ideogram4_unconditional_fp8_scaled.safetensors`、`qwen3vl_8b_fp8_scaled.safetensors`、`flux2-vae.safetensors` | `diffusion_models/`、`diffusion_models/`、`text_encoders/`、`vae/` |
+| **Qwen Image 2.1 T2I** / **Transparent (RGBA)** / **Multi-Ref Edit** | `qwen_image_2.1_int8_convrot.safetensors`、`qwen3vl_8b_int8_convrot.safetensors`、`qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`、`text_encoders/`、`vae/` |
+
+Qwen Image 2.1 文件:<https://huggingface.co/Comfy-Org/Qwen-Image-2.1>(int8 一套约 17 GB;bf16 版也在那)。需要 ComfyUI v0.37+ 的 `TextEncodeQwenImage21` 节点。
 
 ---
 
@@ -99,12 +102,14 @@ ACE-Step v1 和 MiniMax Music 3 都是 ComfyUI 核心原生支持,不需要装�
 | 工作流 | 文件 | 目录 |
 |---|---|---|
 | **Flux Canny Edit**(image-edit) | `flux1-canny-dev.safetensors`、`t5xxl_fp16.safetensors` *(或 `t5xxl_fp8_e4m3fn_scaled.safetensors`)*、`clip_l.safetensors`、`ae.safetensors` | `diffusion_models/`、`text_encoders/`、`text_encoders/`、`vae/` |
+| **Qwen Image 2.1 Edit**(image-edit) | `qwen_image_2.1_int8_convrot.safetensors`、`qwen3vl_8b_int8_convrot.safetensors`、`qwen_image_2.1_vae_bf16.safetensors`,和图像 stage 的 Qwen Image 2.1 工作流共用 | `diffusion_models/`、`text_encoders/`、`vae/` |
 | **Flux Fill Inpaint**(inpaint) | `flux1-fill-dev.safetensors`、t5 + clip\_l + ae(同上) | `diffusion_models/`、`text_encoders/`、`text_encoders/`、`vae/` |
 | **Fooocus SDXL Inpaint**(inpaint) | `juggernautXL_version6Rundiffusion.safetensors`、`fooocus_inpaint_head.pth` | `checkpoints/`、`inpaint/` |
 | **Flux Fill Outpaint**(outpaint) | 同 Flux Fill Inpaint | 同 |
 | **Fooocus SDXL Outpaint**(outpaint) | 同 Fooocus SDXL Inpaint | 同 |
 | **LaMa Erase**(erase) | `big-lama.pt` | `inpaint/` |
 | **BiRefNet Cutout**(cutout) | `birefnet.safetensors` | `background_removal/` |
+| **Qwen Image 2.1 Cutout**(cutout,生成式) | `qwen_image_2.1_int8_convrot.safetensors`、`qwen3vl_8b_int8_convrot.safetensors`、`qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`、`text_encoders/`、`vae/` |
 | **Ultrasharp 4x**(upscale) | `4x-UltraSharp.pth` | `upscale_models/` |
 
 下载:
@@ -124,6 +129,7 @@ ACE-Step v1 和 MiniMax Music 3 都是 ComfyUI 核心原生支持,不需要装�
 | 组 | 文件 | 目录 |
 |---|---|---|
 | **Multi-cam / 3-view 套** | `qwen_image_edit_2511_fp8mixed.safetensors`、`Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors`、`qwen-image-edit-2511-multiple-angles-lora.safetensors`、`qwen_2.5_vl_7b_fp8_scaled.safetensors`、`qwen_image_vae.safetensors` | `diffusion_models/`、`loras/`、`loras/`、`text_encoders/`、`vae/` |
+| **Character 3-View (Qwen 2.1)**(不用 LoRA) | `qwen_image_2.1_int8_convrot.safetensors`、`qwen3vl_8b_int8_convrot.safetensors`、`qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`、`text_encoders/`、`vae/` |
 | **Story 4 / Storyboard 25** | `qwen_image_edit_2509_bf16.safetensors`、`Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors`、`next-scene-qwen-image-lora-2509.safetensors`、`qwen_2.5_vl_7b_fp8_scaled.safetensors`、`qwen_image_vae.safetensors` | `diffusion_models/`、`loras/`、`loras/`、`text_encoders/`、`vae/` |
 | **Multiangle**(3D 相机驱动) | 同上面 multi-view 套 | 同 |
 

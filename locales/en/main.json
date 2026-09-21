@@ -942,6 +942,7 @@
       "label": "Refs",
       "natural": "Natural text (image 1)",
       "minimaxTags": "<Picture n> tags (MiniMax H3)",
+      "qwenTags": "<image n> tags (Qwen Image 2.1)",
       "hint": "How image mentions in the stage prompt are rendered for this workflow's model."
     },
     "section": {

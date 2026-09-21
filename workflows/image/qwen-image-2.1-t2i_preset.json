@@ -1,0 +1,28 @@
+{
+  "label":       "Qwen Image 2.1 T2I",
+  "order":       13,
+  "description": "Qwen Image 2.1 text-to-image (int8). Native 2K: pick the 2K resolution tier for 2048px output. cfg is 1 so the negative prompt is ignored unless you raise cfg in the sidebar. ~25 s per 1K image on a 5090.",
+
+  "result": { "type": "ui_save_batch", "node": "9" },
+
+  "sizing": { "type": "image", "base": 1024, "snap": 32 },
+
+  "inputs": {
+    "6": {
+      "prompt": {
+        "from": "main_prompt",
+        "required": true,
+        "error": "Describe the image to generate."
+      },
+      "negative_prompt": { "from": "option:negative", "default": "" }
+    },
+    "5": {
+      "width":      { "from": "computed:width",  "cast": "int" },
+      "height":     { "from": "computed:height", "cast": "int" },
+      "batch_size": { "from": "option:batch_size", "default": "1", "cast": "int" }
+    },
+    "7": {
+      "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" }
+    }
+  }
+}

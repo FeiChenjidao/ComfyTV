@@ -1,0 +1,30 @@
+{
+  "label":       "Qwen Image 2.1 Transparent (RGBA)",
+  "order":       14,
+  "description": "Qwen Image 2.1 text-to-image with a generated alpha channel — the subject on a transparent background, saved as RGBA PNG. Just describe the subject; the RGBA wording is added around your prompt automatically. Native 2K via the 2K resolution tier.",
+
+  "result": { "type": "ui_save_batch", "node": "9" },
+
+  "sizing": { "type": "image", "base": 1024, "snap": 32 },
+
+  "inputs": {
+    "6": {
+      "prompt": {
+        "from": "main_prompt",
+        "required": true,
+        "error": "Describe the subject to generate on a transparent background.",
+        "prefix": "This is an RGBA format image with transparency. ",
+        "suffix": ". The image has an alpha channel and a transparent background."
+      },
+      "negative_prompt": { "from": "option:negative", "default": "" }
+    },
+    "5": {
+      "width":      { "from": "computed:width",  "cast": "int" },
+      "height":     { "from": "computed:height", "cast": "int" },
+      "batch_size": { "from": "option:batch_size", "default": "1", "cast": "int" }
+    },
+    "7": {
+      "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" }
+    }
+  }
+}

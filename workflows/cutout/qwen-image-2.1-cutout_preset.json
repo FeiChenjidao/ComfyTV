@@ -1,0 +1,20 @@
+{
+  "label":       "Qwen Image 2.1 Cutout",
+  "order":       20,
+  "description": "Generative cutout via Qwen Image 2.1: the model repaints the subject on a transparent background (RGBA PNG). Cleaner than BiRefNet on busy or graphic backgrounds (no stray fragments, no colour spill), but the pixels are regenerated rather than masked, and it is slower (~10 s warm / ~45 s cold vs ~7 s). Needs a distinct foreground subject — on a landscape with none the whole image comes back transparent. Keep BiRefNet for pixel-exact product cutouts.",
+
+  "result": { "type": "ui_save_url", "node": "9" },
+
+  "inputs": {
+    "11": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true,
+        "error": "Cutout needs an upstream image — wire one into the stage's image input."
+      }
+    },
+    "7": {
+      "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" }
+    }
+  }
+}
