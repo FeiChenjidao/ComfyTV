@@ -77,7 +77,7 @@ const props = withDefaults(defineProps<{
   /** Workflow kind for binding lookup (e.g. model / image). */
   workflowKind?: string | null
 }>(), {
-  boundOnly: false,
+  boundOnly: true,
   workflowKind: null,
 })
 

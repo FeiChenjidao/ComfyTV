@@ -116,6 +116,8 @@ function makeImageBatchShell(shellCfg: ImageBatchShellConfig = {}) {
       [ParamsPanelV2, {
         getNode: () => node,
         exclude: ['aspect_ratio', 'resolution', 'batch_size', ...(shellCfg.footerExtra ?? []).map(x => x.name)],
+        boundOnly: true,
+        workflowKind: shellCfg.linkKind ?? 'image',
       }, paramsAnchor],
       [ServerSelectV2, { getNode: () => node, state: stageState }, serverAnchor],
       [MediaCornerV2, { state: stageState, source: 'batch', onAction }, cornerAnchor],

@@ -269,12 +269,34 @@ export function buildBindingOptions(
     { value: '__VALUE__', label: '(use this value)' },
     { value: 'main_prompt', label: 'Stage prompt' },
   ]
-  if (!caps) return out
-  for (const k of caps.option_keys) {
-    out.push({ value: k, label: capsState.optionLabels[k] ?? k })
+  if (!caps) return markRecommendedBindings(out, forWidget?.widget_name)
+
+  const seen = new Set(out.map(o => o.value))
+  function pushOpt(value: string, label?: string) {
+    if (seen.has(value)) return
+    seen.add(value)
+    out.push({ value, label: label ?? capsState.optionLabels[value] ?? value })
   }
+
+  for (const k of caps.option_keys) {
+    pushOpt(k, capsState.optionLabels[k] ?? k)
+  }
+
+  // Layer C: allow binding option:<leaf> for the current widget even when caps
+  // / StageParams have not declared that key yet.
+  const leaf = forWidget?.widget_name
+    ? (forWidget.widget_name.includes('.')
+      ? forWidget.widget_name.slice(forWidget.widget_name.lastIndexOf('.') + 1)
+      : forWidget.widget_name)
+    : ''
+  if (leaf) {
+    const rec = recommendedOptionForWidget(forWidget?.widget_name)
+    if (rec) pushOpt(rec, capsState.optionLabels[rec] ?? rec)
+    else pushOpt(`option:${leaf}`, `option:${leaf}`)
+  }
+
   for (const k of caps.computed_keys) {
-    out.push({ value: k, label: STAGE_COMPUTED_LABELS[k] ?? k })
+    pushOpt(k, STAGE_COMPUTED_LABELS[k] ?? k)
   }
   for (const ukind of caps.upstream_kinds) {
     const maxUsed = maxUsedUpstreamIndex(widgets, ukind)
@@ -282,16 +304,16 @@ export function buildBindingOptions(
     const suffix = ukind === 'text' ? 'value' : 'annotated'
     const label  = UPSTREAM_KIND_LABELS[ukind]
     for (let i = 0; i <= showUpTo; i++) {
-      out.push({
-        value: `upstream_${ukind}:${suffix}[${i}]`,
-        label: `${label} ${i + 1}`,
-      })
+      pushOpt(
+        `upstream_${ukind}:${suffix}[${i}]`,
+        `${label} ${i + 1}`,
+      )
     }
     if (ukind === 'image' && caps.option_keys.includes('option:mask_data')) {
-      out.push({
-        value: 'upstream_image:masked[0]',
-        label: 'Upstream image + painted mask (alpha)',
-      })
+      pushOpt(
+        'upstream_image:masked[0]',
+        'Upstream image + painted mask (alpha)',
+      )
     }
   }
   return markRecommendedBindings(out, forWidget?.widget_name)
@@ -309,6 +331,11 @@ const WIDGET_TO_OPTION: Record<string, string> = {
   batch_size: 'option:batch_size',
   negative: 'option:negative',
   negative_prompt: 'option:negative',
+  scale: 'option:scale',
+  scale_factor: 'option:scale',
+  Scale: 'option:scale',
+  target_resolution: 'option:scale',
+  Target_Resolution: 'option:scale',
   texture: 'option:texture',
   pbr: 'option:pbr',
   texture_quality: 'option:texture_quality',
@@ -337,7 +364,8 @@ const WIDGET_TO_OPTION: Record<string, string> = {
 export function recommendedOptionForWidget(widgetName: string | null | undefined): string | null {
   if (!widgetName) return null
   const leaf = widgetName.includes('.') ? widgetName.slice(widgetName.lastIndexOf('.') + 1) : widgetName
-  return WIDGET_TO_OPTION[leaf] ?? null
+  if (!leaf) return null
+  return WIDGET_TO_OPTION[leaf] ?? `option:${leaf}`
 }
 
 function markRecommendedBindings(

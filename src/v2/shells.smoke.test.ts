@@ -587,30 +587,95 @@ describe('V2 shell smoke', () => {
     let panelH = 0
     const PREVIEW = 280
     const preview = card.querySelector('.v2-preview') as HTMLElement
+    const panel = card.querySelector('.v2-panel') as HTMLElement
     Object.defineProperty(preview, 'offsetHeight', { get: () => PREVIEW })
     Object.defineProperty(card, 'offsetHeight', { get: () => PREVIEW + panelH })
+    Object.defineProperty(panel, 'offsetHeight', { get: () => (panelH > 0 ? panelH : 180) })
+    // Unselected: CSS would hide the panel; keep measurePanelStackHeight honest.
+    panel.style.setProperty('display', 'none', 'important')
 
     // User corner-resized while unselected (compact).
     const dragH = PREVIEW + 40
     node.setSize([320, dragH])
     card.dispatchEvent(new PointerEvent('pointerdown'))
-    // RO-style sample after drag (chrome steady, size moved).
     const sync = (node as any).__comfytvSyncHeight as () => void
-    // Force sample path: size already set; sync apply with current chrome.
     sync()
     const afterDrag = node.size[1]
+    expect(afterDrag).toBeGreaterThan(200)
 
-    // Select → panel chrome appears → apply once grows by panel, keeps preview wanted.
+    // Select → must not re-add the full panel stack on top of a flex-swollen wanted.
     panelH = 180
+    panel.style.removeProperty('display')
+    node.selected = true
     root.setAttribute('data-v2-selected', '')
     sync()
-    expect(node.size[1]).toBe(afterDrag + 180)
+    expect(node.size[1]).toBeLessThan(afterDrag + 40)
+    expect(node.size[1]).toBeGreaterThan(afterDrag - 40)
 
-    // Deselect → chrome drops → apply shrinks back; no drift.
     panelH = 0
+    panel.style.setProperty('display', 'none', 'important')
+    node.selected = false
     root.removeAttribute('data-v2-selected')
     sync()
-    expect(node.size[1]).toBe(afterDrag)
+    expect(node.size[1]).toBeLessThan(afterDrag + 40)
+    expect(node.size[1]).toBeGreaterThan(afterDrag - 40)
+
+    root.remove()
+    document.body.removeAttribute('data-v2-panel-on-select')
+    node.onRemoved?.()
+  })
+
+  it('manageHeight tab remount does not inflate when goLive fires while panel is hidden', () => {
+    document.body.setAttribute('data-v2-panel-on-select', '')
+    const node = makeNode('ComfyTV.Model3DStage')
+    node.selected = false
+    node.setSize([320, 500])
+    V2_SHELLS['ComfyTV.Model3DStage'](node as any, 'model', 'generator')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+    const root = document.createElement('div')
+    root.setAttribute('data-node-id', String(node.id))
+    root.setAttribute('data-v2-shell', '')
+    root.appendChild(card)
+    document.body.appendChild(root)
+
+    const PANEL = 200
+    const PREVIEW = 300
+    const preview = card.querySelector('.v2-preview') as HTMLElement
+    const panel = card.querySelector('.v2-panel') as HTMLElement
+    let panelVisible = false
+    Object.defineProperty(preview, 'offsetHeight', {
+      configurable: true,
+      get: () => PREVIEW + (panelVisible ? 0 : PANEL),
+    })
+    Object.defineProperty(card, 'offsetHeight', {
+      configurable: true,
+      get: () => PREVIEW + PANEL,
+    })
+    Object.defineProperty(panel, 'offsetHeight', {
+      configurable: true,
+      get: () => PANEL,
+    })
+    panel.style.setProperty('display', 'none', 'important')
+
+    const sync = (node as any).__comfytvSyncHeight as () => void
+    // Remount path: connections / pointer while still unselected (panel hidden).
+    node.onConnectionsChange?.(1, 0, true, null, null)
+    sync()
+    const afterRemount = node.size[1]
+    expect(afterRemount).toBeGreaterThan(450)
+    expect(afterRemount).toBeLessThan(520)
+
+    // Select must not stack panel height on top of a flex-swollen wanted.
+    panelVisible = true
+    panel.style.removeProperty('display')
+    node.selected = true
+    root.setAttribute('data-v2-selected', '')
+    sync()
+    expect(Math.abs(node.size[1] - afterRemount)).toBeLessThan(20)
+    expect(node.size[1]).toBeLessThan(500 + PANEL)
+
+    const shell = node.widgets.find((w: any) => w.name === 'v2_shell')
+    expect(shell.options.getMinHeight()).toBe(Math.max(170, Math.round(node.size[1])))
 
     root.remove()
     document.body.removeAttribute('data-v2-panel-on-select')

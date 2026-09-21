@@ -97,6 +97,8 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
       [ParamsPanelV2, {
         getNode: () => node,
         exclude: ['psd_file', 'selected_id', 'captured_image', 'captured_images'],
+        boundOnly: true,
+        workflowKind: 'layer-separation',
       }, paramsAnchor],
       [FooterSelectsV2, { getNode: () => node, linkKind: 'layer-separation', extra: [] }, wfAnchor],
       [ServerSelectV2, { getNode: () => node, state: stageState }, serverAnchor],

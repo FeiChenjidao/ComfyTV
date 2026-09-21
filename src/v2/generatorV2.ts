@@ -47,7 +47,10 @@ interface GeneratorConfig {
   corner?: boolean
   footerExtra?: FooterExtra[]
   controls?: ControlSpec[]
-  /** When true, StageControls only lists widgets bound as option:* on the workflow. */
+  /**
+   * When true (default), option controls only appear if the workflow binds
+   * option:<name>. Pass false only for shells that intentionally show every widget.
+   */
   boundOnlyControls?: boolean
 }
 
@@ -134,7 +137,7 @@ function makeGeneratorShell(config: GeneratorConfig) {
         [ParamsPanelV2, {
           getNode: () => node,
           exclude: promoted,
-          boundOnly: !!config.boundOnlyControls,
+          boundOnly: config.boundOnlyControls !== false,
           workflowKind: config.linkKind ?? null,
         }, paramsAnchor],
         [FooterSelectsV2, {
@@ -148,7 +151,7 @@ function makeGeneratorShell(config: GeneratorConfig) {
         specs.push([StageControlsV2, {
           getNode: () => node,
           controls: config.controls,
-          boundOnly: !!config.boundOnlyControls,
+          boundOnly: config.boundOnlyControls !== false,
           workflowKind: config.linkKind ?? null,
         }, controlsAnchor])
       }
@@ -264,8 +267,6 @@ const GENERATORS: Record<string, GeneratorConfig> = {
   'ComfyTV.Model3DStage': {
     preview: 'model', linkKind: 'model',
     refTypes: ['image', 'text', 'model'],
-    /** Only show a control when the linked workflow binds option:<name>. */
-    boundOnlyControls: true,
     controls: [
       { name: 'seed', control: 'number', labelKey: 'v2.ctl.seed' },
       { name: 'negative', control: 'textarea', labelKey: 'v2.ctl.negative', wide: true },

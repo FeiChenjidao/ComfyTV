@@ -56,11 +56,13 @@ class TestCapsMerge:
         assert caps["option_labels"]["option:guidance"] == "Guidance"
         assert caps["option_labels"]["option:duration_s"] == "Stage duration (s)"
 
-    def test_option_keys_empty_without_seeding(self, reset_db):
-        from ComfyTV.nodes.stages.common.caps import caps_payload
+    def test_option_keys_include_static_without_seeding(self, reset_db):
+        from ComfyTV.nodes.stages.common.caps import CAPS_BY_KIND, caps_payload
         caps = caps_payload()
-        assert caps["caps_by_kind"]["audio"]["option_keys"] == []
-        assert caps["option_labels"] == {}
+        assert set(caps["caps_by_kind"]["audio"]["option_keys"]) == set(
+            CAPS_BY_KIND["audio"]["option_keys"]
+        )
+        assert caps["option_labels"]["option:duration_s"] == "Stage duration (s)"
 
     def test_seeded_option_keys_match_static_vocabulary(self, reset_db):
         from ComfyTV import storage

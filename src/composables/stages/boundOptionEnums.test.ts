@@ -102,6 +102,31 @@ describe('enumsFromExposedWidgets', () => {
     expect(enums.mode).toEqual(['Regular', 'Fast', 'Extreme-High'])
     expect(enums.polygon_count).toEqual(['Default', '18K-Quad', '1M-Triangle'])
   })
+
+  it('includes any bound option:* COMBO, not only the whitelist', () => {
+    const enums = enumsFromExposedWidgets([
+      {
+        widget_name: 'foo.custom_quality',
+        stage_binding: 'option:custom_quality',
+        widget_type: 'COMBO',
+        widget_props: { values: ['low', 'high'] },
+      },
+    ])
+    expect(enums.custom_quality).toEqual(['low', 'high'])
+  })
+
+  it('maps aliased leaves (target_resolution / scale_factor) onto Stage scale', () => {
+    const enums = enumsFromExposedWidgets(
+      [{
+        widget_name: 'target_resolution',
+        stage_binding: null,
+        widget_type: 'COMBO',
+        widget_props: { values: ['2K', '4K', '8K'] },
+      }],
+      ['scale'],
+    )
+    expect(enums.scale).toEqual(['2K', '4K', '8K'])
+  })
 })
 
 describe('syncBoundOptionEnums', () => {
@@ -155,8 +180,8 @@ describe('syncBoundOptionEnums', () => {
 
     const node: any = {
       widgets: [
-        { name: 'aspect_ratio', value: '1:1', options: { values: [...ASPECT_RATIOS_DEFAULT] }, callback: vi.fn() },
-        { name: 'resolution', value: '1080P', options: { values: [...RESOLUTIONS] }, callback: vi.fn() },
+        { name: 'aspect_ratio', type: 'combo', value: '1:1', options: { values: [...ASPECT_RATIOS_DEFAULT] }, callback: vi.fn() },
+        { name: 'resolution', type: 'combo', value: '1080P', options: { values: [...RESOLUTIONS] }, callback: vi.fn() },
       ],
     }
 
@@ -169,7 +194,7 @@ describe('syncBoundOptionEnums', () => {
     expect(comboOptionsVersion.value).toBe(1)
   })
 
-  it('restores Stage defaults when the workflow has no matching COMBOs', async () => {
+  it('leaves Stage combo lists alone when the workflow has no matching COMBOs', async () => {
     vi.mocked(fetchWorkflowConfig).mockResolvedValueOnce({
       id: 1,
       exposed_widgets: [],
@@ -177,14 +202,37 @@ describe('syncBoundOptionEnums', () => {
 
     const node: any = {
       widgets: [
-        { name: 'aspect_ratio', value: 'auto', options: { values: ['auto', '1:1'] }, callback: vi.fn() },
-        { name: 'resolution', value: '2K', options: { values: ['1K', '2K'] }, callback: vi.fn() },
+        { name: 'aspect_ratio', type: 'combo', value: 'auto', options: { values: ['auto', '1:1'] }, callback: vi.fn() },
+        { name: 'resolution', type: 'combo', value: '2K', options: { values: ['1K', '2K'] }, callback: vi.fn() },
       ],
     }
 
     await syncBoundOptionEnums(node, 'image', 'Local SD')
-    expect(node.widgets[0].options.values).toEqual([...ASPECT_RATIOS_DEFAULT])
-    expect(node.widgets[1].options.values).toEqual([...RESOLUTIONS])
+    expect(node.widgets[0].options.values).toEqual(['auto', '1:1'])
+    expect(node.widgets[1].options.values).toEqual(['1K', '2K'])
+  })
+
+  it('syncs Stage scale from bound target_resolution (2K/4K/8K)', async () => {
+    vi.mocked(fetchWorkflowConfig).mockResolvedValue({
+      id: 3,
+      exposed_widgets: [{
+        node_id: '18',
+        widget_name: 'target_resolution',
+        stage_binding: 'option:scale',
+        widget_type: 'COMBO',
+        widget_props: { values: ['2K', '4K', '8K'] },
+      }],
+    } as any)
+
+    const node: any = {
+      widgets: [
+        { name: 'scale', type: 'combo', value: '2x', options: { values: ['2x', '4x'] }, callback: vi.fn() },
+      ],
+    }
+
+    await syncBoundOptionEnums(node, 'upscale', 'WaveSpeed')
+    expect(node.widgets[0].options.values).toEqual(['2K', '4K', '8K'])
+    expect(node.widgets[0].value).toBe('2K')
   })
 
   it('caches per kind/label until cleared', async () => {

@@ -2,6 +2,7 @@ import { useResizeObserver, useTimeoutFn } from '@vueuse/core'
 import { effectScope, watch, type EffectScope } from 'vue'
 
 import { app, type ComfyNode } from '@/lib/comfyApp'
+import { isPanelOnSelectEnabled, measurePanelStackHeight } from '@/v2/panelOnSelect'
 
 const RING_FADE_MS = 400
 
@@ -46,6 +47,25 @@ export function bindCardHeight(node: ComfyNode, opts: {
   const laidOut = () => card.offsetHeight > 0
   const measurable = () => laidOut() && flexible.offsetHeight > 0
   const chromeOf = () => card.offsetHeight - flexible.offsetHeight
+  // Panel-on-select uses display:none on the control stack while unselected; the
+  // preview flex-grows into that space. Treat the hidden stack as chrome so
+  // `wanted` stays the real preview height (avoids inflate-on-select / tab remount).
+  const effectiveChrome = () => {
+    let c = chromeOf()
+    if (isPanelOnSelectEnabled() && !anyNode.selected) {
+      const panelH = measurePanelStackHeight(card)
+      if (panelH > 0) c += panelH
+    }
+    return c
+  }
+  const effectiveWanted = () => {
+    let w = Math.max(min, flexible.offsetHeight)
+    if (isPanelOnSelectEnabled() && !anyNode.selected) {
+      const panelH = measurePanelStackHeight(card)
+      if (panelH > 0 && w > panelH) w -= panelH
+    }
+    return Math.max(min, w)
+  }
 
   let chrome = -1
   let applied = -1
@@ -59,9 +79,9 @@ export function bindCardHeight(node: ComfyNode, opts: {
   // server. Absorbing that into the preview is what flexbox would do and keeps a saved node at
   // the height it was saved at, so only take over once the user is demonstrably working here.
   const sample = () => {
-    chrome = chromeOf()
+    chrome = effectiveChrome()
     offset = card.offsetHeight - node.size[1]
-    wanted = Math.max(min, flexible.offsetHeight)
+    wanted = effectiveWanted()
     applied = node.size[1]
   }
 
@@ -74,7 +94,7 @@ export function bindCardHeight(node: ComfyNode, opts: {
   const apply = () => {
     goLive()
     if (!live || !laidOut()) return
-    chrome = chromeOf()
+    chrome = effectiveChrome()
     const h = chrome + wanted - offset
     applied = h
     if (Math.abs(h - node.size[1]) < 1) return
@@ -93,9 +113,9 @@ export function bindCardHeight(node: ComfyNode, opts: {
   opts.scope.run(() => {
     const onResize = () => {
       if (!laidOut()) return
-      if (!live) { chrome = chromeOf(); return }
+      if (!live) { chrome = effectiveChrome(); return }
       // chrome moved: we drive the node. chrome steady but the card moved: the user did.
-      if (chromeOf() !== chrome) apply()
+      if (effectiveChrome() !== chrome) apply()
       else if (measurable() && Math.abs(node.size[1] - applied) >= 1) sample()
     }
     useResizeObserver(card, onResize)

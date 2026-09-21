@@ -43,6 +43,15 @@ export function bindShellChrome(node: ComfyNode, opts: {
       scope, card, flexible: socketAnchor, min: opts.manageHeight.min,
     })
     anyNode.__comfytvSyncHeight = syncHeight
+    // LiteGraph uses getMinHeight as a floor. A fixed 420+ would re-inflate a
+    // user-shrunk card on tab remount; follow the live node height instead.
+    const shell = (node.widgets ?? []).find((w: any) => w?.name === 'v2_shell') as
+      | { options?: { getMinHeight?: () => number } }
+      | undefined
+    if (shell?.options) {
+      const floor = opts.manageHeight.min
+      shell.options.getMinHeight = () => Math.max(floor, Math.round(Number(node.size[1]) || floor))
+    }
   }
 
   const warnStrip = el('div', 'v2-warn')

@@ -139,6 +139,9 @@ export function useBindingWriter(
       newBinding === 'option:generate_audio'
     ) {
       cast = 'bool'
+    } else if (newBinding.startsWith('option:')) {
+      // Layer C: unknown option keys inherit cast from the bound widget.
+      cast = inferCast(w.widget_type)
     }
     const isUpstream = newBinding.startsWith('upstream_')
     w.stage_binding  = newBinding

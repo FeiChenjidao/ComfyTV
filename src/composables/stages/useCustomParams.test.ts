@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, nextTick } from 'vue'
 import { mount, type VueWrapper } from '@vue/test-utils'
 
+const boundKeysRef = vi.hoisted(() => ({ value: new Set<string>() }))
+
 const { fakeParamStore, getStageMeta } = vi.hoisted(() => {
   const fakeParamStore = {
     ensureHydrated: vi.fn(),
@@ -15,12 +17,20 @@ vi.mock('@/stores/stageParamStore', () => ({
   useStageParamStore: () => fakeParamStore,
 }))
 vi.mock('@/composables/stages/stageMeta', () => ({ getStageMeta }))
+vi.mock('@/composables/stages/useBoundOptionKeys', () => ({
+  useBoundOptionKeys: () => ({
+    keys: boundKeysRef,
+    isBound: (name: string) => boundKeysRef.value.has(name),
+    refresh: async () => {},
+  }),
+}))
 
 import {
   comboOptionsOf,
   defaultParamValue,
   parseParamItems,
   serializeParamItems,
+  syncBoundParamItems,
   useCustomParams,
 } from './useCustomParams'
 
@@ -62,6 +72,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   fakeParamStore.forKind.mockReturnValue(DEFS)
   getStageMeta.mockReturnValue(undefined)
+  boundKeysRef.value = new Set(['steps', 'note', 'mode'])
 })
 
 afterEach(() => {
@@ -105,21 +116,44 @@ describe('defaultParamValue / comboOptionsOf', () => {
   })
 })
 
-describe('useCustomParams — hydration + defs', () => {
-  it('hydrates the store and reads persisted items on mount', async () => {
+describe('syncBoundParamItems', () => {
+  it('attaches bound defs with defaults and drops unbound def keys', () => {
+    const next = syncBoundParamItems(
+      [{ key: 'steps', value: 20 }, { key: 'note', value: 'n' }],
+      new Set(['steps', 'mode']),
+      DEFS.filter(d => d.origin !== 0),
+    )
+    expect(next).toEqual([
+      { key: 'steps', value: 20 },
+      { key: 'mode', value: 'a' },
+    ])
+  })
+
+  it('keeps bound dynamic keys that have no def', () => {
+    const next = syncBoundParamItems(
+      [{ key: 'mystery', value: 9 }],
+      new Set(['mystery']),
+      DEFS.filter(d => d.origin !== 0),
+    )
+    expect(next).toEqual([{ key: 'mystery', value: 9 }])
+  })
+})
+
+describe('useCustomParams — hydration + bound attach', () => {
+  it('hydrates and auto-attaches bound defs', async () => {
+    boundKeysRef.value = new Set(['steps'])
     const node = makeNode([{ key: 'steps', value: 20 }, { key: 'ghost', value: 1 }])
     const api = await setup(node)
     expect(fakeParamStore.ensureHydrated).toHaveBeenCalled()
     expect(fakeParamStore.installWebSocketSync).toHaveBeenCalled()
-    expect(api.items.value).toEqual([{ key: 'steps', value: 20 }, { key: 'ghost', value: 1 }])
     expect(api.attached.value).toEqual([{ key: 'steps', value: 20 }])
-    expect(api.available.value.map((d: any) => d.key)).toEqual(['note', 'mode'])
+    expect(api.items.value.some(it => it.key === 'ghost')).toBe(false)
   })
 
   it('prefers the stage-meta workflow kind over the state kind', async () => {
     getStageMeta.mockReturnValue({ workflow_kind: 'special' })
     const api = await setup(makeNode(), 'image')
-    void api.available.value
+    void api.defs.value
     expect(fakeParamStore.forKind).toHaveBeenCalledWith('special')
   })
 
@@ -129,6 +163,7 @@ describe('useCustomParams — hydration + defs', () => {
   })
 
   it('re-reads items when the widget callback fires', async () => {
+    boundKeysRef.value = new Set(['note'])
     const node = makeNode([])
     const api = await setup(node)
     node.widgets[0].value = JSON.stringify({ items: [{ key: 'note', value: 'x' }] })
@@ -160,26 +195,23 @@ describe('useCustomParams — def helpers', () => {
   })
 })
 
-describe('useCustomParams — attach / detach / setVal', () => {
-  it('attach adds the default value once and persists', async () => {
-    const node = makeNode([])
-    const api = await setup(node)
-    api.menuOpen.value = true
-    api.attach(DEFS[2])
-    expect(api.menuOpen.value).toBe(false)
-    expect(api.items.value).toEqual([{ key: 'mode', value: 'a' }])
-    expect(node.widgets[0].value).toBe(JSON.stringify({ items: [{ key: 'mode', value: 'a' }] }))
-    api.attach(DEFS[2])
-    expect(api.items.value).toHaveLength(1)
-  })
-
-  it('setVal updates only the targeted key, detach removes it', async () => {
+describe('useCustomParams — setVal / ensureDynamic', () => {
+  it('setVal updates only the targeted key', async () => {
+    boundKeysRef.value = new Set(['steps', 'note'])
     const node = makeNode([{ key: 'steps', value: 20 }, { key: 'note', value: 'n' }])
     const api = await setup(node)
     api.setVal('steps', 33)
-    expect(api.items.value).toEqual([{ key: 'steps', value: 33 }, { key: 'note', value: 'n' }])
-    api.detach('note')
-    expect(api.items.value).toEqual([{ key: 'steps', value: 33 }])
-    expect(node.widgets[0].value).toBe(JSON.stringify({ items: [{ key: 'steps', value: 33 }] }))
+    expect(api.items.value.find(it => it.key === 'steps')?.value).toBe(33)
+    expect(api.items.value.find(it => it.key === 'note')?.value).toBe('n')
+  })
+
+  it('ensureDynamic adds a bound unknown key once', async () => {
+    boundKeysRef.value = new Set(['mystery'])
+    const node = makeNode([])
+    const api = await setup(node)
+    api.ensureDynamic('mystery', 'hi')
+    expect(api.items.value).toEqual([{ key: 'mystery', value: 'hi' }])
+    api.ensureDynamic('mystery', 'nope')
+    expect(api.items.value).toEqual([{ key: 'mystery', value: 'hi' }])
   })
 })

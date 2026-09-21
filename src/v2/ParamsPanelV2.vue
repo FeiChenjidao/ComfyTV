@@ -76,7 +76,7 @@ const props = withDefaults(defineProps<{
   boundOnly?: boolean
   workflowKind?: string | null
 }>(), {
-  boundOnly: false,
+  boundOnly: true,
   workflowKind: null,
 })
 

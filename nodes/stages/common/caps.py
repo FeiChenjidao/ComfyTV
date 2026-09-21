@@ -133,15 +133,22 @@ def builtin_option_rows() -> list[dict]:
 def caps_payload() -> dict:
     from .... import storage
 
+    # Static vocabulary is always available so sidebar bindings stay usable
+    # even before system StageParams are seeded (layer C / bound-only UI).
     by_kind: dict[str, dict] = {
         k: {
             "upstream_kinds": list(v["upstream_kinds"]),
-            "option_keys":    [],
+            "option_keys":    list(v["option_keys"]),
             "computed_keys":  list(v["computed_keys"]),
         }
         for k, v in CAPS_BY_KIND.items()
     }
     option_labels: dict[str, str] = {}
+    for kind, caps in CAPS_BY_KIND.items():
+        for okey in caps["option_keys"]:
+            key = okey.split(":", 1)[1] if okey.startswith("option:") else okey
+            label, _ = BUILTIN_OPTION_META.get(key, (key, "string"))
+            option_labels[okey] = label
 
     for p in storage.list_stage_params():
         kind = p["kind"]
