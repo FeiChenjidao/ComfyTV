@@ -71,6 +71,7 @@
       "selectNode": "Select node"
     },
     "addFromAssets": "From the asset library",
+    "addFromEagle": "From the Eagle library",
     "assetNotAttachable": "Images, video, audio, 3D models, and text files can be attached",
     "attachmentTooLarge": "{name} is larger than {limit}",
     "attachmentUploadFailed": "{name} could not be uploaded",

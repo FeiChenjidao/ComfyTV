@@ -3,14 +3,22 @@ import '../native/agentPanel.css'
 
 import { storeToRefs } from 'pinia'
 
+import { watch } from 'vue'
+
 import AssetPickerPopup from '@/components/stages/AssetPickerPopup.vue'
+import EaglePickerPopup from '@/components/stages/EaglePickerPopup.vue'
 import { assetPicker, closeAssetPicker } from '@agent/comfytv/assets'
+import { closeEaglePicker, eaglePicker, refreshEagleAvailability } from '@agent/comfytv/eagle'
 
 import DockedAgentPanel from '../native/components/agent/DockedAgentPanel.vue'
 import { useAgentPanelStore } from '../native/stores/agent/agentPanelStore'
 import ProviderBar from './ProviderBar.vue'
 
 const { enabled, isOpen, width } = storeToRefs(useAgentPanelStore())
+
+watch(isOpen, (open) => {
+  if (open) void refreshEagleAvailability()
+}, { immediate: true })
 </script>
 
 <template>
@@ -33,6 +41,18 @@ const { enabled, isOpen, width } = storeToRefs(useAgentPanelStore())
         @select="assetPicker.handlers.select"
         @deselect="assetPicker.handlers.deselect"
         @close="closeAssetPicker()"
+      />
+    </div>
+    <div
+      v-if="eaglePicker.open && eaglePicker.handlers"
+      class="comfytv-root ctv:absolute ctv:inset-x-4 ctv:bottom-40 ctv:z-30 ctv:max-h-[60%] ctv:overflow-y-auto"
+    >
+      <EaglePickerPopup
+        :added-ids="eaglePicker.handlers.addedIds()"
+        :media-types="['image', 'video', 'audio']"
+        @select="eaglePicker.handlers.select"
+        @deselect="eaglePicker.handlers.deselect"
+        @close="closeEaglePicker()"
       />
     </div>
   </div>

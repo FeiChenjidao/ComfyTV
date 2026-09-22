@@ -2,7 +2,7 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 var _a;
-import { bm as defineComponent, cx as useVModel, c7 as toRefs, cl as useForwardExpose, bP as openBlock, bd as createBlock, cE as withCtx, bZ as renderSlot, cb as unref, aj as Primitive, bf as createContext, co as useId, bX as ref, cB as watch, bG as nextTick, bM as onMounted, cj as useEventListener, bk as createVNode, bE as mergeProps, be as createCommentVNode, ai as Presence_default, ba as computed, bg as createElementBlock, bx as injectPopperContentContext, bJ as normalizeStyle, ci as useEmitAsProps, bI as normalizeProps, bq as guardReactiveProps, a6 as MenuItem_default, bt as hostStore, b2 as app, bS as parseNodeLocatorId, bu as hostVersion, bs as hostManager, bn as defineStore, cu as useStorage, c9 as toValue, b8 as clsx, bH as normalizeClass, b9 as cn, ct as useModel, cv as useTemplateRef, cF as withDirectives, cA as vModelText, bD as mergeModels, a$ as _export_sfc, aN as TooltipProvider_default, aO as TooltipRoot_default, aP as TooltipTrigger_default, bc as createBaseVNode, cH as withModifiers, aM as TooltipPortal_default, aL as TooltipContent_default, bj as createTextVNode, c4 as toDisplayString, cn as useI18n, M as Fragment, bY as renderList, y as DropdownMenuRoot_default, z as DropdownMenuTrigger_default, v as DropdownMenuPortal_default, u as DropdownMenuContent_default, bp as getCurrentScope, bN as onScopeDispose, av as Schema, bB as isNodeLocatorId, br as history, bC as keymap, bW as redo, ca as undo, b5 as baseKeymap, G as EditorView, D as DOMParser$1, aB as Slice, N as Fragment$1, b7 as closeHistory, q as Decoration, r as DecorationSet, aI as TextSelection, bL as onBeforeUnmount, F as EditorState, c0 as shallowRef, c2 as storeToRefs, ce as useAgentRunModeStore, cp as useId$1, b$ as resolveDirective, b6 as buildTooltipConfig, w as DropdownMenuRadioGroup_default, x as DropdownMenuRadioItem_default, b_ as reportError, bw as inject, bA as isMemoSame, cf as useClipboard, cC as watchDebounced, b1 as api, bU as reactiveOmit, cm as useForwardPropsEmits, aD as SliderRoot_default, aF as SliderTrack_default, aC as SliderRange_default, aE as SliderThumb_default, cs as useMediaControls, cD as whenever, c6 as toRef, bl as defineAsyncComponent, cr as useLocalStorage, cz as useWorkflowStore, c5 as toRaw, cd as useAgentPanelStore, l as DOMSerializer, cg as useClipboardItems, cG as withKeys, cq as useIntersectionObserver, bi as createSlots, aH as Teleport, bh as createNodeLocatorId, ch as useElementBounding, ck as useFloating, b4 as autoUpdate, L as FocusScope_default, bK as offset, c1 as shift, cy as useWindowSize, bv as i18n, a as AgentApiError, c8 as toTurnId, by as isAgentEvent, bQ as parseAgentWsEvent, cJ as zDisownedWorkflowError, cI as zAgentAdmissionError, A as AGENT_WS_EVENT_TYPES, cw as useTimestamp, bR as parseNodeId, bF as newChatRequests, b0 as agentBusy, bT as provide, bO as openAssetPicker, bz as isComfyTVAssetDrag, bo as droppedComfyTVAssets, cc as uploadToLibrary, c3 as toAttachment, b3 as assetIdOf, bb as createAgentRestClient, bV as readonly } from "./main-hcmMPtpz.mjs";
+import { bn as defineComponent, cC as useVModel, cc as toRefs, cq as useForwardExpose, bT as openBlock, be as createBlock, cJ as withCtx, c2 as renderSlot, cg as unref, aj as Primitive, bg as createContext, ct as useId, c0 as ref, cG as watch, bK as nextTick, bQ as onMounted, co as useEventListener, bl as createVNode, bI as mergeProps, bf as createCommentVNode, ai as Presence_default, bb as computed, bh as createElementBlock, bA as injectPopperContentContext, bN as normalizeStyle, cn as useEmitAsProps, bM as normalizeProps, bt as guardReactiveProps, a6 as MenuItem_default, bw as hostStore, b2 as app, bX as parseNodeLocatorId, bx as hostVersion, bv as hostManager, bo as defineStore, cz as useStorage, ce as toValue, b9 as clsx, bL as normalizeClass, ba as cn, cy as useModel, cA as useTemplateRef, cK as withDirectives, cF as vModelText, bH as mergeModels, a$ as _export_sfc, aN as TooltipProvider_default, aO as TooltipRoot_default, aP as TooltipTrigger_default, bd as createBaseVNode, cM as withModifiers, aM as TooltipPortal_default, aL as TooltipContent_default, bk as createTextVNode, c9 as toDisplayString, cs as useI18n, M as Fragment, c1 as renderList, y as DropdownMenuRoot_default, z as DropdownMenuTrigger_default, v as DropdownMenuPortal_default, u as DropdownMenuContent_default, bs as getCurrentScope, bR as onScopeDispose, av as Schema, bF as isNodeLocatorId, bu as history, bG as keymap, b$ as redo, cf as undo, b5 as baseKeymap, G as EditorView, D as DOMParser$1, aB as Slice, N as Fragment$1, b8 as closeHistory, q as Decoration, r as DecorationSet, aI as TextSelection, bP as onBeforeUnmount, F as EditorState, c5 as shallowRef, c7 as storeToRefs, cj as useAgentRunModeStore, cu as useId$1, c4 as resolveDirective, b6 as buildTooltipConfig, w as DropdownMenuRadioGroup_default, x as DropdownMenuRadioItem_default, c3 as reportError, bz as inject, bE as isMemoSame, ck as useClipboard, cH as watchDebounced, b1 as api, bZ as reactiveOmit, cr as useForwardPropsEmits, aD as SliderRoot_default, aF as SliderTrack_default, aC as SliderRange_default, aE as SliderThumb_default, cx as useMediaControls, cI as whenever, cb as toRef, bm as defineAsyncComponent, cw as useLocalStorage, cE as useWorkflowStore, ca as toRaw, ci as useAgentPanelStore, l as DOMSerializer, cl as useClipboardItems, cL as withKeys, cv as useIntersectionObserver, bj as createSlots, aH as Teleport, bi as createNodeLocatorId, cm as useElementBounding, cp as useFloating, b4 as autoUpdate, L as FocusScope_default, bO as offset, c6 as shift, cD as useWindowSize, by as i18n, a as AgentApiError, cd as toTurnId, bB as isAgentEvent, bV as parseAgentWsEvent, cO as zDisownedWorkflowError, cN as zAgentAdmissionError, A as AGENT_WS_EVENT_TYPES, cB as useTimestamp, bW as parseNodeId, bJ as newChatRequests, b0 as agentBusy, bY as provide, br as eagleAvailable, bU as openEaglePicker, b7 as closeEaglePicker, bS as openAssetPicker, bC as isComfyTVAssetDrag, bD as isEagleDrag, bq as droppedEagleAssets, bp as droppedComfyTVAssets, ch as uploadToLibrary, c8 as toAttachment, bc as createAgentRestClient, b3 as assetIdOf, b_ as readonly } from "./main-9l0c7koi.mjs";
 const [injectCollapsibleRootContext, provideCollapsibleRootContext] = /* @__PURE__ */ createContext("CollapsibleRoot");
 var CollapsibleRoot_vue_vue_type_script_setup_true_lang_default = /* @__PURE__ */ defineComponent({
   __name: "CollapsibleRoot",
@@ -4687,16 +4687,17 @@ const _hoisted_23 = { class: "ctv:flex ctv:items-center ctv:justify-between ctv:
 const _hoisted_24 = { class: "ctv:whitespace-nowrap" };
 const _hoisted_25 = { class: "ctv:whitespace-nowrap" };
 const _hoisted_26 = { class: "ctv:whitespace-nowrap" };
-const _hoisted_27 = { class: "ctv:flex ctv:items-center ctv:gap-1" };
-const _hoisted_28 = {
+const _hoisted_27 = { class: "ctv:whitespace-nowrap" };
+const _hoisted_28 = { class: "ctv:flex ctv:items-center ctv:gap-1" };
+const _hoisted_29 = {
   key: 0,
   class: "ctv:icon-[lucide--square] ctv:size-4"
 };
-const _hoisted_29 = {
+const _hoisted_30 = {
   key: 1,
   class: "ctv:icon-[lucide--arrow-up] ctv:size-4"
 };
-const _hoisted_30 = {
+const _hoisted_31 = {
   key: 0,
   class: "ctv:ml-1 ctv:opacity-50"
 };
@@ -4708,6 +4709,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
     submitting: { type: Boolean, default: false },
     canAttach: { type: Boolean, default: false },
     canOpenAssets: { type: Boolean, default: false },
+    canOpenEagle: { type: Boolean, default: false },
     selectionTags: { default: () => [] },
     nodeReferenceDisabledReason: {},
     availableWorkflows: { default: () => [] },
@@ -4717,7 +4719,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
     workflowSelecting: { type: Boolean, default: false },
     getMentionNodes: { type: Function, default: () => [] }
   },
-  emits: ["send", "stop", "attach", "openAssets", "selectNodes", "removeTag", "mentionPick", "requestWorkflowReferences", "removeWorkflowReference", "openReferenceWorkflow", "workflowTargetRequired"],
+  emits: ["send", "stop", "attach", "openAssets", "openEagle", "selectNodes", "removeTag", "mentionPick", "requestWorkflowReferences", "removeWorkflowReference", "openReferenceWorkflow", "workflowTargetRequired"],
   setup(__props, { expose: __expose, emit: __emit }) {
     const emit = __emit;
     const { t } = useI18n();
@@ -4930,7 +4932,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
           )
         }, [
           unref(assetDragActive) ? (openBlock(), createElementBlock("div", _hoisted_13, [
-            _cache[8] || (_cache[8] = createBaseVNode("span", {
+            _cache[9] || (_cache[9] = createBaseVNode("span", {
               "aria-hidden": "true",
               class: "ctv:icon-[lucide--upload] ctv:size-6 ctv:shrink-0 ctv:text-muted-foreground"
             }, null, -1)),
@@ -4943,7 +4945,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
                 class: "ctv:inline-flex ctv:h-7 ctv:items-center ctv:gap-1 ctv:rounded-lg ctv:border ctv:border-border-default ctv:bg-secondary-background-hover ctv:px-2.5 ctv:text-xs/4 ctv:font-medium ctv:text-base-foreground ctv:transition-colors ctv:hover:bg-tertiary-background-hover"
               }, [
                 createBaseVNode("span", _hoisted_15, [
-                  _cache[9] || (_cache[9] = createBaseVNode("span", { class: "ctv:icon-[comfy--node] ctv:size-3.5 ctv:text-muted-foreground" }, null, -1)),
+                  _cache[10] || (_cache[10] = createBaseVNode("span", { class: "ctv:icon-[comfy--node] ctv:size-3.5 ctv:text-muted-foreground" }, null, -1)),
                   createBaseVNode("span", _hoisted_16, toDisplayString(tag.title), 1),
                   unref(graphDupes).has(tag.title) || unref(tagDupes).has(tag.title) ? (openBlock(), createElementBlock("span", {
                     key: 0,
@@ -4958,7 +4960,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
                   class: "ctv:size-3.5",
                   onClick: withModifiers(($event) => emit("removeTag", unref(selectedNodeKey)(tag)), ["stop"])
                 }, {
-                  default: withCtx(() => [..._cache[10] || (_cache[10] = [
+                  default: withCtx(() => [..._cache[11] || (_cache[11] = [
                     createBaseVNode("span", { class: "ctv:icon-[lucide--x] ctv:size-3.5 ctv:shrink-0" }, null, -1)
                   ])]),
                   _: 1
@@ -4986,7 +4988,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
           ])) : createCommentVNode("", true),
           createBaseVNode("div", _hoisted_18, [
             __props.workflowSelecting ? (openBlock(), createElementBlock("div", _hoisted_19, [
-              _cache[11] || (_cache[11] = createBaseVNode("span", { class: "ctv:icon-[lucide--loader-circle] ctv:size-3 ctv:animate-spin" }, null, -1)),
+              _cache[12] || (_cache[12] = createBaseVNode("span", { class: "ctv:icon-[lucide--loader-circle] ctv:size-3 ctv:animate-spin" }, null, -1)),
               createTextVNode(" " + toDisplayString(unref(t)("agent.savingWorkflow")), 1)
             ])) : createCommentVNode("", true),
             createBaseVNode("div", _hoisted_20, [
@@ -5030,7 +5032,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
                       onClick: onSelectNodes
                     }, {
                       default: withCtx(() => [
-                        _cache[12] || (_cache[12] = createBaseVNode("span", { class: "ctv:icon-[lucide--mouse-pointer-click] ctv:size-3.5 ctv:shrink-0" }, null, -1)),
+                        _cache[13] || (_cache[13] = createBaseVNode("span", { class: "ctv:icon-[lucide--mouse-pointer-click] ctv:size-3.5 ctv:shrink-0" }, null, -1)),
                         createBaseVNode("span", _hoisted_22, toDisplayString(placeholderHint.value.mentionNodes), 1)
                       ]),
                       _: 1
@@ -5044,7 +5046,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
           createBaseVNode("div", _hoisted_23, [
             createVNode(unref(DropdownMenuRoot_default), {
               open: addMenuOpen.value,
-              "onUpdate:open": _cache[7] || (_cache[7] = ($event) => addMenuOpen.value = $event)
+              "onUpdate:open": _cache[8] || (_cache[8] = ($event) => addMenuOpen.value = $event)
             }, {
               default: withCtx(() => [
                 createVNode(unref(DropdownMenuTrigger_default), { "as-child": "" }, {
@@ -5054,7 +5056,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
                       size: "icon",
                       "aria-label": unref(t)("agent.addToPrompt")
                     }, {
-                      default: withCtx(() => [..._cache[13] || (_cache[13] = [
+                      default: withCtx(() => [..._cache[14] || (_cache[14] = [
                         createBaseVNode("span", { class: "ctv:icon-[lucide--plus] ctv:size-4" }, null, -1)
                       ])]),
                       _: 1
@@ -5093,7 +5095,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
                               onSelect: onSelectNodes
                             }, {
                               default: withCtx(() => [
-                                _cache[14] || (_cache[14] = createBaseVNode("span", { class: "ctv:icon-[comfy--node] ctv:size-4 ctv:shrink-0" }, null, -1)),
+                                _cache[15] || (_cache[15] = createBaseVNode("span", { class: "ctv:icon-[comfy--node] ctv:size-4 ctv:shrink-0" }, null, -1)),
                                 createBaseVNode("span", _hoisted_24, toDisplayString(unref(t)("agent.nodes")), 1)
                               ]),
                               _: 1
@@ -5107,23 +5109,34 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
                           onSelect: _cache[5] || (_cache[5] = ($event) => emit("openAssets"))
                         }, {
                           default: withCtx(() => [
-                            _cache[15] || (_cache[15] = createBaseVNode("span", { class: "ctv:icon-[comfy--image-ai-edit] ctv:size-4 ctv:shrink-0" }, null, -1)),
+                            _cache[16] || (_cache[16] = createBaseVNode("span", { class: "ctv:icon-[comfy--image-ai-edit] ctv:size-4 ctv:shrink-0" }, null, -1)),
                             createBaseVNode("span", _hoisted_25, toDisplayString(unref(t)("agent.addFromAssets")), 1)
                           ]),
                           _: 1
                         })) : createCommentVNode("", true),
-                        __props.canAttach && __props.canOpenAssets ? (openBlock(), createBlock(unref(DropdownMenuSeparator_default), {
+                        __props.canOpenEagle ? (openBlock(), createBlock(unref(DropdownMenuItem_default), {
                           key: 1,
+                          class: "ctv:box-border ctv:flex ctv:h-7 ctv:w-full ctv:cursor-pointer ctv:items-center ctv:gap-1.5 ctv:rounded-lg ctv:px-1.5 ctv:py-1 ctv:text-[14px]/5 ctv:font-normal ctv:text-base-foreground ctv:outline-none ctv:data-highlighted:bg-secondary-background-hover",
+                          onSelect: _cache[6] || (_cache[6] = ($event) => emit("openEagle"))
+                        }, {
+                          default: withCtx(() => [
+                            _cache[17] || (_cache[17] = createBaseVNode("span", { class: "ctv:icon-[lucide--bird] ctv:size-4 ctv:shrink-0" }, null, -1)),
+                            createBaseVNode("span", _hoisted_26, toDisplayString(unref(t)("agent.addFromEagle")), 1)
+                          ]),
+                          _: 1
+                        })) : createCommentVNode("", true),
+                        __props.canAttach && (__props.canOpenAssets || __props.canOpenEagle) ? (openBlock(), createBlock(unref(DropdownMenuSeparator_default), {
+                          key: 2,
                           class: "ctv:mt-0 ctv:mb-px ctv:h-px ctv:bg-border-subtle"
                         })) : createCommentVNode("", true),
                         __props.canAttach ? (openBlock(), createBlock(unref(DropdownMenuItem_default), {
-                          key: 2,
+                          key: 3,
                           class: "ctv:box-border ctv:flex ctv:h-7 ctv:w-full ctv:cursor-pointer ctv:items-center ctv:gap-1.5 ctv:rounded-lg ctv:px-1.5 ctv:py-1 ctv:text-[14px]/5 ctv:font-normal ctv:text-base-foreground ctv:outline-none ctv:data-highlighted:bg-secondary-background-hover",
-                          onSelect: _cache[6] || (_cache[6] = ($event) => emit("attach"))
+                          onSelect: _cache[7] || (_cache[7] = ($event) => emit("attach"))
                         }, {
                           default: withCtx(() => [
-                            _cache[16] || (_cache[16] = createBaseVNode("i", { class: "ctv:icon-[lucide--paperclip] ctv:size-4 ctv:shrink-0" }, null, -1)),
-                            createBaseVNode("span", _hoisted_26, toDisplayString(unref(t)("agent.attachFiles")), 1)
+                            _cache[18] || (_cache[18] = createBaseVNode("i", { class: "ctv:icon-[lucide--paperclip] ctv:size-4 ctv:shrink-0" }, null, -1)),
+                            createBaseVNode("span", _hoisted_27, toDisplayString(unref(t)("agent.attachFiles")), 1)
                           ]),
                           _: 1
                         })) : createCommentVNode("", true)
@@ -5136,7 +5149,7 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
               ]),
               _: 1
             }, 8, ["open"]),
-            createBaseVNode("div", _hoisted_27, [
+            createBaseVNode("div", _hoisted_28, [
               createVNode(_sfc_main$o),
               createVNode(_sfc_main$s, {
                 label: primaryActionTooltip.value,
@@ -5154,14 +5167,14 @@ const _sfc_main$n = /* @__PURE__ */ defineComponent({
                     onClick: onPrimaryAction
                   }, {
                     default: withCtx(() => [
-                      running.value ? (openBlock(), createElementBlock("i", _hoisted_28)) : (openBlock(), createElementBlock("i", _hoisted_29))
+                      running.value ? (openBlock(), createElementBlock("i", _hoisted_29)) : (openBlock(), createElementBlock("i", _hoisted_30))
                     ]),
                     _: 1
                   }, 8, ["variant", "aria-label", "disabled"])
                 ]),
                 content: withCtx(() => [
                   createTextVNode(toDisplayString(primaryActionTooltip.value) + " ", 1),
-                  primaryActionShortcut.value ? (openBlock(), createElementBlock("span", _hoisted_30, toDisplayString(primaryActionShortcut.value), 1)) : createCommentVNode("", true)
+                  primaryActionShortcut.value ? (openBlock(), createElementBlock("span", _hoisted_31, toDisplayString(primaryActionShortcut.value), 1)) : createCommentVNode("", true)
                 ]),
                 _: 1
               }, 8, ["label"])
@@ -7411,10 +7424,10 @@ const _sfc_main$g = /* @__PURE__ */ defineComponent({
       { immediate: true }
     );
     const Load3dViewerContent = defineAsyncComponent(
-      () => import("./Load3dViewerContent-BH79VKC9.mjs")
+      () => import("./Load3dViewerContent-BfD-Ijjd.mjs")
     );
     const MediaLightbox = defineAsyncComponent(
-      () => import("./MediaLightbox-BZ2SBaRg.mjs")
+      () => import("./MediaLightbox-CTJCweuL.mjs")
     );
     function refreshModelThumbnail(asset, retry = true) {
       if (!isAssetPreviewSupported() || modelThumbnails.value[asset.url]) return;
@@ -7622,7 +7635,7 @@ const _sfc_main$f = /* @__PURE__ */ defineComponent({
       return out;
     });
     const MediaLightbox = defineAsyncComponent(
-      () => import("./MediaLightbox-BZ2SBaRg.mjs")
+      () => import("./MediaLightbox-CTJCweuL.mjs")
     );
     const proseItems = ref([]);
     const proseIndex = ref(-1);
@@ -9092,6 +9105,7 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
     submitting: { type: Boolean, default: false },
     canAttach: { type: Boolean, default: false },
     canOpenAssets: { type: Boolean, default: false },
+    canOpenEagle: { type: Boolean, default: false },
     isMaximized: { type: Boolean, default: false },
     selectionTags: { default: () => [] },
     nodeReferenceDisabledReason: {},
@@ -9113,7 +9127,7 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
     editableTurnId: { default: null },
     answeringAskIds: { default: () => /* @__PURE__ */ new Set() }
   },
-  emits: ["send", "stop", "attach", "openAssets", "selectNodes", "removeTag", "mentionPick", "requestWorkflowReferences", "removeWorkflowReference", "feedback", "paywallAction", "newChat", "toggleSize", "close", "openHistory", "selectHistory", "deleteHistory", "copyHistory", "renameHistory", "renameChat", "answerAsk", "openWorkflow", "openReferenceWorkflow"],
+  emits: ["send", "stop", "attach", "openAssets", "openEagle", "selectNodes", "removeTag", "mentionPick", "requestWorkflowReferences", "removeWorkflowReference", "feedback", "paywallAction", "newChat", "toggleSize", "close", "openHistory", "selectHistory", "deleteHistory", "copyHistory", "renameHistory", "renameChat", "answerAsk", "openWorkflow", "openReferenceWorkflow"],
   setup(__props, { expose: __expose, emit: __emit }) {
     const emit = __emit;
     const showHistory = ref(false);
@@ -9224,7 +9238,7 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
               class: "ctv:size-6 ctv:shrink-0",
               onClick: onOpenHistory
             }, {
-              default: withCtx(() => [..._cache[23] || (_cache[23] = [
+              default: withCtx(() => [..._cache[24] || (_cache[24] = [
                 createBaseVNode("span", { class: "ctv:icon-[lucide--history] ctv:size-4 ctv:shrink-0" }, null, -1)
               ])]),
               _: 1
@@ -9278,7 +9292,7 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
                         "aria-label": unref(t)("agent.chatOptions"),
                         class: "ctv:size-6 ctv:shrink-0"
                       }, {
-                        default: withCtx(() => [..._cache[24] || (_cache[24] = [
+                        default: withCtx(() => [..._cache[25] || (_cache[25] = [
                           createBaseVNode("span", { class: "ctv:icon-[lucide--chevron-down] ctv:size-3" }, null, -1)
                         ])]),
                         _: 1
@@ -9307,7 +9321,7 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
                             onSelect: startRename
                           }, {
                             default: withCtx(() => [
-                              _cache[25] || (_cache[25] = createBaseVNode("span", { class: "ctv:icon-[lucide--pencil] ctv:size-4 ctv:shrink-0" }, null, -1)),
+                              _cache[26] || (_cache[26] = createBaseVNode("span", { class: "ctv:icon-[lucide--pencil] ctv:size-4 ctv:shrink-0" }, null, -1)),
                               createBaseVNode("span", _hoisted_5$1, toDisplayString(unref(t)("g.rename")), 1)
                             ]),
                             _: 1
@@ -9318,7 +9332,7 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
                             onSelect: onDeleteChat
                           }, {
                             default: withCtx(() => [
-                              _cache[26] || (_cache[26] = createBaseVNode("span", { class: "ctv:icon-[lucide--trash-2] ctv:size-4 ctv:shrink-0" }, null, -1)),
+                              _cache[27] || (_cache[27] = createBaseVNode("span", { class: "ctv:icon-[lucide--trash-2] ctv:size-4 ctv:shrink-0" }, null, -1)),
                               createBaseVNode("span", _hoisted_6$1, toDisplayString(unref(t)("g.delete")), 1)
                             ]),
                             _: 1
@@ -9371,6 +9385,7 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
                 submitting: __props.submitting,
                 "can-attach": __props.canAttach,
                 "can-open-assets": __props.canOpenAssets,
+                "can-open-eagle": __props.canOpenEagle,
                 "selection-tags": __props.selectionTags,
                 "node-reference-disabled-reason": __props.nodeReferenceDisabledReason,
                 "select-workflow-reference": __props.selectWorkflowReference,
@@ -9383,14 +9398,15 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
                 onStop: _cache[14] || (_cache[14] = ($event) => emit("stop")),
                 onAttach: _cache[15] || (_cache[15] = ($event) => emit("attach")),
                 onOpenAssets: _cache[16] || (_cache[16] = ($event) => emit("openAssets")),
-                onSelectNodes: _cache[17] || (_cache[17] = ($event) => emit("selectNodes")),
-                onRemoveTag: _cache[18] || (_cache[18] = ($event) => emit("removeTag", $event)),
-                onMentionPick: _cache[19] || (_cache[19] = ($event) => emit("mentionPick", $event)),
-                onRequestWorkflowReferences: _cache[20] || (_cache[20] = ($event) => emit("requestWorkflowReferences")),
-                onRemoveWorkflowReference: _cache[21] || (_cache[21] = ($event) => emit("removeWorkflowReference", $event)),
-                onOpenReferenceWorkflow: _cache[22] || (_cache[22] = (workflowId, workflowName) => emit("openReferenceWorkflow", workflowId, workflowName)),
+                onOpenEagle: _cache[17] || (_cache[17] = ($event) => emit("openEagle")),
+                onSelectNodes: _cache[18] || (_cache[18] = ($event) => emit("selectNodes")),
+                onRemoveTag: _cache[19] || (_cache[19] = ($event) => emit("removeTag", $event)),
+                onMentionPick: _cache[20] || (_cache[20] = ($event) => emit("mentionPick", $event)),
+                onRequestWorkflowReferences: _cache[21] || (_cache[21] = ($event) => emit("requestWorkflowReferences")),
+                onRemoveWorkflowReference: _cache[22] || (_cache[22] = ($event) => emit("removeWorkflowReference", $event)),
+                onOpenReferenceWorkflow: _cache[23] || (_cache[23] = (workflowId, workflowName) => emit("openReferenceWorkflow", workflowId, workflowName)),
                 onWorkflowTargetRequired
-              }, null, 8, ["streaming", "submitting", "can-attach", "can-open-assets", "selection-tags", "node-reference-disabled-reason", "select-workflow-reference", "available-workflows", "editable-workflow-id", "has-workflow-target", "workflow-selecting", "get-mention-nodes"]),
+              }, null, 8, ["streaming", "submitting", "can-attach", "can-open-assets", "can-open-eagle", "selection-tags", "node-reference-disabled-reason", "select-workflow-reference", "available-workflows", "editable-workflow-id", "has-workflow-target", "workflow-selecting", "get-mention-nodes"]),
               createVNode(AgentFeedbackCaption)
             ])
           ])
@@ -12173,13 +12189,26 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       exitNodeSelectionMode();
       (_a3 = fileInput.value) == null ? void 0 : _a3.click();
     }
+    const attachedAssetIds = () => composerStore.attachments.flatMap((item) => {
+      const id = assetIdOf(item.ref);
+      return id === null ? [] : [id];
+    });
+    function onOpenEagle() {
+      exitNodeSelectionMode();
+      openEaglePicker({
+        addedIds: attachedAssetIds,
+        select: (asset) => {
+          var _a3;
+          return (_a3 = panelRef.value) == null ? void 0 : _a3.addAttachment(toAttachment(asset));
+        },
+        deselect: (asset) => composerStore.removeAttachment(toAttachment(asset).id)
+      });
+    }
     function onOpenAssets() {
       exitNodeSelectionMode();
+      closeEaglePicker();
       openAssetPicker({
-        addedIds: () => composerStore.attachments.flatMap((item) => {
-          const id = assetIdOf(item.ref);
-          return id === null ? [] : [id];
-        }),
+        addedIds: attachedAssetIds,
         select: (asset) => {
           var _a3;
           return (_a3 = panelRef.value) == null ? void 0 : _a3.addAttachment(toAttachment(asset));
@@ -12209,7 +12238,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     }
     function isAssetDrag(event) {
       var _a3;
-      return (((_a3 = event.dataTransfer) == null ? void 0 : _a3.types) ?? []).includes(MIME_ASSET_INFO) || isComfyTVAssetDrag(event.dataTransfer);
+      return (((_a3 = event.dataTransfer) == null ? void 0 : _a3.types) ?? []).includes(MIME_ASSET_INFO) || isComfyTVAssetDrag(event.dataTransfer) || isEagleDrag(event.dataTransfer);
     }
     function isAttachableDrag(event) {
       var _a3;
@@ -12230,10 +12259,15 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       if (assetDragDepth === 0) assetDragActive.value = false;
     }
     async function attachDroppedAsset(event) {
-      var _a3, _b;
+      var _a3, _b, _c;
+      if (event.dataTransfer && isEagleDrag(event.dataTransfer)) {
+        for (const item of await droppedEagleAssets(event.dataTransfer))
+          (_a3 = panelRef.value) == null ? void 0 : _a3.addAttachment(item);
+        return;
+      }
       if (event.dataTransfer && isComfyTVAssetDrag(event.dataTransfer)) {
         for (const item of droppedComfyTVAssets(event.dataTransfer))
-          (_a3 = panelRef.value) == null ? void 0 : _a3.addAttachment(item);
+          (_b = panelRef.value) == null ? void 0 : _b.addAttachment(item);
         return;
       }
       const asset = event.dataTransfer && getDroppedAsset(event.dataTransfer);
@@ -12246,7 +12280,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
         return;
       }
       if (asset.ref && asset.kind !== "other") {
-        (_b = panelRef.value) == null ? void 0 : _b.addAttachment({
+        (_c = panelRef.value) == null ? void 0 : _c.addAttachment({
           id: `asset:${asset.ref}`,
           name: asset.name,
           ref: asset.ref,
@@ -12318,6 +12352,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             submitting: isSending.value || unref(status) === "thinking",
             "can-attach": true,
             "can-open-assets": !unref(isBuilderMode2),
+            "can-open-eagle": !unref(isBuilderMode2) && unref(eagleAvailable),
             "is-maximized": unref(agentPanelStore).isMaximized,
             "history-groups": unref(history2).grouped,
             "session-id": unref(threadId),
@@ -12340,6 +12375,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             onStop,
             onAttach,
             onOpenAssets,
+            onOpenEagle,
             onSelectNodes,
             onRemoveTag: onRemoveSelectionTag,
             onMentionPick,
@@ -12359,7 +12395,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             onRenameHistory,
             onRenameChat,
             onCopyHistory: onCopyMarkdown
-          }, null, 8, ["entries", "editable-turn-id", "answering-ask-ids", "user-name", "streaming", "submitting", "can-open-assets", "is-maximized", "history-groups", "session-id", "custom-title", "selection-tags", "node-reference-disabled-reason", "select-workflow-reference", "saving-reference", "editable-workflow-id", "active-tab", "workflow-tabs", "visible-tab-path", "selecting-tab-path", "select-tab", "workflow-detached", "paywall-presentation", "onSend", "onRequestWorkflowReferences", "onRemoveWorkflowReference", "onAnswerAsk"]),
+          }, null, 8, ["entries", "editable-turn-id", "answering-ask-ids", "user-name", "streaming", "submitting", "can-open-assets", "can-open-eagle", "is-maximized", "history-groups", "session-id", "custom-title", "selection-tags", "node-reference-disabled-reason", "select-workflow-reference", "saving-reference", "editable-workflow-id", "active-tab", "workflow-tabs", "visible-tab-path", "selecting-tab-path", "select-tab", "workflow-detached", "paywall-presentation", "onSend", "onRequestWorkflowReferences", "onRemoveWorkflowReference", "onAnswerAsk"]),
           unref(consentAccepted) && onboardingKey.value && !unref(canvasStore).linearMode && unref(activeTour) === null ? (openBlock(), createBlock(_sfc_main$1, {
             key: 0,
             steps: coachSteps.value,
@@ -12373,4 +12409,4 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
 export {
   _sfc_main as default
 };
-//# sourceMappingURL=AgentPanelRoot-CuyYf87F.mjs.map
+//# sourceMappingURL=AgentPanelRoot-CUXrf351.mjs.map

@@ -74,7 +74,9 @@ def panel_root(s):
     s = replace_once(s, "import { app } from '@/scripts/app'\n",
                      "import { app } from '@/scripts/app'\n"
                      "import {\n  assetIdOf,\n  droppedComfyTVAssets,\n  isComfyTVAssetDrag,\n"
-                     "  openAssetPicker,\n  toAttachment,\n  uploadToLibrary\n} from '@/comfytv/assets'\n")
+                     "  openAssetPicker,\n  toAttachment,\n  uploadToLibrary\n} from '@/comfytv/assets'\n"
+                     "import {\n  closeEaglePicker,\n  droppedEagleAssets,\n  eagleAvailable,\n"
+                     "  isEagleDrag,\n  openEaglePicker\n} from '@/comfytv/eagle'\n")
     s = replace_once(
         s,
         "  upload: async (file) => {\n"
@@ -96,14 +98,26 @@ def panel_root(s):
         "  exitNodeSelectionMode()\n"
         "  sidebarTabStore.activeSidebarTabId = 'assets'\n"
         "}\n",
+        "const attachedAssetIds = (): number[] =>\n"
+        "  composerStore.attachments.flatMap((item) => {\n"
+        "    const id = assetIdOf(item.ref)\n"
+        "    return id === null ? [] : [id]\n"
+        "  })\n"
+        "\n"
+        "function onOpenEagle(): void {\n"
+        "  exitNodeSelectionMode()\n"
+        "  openEaglePicker({\n"
+        "    addedIds: attachedAssetIds,\n"
+        "    select: (asset) => panelRef.value?.addAttachment(toAttachment(asset)),\n"
+        "    deselect: (asset) => composerStore.removeAttachment(toAttachment(asset).id)\n"
+        "  })\n"
+        "}\n"
+        "\n"
         "function onOpenAssets(): void {\n"
         "  exitNodeSelectionMode()\n"
+        "  closeEaglePicker()\n"
         "  openAssetPicker({\n"
-        "    addedIds: () =>\n"
-        "      composerStore.attachments.flatMap((item) => {\n"
-        "        const id = assetIdOf(item.ref)\n"
-        "        return id === null ? [] : [id]\n"
-        "      }),\n"
+        "    addedIds: attachedAssetIds,\n"
         "    select: (asset) => panelRef.value?.addAttachment(toAttachment(asset)),\n"
         "    deselect: (asset) => composerStore.removeAttachment(toAttachment(asset).id)\n"
         "  })\n"
@@ -113,24 +127,74 @@ def panel_root(s):
         "  return (event.dataTransfer?.types ?? []).includes(MIME_ASSET_INFO)\n",
         "  return (\n"
         "    (event.dataTransfer?.types ?? []).includes(MIME_ASSET_INFO) ||\n"
-        "    isComfyTVAssetDrag(event.dataTransfer)\n"
+        "    isComfyTVAssetDrag(event.dataTransfer) ||\n"
+        "    isEagleDrag(event.dataTransfer)\n"
         "  )\n")
     s = replace_once(
         s,
         "async function attachDroppedAsset(event: DragEvent): Promise<void> {\n",
         "async function attachDroppedAsset(event: DragEvent): Promise<void> {\n"
+        "  if (event.dataTransfer && isEagleDrag(event.dataTransfer)) {\n"
+        "    for (const item of await droppedEagleAssets(event.dataTransfer))\n"
+        "      panelRef.value?.addAttachment(item)\n"
+        "    return\n"
+        "  }\n"
         "  if (event.dataTransfer && isComfyTVAssetDrag(event.dataTransfer)) {\n"
         "    for (const item of droppedComfyTVAssets(event.dataTransfer))\n"
         "      panelRef.value?.addAttachment(item)\n"
         "    return\n"
         "  }\n")
+    s = replace_once(
+        s,
+        '      :can-open-assets="!isBuilderMode"\n',
+        '      :can-open-assets="!isBuilderMode"\n'
+        '      :can-open-eagle="!isBuilderMode && eagleAvailable"\n')
+    s = replace_once(
+        s,
+        '      @open-assets="onOpenAssets"\n',
+        '      @open-assets="onOpenAssets"\n'
+        '      @open-eagle="onOpenEagle"\n')
     assert "crdt/" not in s and "useAgentCrdtFollower" not in s, "crdt residue"
     return s
 
 
+EAGLE_MENU_ITEM = (
+    "              <DropdownMenuItem\n"
+    '                v-if="canOpenEagle"\n'
+    '                class="ctv:box-border ctv:flex ctv:h-7 ctv:w-full ctv:cursor-pointer'
+    " ctv:items-center ctv:gap-1.5 ctv:rounded-lg ctv:px-1.5 ctv:py-1 ctv:text-[14px]/5"
+    " ctv:font-normal ctv:text-base-foreground ctv:outline-none"
+    ' ctv:data-highlighted:bg-secondary-background-hover"\n'
+    "                @select=\"emit('openEagle')\"\n"
+    "              >\n"
+    '                <span class="ctv:icon-[lucide--bird] ctv:size-4 ctv:shrink-0" />\n'
+    '                <span class="ctv:whitespace-nowrap">\n'
+    "                  {{ t('agent.addFromEagle') }}\n"
+    "                </span>\n"
+    "              </DropdownMenuItem>\n"
+)
+
+
+def eagle_prop(s):
+    s = replace_once(s, "  canOpenAssets = false,\n",
+                     "  canOpenAssets = false,\n  canOpenEagle = false,\n")
+    s = replace_once(s, "  canOpenAssets?: boolean\n",
+                     "  canOpenAssets?: boolean\n  canOpenEagle?: boolean\n")
+    return replace_once(s, "  openAssets: []\n", "  openAssets: []\n  openEagle: []\n")
+
+
 def composer(s):
-    return cut(s, "              <DropdownMenuSub\n                v-model:open=\"workflowSubmenuOpen\"",
-               "              </DropdownMenuSub>\n")
+    s = cut(s, "              <DropdownMenuSub\n                v-model:open=\"workflowSubmenuOpen\"",
+            "              </DropdownMenuSub>\n")
+    s = eagle_prop(s)
+    s = replace_once(
+        s,
+        "              <DropdownMenuSeparator\n"
+        '                v-if="canAttach && canOpenAssets"\n',
+        EAGLE_MENU_ITEM
+        + "              <DropdownMenuSeparator\n"
+        '                v-if="canAttach && (canOpenAssets || canOpenEagle)"\n')
+    return s
 
 
 def transcript(s):
@@ -196,6 +260,12 @@ def workflow_selection(s):
 
 
 def agent_panel(s):
+    s = eagle_prop(s)
+    s = replace_once(s, "            :can-open-assets\n",
+                     "            :can-open-assets\n            :can-open-eagle\n")
+    s = replace_once(s, "            @open-assets=\"emit('openAssets')\"\n",
+                     "            @open-assets=\"emit('openAssets')\"\n"
+                     "            @open-eagle=\"emit('openEagle')\"\n")
     s = cut(s, "          <RunNoticeBanner\n", "/>\n")
     s = cut(s, "            <template #header>\n", "            </template>\n")
     s = replace_once(s, "import RunNoticeBanner from './RunNoticeBanner.vue'\n", "")

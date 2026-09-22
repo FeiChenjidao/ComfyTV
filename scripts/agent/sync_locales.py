@@ -23,6 +23,7 @@ OVERRIDES = {
         "zh": "描述想法，拖入媒体资源和文件，或\n提及节点",
     },
     "agent.addFromAssets": {"en": "From the asset library", "zh": "从资产库选择"},
+    "agent.addFromEagle": {"en": "From the Eagle library", "zh": "从 Eagle 库选择"},
     "agent.attachFiles": {"en": "Upload to the asset library", "zh": "上传到资产库"},
     "agent.suggestedPrompts": {
         "en": [

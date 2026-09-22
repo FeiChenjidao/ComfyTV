@@ -43,6 +43,13 @@ import {
   toAttachment,
   uploadToLibrary
 } from '@agent/comfytv/assets'
+import {
+  closeEaglePicker,
+  droppedEagleAssets,
+  eagleAvailable,
+  isEagleDrag,
+  openEaglePicker
+} from '@agent/comfytv/eagle'
 import { agentBusy, newChatRequests } from '@agent/comfytv/actions'
 import type { ComfyWorkflowJSON } from '@agent/platform/workflow/validation/schemas/workflowSchema'
 import { blankGraph } from '@agent/scripts/defaultGraph'
@@ -980,14 +987,26 @@ function onAttach(): void {
   fileInput.value?.click()
 }
 
+const attachedAssetIds = (): number[] =>
+  composerStore.attachments.flatMap((item) => {
+    const id = assetIdOf(item.ref)
+    return id === null ? [] : [id]
+  })
+
+function onOpenEagle(): void {
+  exitNodeSelectionMode()
+  openEaglePicker({
+    addedIds: attachedAssetIds,
+    select: (asset) => panelRef.value?.addAttachment(toAttachment(asset)),
+    deselect: (asset) => composerStore.removeAttachment(toAttachment(asset).id)
+  })
+}
+
 function onOpenAssets(): void {
   exitNodeSelectionMode()
+  closeEaglePicker()
   openAssetPicker({
-    addedIds: () =>
-      composerStore.attachments.flatMap((item) => {
-        const id = assetIdOf(item.ref)
-        return id === null ? [] : [id]
-      }),
+    addedIds: attachedAssetIds,
     select: (asset) => panelRef.value?.addAttachment(toAttachment(asset)),
     deselect: (asset) => composerStore.removeAttachment(toAttachment(asset).id)
   })
@@ -1023,7 +1042,8 @@ function isAssetDrag(event: DragEvent): boolean {
   // cards, which always carry the asset-info payload.
   return (
     (event.dataTransfer?.types ?? []).includes(MIME_ASSET_INFO) ||
-    isComfyTVAssetDrag(event.dataTransfer)
+    isComfyTVAssetDrag(event.dataTransfer) ||
+    isEagleDrag(event.dataTransfer)
   )
 }
 
@@ -1051,6 +1071,11 @@ function onPanelDragLeave(): void {
 }
 
 async function attachDroppedAsset(event: DragEvent): Promise<void> {
+  if (event.dataTransfer && isEagleDrag(event.dataTransfer)) {
+    for (const item of await droppedEagleAssets(event.dataTransfer))
+      panelRef.value?.addAttachment(item)
+    return
+  }
   if (event.dataTransfer && isComfyTVAssetDrag(event.dataTransfer)) {
     for (const item of droppedComfyTVAssets(event.dataTransfer))
       panelRef.value?.addAttachment(item)
@@ -1141,6 +1166,7 @@ function onPanelDrop(event: DragEvent): void {
       :submitting="isSending || status === 'thinking'"
       :can-attach="true"
       :can-open-assets="!isBuilderMode"
+      :can-open-eagle="!isBuilderMode && eagleAvailable"
       :is-maximized="agentPanelStore.isMaximized"
       :history-groups="history.grouped"
       :session-id="threadId"
@@ -1163,6 +1189,7 @@ function onPanelDrop(event: DragEvent): void {
       @stop="onStop"
       @attach="onAttach"
       @open-assets="onOpenAssets"
+      @open-eagle="onOpenEagle"
       @select-nodes="onSelectNodes"
       @remove-tag="onRemoveSelectionTag"
       @mention-pick="onMentionPick"

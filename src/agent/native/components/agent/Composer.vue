@@ -42,6 +42,7 @@ const {
   submitting = false,
   canAttach = false,
   canOpenAssets = false,
+  canOpenEagle = false,
   selectionTags = [],
   nodeReferenceDisabledReason,
   availableWorkflows = [],
@@ -55,6 +56,7 @@ const {
   submitting?: boolean
   canAttach?: boolean
   canOpenAssets?: boolean
+  canOpenEagle?: boolean
   selectionTags?: SelectedNode[]
   nodeReferenceDisabledReason?: string
   availableWorkflows?: WorkflowReferenceOption[]
@@ -75,6 +77,7 @@ const emit = defineEmits<{
   stop: []
   attach: []
   openAssets: []
+  openEagle: []
   selectNodes: []
   removeTag: [id: string]
   mentionPick: [node: SelectedNode]
@@ -563,8 +566,18 @@ defineExpose({
                   {{ t('agent.addFromAssets') }}
                 </span>
               </DropdownMenuItem>
+              <DropdownMenuItem
+                v-if="canOpenEagle"
+                class="ctv:box-border ctv:flex ctv:h-7 ctv:w-full ctv:cursor-pointer ctv:items-center ctv:gap-1.5 ctv:rounded-lg ctv:px-1.5 ctv:py-1 ctv:text-[14px]/5 ctv:font-normal ctv:text-base-foreground ctv:outline-none ctv:data-highlighted:bg-secondary-background-hover"
+                @select="emit('openEagle')"
+              >
+                <span class="ctv:icon-[lucide--bird] ctv:size-4 ctv:shrink-0" />
+                <span class="ctv:whitespace-nowrap">
+                  {{ t('agent.addFromEagle') }}
+                </span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator
-                v-if="canAttach && canOpenAssets"
+                v-if="canAttach && (canOpenAssets || canOpenEagle)"
                 class="ctv:mt-0 ctv:mb-px ctv:h-px ctv:bg-border-subtle"
               />
               <DropdownMenuItem

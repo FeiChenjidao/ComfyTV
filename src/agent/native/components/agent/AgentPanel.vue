@@ -45,6 +45,7 @@ const {
   submitting = false,
   canAttach = false,
   canOpenAssets = false,
+  canOpenEagle = false,
   isMaximized = false,
   selectionTags = [],
   nodeReferenceDisabledReason,
@@ -72,6 +73,7 @@ const {
   submitting?: boolean
   canAttach?: boolean
   canOpenAssets?: boolean
+  canOpenEagle?: boolean
   isMaximized?: boolean
   selectionTags?: SelectedNode[]
   nodeReferenceDisabledReason?: string
@@ -104,6 +106,7 @@ const emit = defineEmits<{
   stop: []
   attach: []
   openAssets: []
+  openEagle: []
   selectNodes: []
   removeTag: [id: string]
   mentionPick: [node: SelectedNode]
@@ -373,6 +376,7 @@ defineExpose({ addAttachment, updateAttachment, removeAttachment })
             :submitting
             :can-attach
             :can-open-assets
+            :can-open-eagle
             :selection-tags
             :node-reference-disabled-reason
             :select-workflow-reference
@@ -385,6 +389,7 @@ defineExpose({ addAttachment, updateAttachment, removeAttachment })
             @stop="emit('stop')"
             @attach="emit('attach')"
             @open-assets="emit('openAssets')"
+            @open-eagle="emit('openEagle')"
             @select-nodes="emit('selectNodes')"
             @remove-tag="emit('removeTag', $event)"
             @mention-pick="emit('mentionPick', $event)"
