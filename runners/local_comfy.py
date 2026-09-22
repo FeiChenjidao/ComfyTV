@@ -91,8 +91,9 @@ class LocalComfyUIRunner(Runner):
         workflow, result_meta = prepare_workflow(self.id, self.kinds, ctx)
         result_node = result_meta.get("node")
 
-        sub_prompt_id = f"comfytv-{uuid.uuid4().hex[:8]}"
-        _log.info("[ComfyTV/%s] %s  nodes=%d", self.id, sub_prompt_id, len(workflow))
+        sub_prompt_id = str(uuid.uuid4())
+        _log.info("[ComfyTV/%s] comfytv-%s  nodes=%d",
+                  self.id, sub_prompt_id[:8], len(workflow))
 
         execute_outputs = _execute_node_ids(workflow, result_meta)
         executor = await _run_subprompt(workflow, sub_prompt_id,
