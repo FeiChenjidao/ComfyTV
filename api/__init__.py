@@ -30,6 +30,7 @@ from . import mcp        # noqa: F401
 from . import mcp_commands  # noqa: F401
 from . import prompt_lint   # noqa: F401
 from . import bot        # noqa: F401
+from . import agent_routes  # noqa: F401
 from . import eagle      # noqa: F401
 from . import blender    # noqa: F401
 from . import llm        # noqa: F401

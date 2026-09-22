@@ -27,6 +27,8 @@ SETTINGS_SPEC: dict[str, dict[str, Any]] = {
     "bot-enable-comfy-mcp": {"type": "boolean", "default": False},
     "bot-comfy-mcp-command": {"type": "string", "default": ""},
     "bot-always-allow-runs": {"type": "boolean", "default": True},
+    "bot-provider": {"type": "string", "default": ""},
+    "bot-run-mode": {"type": "choice", "default": "ask_approval", "options": ["ask_approval", "auto"]},
     "enable-skills": {"type": "boolean", "default": True},
     "skills-disabled": {"type": "string", "default": "[]"},
     "enable-collab": {"type": "boolean", "default": False, "experimental": True},

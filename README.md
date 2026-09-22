@@ -118,7 +118,7 @@ The full documentation lives at **[comfytv.org](https://comfytv.org)** — guide
 
 ComfyTV is built to be driven by AI agents as well as by hand. Three pieces, all managed from the **Settings** tab (MCP and the Bot are off by default):
 
-**ComfyTV Bot** — a chat agent embedded in the sidebar (✨). Describe what you want; it builds nodes, runs workflows, waits for renders, looks at the results with real vision and iterates. It drives your locally installed agent CLI — **Claude Code, Codex, Qwen Code** — or any OpenAI-compatible **local LLM server**; no API keys are ever stored. Image / video / audio attachments, per-provider model choice, persistent conversations. [Guide →](docs/bot.md)
+**ComfyTV Bot** — a chat agent docked beside the canvas (the agent button at the top right), using the same panel the ComfyUI frontend ships for its cloud agent. Describe what you want; it builds nodes, runs workflows, waits for renders, looks at the results with real vision and iterates. It drives your locally installed agent CLI — **Claude Code, Codex, Qwen Code** — or any OpenAI-compatible **local LLM server**; no API keys are ever stored. Image / video attachments, `@` mentions of nodes, per-provider model choice, persistent conversations. [Guide →](docs/bot.md)
 
 **MCP server** — a built-in [MCP](https://modelcontextprotocol.io) endpoint at `/comfytv/mcp` with **45 tools**: read the live canvas, build / run / wait on stages, inspect results (`view_image` returns actual pixels), edit the **native ComfyUI graph** (`graph_edit` / `graph_run` — any node from any plugin), and manage workflow bindings. It runs inside the ComfyUI server process — no extra install:
 
@@ -128,7 +128,7 @@ claude mcp add --transport http comfytv http://127.0.0.1:8188/comfytv/mcp
 
 Canvas writes are executed by the open ComfyTV page (Comfy Desktop or a browser). The endpoint shares ComfyUI's trust boundary — expose port 8188 carefully. Pairs with the official [comfy-mcp](https://github.com/Comfy-Org/comfy-mcp) for the machine layer (installing nodes, downloading models). [Guide →](docs/mcp.md)
 
-**Agent Skills** — installable `SKILL.md` instruction packs (the open Agent Skills format) that teach agents your methodologies. Every agent above discovers them automatically; invoke one explicitly from the Bot by typing `/`, or from Claude Code as a `/mcp__comfytv__<name>` slash command. One skill ships built in: `h3-cinematic-director`, a director-grade MiniMax H3 production methodology. [Guide →](docs/skills.md)
+**Agent Skills** — installable `SKILL.md` instruction packs (the open Agent Skills format) that teach agents your methodologies. Every agent above discovers them automatically; invoke one explicitly from the Bot by starting a message with `/<name>`, or from Claude Code as a `/mcp__comfytv__<name>` slash command. One skill ships built in: `h3-cinematic-director`, a director-grade MiniMax H3 production methodology. [Guide →](docs/skills.md)
 
 ---
 
@@ -145,4 +145,7 @@ Canvas writes are executed by the open ComfyTV page (Comfy Desktop or a browser)
 
 ## License
 
-See [LICENSE](LICENSE).
+GPL-3.0 — see [LICENSE](LICENSE). The bot panel under `src/agent/native` is
+vendored from [ComfyUI_frontend](https://github.com/Comfy-Org/ComfyUI_frontend)
+(GPL-3.0); `src/agent/native/UPSTREAM` records the commit it was taken from and
+`python scripts/agent/sync_native.py` refreshes it.

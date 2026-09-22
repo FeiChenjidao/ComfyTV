@@ -2,11 +2,11 @@
 
 # ComfyTV Bot
 
-> A chat agent embedded in the sidebar that drives your canvas: describe what you want, and it builds nodes, runs workflows, waits for renders, looks at the results and iterates — powered by your locally installed agent CLI, with no API keys stored anywhere.
+> A chat agent docked beside your canvas: describe what you want, and it builds nodes, runs workflows, waits for renders, looks at the results and iterates — powered by your locally installed agent CLI, with no API keys stored anywhere.
 
 ## What it is
 
-The **ComfyTV Bot** is a sidebar chat panel (the ✨ icon) backed by a local agent CLI. Every message you send spawns an agent turn that can use the full [ComfyTV MCP toolset](mcp.md) — and *only* that toolset: it can read and edit your canvas, run stages, inspect images, and manage your library, but it has no shell, no file system access, and no other tools.
+The **ComfyTV Bot** is a panel docked to the right of the canvas — open it with the agent button at the top right of the workflow tabs. The panel is the one the ComfyUI frontend ships for its cloud agent, vendored into ComfyTV (see `src/agent/native/UPSTREAM`) and wired to ComfyTV's own local agent backend. Every message you send spawns an agent turn that can use the full [ComfyTV MCP toolset](mcp.md) — and *only* that toolset: it can read and edit your canvas, run stages, inspect images, and manage your library, but it has no shell, no file system access, and no other tools.
 
 Typical asks:
 
@@ -34,7 +34,7 @@ Prerequisites:
 1. Install at least one agent CLI and sign in once — or run a local model server and set its URL in Settings.
 2. In ComfyTV **Settings → Agent & MCP**, enable **MCP server** and then **ComfyTV Bot** (the bot requires MCP — it's how the agent reaches your canvas).
 
-With more than one provider available, the ➕ button asks which engine a new chat should use; each chat remembers its provider. If no provider is found, the panel shows an install guide instead of a chat box.
+The bar above the chat picks the engine (and, per engine, the model) for new chats; a chat keeps the engine it started with, so switching the engine starts a new chat. A red dot on the engine chip means it is not installed or not signed in — hover it for the reason.
 
 Provider isolation is per-engine: Claude Code runs with a strict per-turn MCP config and a tool whitelist; Codex runs `codex exec` sandboxed to the bot's working directory with shell and web search disabled, every MCP server except ComfyTV's turned off, and its localhost canvas-tool approvals routed through Codex's automatic reviewer (headless runs cannot prompt); Qwen Code runs against a project-scoped `.qwen/settings.json` inside the bot's working directory (ComfyTV MCP server only, built-in shell/file tools excluded) — your global CLI configuration is never touched.
 
@@ -62,12 +62,15 @@ Compared to the Local LLM provider:
 
 ## Using the panel
 
-- **Conversations** are persistent: the list supports pin, rename and delete; each chat remembers its full context across turns (the CLI resumes the same session).
-- **Streaming**: replies stream in live; tool activity collapses into a drawer (closed by default) with chips per call (e.g. `add_stage`, `wait_stage`) so you can watch it work the canvas in real time — nodes appear and run on your canvas as it goes.
-- **Attachments**: on providers that support them, attach images / video / audio via the 📎 buttons, by dragging files in, picking from the asset library, or pasting. Videos are summarized with a middle frame, audio with a waveform, so the agent can actually *see* what you sent.
-- **Skills**: type **`/`** in the input to open the skill palette — pick an installed [Agent Skill](skills.md) and it becomes a chip on your message; the agent reads that skill first and follows its instructions for the task.
+- **Canvas**: the bot always works on the tab on screen; switch tabs and it follows.
+- **Conversations** are persistent: the history screen (clock icon) lists, renames and removes chats; each chat remembers its full context across turns (the CLI resumes the same session).
+- **Streaming**: replies stream in live; tool activity shows as an activity trace per turn (e.g. `add_stage`, `wait_stage`) that folds into a summary when the turn ends — nodes appear and run on your canvas as it goes.
+- **Mentions**: type **`@`** to reference a node (a stage) on the canvas, or select nodes with the picker to attach them to the message.
+- **Attachments**: on providers that support them, attach images / video / audio from ComfyTV's asset library via the **+** button, by dragging asset cards from the Assets tab, or by dropping / pasting files (they are imported into the library first, so the agent can hand them to stages as `asset_refs`). Videos are summarized with a middle frame, audio with a waveform, so the agent can actually *see* what you sent.
+- **Skills**: start a message with **`/<name>`** to run it under an installed [Agent Skill](skills.md); the agent reads that skill first and follows its instructions for the task.
+- **Run permissions**: the popover next to the send button switches between asking before the agent runs a workflow and running automatically.
 - **Stop** aborts the current turn; partial output is kept.
-- Switching sidebar tabs (or closing the panel) does not interrupt a running turn — the turn continues server-side and the transcript catches up when you return.
+- Closing the panel does not interrupt a running turn — the turn continues server-side and the transcript catches up when you reopen it.
 
 ## How it works, briefly
 
@@ -77,8 +80,8 @@ Each turn spawns a fresh CLI process in headless mode, locked down to the ComfyT
 
 | Symptom | Cause / fix |
 |---|---|
-| No ✨ icon in the sidebar | **Enable ComfyTV Bot** is off (Settings → Agent & MCP), which itself requires **Enable MCP server** |
-| Panel shows an install guide | No agent CLI found — install one from the table above and sign in, then *Check again* |
+| No agent button at the top right | **Enable ComfyTV Bot** is off (Settings → Agent & MCP), which itself requires **Enable MCP server**; the button also needs a ComfyUI frontend that ships the agent panel slot (1.53 or newer) |
+| Red dot on the engine chip | That agent CLI is not installed or not signed in — install one from the table above and sign in, then reopen the panel |
 | Bot says it can't reach the canvas | No ComfyTV page open (or page websocket dropped after a server restart — hard-refresh) |
 | Long renders: bot seems idle | It's inside a blocking `wait_stage` — the tool chip shows it; this is normal and cheap |
 

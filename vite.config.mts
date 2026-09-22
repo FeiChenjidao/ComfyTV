@@ -37,10 +37,18 @@ export default defineConfig({
     copyNodeDocs()
   ],
   resolve: {
-    alias: {
-      '@jtydhr88/pentrado': resolve(__dirname, './packages/pentrado/src'),
-      '@': resolve(__dirname, './src')
-    }
+    alias: [
+      { find: '@jtydhr88/pentrado', replacement: resolve(__dirname, './packages/pentrado/src') },
+      // The vendored Comfy Agent panel (src/agent/native) and its host shims
+      // resolve '@agent/' to the shim tree, never to ComfyTV's own '@/'.
+      { find: /^@agent\//, replacement: resolve(__dirname, './src/agent/host') + '/' },
+      { find: '@comfyorg/tailwind-utils', replacement: resolve(__dirname, './src/agent/host/tailwind-utils.ts') },
+      { find: '@comfyorg/ingest-types/zod', replacement: resolve(__dirname, './src/agent/host/ingest-types/zod.gen.ts') },
+      { find: '@comfyorg/ingest-types', replacement: resolve(__dirname, './src/agent/host/ingest-types/index.ts') },
+      { find: '@comfyorg/shared-frontend-utils/formatUtil', replacement: resolve(__dirname, './src/agent/host/utils/formatUtil.ts') },
+      { find: /^shiki$/, replacement: resolve(__dirname, './src/agent/host/shiki.ts') },
+      { find: /^@\//, replacement: resolve(__dirname, './src') + '/' }
+    ]
   },
   build: {
     lib: {
@@ -61,6 +69,9 @@ export default defineConfig({
     minify: false
   },
   define: {
-    'process.env.NODE_ENV': JSON.stringify('production')
+    'process.env.NODE_ENV': JSON.stringify('production'),
+    __DISTRIBUTION__: JSON.stringify('localhost'),
+    __IS_NIGHTLY__: 'false',
+    __COMFYUI_FRONTEND_VERSION__: JSON.stringify('comfytv')
   }
 })
