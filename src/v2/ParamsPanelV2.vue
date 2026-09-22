@@ -57,11 +57,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import type { LGraphNode } from '@/lib/comfyApp'
+import { useNodeUiFlag } from '@/v2/nodeUiFlag'
 import { useWidgetValues } from '@/v2/useWidgetValues'
 
 const { t } = useI18n()
@@ -118,7 +119,7 @@ const rows = computed<Row[]>(() => {
   return out
 })
 
-const open = ref(false)
+const open = useNodeUiFlag(props.getNode, 'v2_params_open')
 const { values, write: writeRaw } = useWidgetValues(
   props.getNode,
   rows.value.map(r => r.name),

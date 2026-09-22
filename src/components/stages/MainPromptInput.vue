@@ -15,22 +15,30 @@
     </div>
     <EditorContent :editor="editor" class="comfytv-prompt-editor" />
     <div class="ctv:flex ctv:gap-1 ctv:mt-1">
-      <button
-        type="button"
-        :class="[iconBtnClass, helperOpen
-          ? 'ctv:bg-primary-background/20 ctv:border-primary-background/50 ctv:text-primary-background'
-          : 'ctv:bg-secondary-background ctv:border-border-default ctv:text-muted-foreground ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground']"
-        :title="$t('promptHelper.open')"
-        @click="helperOpen = !helperOpen"
-      ><i class="pi pi-sparkles" /></button>
-      <button
-        type="button"
-        :class="[iconBtnClass, cameraOpen
-          ? 'ctv:bg-primary-background/20 ctv:border-primary-background/50 ctv:text-primary-background'
-          : 'ctv:bg-secondary-background ctv:border-border-default ctv:text-muted-foreground ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground']"
-        :title="$t('cameraPrompt.open')"
-        @click="cameraOpen = !cameraOpen"
-      ><i class="pi pi-video" /></button>
+      <ComfyTVPopover v-model:open="helperOpen" width="320px">
+        <template #trigger>
+          <button
+            type="button"
+            :class="[iconBtnClass, helperOpen
+              ? 'ctv:bg-primary-background/20 ctv:border-primary-background/50 ctv:text-primary-background'
+              : 'ctv:bg-secondary-background ctv:border-border-default ctv:text-muted-foreground ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground']"
+            :title="$t('promptHelper.open')"
+          ><i class="pi pi-sparkles" /></button>
+        </template>
+        <PromptHelperPanel :groups="helper.groups" :is-active="helper.isActive" @apply="helper.apply" />
+      </ComfyTVPopover>
+      <ComfyTVPopover v-model:open="cameraOpen" width="320px">
+        <template #trigger>
+          <button
+            type="button"
+            :class="[iconBtnClass, cameraOpen
+              ? 'ctv:bg-primary-background/20 ctv:border-primary-background/50 ctv:text-primary-background'
+              : 'ctv:bg-secondary-background ctv:border-border-default ctv:text-muted-foreground ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground']"
+            :title="$t('cameraPrompt.open')"
+          ><i class="pi pi-video" /></button>
+        </template>
+        <CameraPromptPanel @insert="onCameraInsert" />
+      </ComfyTVPopover>
       <button
         type="button"
         :class="[iconBtnClass,
@@ -38,52 +46,50 @@
         :title="$t('mention.parse')"
         @click="onParseMentions"
       ><i class="pi pi-at" /></button>
-      <button
-        type="button"
-        :class="[iconBtnClass, saveOpen
-          ? 'ctv:bg-primary-background/20 ctv:border-primary-background/50 ctv:text-primary-background'
-          : 'ctv:bg-secondary-background ctv:border-border-default ctv:text-muted-foreground ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground']"
-        :title="$t('promptSave.open')"
-        @click="toggleSave"
-      ><i class="pi pi-bookmark" /></button>
-      <button
-        type="button"
-        :class="[iconBtnClass, entriesOpen
-          ? 'ctv:bg-primary-background/20 ctv:border-primary-background/50 ctv:text-primary-background'
-          : 'ctv:bg-secondary-background ctv:border-border-default ctv:text-muted-foreground ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground']"
-        :title="$t('promptEntries.open')"
-        @click="entriesOpen = !entriesOpen"
-      ><i class="pi pi-book" /></button>
+      <ComfyTVPopover v-model:open="saveOpen" width="260px" @update:open="onSaveToggle">
+        <template #trigger>
+          <button
+            type="button"
+            :class="[iconBtnClass, saveOpen
+              ? 'ctv:bg-primary-background/20 ctv:border-primary-background/50 ctv:text-primary-background'
+              : 'ctv:bg-secondary-background ctv:border-border-default ctv:text-muted-foreground ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground']"
+            :title="$t('promptSave.open')"
+          ><i class="pi pi-bookmark" /></button>
+        </template>
+        <div class="ctv:p-2 ctv:flex ctv:flex-col ctv:gap-1.5
+                    ctv:bg-interface-menu-surface ctv:border ctv:border-border-default ctv:rounded">
+          <span class="ctv:text-2xs ctv:text-muted-foreground">{{ $t('promptSave.hint') }}</span>
+          <input
+            v-model="saveLabel"
+            class="ctv:h-6 ctv:box-border ctv:px-2 ctv:rounded-sm ctv:text-xs ctv:[font-family:inherit]
+                   ctv:bg-interface-panel-surface ctv:border ctv:border-border-subtle ctv:text-base-foreground
+                   ctv:placeholder:text-muted-foreground ctv:focus-visible:outline-none ctv:focus:border-border-default"
+            :placeholder="$t('promptSave.labelPlaceholder')"
+            @keydown.stop
+            @keydown.enter.prevent="onSavePrompt"
+            @keydown.escape="saveOpen = false"
+          />
+          <span v-if="saveError" class="ctv:text-2xs ctv:text-destructive-background">{{ saveError }}</span>
+          <div class="ctv:flex ctv:justify-end ctv:gap-1.5">
+            <button :class="saveBtnClass" :disabled="!canSavePrompt" @click="onSavePrompt">
+              {{ $t('promptSave.save') }}
+            </button>
+          </div>
+        </div>
+      </ComfyTVPopover>
+      <ComfyTVPopover v-model:open="entriesOpen" width="300px">
+        <template #trigger>
+          <button
+            type="button"
+            :class="[iconBtnClass, entriesOpen
+              ? 'ctv:bg-primary-background/20 ctv:border-primary-background/50 ctv:text-primary-background'
+              : 'ctv:bg-secondary-background ctv:border-border-default ctv:text-muted-foreground ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground']"
+            :title="$t('promptEntries.open')"
+          ><i class="pi pi-book" /></button>
+        </template>
+        <EntriesQuickPanel @insert="onEntryInsert" />
+      </ComfyTVPopover>
     </div>
-    <EntriesQuickPanel v-if="entriesOpen" @insert="onEntryInsert" />
-    <div v-if="saveOpen"
-         class="ctv:mt-1 ctv:p-2 ctv:rounded ctv:flex ctv:flex-col ctv:gap-1.5
-                ctv:bg-secondary-background ctv:border ctv:border-border-default">
-      <span class="ctv:text-2xs ctv:text-muted-foreground">{{ $t('promptSave.hint') }}</span>
-      <input
-        v-model="saveLabel"
-        class="ctv:h-6 ctv:box-border ctv:px-2 ctv:rounded-sm ctv:text-xs ctv:[font-family:inherit]
-               ctv:bg-interface-panel-surface ctv:border ctv:border-border-subtle ctv:text-base-foreground
-               ctv:placeholder:text-muted-foreground ctv:focus-visible:outline-none ctv:focus:border-border-default"
-        :placeholder="$t('promptSave.labelPlaceholder')"
-        @keydown.stop
-        @keydown.enter.prevent="onSavePrompt"
-        @keydown.escape="saveOpen = false"
-      />
-      <span v-if="saveError" class="ctv:text-2xs ctv:text-destructive-background">{{ saveError }}</span>
-      <div class="ctv:flex ctv:justify-end ctv:gap-1.5">
-        <button :class="saveBtnClass" :disabled="!canSavePrompt" @click="onSavePrompt">
-          {{ $t('promptSave.save') }}
-        </button>
-      </div>
-    </div>
-    <PromptHelperPanel
-      v-if="helperOpen"
-      :groups="helper.groups"
-      :is-active="helper.isActive"
-      @apply="helper.apply"
-    />
-    <CameraPromptPanel v-if="cameraOpen" @insert="onCameraInsert" />
   </div>
 </template>
 
@@ -104,6 +110,8 @@ import { useEntryStore } from '@/stores/entryStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { isValidLabel } from '@/utils/labelRegex'
 import type { LGraphNode } from '@/lib/comfyApp'
+
+import ComfyTVPopover from '@/components/widgets/ComfyTVPopover.vue'
 
 import CameraPromptPanel from './CameraPromptPanel.vue'
 import EntriesQuickPanel from './EntriesQuickPanel.vue'
@@ -175,10 +183,9 @@ const canSavePrompt = computed(() =>
   && nonSlotMentionLabels(normalizeMentionText(promptText.value)).length === 0,
 )
 
-function toggleSave() {
-  saveOpen.value = !saveOpen.value
+function onSaveToggle(open: boolean) {
   saveDone.value = false
-  if (saveOpen.value) saveLabel.value = ''
+  if (open) saveLabel.value = ''
 }
 
 async function onSavePrompt() {

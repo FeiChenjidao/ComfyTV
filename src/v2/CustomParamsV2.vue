@@ -2,15 +2,17 @@
   <div v-if="hasWidget && (attached.length || available.length)" class="v2-cparams" @pointerdown.stop>
     <div class="v2-cparams__head">
       <span class="v2-cparams__title">{{ t('v2.customParams.title') }}</span>
-      <div class="v2-cparams__addwrap">
-        <button
-          type="button"
-          class="v2-cparams__add"
-          :disabled="!available.length"
-          :title="t('v2.customParams.addHint')"
-          @click.stop="menuOpen = !menuOpen"
-        >+ {{ t('v2.customParams.add') }}</button>
-        <div v-if="menuOpen" class="v2-cparams__menu" @click.stop @wheel.stop>
+      <ComfyTVPopover v-model:open="menuOpen" align="end" width="190px">
+        <template #trigger>
+          <button
+            type="button"
+            class="v2-cparams__add"
+            :disabled="!available.length"
+            :title="t('v2.customParams.addHint')"
+            @click.stop
+          >+ {{ t('v2.customParams.add') }}</button>
+        </template>
+        <div class="v2-cparams__menu">
           <button
             v-for="d in available"
             :key="d.key"
@@ -22,7 +24,7 @@
             <span class="v2-cparams__menutype">{{ d.type }}</span>
           </button>
         </div>
-      </div>
+      </ComfyTVPopover>
     </div>
 
     <div v-for="item in attached" :key="item.key" class="v2-cparams__row">
@@ -79,6 +81,7 @@
 import { useI18n } from 'vue-i18n'
 
 import ComfyTVNumber from '@/components/widgets/ComfyTVNumber.vue'
+import ComfyTVPopover from '@/components/widgets/ComfyTVPopover.vue'
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import ComfyTVSlider from '@/components/widgets/ComfyTVSlider.vue'
 import ComfyTVText from '@/components/widgets/ComfyTVText.vue'
@@ -130,11 +133,8 @@ const {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.v2-cparams__addwrap {
-  position: relative;
-  margin-left: auto;
-}
 .v2-cparams__add {
+  margin-left: auto;
   border: 1px solid var(--v2-chip-border);
   border-radius: 8px;
   height: 22px;
@@ -147,11 +147,6 @@ const {
 .v2-cparams__add:hover { background: var(--v2-hover-bg); color: var(--v2-text-strong); }
 .v2-cparams__add:disabled { opacity: 0.4; pointer-events: none; }
 .v2-cparams__menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 30;
-  width: 190px;
   max-height: 220px;
   overflow-y: auto;
   padding: 4px;

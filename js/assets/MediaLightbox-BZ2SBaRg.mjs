@@ -1,4 +1,4 @@
-import { bm as defineComponent, bM as onMounted, bL as onBeforeUnmount, bP as openBlock, bd as createBlock, bc as createBaseVNode, bg as createElementBlock, be as createCommentVNode, M as Fragment, cH as withModifiers, aH as Teleport, ba as computed } from "./main-DLhG3DWz.mjs";
+import { bm as defineComponent, bM as onMounted, bL as onBeforeUnmount, bP as openBlock, bd as createBlock, bc as createBaseVNode, bg as createElementBlock, be as createCommentVNode, M as Fragment, cH as withModifiers, aH as Teleport, ba as computed } from "./main-hcmMPtpz.mjs";
 const _hoisted_1 = ["src"];
 const _hoisted_2 = ["src"];
 const _hoisted_3 = ["src", "alt"];
@@ -96,4 +96,4 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
 export {
   _sfc_main as default
 };
-//# sourceMappingURL=MediaLightbox-CuS_Fs1R.mjs.map
+//# sourceMappingURL=MediaLightbox-BZ2SBaRg.mjs.map
