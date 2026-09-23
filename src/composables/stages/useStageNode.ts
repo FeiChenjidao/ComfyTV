@@ -41,6 +41,7 @@ import { syncMediaTable } from '@/composables/stages/mediaOrderSync'
 import {
   clearBoundOptionEnumsCache,
   syncBoundOptionEnums,
+  type ApplyDefaultsMode,
 } from '@/composables/stages/boundOptionEnums'
 import { useSelectionStore } from '@/stores/selectionStore'
 import { app } from '@/lib/comfyApp'
@@ -101,11 +102,15 @@ export function useStageNode(
   const meta = getStageMeta(node.comfyClass)
   const workflowKind = meta?.workflow_kind || null
 
+  let _applyDefaults: ApplyDefaultsMode = 'all'
+
   function syncOptionEnums(): void {
     if (!workflowKind) return
     const wfWidget = node.widgets?.find((w: any) => w.name === 'workflow')
     const label = wfWidget ? String(wfWidget.value ?? '') : ''
-    void syncBoundOptionEnums(node, workflowKind, label)
+    const mode = _applyDefaults
+    _applyDefaults = 'empty'
+    void syncBoundOptionEnums(node, workflowKind, label, { applyDefaults: mode })
   }
 
   function triggerPrepForCurrentWorkflow(): void {
@@ -144,6 +149,7 @@ export function useStageNode(
     if (wfWidget) {
       const selectionStore = useSelectionStore()
       wfWidget.callback = useChainCallback(wfWidget.callback, () => {
+        _applyDefaults = 'all'
         queueMicrotask(reValidate)
         queueMicrotask(triggerPrepForCurrentWorkflow)
         queueMicrotask(() => selectionStore.refreshFromCanvas())
@@ -156,7 +162,10 @@ export function useStageNode(
 
   store.setRefresher(node, refresh)
   const syncMedia = () => { syncMediaTable(node) }
-  onNodeConfigure(node, () => queueMicrotask(syncMedia))
+  onNodeConfigure(node, () => {
+    _applyDefaults = false
+    queueMicrotask(syncMedia)
+  })
   node.onConnectionsChange = useChainCallback(node.onConnectionsChange, () => {
     queueMicrotask(syncMedia)
     queueMicrotask(refresh)

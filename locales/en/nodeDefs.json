@@ -1063,6 +1063,10 @@
       "merge_mode": {
         "name": "Mode",
         "tooltip": "layers = Photoshop-style stack; row = place images left to right."
+      },
+      "aspect_ratio": {
+        "name": "Aspect",
+        "tooltip": "native = keep source aspect; 1:1 with layers pads the composite to a square on the long side; 1:1 with row pads each image into a shared long-side square then tiles them (N images → N:1)."
       }
     },
     "outputs": {

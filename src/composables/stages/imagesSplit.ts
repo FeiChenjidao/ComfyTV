@@ -43,32 +43,57 @@ function uniqueOutputName(label: string, used: Set<string>, fallback: string): s
   return name
 }
 
+function outputHasLinks(slot: any): boolean {
+  const links = slot?.links
+  return Array.isArray(links) && links.length > 0
+}
+
+/** Highest 1-based count needed to keep every linked output socket. */
+export function linkedOutputCount(outputs: any[] | null | undefined): number {
+  if (!Array.isArray(outputs)) return 0
+  let n = 0
+  for (let i = 0; i < outputs.length; i++) {
+    if (outputHasLinks(outputs[i])) n = i + 1
+  }
+  return n
+}
+
 export function syncImagesSplitOutputs(node: any, items: ImageGroupItem[]) {
   if (!node) return
-  const n = Math.max(1, Math.min(items.length, IMAGES_SPLIT_MAX))
   if (!Array.isArray(node.outputs)) node.outputs = []
 
+  const linked = linkedOutputCount(node.outputs)
+  // Never shrink below linked sockets — empty/pending content on refresh must
+  // not removeOutput() and drop graph wires.
+  const n = Math.max(1, Math.min(IMAGES_SPLIT_MAX, Math.max(items.length, linked)))
+
   while (node.outputs.length > n) {
+    const last = node.outputs[node.outputs.length - 1]
+    if (outputHasLinks(last)) break
     if (typeof node.removeOutput === 'function') node.removeOutput(node.outputs.length - 1)
     else node.outputs.pop()
   }
 
   const used = new Set<string>()
   for (let i = 0; i < n; i++) {
-    const fallback = `image${i + 1}`
-    const label = uniqueOutputName(items[i]?.label || '', used, fallback)
+    // Keep schema names (image1…) stable so workflow reconnect survives refresh.
+    // Layer titles only go on label / localized_name.
+    const name = `image${i + 1}`
+    const display = uniqueOutputName(items[i]?.label || '', used, name)
     if (i >= node.outputs.length) {
       if (typeof node.addOutput === 'function') {
-        node.addOutput(label, IMAGES_SPLIT_TYPE, { label, localized_name: label })
+        node.addOutput(name, IMAGES_SPLIT_TYPE, { label: display, localized_name: display })
       } else {
-        node.outputs.push({ name: label, type: IMAGES_SPLIT_TYPE, label, localized_name: label, links: [] })
+        node.outputs.push({
+          name, type: IMAGES_SPLIT_TYPE, label: display, localized_name: display, links: [],
+        })
       }
       continue
     }
     const slot = node.outputs[i]
-    slot.name = label
-    slot.label = label
-    slot.localized_name = label
+    slot.name = name
+    slot.label = display
+    slot.localized_name = display
     if (slot.type == null || slot.type === '') slot.type = IMAGES_SPLIT_TYPE
   }
   node.setDirtyCanvas?.(true, true)

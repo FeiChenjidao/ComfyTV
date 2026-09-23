@@ -22,6 +22,12 @@
           :data-on="mode === opt ? '1' : ''"
           @click="mode = opt"
         >{{ $t(`imageMerge.${opt}`) }}</button>
+        <button
+          type="button"
+          class="v2-ed__chip"
+          :data-on="square ? '1' : ''"
+          @click="square = !square"
+        >{{ $t('imageMerge.aspect11') }}</button>
       </div>
     </div>
 
@@ -47,5 +53,5 @@ const props = defineProps<{
   state: StageState
 }>()
 
-const { mode, previewUrl, computing, inputCount } = useImageMerge(props.node, props.state)
+const { mode, square, previewUrl, computing, inputCount } = useImageMerge(props.node, props.state)
 </script>

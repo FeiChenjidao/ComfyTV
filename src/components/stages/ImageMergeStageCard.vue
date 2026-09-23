@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <div class="ctv:grid ctv:grid-cols-2 ctv:gap-1.5 ctv:text-xs">
+    <div class="ctv:grid ctv:grid-cols-3 ctv:gap-1.5 ctv:text-xs">
       <button
         v-for="opt in MERGE_MODES"
         :key="opt"
@@ -27,6 +27,13 @@
         :class="mode === opt ? 'ctv:border-primary' : ''"
         @click="mode = opt"
       >{{ $t(`imageMerge.${opt}`) }}</button>
+      <button
+        type="button"
+        class="ctv:py-1 ctv:px-1.5 ctv:rounded ctv:text-xs ctv:cursor-pointer
+               ctv:bg-secondary-background ctv:border ctv:border-border-subtle ctv:text-base-foreground ctv:hover:bg-secondary-background-hover"
+        :class="square ? 'ctv:border-primary' : ''"
+        @click="square = !square"
+      >{{ $t('imageMerge.aspect11') }}</button>
     </div>
 
     <div class="ctv:text-2xs ctv:text-center ctv:py-0.5 ctv:tracking-wide">
@@ -63,5 +70,5 @@ const props = defineProps<{
   node: LGraphNode
 }>()
 
-const { mode, previewUrl, computing, inputCount } = useImageMerge(props.node, props.state)
+const { mode, square, previewUrl, computing, inputCount } = useImageMerge(props.node, props.state)
 </script>

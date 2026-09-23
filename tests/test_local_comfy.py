@@ -604,6 +604,21 @@ class TestAutoDetectResult:
             "type": "ui_save_batch", "node": "9",
         }
 
+    def test_layer_separation_prefers_image_compositor(self):
+        wf = {
+            "23": {"class_type": "SaveImageAdvanced", "inputs": {}},
+            "25": {"class_type": "ImageCompositor", "inputs": {}},
+        }
+        assert lc._auto_detect_result(wf, "layer-separation") == {
+            "type": "ui_save_url", "node": "25",
+        }
+
+    def test_layer_separation_save_image_advanced(self):
+        wf = {"23": {"class_type": "SaveImageAdvanced", "inputs": {}}}
+        assert lc._auto_detect_result(wf, "layer-separation") == {
+            "type": "ui_save_layered", "node": "23",
+        }
+
 
 # ─── _apply_prunes ───────────────────────────────────────────────────────────
 
@@ -1095,6 +1110,32 @@ class TestExtractResult:
         ex = _FakeExecutor({})
         with pytest.raises(RuntimeError, match="unsupported result.type"):
             await lc._extract_result(ex, {"type": "weird", "node": "9"})
+
+
+class TestExtractCompositorLayers:
+    def test_packs_nested_compositor_layers_into_url_payload(self):
+        import asyncio
+
+        async def _run():
+            ex = _FakeExecutor({
+                "9": {"images": [
+                    {"filename": "out.png", "subfolder": "", "type": "output"},
+                ]},
+                "25": {
+                    "images": [{"filename": "preview.png", "subfolder": "", "type": "temp"}],
+                    "compositor_layers": [
+                        {"filename": "base.png", "subfolder": "", "type": "temp"},
+                        {"filename": "ship.png", "subfolder": "", "type": "temp"},
+                    ],
+                    "compositor_inputs": ["fp1", "fp2"],
+                },
+            })
+            return await lc._extract_result(ex, {"type": "ui_save_url", "node": "9"})
+
+        data = json.loads(asyncio.run(_run()))
+        assert "filename=preview.png" in data["images"][0]["image_url"]
+        assert [r["filename"] for r in data["compositor_layers"]] == ["base.png", "ship.png"]
+        assert data["compositor_inputs"] == ["fp1", "fp2"]
 
 
 # ─── _output_node_ids ────────────────────────────────────────────────────────

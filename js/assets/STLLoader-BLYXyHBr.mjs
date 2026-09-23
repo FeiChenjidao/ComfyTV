@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:js/assets/STLLoader-BLYXyHBr.mjs
 import { K as Loader, F as FileLoader, d as BufferGeometry, g as Color, a9 as SRGBColorSpace, c as BufferAttribute, ao as Vector3, p as Float32BufferAttribute } from "./main-DRNxXDE3.mjs";
+========
+import { K as Loader, F as FileLoader, d as BufferGeometry, g as Color, a9 as SRGBColorSpace, c as BufferAttribute, ao as Vector3, p as Float32BufferAttribute } from "./main-tEsaNmQB.mjs";
+>>>>>>>> b15c43d (Fix ComfyTV workflow nodes and bot integration):js/assets/STLLoader-Bdq8Z4x2.mjs
 class STLLoader extends Loader {
   /**
    * Constructs a new STL loader.
@@ -208,4 +212,8 @@ class STLLoader extends Loader {
 export {
   STLLoader
 };
+<<<<<<<< HEAD:js/assets/STLLoader-BLYXyHBr.mjs
 //# sourceMappingURL=STLLoader-BLYXyHBr.mjs.map
+========
+//# sourceMappingURL=STLLoader-Bdq8Z4x2.mjs.map
+>>>>>>>> b15c43d (Fix ComfyTV workflow nodes and bot integration):js/assets/STLLoader-Bdq8Z4x2.mjs

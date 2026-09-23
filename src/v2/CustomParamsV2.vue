@@ -114,6 +114,73 @@ const {
   detach,
   setVal,
 } = useCustomParams(props.node, () => props.state)
+<<<<<<< HEAD
+=======
+
+const workflowKind = computed(() =>
+  getStageMeta(props.node.comfyClass ?? '')?.workflow_kind || props.state.kind)
+
+const { metaByKey } = useBoundOptionMeta(() => props.node, workflowKind)
+
+watch(
+  [boundKeys, metaByKey, attached],
+  () => {
+    const defKeys = new Set(attached.value.map(it => it.key))
+    const widgetNames = new Set(
+      ((props.node.widgets ?? []) as any[])
+        .map(w => String(w?.name ?? ''))
+        .filter(Boolean),
+    )
+    for (const key of boundKeys.value) {
+      if (defKeys.has(key) || widgetNames.has(key)) continue
+      const meta = metaByKey.value.get(key)
+      const fallback =
+        meta?.defaultValue != null && meta.defaultValue !== ''
+          ? (meta.control === 'toggle'
+            ? (meta.defaultValue === 'true' || meta.defaultValue === '1')
+            : meta.control === 'number'
+              ? (Number.isFinite(Number(meta.defaultValue)) ? Number(meta.defaultValue) : meta.defaultValue)
+              : meta.defaultValue)
+          : meta?.control === 'toggle' ? false
+            : meta?.control === 'number' ? (meta.min ?? 0)
+              : meta?.control === 'combo' ? (meta.options?.[0] ?? '')
+                : ''
+      ensureDynamic(key, fallback)
+    }
+  },
+  { immediate: true, deep: true },
+)
+
+const dynamicRows = computed(() => {
+  const byKey = new Map(dynamicAttached.value.map(it => [it.key, it]))
+  const out: Array<{
+    key: string
+    label: string
+    control: 'toggle' | 'number' | 'combo' | 'text'
+    value: unknown
+    options?: string[]
+    min?: number
+    max?: number
+    step?: number
+  }> = []
+  for (const key of boundKeys.value) {
+    const item = byKey.get(key)
+    if (!item) continue
+    const meta = metaByKey.value.get(key)
+    out.push({
+      key,
+      label: meta?.label ?? key,
+      control: meta?.control ?? 'text',
+      value: item.value,
+      options: meta?.options,
+      min: meta?.min,
+      max: meta?.max,
+      step: meta?.step,
+    })
+  }
+  return out
+})
+>>>>>>> b15c43d (Fix ComfyTV workflow nodes and bot integration)
 </script>
 
 <style scoped>

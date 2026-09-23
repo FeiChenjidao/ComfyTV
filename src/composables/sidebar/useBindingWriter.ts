@@ -12,6 +12,13 @@ export function useBindingWriter(
     return true
   }
 
+  /** option:* / computed:* can store a fallback default; upstream_* cannot. */
+  function canEditBindingDefault(w: ExposedWidget): boolean {
+    const b = w.stage_binding
+    if (typeof b !== 'string') return false
+    return b.startsWith('option:') || b.startsWith('computed:')
+  }
+
   function dropdownValueFor(w: ExposedWidget): string {
     if (!w.stage_binding) return '__VALUE__'
     if (w.stage_binding.startsWith('literal:')) return '__VALUE__'
@@ -62,7 +69,35 @@ export function useBindingWriter(
     }
   }
 
+  function seedDefaultFromWidget(w: ExposedWidget): string | null {
+    if (w.current_value === null || w.current_value === undefined) return null
+    if (typeof w.current_value === 'string' && w.current_value === '') return null
+    return String(w.current_value)
+  }
+
+  async function onDefaultChange(w: ExposedWidget, newVal: any) {
+    if (!canEditBindingDefault(w) || !w.stage_binding) return
+
+    const isCleared =
+      newVal === null || newVal === undefined ||
+      (typeof newVal === 'string' && newVal === '')
+    w.override_value = isCleared ? null : String(newVal)
+
+    await postBinding({
+      node_id:    w.node_id,
+      input_name: w.widget_name,
+      from:       w.stage_binding,
+      default:    w.override_value,
+      cast:       w.cast,
+      required:   w.required ?? false,
+    })
+  }
+
   async function onValueChange(w: ExposedWidget, newVal: any) {
+    if (canEditBindingDefault(w)) {
+      await onDefaultChange(w, newVal)
+      return
+    }
     if (isStageBound(w)) return
 
     const isCleared =
@@ -126,6 +161,7 @@ export function useBindingWriter(
                newBinding === 'computed:height' ||
                newBinding === 'computed:length') {
       cast = 'int'
+      defaultValue = seedDefaultFromWidget(w)
     } else if (
       newBinding === 'option:texture' ||
       newBinding === 'option:pbr' ||
@@ -139,6 +175,13 @@ export function useBindingWriter(
       newBinding === 'option:generate_audio'
     ) {
       cast = 'bool'
+<<<<<<< HEAD
+=======
+      defaultValue = seedDefaultFromWidget(w)
+    } else if (newBinding.startsWith('option:') || newBinding.startsWith('computed:')) {
+      cast = inferCast(w.widget_type)
+      defaultValue = seedDefaultFromWidget(w)
+>>>>>>> b15c43d (Fix ComfyTV workflow nodes and bot integration)
     }
     const isUpstream = newBinding.startsWith('upstream_')
     w.stage_binding  = newBinding
@@ -159,6 +202,7 @@ export function useBindingWriter(
   return {
     isStageBound,
     isUpstreamBound,
+    canEditBindingDefault,
     dropdownValueFor,
     coerceForWidget,
     effectiveValue,
@@ -166,6 +210,7 @@ export function useBindingWriter(
     numProp,
     inferCast,
     onValueChange,
+    onDefaultChange,
     onBindingChange,
     onRequiredToggle,
   }

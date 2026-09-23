@@ -43,16 +43,20 @@ _TEXT_OUTPUT_NODES = (
 
 def _auto_detect_result(workflow: dict, ctx_kind: str | None = None) -> dict:
     if ctx_kind == 'layer-separation':
+        for node_id, node in workflow.items():
+            if isinstance(node, dict) and node.get("class_type") == "ImageCompositor":
+                return {"type": "ui_save_url", "node": node_id}
         image_default = 'ui_save_layered'
     elif ctx_kind in _BATCH_OUTPUT_KINDS:
         image_default = 'ui_save_batch'
     else:
         image_default = 'ui_save_url'
     save_node_result = {
-        'SaveImage':        image_default,
-        'SaveAnimatedWEBP': image_default,
-        'SaveAnimatedPNG':  image_default,
-        'PreviewImage':     image_default,
+        'SaveImage':         image_default,
+        'SaveImageAdvanced': image_default,
+        'SaveAnimatedWEBP':  image_default,
+        'SaveAnimatedPNG':   image_default,
+        'PreviewImage':      image_default,
         'SaveVideo':         'ui_save_url',
         'SaveAudio':         'ui_save_url',
         'SaveAudioMP3':      'ui_save_url',

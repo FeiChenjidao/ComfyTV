@@ -12,6 +12,7 @@ from ._cli_common import (
     PROBE_CACHE_S,
     TOOL_RESULT_CAP,
     base_spawn_env,
+    cli_command_argv,
     kill_process_tree,
     normalize_usage,
     run_cli_turn,
@@ -63,7 +64,7 @@ def resolve_cursor_command() -> Optional[list[str]]:
     for name in ("agent", "cursor-agent"):
         found = shutil.which(name)
         if found:
-            argv = _command_argv(found)
+            argv = cli_command_argv(found)
             if argv:
                 return argv
     localapp = os.environ.get("LOCALAPPDATA") or str(
@@ -79,28 +80,9 @@ def resolve_cursor_command() -> Optional[list[str]]:
         Path("/opt/homebrew/bin/agent"),
     ]
     for candidate in candidates:
-        argv = _command_argv(str(candidate))
+        argv = cli_command_argv(str(candidate))
         if argv:
             return argv
-    return None
-
-
-def _command_argv(path: str) -> Optional[list[str]]:
-    p = Path(path)
-    if p.suffix.lower() == ".exe":
-        return [str(p)] if p.is_file() else None
-    if sys.platform != "win32":
-        if p.is_file() and os.access(path, os.X_OK):
-            return [str(p)]
-        return None
-    exe = p.with_suffix(".exe")
-    if exe.is_file():
-        return [str(exe)]
-    cmd = p.with_suffix(".cmd")
-    if cmd.is_file():
-        return ["cmd.exe", "/d", "/s", "/c", str(cmd)]
-    if p.is_file():
-        return [str(p)]
     return None
 
 

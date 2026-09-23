@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import base64
 import json
+from pathlib import Path
 
 from ComfyTV.bot.codex import (
     CodexCodeProvider,
     _CodexStreamParser,
     _flatten_mcp_content,
+    resolve_codex_command,
 )
 from ComfyTV.bot.providers import TurnRequest
 
@@ -131,6 +133,8 @@ class TestCodexArgv:
         monkeypatch.setattr(codex, "resolve_codex_command", lambda: ["codex"])
         monkeypatch.setattr(CodexCodeProvider, "_mcp_lockdown_args",
                             lambda self: [])
+        monkeypatch.setattr(CodexCodeProvider, "_plugin_lockdown_args",
+                            lambda self: [])
         return CodexCodeProvider(home_dir=str(tmp_path))
 
     def test_first_turn_shape(self, monkeypatch, tmp_path):
@@ -139,17 +143,18 @@ class TestCodexArgv:
             TurnRequest(chat_id="c", user_text="hi",
                         mcp_endpoint="http://127.0.0.1:8188/comfytv/mcp"),
             str(tmp_path))
-        assert argv[:2] == ["codex", "exec"]
+        assert argv[:4] == ["codex", "exec", "--sandbox", "read-only"]
         assert "--json" in argv
         assert "--skip-git-repo-check" in argv
-        assert "--approve-for-me" in argv
-        assert "--sandbox" not in argv
+        assert "--approve-for-me" not in argv
         assert 'mcp_servers.comfytv.url="http://127.0.0.1:8188/comfytv/mcp"' in argv
         assert "mcp_servers.comfytv.tool_timeout_sec=600" in argv
+        assert 'mcp_servers.comfytv.default_tools_approval_mode="approve"' in argv
         assert "features.shell_tool=false" in argv
         assert 'web_search="disabled"' in argv
-        assert 'approvals_reviewer="auto_review"' in argv
-        assert argv[-1] == "hi"
+        assert 'approval_policy="never"' in argv
+        assert "approvals_reviewer" not in " ".join(argv)
+        assert argv[-2:] == ["--", "hi"]
         assert temp == []
 
     def test_model_override(self, monkeypatch, tmp_path):
@@ -168,12 +173,12 @@ class TestCodexArgv:
         argv, _ = provider._build_argv(
             TurnRequest(chat_id="c", user_text="hi", resume_token="th-9"),
             str(tmp_path))
-        assert argv[:4] == ["codex", "exec", "--approve-for-me", "resume"]
-        assert "--approve-for-me" in argv
-        assert "--sandbox" not in argv
-        assert 'approvals_reviewer="auto_review"' in argv
-        assert argv[-2] == "th-9"
-        assert argv[-1] == "hi"
+        assert argv[:5] == ["codex", "exec", "--sandbox", "read-only", "resume"]
+        assert "--approve-for-me" not in argv
+        assert argv.index("--sandbox") < argv.index("resume")
+        assert 'approval_policy="never"' in argv
+        assert "approvals_reviewer" not in " ".join(argv)
+        assert argv[-3:] == ["--", "th-9", "hi"]
 
     def test_attachments_written_and_flagged(self, monkeypatch, tmp_path):
         provider = self._provider(monkeypatch, tmp_path)
@@ -187,6 +192,10 @@ class TestCodexArgv:
         assert len(temp) == 2
         assert len(set(temp)) == 2
         assert argv.count("-i") == 2
+        assert argv[-2:] == ["--", "hi"]
+        dash = argv.index("--")
+        last_i = max(i for i, a in enumerate(argv) if a == "-i")
+        assert last_i < dash
         for path in temp:
             with open(path, "rb") as fh:
                 assert fh.read() == b"jpegbytes"
@@ -202,22 +211,128 @@ class TestCodexArgv:
         assert temp == []
         assert "-i" not in argv
 
+    def test_empty_prompt_with_attachment_still_has_text(
+            self, monkeypatch, tmp_path):
+        provider = self._provider(monkeypatch, tmp_path)
+        data = base64.b64encode(b"jpegbytes").decode("ascii")
+        argv, temp = provider._build_argv(
+            TurnRequest(chat_id="c", user_text="  ", attachments=[
+                {"data": data, "media_type": "image/jpeg"},
+            ]),
+            str(tmp_path))
+        assert len(temp) == 1
+        assert argv[-2] == "--"
+        assert argv[-1].strip()
+        assert argv[-1] != temp[0]
+
+    def test_plugin_lockdown_disables_desktop_plugins(
+            self, monkeypatch, tmp_path):
+        from ComfyTV.bot import codex
+        home = tmp_path / "home"
+        (home / ".codex").mkdir(parents=True)
+        (home / ".codex" / "config.toml").write_text(
+            '[plugins."computer-use@openai-bundled"]\nenabled = true\n'
+            '[plugins."browser@openai-bundled"]\nenabled = true\n',
+            encoding="utf-8")
+        monkeypatch.setattr(Path, "home", lambda: home)
+        monkeypatch.setattr(codex, "resolve_codex_command", lambda: ["codex"])
+        monkeypatch.setattr(CodexCodeProvider, "_mcp_lockdown_args",
+                            lambda self: [])
+        provider = CodexCodeProvider(home_dir=str(tmp_path))
+        argv, _ = provider._build_argv(
+            TurnRequest(chat_id="c", user_text="hi"), str(tmp_path))
+        assert 'plugins."computer-use@openai-bundled".enabled=false' in argv
+        assert 'plugins."browser@openai-bundled".enabled=false' in argv
+
+
+class TestResolveCodexCommand:
+    def test_env_override(self, tmp_path, monkeypatch):
+        from ComfyTV.bot import codex
+        exe = tmp_path / "codex.exe"
+        exe.write_text("", encoding="utf-8")
+        monkeypatch.setenv("COMFYTV_CODEX_PATH", str(exe))
+        monkeypatch.setattr(codex.shutil, "which", lambda *_a, **_k: None)
+        assert resolve_codex_command() == [str(exe)]
+
+    def test_windows_npm_cmd(self, tmp_path, monkeypatch):
+        from ComfyTV.bot import codex
+        appdata = tmp_path / "AppData" / "Roaming"
+        npm = appdata / "npm"
+        npm.mkdir(parents=True)
+        cmd = npm / "codex.cmd"
+        cmd.write_text("@echo off\n", encoding="utf-8")
+        monkeypatch.delenv("COMFYTV_CODEX_PATH", raising=False)
+        monkeypatch.setenv("APPDATA", str(appdata))
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "Local"))
+        monkeypatch.setattr(codex.shutil, "which", lambda *_a, **_k: None)
+        monkeypatch.setattr(codex.sys, "platform", "win32")
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        argv = resolve_codex_command()
+        assert argv is not None
+        assert argv[:4] == ["cmd.exe", "/d", "/s", "/c"]
+        assert argv[4].endswith("codex.cmd")
+
+    def test_missing_returns_none(self, tmp_path, monkeypatch):
+        from ComfyTV.bot import codex
+        monkeypatch.delenv("COMFYTV_CODEX_PATH", raising=False)
+        monkeypatch.setenv("APPDATA", str(tmp_path / "a"))
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "b"))
+        monkeypatch.setattr(codex.shutil, "which", lambda *_a, **_k: None)
+        monkeypatch.setattr(Path, "home", lambda: tmp_path / "home")
+        assert resolve_codex_command() is None
+
+
+class TestCodexProbe:
+    def test_not_found_detail(self, monkeypatch):
+        import asyncio
+        from ComfyTV.bot import codex
+        monkeypatch.setattr(codex, "resolve_codex_command", lambda: None)
+        provider = CodexCodeProvider(home_dir=".")
+        provider._probe_cache = None
+        st = asyncio.get_event_loop().run_until_complete(provider.probe())
+        assert st.available is False
+        assert "npm install -g @openai/codex" in st.detail
+        assert "ChatGPT desktop" in st.detail
+        assert "COMFYTV_CODEX_PATH" in st.detail
+
+    def test_not_logged_in_detail(self, monkeypatch, tmp_path):
+        import asyncio
+        from ComfyTV.bot import codex
+
+        async def fake_proc(*_a, **_k):
+            class P:
+                returncode = 0
+                async def communicate(self):
+                    return b"codex-cli 0.1.0\n", b""
+            return P()
+
+        monkeypatch.setattr(codex, "resolve_codex_command", lambda: ["codex"])
+        monkeypatch.setattr(codex.asyncio, "create_subprocess_exec", fake_proc)
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        provider = CodexCodeProvider(home_dir=str(tmp_path))
+        provider._probe_cache = None
+        st = asyncio.get_event_loop().run_until_complete(provider.probe())
+        assert st.available is True
+        assert st.logged_in is False
+        assert "codex login" in st.detail
+
 
 class TestListModels:
-    async def test_reads_pinned_model(self, tmp_path, monkeypatch):
-        from pathlib import Path
+    def test_reads_pinned_model(self, tmp_path, monkeypatch):
+        import asyncio
         home = tmp_path / "home"
         (home / ".codex").mkdir(parents=True)
         (home / ".codex" / "config.toml").write_text(
             'model = "gpt-5.3-codex"\n', encoding="utf-8")
         monkeypatch.setattr(Path, "home", lambda: home)
-        assert await CodexCodeProvider(home_dir=".").list_models() == [
-            "gpt-5.3-codex"]
+        assert asyncio.get_event_loop().run_until_complete(
+            CodexCodeProvider(home_dir=".").list_models()) == ["gpt-5.3-codex"]
 
-    async def test_no_config(self, tmp_path, monkeypatch):
-        from pathlib import Path
+    def test_no_config(self, tmp_path, monkeypatch):
+        import asyncio
         monkeypatch.setattr(Path, "home", lambda: tmp_path / "nope")
-        assert await CodexCodeProvider(home_dir=".").list_models() == []
+        assert asyncio.get_event_loop().run_until_complete(
+            CodexCodeProvider(home_dir=".").list_models()) == []
 
 
 class TestCodexCaps:

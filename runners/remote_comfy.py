@@ -356,8 +356,6 @@ class RemoteComfyUIRunner(Runner):
 
     async def _extract_result(self, session: aiohttp.ClientSession,
                               entry: dict, result_meta: dict) -> str:
-        rtype = result_meta.get("type")
-        node_id = result_meta.get("node")
         outputs = entry.get("outputs") or {}
 
         import folder_paths
@@ -367,6 +365,17 @@ class RemoteComfyUIRunner(Runner):
             / _safe_path_component(self.server["label"])
             / uuid.uuid4().hex[:8]
         )
+
+        payload = await self._extract_result_raw(
+            session, result_meta, outputs, dest_dir, entry,
+        )
+        return await self._pack_compositor_payload(session, outputs, dest_dir, payload)
+
+    async def _extract_result_raw(self, session: aiohttp.ClientSession,
+                                  result_meta: dict, outputs: dict,
+                                  dest_dir: Path, entry: dict) -> str:
+        rtype = result_meta.get("type")
+        node_id = result_meta.get("node")
 
         if rtype in ("ui_save_url", "ui_save_layered"):
             items = _save_files_from(outputs.get(node_id) or {})
@@ -404,7 +413,9 @@ class RemoteComfyUIRunner(Runner):
             multi: dict[str, str] = {}
             for sub in result_meta.get("outputs") or []:
                 key = str(sub.get("id") or sub.get("kind") or sub.get("node"))
-                multi[key] = await self._extract_result(session, entry, sub)
+                multi[key] = await self._extract_result_raw(
+                    session, sub, outputs, dest_dir, entry,
+                )
             return json.dumps({"multi": multi})
 
         if rtype == "graph_output_first":
@@ -455,6 +466,67 @@ class RemoteComfyUIRunner(Runner):
             )
         self._raise_history_error(entry, self.server["label"])
         return await self._extract_result(session, entry, result_meta)
+
+    async def _localize_compositor_ui(
+        self,
+        session: aiohttp.ClientSession,
+        ui: dict,
+        dest_dir: Path,
+    ) -> dict:
+        from ._nested_exec import _compositor_ui
+        view_url_to_image_ref = _compositor_ui().view_url_to_image_ref
+
+        localized = dict(ui)
+        layers = []
+        for ref in ui.get("compositor_layers") or []:
+            if not isinstance(ref, dict) or not ref.get("filename"):
+                continue
+            try:
+                url = await self._download_file(session, ref, dest_dir)
+            except Exception:
+                continue
+            new_ref = view_url_to_image_ref(url)
+            layers.append(new_ref or ref)
+        if layers:
+            localized["compositor_layers"] = layers
+        images = []
+        for im in ui.get("images") or []:
+            if not isinstance(im, dict) or not im.get("filename"):
+                continue
+            try:
+                url = await self._download_file(session, im, dest_dir)
+            except Exception:
+                images.append(im)
+                continue
+            new_ref = view_url_to_image_ref(url)
+            images.append(new_ref or im)
+        if images:
+            localized["images"] = images
+        return localized
+
+    async def _pack_compositor_payload(
+        self,
+        session: aiohttp.ClientSession,
+        outputs: dict,
+        dest_dir: Path,
+        payload: str,
+    ) -> str:
+        try:
+            from ._nested_exec import _compositor_ui
+            cui = _compositor_ui()
+        except Exception:
+            return payload
+        ui = cui.harvest_compositor_ui(outputs)
+        if not ui:
+            return payload
+        try:
+            ui = await self._localize_compositor_ui(session, ui, dest_dir)
+        except Exception:
+            pass
+        try:
+            return cui.pack_payload_with_compositor_ui(payload, ui)
+        except Exception:
+            return payload
 
     async def invoke(self, ctx: RunnerContext):
         from ._batch_loop import (

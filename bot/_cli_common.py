@@ -102,6 +102,27 @@ def resolve_comfy_mcp_argv(command: str) -> list[str]:
     return [found] if found else []
 
 
+def cli_command_argv(path: str) -> Optional[list[str]]:
+    """Resolve a CLI path to an argv list, including Windows .cmd wrappers."""
+    from pathlib import Path
+    p = Path(path)
+    if p.suffix.lower() == ".exe":
+        return [str(p)] if p.is_file() else None
+    if sys.platform != "win32":
+        if p.is_file() and os.access(path, os.X_OK):
+            return [str(p)]
+        return None
+    exe = p.with_suffix(".exe")
+    if exe.is_file():
+        return [str(exe)]
+    cmd = p.with_suffix(".cmd")
+    if cmd.is_file():
+        return ["cmd.exe", "/d", "/s", "/c", str(cmd)]
+    if p.is_file():
+        return [str(p)]
+    return None
+
+
 def base_spawn_env() -> dict:
     env = dict(os.environ)
     env.setdefault("MCP_TOOL_TIMEOUT", str(MCP_TOOL_TIMEOUT_MS))

@@ -226,7 +226,7 @@ function uniqueOutputName(label: string, used: Set<string>, fallback: string): s
   return name
 }
 
-/** Slot 0 stays the image-group batch; slots 1..N are per-tile COMFYTV_IMAGE named by label. */
+/** Slot 0 stays the image-group batch; slots 1..N are per-tile COMFYTV_IMAGE. */
 export function syncCustomSplitOutputs(
   node: any,
   items: Array<{ label: string; image_url?: string }>,
@@ -253,8 +253,17 @@ export function syncCustomSplitOutputs(
     batch.type = CUSTOM_SPLIT_IMAGES_TYPE
   }
 
-  const n = Math.max(0, Math.min(items.length, CUSTOM_SPLIT_MAX_TILES))
+  const tileOutputs = Array.isArray(node.outputs) ? node.outputs.slice(1) : []
+  let linkedTiles = 0
+  for (let i = 0; i < tileOutputs.length; i++) {
+    const links = tileOutputs[i]?.links
+    if (Array.isArray(links) && links.length > 0) linkedTiles = i + 1
+  }
+  const n = Math.max(0, Math.min(CUSTOM_SPLIT_MAX_TILES, Math.max(items.length, linkedTiles)))
   while (node.outputs.length > n + 1) {
+    const last = node.outputs[node.outputs.length - 1]
+    const links = last?.links
+    if (Array.isArray(links) && links.length > 0) break
     if (typeof node.removeOutput === 'function') node.removeOutput(node.outputs.length - 1)
     else node.outputs.pop()
   }
