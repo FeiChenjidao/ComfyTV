@@ -471,6 +471,10 @@
         "desc": "What fills the card around a letterboxed thumbnail: the checkerboard used by image previews, or a dimmed copy of the same picture stretched to fill.",
         "options": { "checker": "Checkerboard", "image": "Same picture, dimmed" }
       },
+      "auto-picker": {
+        "label": "Auto-attach picker on run",
+        "desc": "When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically."
+      },
       "enable-db-backup": {
         "label": "Automatic backup on startup",
         "desc": "Back up the ComfyTV data directory (database + workflows) every time the server starts, before any migration runs."

@@ -12,6 +12,7 @@ SETTINGS_SPEC: dict[str, dict[str, Any]] = {
     "enable-v2": {"type": "boolean", "default": False, "experimental": True},
     "v2-lod-scale": {"type": "choice", "default": "42", "options": ["30", "42", "50", "60"]},
     "v2-lod-fill": {"type": "choice", "default": "checker", "options": ["checker", "image"]},
+    "auto-picker": {"type": "boolean", "default": True},
     "enable-db-backup": {"type": "boolean", "default": True},
     "db-backup-max-count": {"type": "int", "default": 10, "min": 1},
     "db-backup-path": {"type": "string", "default": ""},

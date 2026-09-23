@@ -471,6 +471,10 @@
         "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。",
         "options": { "checker": "棋盘格", "image": "同图压暗铺满" }
       },
+      "auto-picker": {
+        "label": "运行时自动接挑选节点",
+        "desc": "Image 或 Video stage 运行时，如果输出端还没有连线，自动在后面接一个 Picker stage。"
+      },
       "enable-db-backup": {
         "label": "启动时自动备份",
         "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。"
