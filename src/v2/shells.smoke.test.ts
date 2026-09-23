@@ -55,6 +55,7 @@ import '@/v2/scene3dV2'
 import '@/v2/relightV2'
 import '@/v2/loadersV2'
 import '@/v2/generatorV2'
+import '@/v2/layerSeparationShell'
 
 interface Meta {
   kind: StageKind
@@ -251,6 +252,7 @@ const EXTRA_WIDGETS: Record<string, Array<[string, string]>> = {
   'ComfyTV.ImageStage': [['resolution', 'combo'], ['aspect_ratio', 'combo'], ['batch_size', 'number'], ['selected_index', 'number']],
   'ComfyTV.ShotImagesStage': [['selected_index', 'number']],
   'ComfyTV.ImageVariationsStage': [['variant_count', 'number'], ['selected_index', 'number']],
+  'ComfyTV.LayerSeparationStage': [['psd_file', 'string'], ['captured_image', 'string'], ['captured_images', 'string'], ['compositor', 'string']],
   'ComfyTV.ImagePickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.VideoPickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.AudioPickerStage': [['selected_index', 'number'], ['pool', 'string']],
@@ -743,7 +745,7 @@ describe('V2 shell smoke', () => {
         `${cls}: shell root missing v2-card`,
       ).toBe(true)
 
-      if (hasOutputToolbar(meta.kind)) {
+      if (hasOutputToolbar(meta.kind) && cls !== 'ComfyTV.LayerSeparationStage') {
         expect(card.querySelector('.v2-toolbar'), `${cls}: output toolbar missing`).toBeTruthy()
       }
 

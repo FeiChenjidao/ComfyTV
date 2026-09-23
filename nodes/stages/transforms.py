@@ -298,6 +298,15 @@ class ImageMergeStage(io.ComfyNode):
                     tooltip="layers = stack like Photoshop (source-over at 0,0); "
                             "row = place images left to right.",
                 ),
+                io.Combo.Input(
+                    "aspect_ratio", options=["native", "1:1"], default="native",
+                    socketless=True, extra_dict={"hidden": True},
+                    tooltip="native = keep source aspect; 1:1 = square output "
+                            "(layers: pad composite to long side; row: pad each "
+                            "image to a shared long-side square then tile).",
+                ),
+                # Autogrow keeps the socket strip short (min+1). Load-time restore
+                # in the frontend re-expands and reattaches saved wires.
                 io.Autogrow.Input(
                     "images",
                     template=io.Autogrow.TemplatePrefix(
@@ -315,6 +324,11 @@ class ImageMergeStage(io.ComfyNode):
 
     @classmethod
     def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
-                merge_mode="layers", images=None):
+                merge_mode="layers", aspect_ratio="native", images=None, **kwargs):
         vals = [v for v in _autogrow_values(images) if v]
+        if not vals:
+            for i in range(IMAGE_MERGE_MAX):
+                v = kwargs.get(f"image{i}")
+                if v:
+                    vals.append(v)
         return io.NodeOutput(vals[0] if vals else "")

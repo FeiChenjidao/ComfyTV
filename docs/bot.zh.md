@@ -24,7 +24,7 @@ Bot 不直接调用任何云端模型 API,ComfyTV 也永远不存 key。它驱�
 | Provider | 安装 | 登录 | 附件 |
 | --- | --- | --- | --- |
 | [Claude Code](https://claude.com/claude-code) | `npm install -g @anthropic-ai/claude-code` | 运行 `claude` 登录一次 | 图片/视频/音频 |
-| [Codex](https://developers.openai.com/codex) | `npm install -g @openai/codex` | `codex login` | 图片/视频/音频 |
+| [Codex](https://developers.openai.com/codex) / ChatGPT CLI | `npm install -g @openai/codex`（Windows 同） | `codex login` | 图片/视频/音频 |
 | [Qwen Code](https://qwenlm.github.io/qwen-code-docs/zh/) | 官方安装脚本(见其文档) | 运行 `qwen` 后 `/auth` | 暂不支持 |
 | [Cursor CLI](https://cursor.com/docs/cli/overview) | `curl https://cursor.com/install -fsS \| bash`(Windows:`irm 'https://cursor.com/install?win32=true' \| iex`) | `agent login` | 图片/视频/音频 |
 | Local LLM | 任意 OpenAI 兼容的本地模型服务 | 无 — 在设置里填端点 URL 即可 | 暂不支持 |
@@ -35,9 +35,17 @@ Bot 不直接调用任何云端模型 API,ComfyTV 也永远不存 key。它驱�
 1. 至少装好一个 agent CLI 并登录 — 或者跑一个本地模型服务并在设置里填上它的 URL。
 2. 在 ComfyTV **设置 → Agent 与 MCP** 里,先开 **MCP 服务**,再开 **ComfyTV Bot**(Bot 依赖 MCP — 那是 agent 触达画布的通道)。
 
+Windows 上 Codex 特别容易「已安装但 Bot 检测不到」:
+
+- **Microsoft Store / ChatGPT 桌面版 ≠ CLI**。Store 包(`OpenAI.Codex`)自带的 `resources\codex.exe` 受 AppX 沙箱限制,外部进程无法直接调用,也不会注册 `codex` 命令。Bot 需要的是 npm 装的 `@openai/codex` CLI(`codex exec`)。
+- 另:ComfyUI 进程的 PATH 往往不含 npm 全局目录。装好 CLI 后可用下面任一方式:
+  - 终端执行 `where codex` 确认路径,然后设环境变量 `COMFYTV_CODEX_PATH` 指向该 `.exe` / `.cmd`(再重启 ComfyUI)
+  - 或把 npm 全局 bin(`%APPDATA%\npm`)加进系统 PATH 后重启 ComfyUI
+- Bot 面板点*重新检测*看 Codex 是否出现;若显示需登录,再跑一次 `codex login`(本机若已有 `~/.codex\auth.json`,通常可复用桌面版登录态)
+
 有多个 provider 可用时,➕ 按钮会让你选新对话用哪个引擎;每个对话记住自己的 provider。一个都检测不到时,面板显示安装引导而不是聊天框。
 
-隔离策略按引擎各自落实:Claude Code 走每轮独立的严格 MCP 配置+工具白名单;Codex 的 `codex exec` 沙箱限定在 bot 工作目录,shell 和联网搜索关闭,该回合只保留 ComfyTV 一个 MCP 服务,审批请求交给 Codex 自带的自动审察(headless 无法弹批准框);Qwen Code 走 bot 工作目录内的项目级 `.qwen/settings.json`(只挂 ComfyTV MCP,内置 shell/文件工具全部排除);Cursor CLI 在隔离的 bot-home 里跑 `agent -p`,项目级 `.cursor/mcp.json`(只挂 ComfyTV MCP)和 `.cursor/cli.json` 禁止 shell/写文件/联网抓取 — 你的全局 `~/.cursor/mcp.json` 永远不被碰。
+隔离策略按引擎各自落实:Claude Code 走每轮独立的严格 MCP 配置+工具白名单;Codex 的 `codex exec` 沙箱限定在 bot 工作目录,shell、联网搜索和 ChatGPT 桌面插件全部关闭,该回合只保留 ComfyTV 一个 MCP 服务;`approval_policy=never` 避开自动审察(自定义中转会把审察 prompt 判违规),同时给 ComfyTV 设 `default_tools_approval_mode=approve`,否则 headless 下 MCP 会被 never 策略直接拒绝;真正开跑仍走 ComfyTV 自己的对话审批;Qwen Code 走 bot 工作目录内的项目级 `.qwen/settings.json`(只挂 ComfyTV MCP,内置 shell/文件工具全部排除);Cursor CLI 在隔离的 bot-home 里跑 `agent -p`,项目级 `.cursor/mcp.json`(只挂 ComfyTV MCP)和 `.cursor/cli.json` 禁止 shell/写文件/联网抓取 — 你的全局 `~/.cursor/mcp.json` 永远不被碰。
 
 ## Local LLM provider
 
@@ -79,7 +87,10 @@ ComfyUI LLM 更进一步:连外部服务也不需要 — 推理直接跑在 **Co
 | 现象 | 原因 / 处理 |
 |---|---|
 | 侧边栏没有 ✨ 图标 | **启用 ComfyTV Bot** 没开(设置 → Agent 与 MCP),它又依赖**启用 MCP 服务** |
-| 面板显示安装引导 | 没检测到 agent CLI — 按上表装一个并登录,然后点*重新检测* |
+| 面板显示安装引导 | 没检测到 agent CLI — 按上表装一个并登录,然后点*重新检测*;Codex 在 Windows 可设 `COMFYTV_CODEX_PATH` |
+| Codex 显示但提示 login | 运行 `codex login`(登录态写在 `~/.codex/auth.json`) |
+| 工具报 Automatic approval review failed / usage policy | 旧版 Bot 把画布工具送给 Codex 自动审察,自定义中转会把审察 prompt 判违规。更新 ComfyTV 后**重启 ComfyUI** |
+| 工具报 MCP tool call requires approval, but approval policy is never | headless exec 会拒绝未预批准的 MCP。当前 Bot 只给 ComfyTV 服务设了 `default_tools_approval_mode=approve`;更新后请**重启 ComfyUI** |
 | Bot 说够不到画布 | 没有打开的 ComfyTV 页面（Comfy Desktop 或浏览器）；或服务器重启后 websocket 断了——刷新该页面 |
 | 长渲染时 Bot 好像没动 | 它在 `wait_stage` 里阻塞等待 — 工具条目能看到;正常且省钱 |
 

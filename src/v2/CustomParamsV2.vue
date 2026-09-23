@@ -140,10 +140,16 @@ watch(
       if (defKeys.has(key) || widgetNames.has(key)) continue
       const meta = metaByKey.value.get(key)
       const fallback =
-        meta?.control === 'toggle' ? false
-          : meta?.control === 'number' ? (meta.min ?? 0)
-            : meta?.control === 'combo' ? (meta.options?.[0] ?? '')
-              : ''
+        meta?.defaultValue != null && meta.defaultValue !== ''
+          ? (meta.control === 'toggle'
+            ? (meta.defaultValue === 'true' || meta.defaultValue === '1')
+            : meta.control === 'number'
+              ? (Number.isFinite(Number(meta.defaultValue)) ? Number(meta.defaultValue) : meta.defaultValue)
+              : meta.defaultValue)
+          : meta?.control === 'toggle' ? false
+            : meta?.control === 'number' ? (meta.min ?? 0)
+              : meta?.control === 'combo' ? (meta.options?.[0] ?? '')
+                : ''
       ensureDynamic(key, fallback)
     }
   },

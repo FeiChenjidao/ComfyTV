@@ -20,6 +20,7 @@ export interface BoundOptionMeta {
   max?: number
   step?: number
   label?: string
+  defaultValue?: string
 }
 
 function leafName(widgetName: string): string {
@@ -37,14 +38,18 @@ function metaFromWidget(key: string, w: {
   widget_type?: string
   widget_props?: Record<string, unknown> | null
   widget_name?: string
+  override_value?: string | null
 }): BoundOptionMeta {
   const props = w.widget_props ?? {}
   const type = String(w.widget_type ?? '').toUpperCase()
+  const defaultValue = w.override_value == null || w.override_value === ''
+    ? undefined
+    : String(w.override_value)
   if (type === 'BOOLEAN') {
-    return { key, control: 'toggle', label: key }
+    return { key, control: 'toggle', label: key, defaultValue }
   }
   if (type === 'COMBO') {
-    return { key, control: 'combo', options: comboValues(props), label: key }
+    return { key, control: 'combo', options: comboValues(props), label: key, defaultValue }
   }
   if (type === 'INT' || type === 'FLOAT') {
     return {
@@ -54,9 +59,10 @@ function metaFromWidget(key: string, w: {
       max: typeof props.max === 'number' ? props.max : undefined,
       step: typeof props.step === 'number' ? props.step : (type === 'INT' ? 1 : 0.1),
       label: key,
+      defaultValue,
     }
   }
-  return { key, control: 'text', label: leafName(String(w.widget_name ?? key)) }
+  return { key, control: 'text', label: leafName(String(w.widget_name ?? key)), defaultValue }
 }
 
 /**

@@ -9,8 +9,16 @@
       <div class="ctv:text-xs ctv:text-muted-foreground ctv:leading-relaxed">
         {{ $t('bot.noProviderBody') }}
       </div>
+      <code class="ctv:rounded ctv:bg-secondary-background ctv:px-2 ctv:py-1 ctv:text-xs">npm install -g {{ '@' }}openai/codex</code>
+      <code class="ctv:rounded ctv:bg-secondary-background ctv:px-2 ctv:py-1 ctv:text-xs">codex login</code>
       <code class="ctv:rounded ctv:bg-secondary-background ctv:px-2 ctv:py-1 ctv:text-xs">npm install -g {{ '@' }}anthropic-ai/claude-code</code>
       <code class="ctv:rounded ctv:bg-secondary-background ctv:px-2 ctv:py-1 ctv:text-xs">curl https://cursor.com/install -fsS | bash</code>
+      <div
+        v-if="providerHints.length"
+        class="ctv:mt-1 ctv:flex ctv:flex-col ctv:gap-1 ctv:text-2xs ctv:text-muted-foreground"
+      >
+        <div v-for="h in providerHints" :key="h.id">{{ h.label }}: {{ h.detail }}</div>
+      </div>
       <button
         class="ctv:mt-1 ctv:rounded-md ctv:border ctv:border-border-subtle ctv:bg-transparent ctv:px-3 ctv:py-1.5 ctv:text-xs ctv:text-base-foreground ctv:cursor-pointer"
         @click="store.refreshStatus()"
@@ -59,8 +67,9 @@
           v-for="p in store.availableProviders"
           :key="p.id"
           class="ctv:rounded-md ctv:border ctv:border-border-subtle ctv:bg-transparent ctv:px-2 ctv:py-0.5 ctv:text-xs ctv:text-base-foreground ctv:cursor-pointer"
+          :title="p.detail || p.label"
           @click="openNew(p.id)"
-        >{{ p.label }}</button>
+        >{{ p.label }}<span v-if="p.logged_in === false" class="ctv:ml-1 ctv:text-2xs ctv:text-muted-foreground">(login)</span></button>
         <button class="ctv-bot-iconbtn ctv:ml-auto" @click="providerMenuOpen = false">
           <i class="pi pi-times ctv:text-[10px]" />
         </button>
@@ -130,8 +139,9 @@
           v-for="p in store.availableProviders"
           :key="p.id"
           class="ctv:rounded-md ctv:border ctv:border-border-subtle ctv:bg-transparent ctv:px-2 ctv:py-0.5 ctv:text-xs ctv:text-base-foreground ctv:cursor-pointer"
+          :title="p.detail || p.label"
           @click="openNew(p.id)"
-        >{{ p.label }}</button>
+        >{{ p.label }}<span v-if="p.logged_in === false" class="ctv:ml-1 ctv:text-2xs ctv:text-muted-foreground">(login)</span></button>
         <button class="ctv-bot-iconbtn ctv:ml-auto" @click="providerMenuOpen = false">
           <i class="pi pi-times ctv:text-[10px]" />
         </button>
@@ -242,6 +252,12 @@ onMounted(() => {
 })
 
 const providerMenuOpen = ref(false)
+
+const providerHints = computed(() =>
+  store.providers
+    .filter(p => (p.detail || '').trim().length > 0)
+    .map(p => ({ id: p.id, label: p.label, detail: p.detail })),
+)
 
 async function openNew(providerId?: string) {
   providerMenuOpen.value = false

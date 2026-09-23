@@ -37,7 +37,7 @@ Bot 不直接调用任何云端模型 API,ComfyTV 也永远不存 key。它驱�
 
 有多个 provider 可用时,➕ 按钮会让你选新对话用哪个引擎;每个对话记住自己的 provider。一个都检测不到时,面板显示安装引导而不是聊天框。
 
-隔离策略按引擎各自落实:Claude Code 走每轮独立的严格 MCP 配置+工具白名单;Codex 的 `codex exec` 沙箱限定在 bot 工作目录,shell 和联网搜索关闭,该回合只保留 ComfyTV 一个 MCP 服务,审批请求交给 Codex 自带的自动审察(headless 无法弹批准框);Qwen Code 走 bot 工作目录内的项目级 `.qwen/settings.json`(只挂 ComfyTV MCP,内置 shell/文件工具全部排除);Cursor CLI 在隔离的 bot-home 里跑 `agent -p`,项目级 `.cursor/mcp.json`(只挂 ComfyTV MCP)和 `.cursor/cli.json` 禁止 shell/写文件/联网抓取 — 你的全局 `~/.cursor/mcp.json` 永远不被碰。
+隔离策略按引擎各自落实:Claude Code 走每轮独立的严格 MCP 配置+工具白名单;Codex 的 `codex exec` 沙箱限定在 bot 工作目录,shell、联网搜索和 ChatGPT 桌面插件全部关闭,该回合只保留 ComfyTV 一个 MCP 服务;`approval_policy=never` 避开自动审察(自定义中转会把审察 prompt 判违规),同时给 ComfyTV 设 `default_tools_approval_mode=approve`,否则 headless 下 MCP 会被 never 策略直接拒绝;真正开跑仍走 ComfyTV 自己的对话审批;Qwen Code 走 bot 工作目录内的项目级 `.qwen/settings.json`(只挂 ComfyTV MCP,内置 shell/文件工具全部排除);Cursor CLI 在隔离的 bot-home 里跑 `agent -p`,项目级 `.cursor/mcp.json`(只挂 ComfyTV MCP)和 `.cursor/cli.json` 禁止 shell/写文件/联网抓取 — 你的全局 `~/.cursor/mcp.json` 永远不被碰。
 
 ## Local LLM provider
 

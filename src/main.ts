@@ -375,6 +375,32 @@ const extension: ComfyExtension = {
         store.applyExecutedPayload(state, msg)
       },
     )
+    if (nodeData.name === 'ComfyTV.ImageMergeStage') {
+      const { restoreMergeInputsFromSaved } = await import('@/composables/stages/imageMerge')
+      const prevConfigure = proto.onConfigure
+      proto.onConfigure = function (this: ComfyNode, info: any) {
+        ;(this as any).__comfytvMergeConfigureInfo = info
+        // Expand/restore AFTER the default configure so a short saved inputs[]
+        // cannot wipe sockets before links are reattached.
+        const ret = prevConfigure?.call(this, info)
+        restoreMergeInputsFromSaved(this, info)
+        return ret
+      }
+    }
+  },
+
+  async afterConfigureGraph() {
+    const { restoreMergeInputsFromSaved, IMAGE_MERGE_CLASS } =
+      await import('@/composables/stages/imageMerge')
+    const nodes = (app as any)?.graph?._nodes
+    if (!Array.isArray(nodes)) return
+    for (const node of nodes) {
+      if (String(node?.comfyClass || '') !== IMAGE_MERGE_CLASS) continue
+      restoreMergeInputsFromSaved(
+        node,
+        (node as any).__comfytvMergeConfigureInfo ?? { inputs: node.inputs },
+      )
+    }
   },
 
   loadedGraphNode(node: ComfyNode) {
@@ -405,6 +431,12 @@ const extension: ComfyExtension = {
       if (mainPrompt && !mainPrompt.value && typeof legacy?.value === 'string' && legacy.value) {
         mainPrompt.value = legacy.value
       }
+    }
+
+    // Fresh merge nodes (and any leftover fixed-schema strip) should start short.
+    if (node.comfyClass === 'ComfyTV.ImageMergeStage' && !(node as any).__comfytvFromSave) {
+      const { pruneMergeEmptyInputs } = await import('@/composables/stages/imageMerge')
+      pruneMergeEmptyInputs(node, 1)
     }
 
     await v2Ready

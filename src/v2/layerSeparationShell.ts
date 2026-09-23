@@ -1,14 +1,12 @@
-import { watch } from 'vue'
+import { onScopeDispose, watch } from 'vue'
 
 import MainPromptInput from '@/components/stages/MainPromptInput.vue'
 import StagePresetBar from '@/components/stages/StagePresetBar.vue'
 import { useStageNode } from '@/composables/stages/useStageNode'
 import { t } from '@/i18n'
-import { type ComfyNode } from '@/lib/comfyApp'
+import { app, type ComfyNode } from '@/lib/comfyApp'
 import CustomParamsV2 from '@/v2/CustomParamsV2.vue'
 import FooterSelectsV2 from '@/v2/FooterSelectsV2.vue'
-import LayerSeparationEditorV2 from '@/v2/LayerSeparationEditorV2.vue'
-import { attachOutputToolbar } from '@/v2/outputToolbar'
 import { createIslandGroup } from '@/v2/islands'
 import { bindNodeDrag } from '@/v2/nodeDrag'
 import { bindPanelCollapse, stageInfoLine } from '@/v2/panelCollapse'
@@ -39,25 +37,45 @@ function el(tag: string, cls: string, html?: string) {
   return e
 }
 
+function installOfficialCompositor(node: ComfyNode) {
+  const anyNode = node as any
+  anyNode.hideOutputImages = true
+  if (anyNode.__comfytvOfficialCompositor) return
+
+  const extension = (app as any).extensions?.find(
+    (item: any) => item?.name === 'Comfy.ImageCompositor',
+  )
+  if (typeof extension?.nodeCreated !== 'function') return
+
+  // Core gates this setup by node class. Shadow it only for the synchronous
+  // setup call so this node keeps its own workflow identity and serialization.
+  const ownConstructor = Object.getOwnPropertyDescriptor(anyNode, 'constructor')
+  Object.defineProperty(anyNode, 'constructor', {
+    configurable: true,
+    value: { comfyClass: 'ImageCompositor' },
+  })
+  try {
+    extension.nodeCreated(anyNode, app)
+    anyNode.__comfytvOfficialCompositor = true
+  } finally {
+    if (ownConstructor) Object.defineProperty(anyNode, 'constructor', ownConstructor)
+    else delete anyNode.constructor
+  }
+}
+
 function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
   installV2ShellCss()
+  installOfficialCompositor(node)
   const anyNode = node as any
   const title = t('v2.ed.layerSeparation')
 
-  const card = el('div', 'v2-card')
+  const card = el('div', 'v2-card v2-layer-separation-card')
   bindWheelCapture(card)
   const handle = el('div', 'v2-label v2-handle', `${ICON_GRIP}${ICON}<span>${title}</span>`)
   card.appendChild(handle)
   bindNodeDrag(node, handle)
 
-  const preview = el('div', 'v2-preview')
-  preview.style.minHeight = '280px'
-  const mediaAnchor = el('div', 'v2-mp-host')
-  mediaAnchor.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;'
-  const busy = el('div', 'v2-preview__busy',
-    `<div class="v2-preview__spinner"></div><div class="v2-preview__busytext"><span></span><small></small></div>`)
-  preview.append(mediaAnchor, busy)
-
+  const compositorAnchor = el('div', 'v2-compositor-host')
   const panel = el('div', 'v2-panel')
   const refsAnchor = el('div', 'v2-panel__refs')
   const promptAnchor = el('div', 'v2-panel__prompthost')
@@ -70,25 +88,47 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
   const run = el('button', 'v2-run', RUN_BUTTON_HTML) as HTMLButtonElement
   footer.append(wfAnchor, serverAnchor, run)
   panel.append(refsAnchor, promptAnchor, presetAnchor, customAnchor, paramsAnchor, footer)
-  card.append(preview, panel)
+  card.append(compositorAnchor, panel)
 
   node.addDOMWidget('v2_shell', 'v2', card, {
-    getMinHeight: () => 560,
+    getMinHeight: () => 420,
     hideOnZoom: false,
     serialize: false,
   })
   ensureMinSize(node, 360, 580)
 
   const stageApi = useStageNode(node as any, kind, variant)
-  const { state: stageState, onRunRequest, onCancelRequest, onAction } = stageApi
+  const { state: stageState, onRunRequest, onCancelRequest } = stageApi
   const scope = createNodeScope(node)
   scope.run(() => bindProgressRing(card, stageState))
-  attachOutputToolbar(node, card, kind, stageState, onAction)
+
+  scope.run(() => {
+    let observer: MutationObserver | null = null
+    let frame = 0
+    const attachCompositor = () => {
+      const root = card.closest('.lg-node')
+      if (!root) {
+        frame = requestAnimationFrame(attachCompositor)
+        return
+      }
+      if (!observer) {
+        observer = new MutationObserver(attachCompositor)
+        observer.observe(root, { childList: true, subtree: true })
+      }
+      const widget = Array.from(root.querySelectorAll<HTMLElement>('.lg-node-widget'))
+        .find(el => !el.contains(compositorAnchor) && el.querySelector('[data-testid="compositor-open-button"]'))
+      if (widget && widget.parentElement !== compositorAnchor) compositorAnchor.appendChild(widget)
+    }
+    frame = requestAnimationFrame(attachCompositor)
+    onScopeDispose(() => {
+      cancelAnimationFrame(frame)
+      observer?.disconnect()
+    })
+  })
 
   const islands = createIslandGroup()
   const mountApps = () => {
     islands.unmountAll()
-    islands.mount(mediaAnchor, LayerSeparationEditorV2, { node, state: stageState })
     const specs: Array<[unknown, Record<string, unknown>, HTMLElement]> = [
       [MediaStripV2, { getNode: () => node, types: ['image'] }, refsAnchor],
       [MainPromptInput, { node }, promptAnchor],
@@ -96,7 +136,7 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
       [CustomParamsV2, { node, state: stageState }, customAnchor],
       [ParamsPanelV2, {
         getNode: () => node,
-        exclude: ['psd_file', 'selected_id', 'captured_image', 'captured_images'],
+        exclude: ['psd_file', 'selected_id', 'captured_image', 'captured_images', 'compositor'],
         boundOnly: true,
         workflowKind: 'layer-separation',
       }, paramsAnchor],
@@ -115,18 +155,11 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
     queueMicrotask(mountApps)
   }
 
-  const busyPct = busy.querySelector('.v2-preview__busytext span') as HTMLElement
-  const busyLabel = busy.querySelector('.v2-preview__busytext small') as HTMLElement
   scope.run(() => {
     watch(
-      () => [stageState.running, stageState.progress?.value, stageState.progress?.max, stageState.progress?.text] as const,
-      ([running, v, m, text]) => {
+      () => stageState.running,
+      (running) => {
         run.dataset.busy = running ? '1' : ''
-        busy.dataset.show = running ? '1' : ''
-        const max = Number(m) || 0
-        const p = running && max > 0 ? Math.min(1, Math.max(0, (Number(v) || 0) / max)) : 0
-        busyPct.textContent = p > 0 ? `${Math.round(p * 100)}%` : ''
-        busyLabel.textContent = running && text ? String(text) : ''
       },
       { immediate: true },
     )
@@ -139,11 +172,9 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
     else void onRunRequest()
   })
 
-  bindNodeDrag(node, preview)
   bindShellChrome(node, {
-    scope, card, socketAnchor: preview, state: stageState,
-    media: { source: 'batch', preferImageInput: true },
-    lod: true,
+    scope, card, socketAnchor: compositorAnchor, state: stageState,
+    manageHeight: { min: 170 },
   })
   bindPromptResize(node, promptAnchor, scope)
   bindPanelCollapse(node, {
@@ -157,7 +188,7 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
     prevRemoved?.apply(this, args)
   }
 
-  hideNativeWidgets(node)
+  hideNativeWidgets(node, ['compositor'])
   return stageApi
 }
 

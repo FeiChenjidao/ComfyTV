@@ -193,6 +193,37 @@ async def _run_subprompt(sub_prompt: dict, sub_prompt_id: str,
 _SAVE_UI_KEYS = ("images", "audio", "videos", "gifs", "video", "3d")
 
 
+def _compositor_ui():
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    name = f"{__name__.split('.', 1)[0]}.nodes.stages.common.compositor_ui"
+    cached = sys.modules.get(name)
+    if cached is not None:
+        return cached
+    path = Path(__file__).resolve().parent.parent / "nodes" / "stages" / "common" / "compositor_ui.py"
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _remember_compositor_ui(outputs: dict, payload: str) -> str:
+    try:
+        cui = _compositor_ui()
+    except Exception:
+        return payload
+    ui = cui.harvest_compositor_ui(outputs)
+    if not ui:
+        return payload
+    try:
+        return cui.pack_payload_with_compositor_ui(payload, ui)
+    except Exception:
+        return payload
+
+
 def _save_files_from(save_out: dict) -> list[dict]:
     if not isinstance(save_out, dict):
         return []
@@ -211,8 +242,16 @@ async def _extract_result(executor, result_meta: dict) -> str:
             "result.node is required (id of the save / output node to read)"
         )
 
+    outputs = (executor.history_result or {}).get("outputs", {})
+    payload = await _extract_result_raw(executor, result_meta, outputs)
+    return _remember_compositor_ui(outputs, payload)
+
+
+async def _extract_result_raw(executor, result_meta: dict, outputs: dict) -> str:
+    rtype = result_meta.get("type")
+    node_id = result_meta.get("node")
+
     if rtype in ("ui_save_url", "ui_save_layered"):
-        outputs = (executor.history_result or {}).get("outputs", {})
         items = _save_files_from(outputs.get(node_id) or {})
         if not items:
             raise RuntimeError(f"save node {node_id!r} produced no files")
@@ -230,7 +269,6 @@ async def _extract_result(executor, result_meta: dict) -> str:
         )
 
     if rtype == "ui_save_batch":
-        outputs = (executor.history_result or {}).get("outputs", {})
         files: list[dict] = []
         ordered_ids = [node_id] if result_meta.get("only_node") else             [node_id] + [k for k in outputs.keys() if k != node_id]
         for nid in ordered_ids:
@@ -255,7 +293,7 @@ async def _extract_result(executor, result_meta: dict) -> str:
         multi: dict[str, str] = {}
         for sub in result_meta.get("outputs") or []:
             key = str(sub.get("id") or sub.get("kind") or sub.get("node"))
-            multi[key] = await _extract_result(executor, sub)
+            multi[key] = await _extract_result_raw(executor, sub, outputs)
         return json.dumps({"multi": multi})
 
     if rtype == "graph_output_first":

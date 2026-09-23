@@ -913,6 +913,8 @@
     "customExposedPrompt": "main prompt",
     "customOutputsHint": "Outputs are chosen in the card's Expose I/O panel.",
     "bindTo": "Bind to:",
+    "bindingDefault": "Default",
+    "bindingDefaultHint": "Used when the stage control is empty.",
     "exportPreset": "Export preset.json",
     "exportPresetTooltip": "Download the current bindings as a *_preset.json file. Drop it next to the workflow JSON in workflows/<kind>/ to ship these defaults to other users.",
     "exportPresetFailed": "Export failed: {detail}",
@@ -1879,11 +1881,6 @@
     "clipping": "Clipping mask",
     "expand": "Expand"
   },
-  "layerSeparation": {
-    "emptyHint": "Run a workflow or drop a PSD to load layers",
-    "previewHint": "Composite preview",
-    "loadPsd": "Load PSD"
-  },
   "imagesSplit": {
     "connect": "Connect an image group",
     "empty": "No layers in this group yet",
@@ -1898,6 +1895,7 @@
     "mode": "Merge",
     "layers": "Layers",
     "row": "Row",
+    "aspect11": "1:1",
     "hint": "Wire any number of images",
     "needImages": "Wire images to merge",
     "wired": "{n} wired",

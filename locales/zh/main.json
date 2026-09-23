@@ -913,6 +913,8 @@
     "customExposedPrompt": "主提示词",
     "customOutputsHint": "输出在卡片的“暴露输入输出”面板里选择。",
     "bindTo": "绑定到：",
+    "bindingDefault": "默认值",
+    "bindingDefaultHint": "舞台控件为空时使用此默认值。",
     "exportPreset": "导出 preset.json",
     "exportPresetTooltip": "把当前绑定导出为 *_preset.json 文件，丢进 workflows/<kind>/ 和工作流 JSON 同目录，其他用户首次启动时会自动应用这套默认。",
     "exportPresetFailed": "导出失败: {detail}",
@@ -1879,11 +1881,6 @@
     "clipping": "剪切蒙版",
     "expand": "展开"
   },
-  "layerSeparation": {
-    "emptyHint": "运行工作流或拖入 PSD 以加载图层",
-    "previewHint": "合成预览",
-    "loadPsd": "加载 PSD"
-  },
   "imagesSplit": {
     "connect": "请接入图像组",
     "empty": "图像组里还没有图层",
@@ -1898,6 +1895,7 @@
     "mode": "合并方式",
     "layers": "图层叠加",
     "row": "横向排布",
+    "aspect11": "1:1",
     "hint": "可接入任意数量的图片",
     "needImages": "请接入要合并的图片",
     "wired": "已接入 {n} 张",

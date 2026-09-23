@@ -48,7 +48,7 @@ describe('parseImageGroupItems', () => {
 
 describe('syncImagesSplitOutputs', () => {
   function makeNode(count = 4) {
-    const node = {
+    const node: any = {
       outputs: Array.from({ length: count }, (_, i) => ({
         name: `image${i + 1}`,
         type: 'COMFYTV_IMAGE',
@@ -63,18 +63,29 @@ describe('syncImagesSplitOutputs', () => {
     return node
   }
 
-  it('trims extra sockets down to the item count (minimum 1)', () => {
+  it('trims unlinked extra sockets down to the item count (minimum 1)', () => {
     const node = makeNode(8)
     syncImagesSplitOutputs(node, [
       { index: '1', label: 'A', image_url: '/a' },
       { index: '2', label: 'B', image_url: '/b' },
     ])
-    expect(node.outputs.map((s: any) => s.name)).toEqual(['A', 'B'])
+    expect(node.outputs.map((s: any) => s.name)).toEqual(['image1', 'image2'])
     expect(node.outputs.map((s: any) => s.label)).toEqual(['A', 'B'])
     expect(node.outputs.map((s: any) => s.localized_name)).toEqual(['A', 'B'])
   })
 
-  it('keeps one placeholder socket when the group is empty', () => {
+  it('keeps linked sockets when the group is temporarily empty', () => {
+    const node = makeNode(4)
+    node.outputs[0].links = [1]
+    node.outputs[2].links = [2]
+    syncImagesSplitOutputs(node, [])
+    expect(node.outputs).toHaveLength(3)
+    expect(node.outputs.map((s: any) => s.name)).toEqual(['image1', 'image2', 'image3'])
+    expect(node.outputs[0].links).toEqual([1])
+    expect(node.outputs[2].links).toEqual([2])
+  })
+
+  it('keeps one placeholder socket when the group is empty and unlinked', () => {
     const node = makeNode(4)
     syncImagesSplitOutputs(node, [])
     expect(node.outputs).toHaveLength(1)
@@ -92,7 +103,9 @@ describe('syncImagesSplitOutputs', () => {
     syncImagesSplitOutputs(node, items.slice(0, IMAGES_SPLIT_MAX))
     expect(node.outputs).toHaveLength(IMAGES_SPLIT_MAX)
     expect(node.outputs[0].localized_name).toBe('L1')
-    expect(node.outputs.at(-1).name).toBe(`L${IMAGES_SPLIT_MAX}`)
+    expect(node.outputs[0].name).toBe('image1')
+    expect(node.outputs.at(-1).name).toBe(`image${IMAGES_SPLIT_MAX}`)
+    expect(node.outputs.at(-1).localized_name).toBe(`L${IMAGES_SPLIT_MAX}`)
   })
 
   it('shrinks a socket-stretched node back to a compact height', () => {
@@ -118,24 +131,26 @@ describe('syncImagesSplitOutputs', () => {
     expect(node.size[0]).toBeGreaterThanOrEqual(360)
   })
 
-  it('uses the first layer name on socket 0, not image1', () => {
+  it('keeps schema names and puts layer titles on labels', () => {
     const node = makeNode(1)
     syncImagesSplitOutputs(node, [
       { index: '1', label: '梅花', image_url: '/a' },
       { index: '2', label: '山石瀑布', image_url: '/b' },
     ])
-    expect(node.outputs[0].name).toBe('梅花')
+    expect(node.outputs[0].name).toBe('image1')
     expect(node.outputs[0].label).toBe('梅花')
-    expect(node.outputs[1].name).toBe('山石瀑布')
+    expect(node.outputs[1].name).toBe('image2')
+    expect(node.outputs[1].label).toBe('山石瀑布')
   })
 
-  it('disambiguates duplicate layer names', () => {
+  it('disambiguates duplicate layer names on labels only', () => {
     const node = makeNode(1)
     syncImagesSplitOutputs(node, [
       { index: '1', label: 'Layer', image_url: '/a' },
       { index: '2', label: 'Layer', image_url: '/b' },
     ])
-    expect(node.outputs.map((s: any) => s.name)).toEqual(['Layer', 'Layer (2)'])
+    expect(node.outputs.map((s: any) => s.name)).toEqual(['image1', 'image2'])
+    expect(node.outputs.map((s: any) => s.label)).toEqual(['Layer', 'Layer (2)'])
   })
 })
 
@@ -200,7 +215,8 @@ describe('syncImagesSplitStage / imagesSplitUrlAt', () => {
     )
     expect(truncated).toBe(false)
     expect(items.map(i => i.label)).toEqual(['Sky', 'Ground'])
-    expect(node.outputs.map((s: any) => s.name)).toEqual(['Sky', 'Ground'])
+    expect(node.outputs.map((s: any) => s.name)).toEqual(['image1', 'image2'])
+    expect(node.outputs.map((s: any) => s.label)).toEqual(['Sky', 'Ground'])
     expect(written[0]?.slice(0, 3)).toEqual(['/sky.png', '/g.png', null])
     expect(written[0]).toHaveLength(IMAGES_SPLIT_MAX)
   })

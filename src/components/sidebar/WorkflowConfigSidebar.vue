@@ -165,6 +165,10 @@
               >
                 <div class="ctv:text-2xs">
                   <span class="ctv:font-mono ctv:text-muted-foreground">.{{ w.widget_name }}</span>
+                  <span v-if="canEditBindingDefault(w)"
+                        class="ctv:ml-1.5 ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground/70">
+                    {{ $t('configSidebar.bindingDefault') }}
+                  </span>
                 </div>
                 <ComfyTVWidget
                   :kind="w.widget_type"
@@ -175,9 +179,13 @@
                   :step="numProp(w, 'step')"
                   :precision="numProp(w, 'precision')"
                   :multiline="!!w.widget_props?.multiline"
-                  :disabled="isStageBound(w) || !!exposedOf(w)"
+                  :disabled="!!exposedOf(w) || (isStageBound(w) && !canEditBindingDefault(w))"
                   @update:model-value="onValueChange(w, $event)"
                 />
+                <p v-if="canEditBindingDefault(w)"
+                   class="ctv:m-0 ctv:text-3xs ctv:leading-snug ctv:text-muted-foreground/70">
+                  {{ $t('configSidebar.bindingDefaultHint') }}
+                </p>
                 <div v-if="exposedOf(w)" class="ctv:flex ctv:items-center ctv:gap-1.5 ctv:mt-0.5 ctv:text-3xs ctv:text-muted-foreground">
                   <span class="ctv:uppercase ctv:tracking-wide">{{ $t('configSidebar.customExposed') }}</span>
                   <span class="ctv:py-px ctv:px-1.5 ctv:rounded-lg ctv:bg-base-foreground/5 ctv:text-base-foreground">
@@ -413,6 +421,7 @@ function isNodeCollapsed(nodeId: string): boolean {
 const {
   isStageBound,
   isUpstreamBound,
+  canEditBindingDefault,
   dropdownValueFor,
   effectiveValue,
   comboOptions,

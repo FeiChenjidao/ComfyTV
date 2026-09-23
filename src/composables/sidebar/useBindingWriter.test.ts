@@ -136,13 +136,47 @@ describe('useBindingWriter — mutation flows', () => {
     expect(deleteBinding).toHaveBeenCalledWith('1', 'w')
   })
 
-  it('onValueChange is a no-op when the widget is currently stage-bound', async () => {
+  it('onValueChange is a no-op when the widget is upstream-bound', async () => {
     const { onValueChange, postBinding, deleteBinding } = setup()
-    const w = widget({ stage_binding: 'option:seed' })
+    const w = widget({ stage_binding: 'upstream_image:annotated[0]' })
     await onValueChange(w, 'whatever')
     expect(postBinding).not.toHaveBeenCalled()
     expect(deleteBinding).not.toHaveBeenCalled()
-    expect(w.stage_binding).toBe('option:seed')
+    expect(w.stage_binding).toBe('upstream_image:annotated[0]')
+  })
+
+  it('onValueChange updates fallback default for option:* without converting to literal', async () => {
+    const { onValueChange, postBinding, canEditBindingDefault } = setup()
+    const w = widget({
+      widget_type: 'COMBO',
+      stage_binding: 'option:scale',
+      cast: null,
+      override_value: null,
+      current_value: '2K',
+    })
+    expect(canEditBindingDefault(w)).toBe(true)
+    await onValueChange(w, '4K')
+    expect(w.stage_binding).toBe('option:scale')
+    expect(w.override_value).toBe('4K')
+    expect(postBinding).toHaveBeenCalledWith({
+      node_id: '1', input_name: 'w', from: 'option:scale',
+      default: '4K', cast: null, required: false,
+    })
+  })
+
+  it('onValueChange clears option default without deleting the binding', async () => {
+    const { onValueChange, postBinding, deleteBinding } = setup()
+    const w = widget({
+      stage_binding: 'option:scale',
+      override_value: '4K',
+    })
+    await onValueChange(w, '')
+    expect(w.stage_binding).toBe('option:scale')
+    expect(w.override_value).toBeNull()
+    expect(deleteBinding).not.toHaveBeenCalled()
+    expect(postBinding).toHaveBeenCalledWith(expect.objectContaining({
+      from: 'option:scale', default: null,
+    }))
   })
 
   it('onBindingChange to __VALUE__ deletes the existing binding', async () => {
@@ -164,13 +198,23 @@ describe('useBindingWriter — mutation flows', () => {
     })
   })
 
-  it('onBindingChange to a computed key seeds cast=int with no default', async () => {
+  it('onBindingChange to a computed key seeds cast=int from current_value', async () => {
     const { onBindingChange, postBinding } = setup()
-    const w = widget()
+    const w = widget({ widget_type: 'INT', current_value: 1024 })
     await onBindingChange(w, 'computed:width')
     expect(postBinding).toHaveBeenCalledWith({
       node_id: '1', input_name: 'w', from: 'computed:width',
-      default: null, cast: 'int', required: false,
+      default: '1024', cast: 'int', required: false,
+    })
+  })
+
+  it('onBindingChange to option:* seeds default from the widget current_value', async () => {
+    const { onBindingChange, postBinding } = setup()
+    const w = widget({ widget_type: 'COMBO', current_value: '4K' })
+    await onBindingChange(w, 'option:scale')
+    expect(postBinding).toHaveBeenCalledWith({
+      node_id: '1', input_name: 'w', from: 'option:scale',
+      default: '4K', cast: null, required: false,
     })
   })
 

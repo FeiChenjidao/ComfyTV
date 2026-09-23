@@ -28,7 +28,6 @@ import MeshBooleanStageCard from '@/components/stages/MeshBooleanStageCard.vue'
 import GridSplitStageCard from '@/components/stages/GridSplitStageCard.vue'
 import CustomSplitStageCard from '@/components/stages/CustomSplitStageCard.vue'
 import PsdLayerTreeStageCard from '@/components/stages/PsdLayerTreeStageCard.vue'
-import LayerSeparationStageCard from '@/components/stages/LayerSeparationStageCard.vue'
 import ImagesSplitStageCard from '@/components/stages/ImagesSplitStageCard.vue'
 import ImageMergeStageCard from '@/components/stages/ImageMergeStageCard.vue'
 import DirectorTimelineStageCard from '@/components/stages/DirectorTimelineStageCard.vue'
@@ -217,7 +216,6 @@ export const RICH_STAGE_CARDS: Record<string, any> = {
   'ComfyTV.CompareStage':             CompareStageCard,
   'ComfyTV.AssetImageLoaderStage':    AssetLoaderCard,
   'ComfyTV.PsdLayerTreeStage':        PsdLayerTreeStageCard,
-  'ComfyTV.LayerSeparationStage':     LayerSeparationStageCard,
   'ComfyTV.ImagesSplitStage':         ImagesSplitStageCard,
   'ComfyTV.ImageMergeStage':          ImageMergeStageCard,
   'ComfyTV.AssetVideoLoaderStage':    AssetLoaderCard,
@@ -390,7 +388,7 @@ export const RICH_STAGE_MIN_HEIGHTS: Record<string, number> = {
   'ComfyTV.GridSplitStage':           560,
   'ComfyTV.CustomSplitStage':         560,
   'ComfyTV.PsdLayerTreeStage':        420,
-  'ComfyTV.LayerSeparationStage':     620,
+  'ComfyTV.LayerSeparationStage':     720,
   'ComfyTV.ImagesSplitStage':         680,
   'ComfyTV.ImageMergeStage':          460,
   'ComfyTV.OutpaintStage':            620,
@@ -514,6 +512,7 @@ export const RICH_STAGE_MIN_WIDTHS: Record<string, number> = {
   'ComfyTV.Scene3DStage': 960,
   'ComfyTV.BlenderSceneStage': 960,
   'ComfyTV.LayerEditorStage': 960,
+  'ComfyTV.LayerSeparationStage': 960,
   'ComfyTV.StoryboardEditorStage': 1080,
 }
 

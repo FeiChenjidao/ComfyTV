@@ -24,7 +24,7 @@ The bot does not talk to any cloud model API directly and ComfyTV never stores a
 | Provider | Install | Sign in | Attachments |
 | --- | --- | --- | --- |
 | [Claude Code](https://claude.com/claude-code) | `npm install -g @anthropic-ai/claude-code` | run `claude`, log in once | images / video / audio |
-| [Codex](https://developers.openai.com/codex) | `npm install -g @openai/codex` | `codex login` | images / video / audio |
+| [Codex](https://developers.openai.com/codex) / ChatGPT CLI | `npm install -g @openai/codex` (same on Windows) | `codex login` | images / video / audio |
 | [Qwen Code](https://qwenlm.github.io/qwen-code-docs/) | official install script (see its docs) | run `qwen`, then `/auth` | not yet |
 | [Cursor CLI](https://cursor.com/docs/cli/overview) | `curl https://cursor.com/install -fsS \| bash` (Windows: `irm 'https://cursor.com/install?win32=true' \| iex`) | `agent login` | images / video / audio |
 | Local LLM | any OpenAI-compatible local server | none — set the endpoint URL in Settings | not yet |
@@ -35,9 +35,17 @@ Prerequisites:
 1. Install at least one agent CLI and sign in once — or run a local model server and set its URL in Settings.
 2. In ComfyTV **Settings → Agent & MCP**, enable **MCP server** and then **ComfyTV Bot** (the bot requires MCP — it's how the agent reaches your canvas).
 
+On Windows, Codex is often “installed” but invisible to the bot:
+
+- **Microsoft Store / ChatGPT desktop ≠ CLI.** The Store package (`OpenAI.Codex`) ships a sandboxed `resources\codex.exe` that other processes cannot launch, and it does not register a `codex` command. The bot needs the npm `@openai/codex` CLI (`codex exec`).
+- Separately, ComfyUI’s process PATH often omits the npm global bin. After installing the CLI:
+  - Run `where codex`, then set `COMFYTV_CODEX_PATH` to that `.exe` / `.cmd` and restart ComfyUI
+  - Or add `%APPDATA%\npm` to the system PATH and restart ComfyUI
+- Hit *Recheck* in the bot panel; if it says login is required, run `codex login` (an existing `~\.codex\auth.json` from the desktop app is usually reusable)
+
 With more than one provider available, the ➕ button asks which engine a new chat should use; each chat remembers its provider. If no provider is found, the panel shows an install guide instead of a chat box.
 
-Provider isolation is per-engine: Claude Code runs with a strict per-turn MCP config and a tool whitelist; Codex runs `codex exec` sandboxed to the bot's working directory with shell and web search disabled, every MCP server except ComfyTV's turned off, and its localhost canvas-tool approvals routed through Codex's automatic reviewer (headless runs cannot prompt); Qwen Code runs against a project-scoped `.qwen/settings.json` inside the bot's working directory (ComfyTV MCP server only, built-in shell/file tools excluded); Cursor CLI runs `agent -p` against an isolated bot-home workspace with a project `.cursor/mcp.json` (ComfyTV MCP only) and `.cursor/cli.json` that denies shell, file writes and web fetch — your global `~/.cursor/mcp.json` is never touched.
+Provider isolation is per-engine: Claude Code runs with a strict per-turn MCP config and a tool whitelist; Codex runs `codex exec` sandboxed to the bot's working directory with shell, web search, and ChatGPT-desktop plugins disabled, every MCP server except ComfyTV's turned off, `approval_policy=never` (no auto-review — that reviewer fails closed on custom providers), and `mcp_servers.comfytv.default_tools_approval_mode=approve` so localhost canvas tools can run in headless exec (GPU runs still go through ComfyTV's own chat approval); Qwen Code runs against a project-scoped `.qwen/settings.json` inside the bot's working directory (ComfyTV MCP server only, built-in shell/file tools excluded); Cursor CLI runs `agent -p` against an isolated bot-home workspace with a project `.cursor/mcp.json` (ComfyTV MCP only) and `.cursor/cli.json` that denies shell, file writes and web fetch — your global `~/.cursor/mcp.json` is never touched.
 
 ## Local LLM provider
 
@@ -79,7 +87,10 @@ Each turn spawns a fresh CLI process in headless mode, locked down to the ComfyT
 | Symptom | Cause / fix |
 |---|---|
 | No ✨ icon in the sidebar | **Enable ComfyTV Bot** is off (Settings → Agent & MCP), which itself requires **Enable MCP server** |
-| Panel shows an install guide | No agent CLI found — install one from the table above and sign in, then *Check again* |
+| Panel shows an install guide | No agent CLI found — install one from the table above and sign in, then *Check again*; on Windows Codex can use `COMFYTV_CODEX_PATH` |
+| Codex shows a login hint | Run `codex login` (auth lives in `~/.codex/auth.json`) |
+| Tools fail with Automatic approval review failed / usage policy | Older Bot routed canvas tools through Codex auto-review; custom providers flag that review prompt. After updating ComfyTV, **restart ComfyUI** |
+| Tools fail with MCP tool call requires approval, but approval policy is never | Headless exec denies unapproved MCP. Current Bot pre-approves only the ComfyTV server (`default_tools_approval_mode=approve`); **restart ComfyUI** after the update |
 | Bot says it can't reach the canvas | No ComfyTV page open (or page websocket dropped after a server restart — hard-refresh) |
 | Long renders: bot seems idle | It's inside a blocking `wait_stage` — the tool chip shows it; this is normal and cheap |
 

@@ -164,11 +164,14 @@ def _ensure_comfyui_stubs():
             Input = _Input
             Output = _Input
 
+        class _Compositor(_Input):
+            Input = _Input
+
         io = types.SimpleNamespace(
             Int=_Int, Float=_Float, Boolean=_Boolean, String=_String,
             Combo=_Combo, Custom=_Custom, Autogrow=_Autogrow,
             Color=_Color, NumberDisplay=_NumDisplay, MultiType=_MultiType,
-            Mask=_Mask,
+            Mask=_Mask, Compositor=_Compositor,
             NodeOutput=_NodeOutput,
             ComfyNode=_ComfyNode, Schema=_Schema,
             UploadType=_UploadType, FolderType=_FolderType, Hidden=_Hidden,

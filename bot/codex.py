@@ -12,6 +12,7 @@ from ._cli_common import (
     PROBE_CACHE_S,
     TOOL_RESULT_CAP,
     base_spawn_env,
+    cli_command_argv,
     kill_process_tree,
     normalize_usage,
     run_cli_turn,
@@ -37,27 +38,77 @@ _MEDIA_EXT = {
     "image/gif": ".gif",
 }
 
+_NOT_FOUND_DETAIL = (
+    "codex CLI not found — install with `npm install -g @openai/codex` "
+    "(Microsoft Store / ChatGPT desktop app is not the CLI), "
+    "or set COMFYTV_CODEX_PATH to the binary"
+)
+_NOT_LOGGED_IN_DETAIL = "codex is installed but not signed in — run `codex login`"
+
 
 def resolve_codex_command() -> Optional[list[str]]:
+    override = (os.environ.get("COMFYTV_CODEX_PATH") or "").strip()
+    if override:
+        argv = cli_command_argv(override)
+        if argv:
+            return argv
+
     if sys.platform == "win32":
-        exe = shutil.which("codex.exe")
-        if exe:
-            return [exe]
-    found = shutil.which("codex")
-    if found:
-        return [found]
-    candidates = [
-        "/Applications/ChatGPT.app/Contents/Resources/codex",
-        str(Path.home() / ".local" / "bin" / "codex"),
-        str(Path.home() / ".codex" / "bin" / "codex"),
+        for name in ("codex.exe", "codex.cmd", "codex"):
+            found = shutil.which(name)
+            if found:
+                argv = cli_command_argv(found)
+                if argv:
+                    return argv
+    else:
+        found = shutil.which("codex")
+        if found:
+            argv = cli_command_argv(found)
+            if argv:
+                return argv
+
+    home = Path.home()
+    localapp = Path(os.environ.get("LOCALAPPDATA") or (home / "AppData" / "Local"))
+    appdata = Path(os.environ.get("APPDATA") or (home / "AppData" / "Roaming"))
+    candidates: list[Path] = [
+        home / ".local" / "bin" / "codex",
+        home / ".local" / "bin" / "codex.exe",
+        home / ".codex" / "bin" / "codex",
+        home / ".codex" / "bin" / "codex.exe",
+        Path("/Applications/ChatGPT.app/Contents/Resources/codex"),
+        Path("/usr/local/bin/codex"),
+        Path("/opt/homebrew/bin/codex"),
+        appdata / "npm" / "codex",
+        appdata / "npm" / "codex.cmd",
+        appdata / "npm" / "codex.exe",
+        localapp / "npm" / "codex",
+        localapp / "npm" / "codex.cmd",
+        localapp / "npm" / "codex.exe",
+        localapp / "Programs" / "ChatGPT" / "resources" / "codex",
+        localapp / "Programs" / "ChatGPT" / "resources" / "codex.exe",
+        localapp / "ChatGPT" / "resources" / "codex",
+        localapp / "ChatGPT" / "resources" / "codex.exe",
     ]
+    # ChatGPT desktop may nest the binary under versioned resource folders.
+    for root in (
+        localapp / "Programs" / "ChatGPT",
+        localapp / "ChatGPT",
+        Path("/Applications/ChatGPT.app/Contents/Resources"),
+    ):
+        if not root.is_dir():
+            continue
+        for name in ("codex", "codex.exe"):
+            direct = root / name
+            if direct not in candidates:
+                candidates.append(direct)
+            nested = root / "resources" / name
+            if nested not in candidates:
+                candidates.append(nested)
+
     for candidate in candidates:
-        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
-            return [candidate]
-    if sys.platform == "win32":
-        for candidate in candidates:
-            if os.path.isfile(candidate + ".exe"):
-                return [candidate + ".exe"]
+        argv = cli_command_argv(str(candidate))
+        if argv:
+            return argv
     return None
 
 
@@ -293,7 +344,7 @@ class CodexCodeProvider(AgentProvider):
             return self._probe_cache[1]
         argv = resolve_codex_command()
         if not argv:
-            status = ProviderStatus(available=False, detail="codex executable not found")
+            status = ProviderStatus(available=False, detail=_NOT_FOUND_DETAIL)
             self._probe_cache = (now, status)
             return status
         try:
@@ -303,16 +354,27 @@ class CodexCodeProvider(AgentProvider):
                 stderr=asyncio.subprocess.PIPE,
                 env=base_spawn_env(),
             )
-            out, _ = await asyncio.wait_for(proc.communicate(), timeout=15)
+            out, err = await asyncio.wait_for(proc.communicate(), timeout=15)
             version = (out or b"").decode("utf-8", "replace").strip()
+            if not version:
+                version = (err or b"").decode("utf-8", "replace").strip()
+            if proc.returncode not in (0, None) and not version:
+                status = ProviderStatus(
+                    available=False,
+                    detail=f"version check failed (exit {proc.returncode})",
+                )
+                self._probe_cache = (now, status)
+                return status
         except (OSError, asyncio.TimeoutError) as e:
             status = ProviderStatus(available=False, detail=f"version check failed: {e}")
             self._probe_cache = (now, status)
             return status
+        logged_in = self._detect_logged_in()
         status = ProviderStatus(
             available=True,
             version=version,
-            logged_in=self._detect_logged_in(),
+            logged_in=logged_in,
+            detail="" if logged_in else _NOT_LOGGED_IN_DETAIL,
         )
         self._probe_cache = (now, status)
         return status
@@ -335,25 +397,45 @@ class CodexCodeProvider(AgentProvider):
             return [str(model)] if model else []
         return await asyncio.to_thread(read)
 
-    def _mcp_lockdown_args(self) -> list[str]:
-        args: list[str] = []
+    def _codex_user_config(self) -> dict:
         try:
             import tomllib
         except Exception:
-            return args
+            return {}
         cfg = Path.home() / ".codex" / "config.toml"
         if not cfg.exists():
-            return args
+            return {}
         try:
             data = tomllib.loads(cfg.read_text(encoding="utf-8", errors="ignore"))
         except Exception:
-            return args
-        servers = data.get("mcp_servers") or {}
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    def _mcp_lockdown_args(self) -> list[str]:
+        args: list[str] = []
+        servers = self._codex_user_config().get("mcp_servers") or {}
         if not isinstance(servers, dict):
             return args
         for server_id in servers:
             if server_id != "comfytv":
                 args += ["-c", f"mcp_servers.{server_id}.enabled=false"]
+        return args
+
+    def _plugin_lockdown_args(self) -> list[str]:
+        """Turn off ChatGPT-desktop plugins for this exec.
+
+        Desktop config often enables computer-use / browser plugins. Combined
+        with approval_policy=never those would run without a reviewer.
+        """
+        args: list[str] = []
+        plugins = self._codex_user_config().get("plugins") or {}
+        if not isinstance(plugins, dict):
+            return args
+        for plugin_id in plugins:
+            name = str(plugin_id).replace('"', "")
+            if not name:
+                continue
+            args += ["-c", f'plugins."{name}".enabled=false']
         return args
 
     def _write_attachment(self, home: str, data: str, media_type: str,
@@ -376,7 +458,7 @@ class CodexCodeProvider(AgentProvider):
     def _build_argv(self, turn: TurnRequest, home: str) -> tuple[list[str], list[str]]:
         argv = resolve_codex_command()
         if not argv:
-            raise RuntimeError("codex executable not found")
+            raise RuntimeError(_NOT_FOUND_DETAIL)
 
         flags = ["--json", "--skip-git-repo-check"]
         if turn.mcp_endpoint:
@@ -384,11 +466,21 @@ class CodexCodeProvider(AgentProvider):
                 "-c", 'mcp_servers.comfytv.url="%s"' % turn.mcp_endpoint,
                 "-c", "mcp_servers.comfytv.required=true",
                 "-c", f"mcp_servers.comfytv.tool_timeout_sec={_MCP_TOOL_TIMEOUT_SEC}",
+                # exec's approval_policy=never rejects MCP calls unless this
+                # server is pre-approved. "approve" auto-runs ComfyTV tools
+                # without --approve-for-me / auto_review.
+                "-c", 'mcp_servers.comfytv.default_tools_approval_mode="approve"',
             ]
         flags += self._mcp_lockdown_args()
+        flags += self._plugin_lockdown_args()
         flags += ["-c", "features.shell_tool=false"]
         flags += ["-c", 'web_search="disabled"']
-        flags += ["-c", 'approvals_reviewer="auto_review"']
+        # Headless turns cannot pop a human approval dialog. auto_review fails
+        # closed on custom providers ("Invalid prompt … usage policy").
+        # approval_policy=never still denies MCP unless the server above is
+        # default_tools_approval_mode=approve. Shell/plugins stay off; GPU
+        # runs still go through ComfyTV's own ask_user approval.
+        flags += ["-c", 'approval_policy="never"']
         if turn.model:
             flags += ["-m", turn.model]
 
@@ -404,14 +496,27 @@ class CodexCodeProvider(AgentProvider):
                 flags += ["-i", path]
 
         argv = argv + ["exec"]
+        # `--sandbox` belongs to `codex exec`, not `codex exec resume`.
+        # codex-cli 0.155 rejects it after `resume`
+        # ("unexpected argument '--sandbox'"). Parent options go first so
+        # resumed turns stay read-only too.
+        argv += ["--sandbox", "read-only"]
         if turn.resume_token:
-            argv += ["--approve-for-me", "resume"]
-        else:
-            argv += ["--approve-for-me"]
+            argv += ["resume"]
         argv += flags
+        # `--image <FILE>...` is greedy and will swallow the prompt (and the
+        # resume session id) unless options are terminated. Without a prompt
+        # argument, exec reads stdin and fails with "No prompt provided".
+        argv.append("--")
         if turn.resume_token:
             argv.append(turn.resume_token)
-        argv.append(turn.user_text)
+        prompt = (turn.user_text or "").strip()
+        if not prompt:
+            prompt = (
+                "Look at the attached media and describe what you see."
+                if temp_files else "Continue."
+            )
+        argv.append(prompt)
         return argv, temp_files
 
     async def send(self, turn: TurnRequest, emit: EmitFn,

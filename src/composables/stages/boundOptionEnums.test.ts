@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const apiSend = vi.fn(async () => ({ ok: true }))
 vi.mock('@/api', () => ({
   fetchWorkflowConfig: vi.fn(),
-  apiSend: (...a: unknown[]) => apiSend(...a),
+  apiSend: (...a: unknown[]) => (apiSend as any)(...a),
   OkSchema: {},
 }))
 vi.mock('@/composables/stages/useWorkflowPrep', () => ({
@@ -18,8 +18,10 @@ import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
 import { ASPECT_RATIOS_DEFAULT, RESOLUTIONS } from '@/utils/sizing'
 import {
   clearBoundOptionEnumsCache,
+  defaultsFromExposedWidgets,
   enumsFromExposedWidgets,
   loadBoundOptionEnums,
+  applyBoundOptionDefaults,
   syncBoundOptionEnums,
 } from './boundOptionEnums'
 
@@ -253,5 +255,63 @@ describe('syncBoundOptionEnums', () => {
     clearBoundOptionEnumsCache('image', 'A')
     await loadBoundOptionEnums('image', 'A')
     expect(fetchWorkflowConfig).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('defaultsFromExposedWidgets / applyBoundOptionDefaults', () => {
+  it('reads option:* override_value as panel defaults', () => {
+    expect(defaultsFromExposedWidgets([
+      { stage_binding: 'option:aspect_ratio', override_value: '16:9' },
+      { stage_binding: 'option:seed', override_value: '42' },
+      { stage_binding: 'literal:x', override_value: 'nope' },
+      { stage_binding: 'option:empty', override_value: '' },
+    ])).toEqual({ aspect_ratio: '16:9', seed: '42' })
+  })
+
+  it('writes combo + number defaults onto Stage widgets', () => {
+    const node: any = {
+      widgets: [
+        { name: 'aspect_ratio', type: 'combo', value: '1:1', options: { values: ['auto', '1:1', '16:9'] }, callback: vi.fn() },
+        { name: 'seed', type: 'number', value: 0, callback: vi.fn() },
+        { name: 'custom_params', type: 'string', value: '{"items":[]}', callback: vi.fn() },
+      ],
+    }
+    applyBoundOptionDefaults(node, { aspect_ratio: '16:9', seed: '7', guidance: '3.5' }, 'all')
+    expect(node.widgets[0].value).toBe('16:9')
+    expect(node.widgets[1].value).toBe(7)
+    expect(JSON.parse(node.widgets[2].value)).toEqual({ items: [{ key: 'guidance', value: '3.5' }] })
+  })
+
+  it('empty mode keeps user-edited values', () => {
+    const node: any = {
+      widgets: [
+        { name: 'aspect_ratio', type: 'combo', value: '1:1', options: { values: ['1:1', '16:9'] }, callback: vi.fn() },
+      ],
+    }
+    applyBoundOptionDefaults(node, { aspect_ratio: '16:9' }, 'empty')
+    expect(node.widgets[0].value).toBe('1:1')
+  })
+
+  it('applies override_value onto the panel when selecting a workflow', async () => {
+    vi.mocked(fetchWorkflowConfig).mockResolvedValue({
+      id: 4,
+      exposed_widgets: [{
+        node_id: '1',
+        widget_name: 'model.aspect_ratio',
+        stage_binding: 'option:aspect_ratio',
+        widget_type: 'COMBO',
+        widget_props: { values: ['auto', '1:1', '16:9'] },
+        override_value: '16:9',
+      }],
+    } as any)
+
+    const node: any = {
+      widgets: [
+        { name: 'aspect_ratio', type: 'combo', value: '1:1', options: { values: [...ASPECT_RATIOS_DEFAULT] }, callback: vi.fn() },
+      ],
+    }
+    await syncBoundOptionEnums(node, 'image', 'NanoBanana2', { applyDefaults: 'all' })
+    expect(node.widgets[0].options.values).toEqual(['auto', '1:1', '16:9'])
+    expect(node.widgets[0].value).toBe('16:9')
   })
 })

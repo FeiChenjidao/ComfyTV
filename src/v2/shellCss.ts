@@ -235,6 +235,23 @@ body[data-v2-slot-hover] .p-tooltip { display: none !important; }
 .lg-node[data-v2-shell] .lg-node-widget > div:first-child { display: none; }
 .lg-node[data-v2-shell] .lg-node-widget > *:last-child { flex: 1; min-width: 0; }
 .lg-node[data-v2-shell] .lg-node-widget:not(:has(.v2-card)) { display: none; }
+.v2-compositor-host {
+  position: relative;
+  display: flex;
+  flex: 1 1 170px;
+  min-height: 170px;
+  overflow: hidden;
+}
+.lg-node[data-v2-shell] .v2-compositor-host > .lg-node-widget:has([data-testid="compositor-open-button"]) {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+}
+.lg-node[data-v2-shell] .v2-compositor-host > .lg-node-widget:has([data-testid="compositor-open-button"]) > *:last-child {
+  height: 100%;
+  min-height: 0;
+}
 
 .v2-card {
   position: relative;

@@ -250,6 +250,23 @@ describe('split math', () => {
       inputs: [{ name: 'images.正' }, { name: 'images.左' }],
     }, '左')).toBe(1)
   })
+
+  it('syncCustomSplitOutputs keeps linked tile sockets when items briefly empty', () => {
+    const node: any = {
+      outputs: [
+        { name: 'images', type: 'COMFYTV_IMAGES', links: [] },
+        { name: '正', type: 'COMFYTV_IMAGE', links: [10] },
+        { name: '左', type: 'COMFYTV_IMAGE', links: [] },
+        { name: '背', type: 'COMFYTV_IMAGE', links: [11] },
+      ],
+      removeOutput: (i: number) => { node.outputs.splice(i, 1) },
+      setDirtyCanvas: vi.fn(),
+    }
+    syncCustomSplitOutputs(node, [])
+    expect(node.outputs).toHaveLength(4)
+    expect(node.outputs[1].links).toEqual([10])
+    expect(node.outputs[3].links).toEqual([11])
+  })
 })
 
 describe('useCustomSplit — state + widget bridging', () => {

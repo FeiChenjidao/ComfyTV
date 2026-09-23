@@ -139,9 +139,9 @@ export function bindPromptResize(node: ComfyNode, promptAnchor: HTMLElement, sco
   })
 }
 
-export function hideNativeWidgets(node: ComfyNode) {
+export function hideNativeWidgets(node: ComfyNode, keep: readonly string[] = []) {
   for (const w of (node.widgets ?? []) as any[]) {
-    if (w.type === 'v2') continue
+    if (w.type === 'v2' || keep.includes(w.name)) continue
     ;(w.options ??= {}).hidden = true
     w.hidden = true
   }
