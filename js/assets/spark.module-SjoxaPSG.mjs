@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:js/assets/spark.module-Bj6gX_dz.mjs
-import { R as Mesh, Y as OrthographicCamera, d as BufferGeometry, p as Float32BufferAttribute, ao as Vector3, an as Vector2, E as Euler, Q as Matrix4, a0 as Quaternion, g as Color, ac as ShaderMaterial, n as DoubleSide, G as GLSL3, f as Clock, ap as Vector4, O as Matrix2, as as WebGLCubeRenderTarget, z as LinearMipMapLinearFilter, a3 as RGBAFormat, i as CubeCamera, Z as PMREMGenerator, V as MeshStandardMaterial, at as WebGLRenderTarget, a9 as SRGBColorSpace, ak as UnsignedByteType, _ as PerspectiveCamera, j as DataArrayTexture, a5 as RGIntegerFormat, al as UnsignedIntType, a4 as RGBAIntegerFormat, ar as WebGLArrayRenderTarget, W as NearestFilter, k as DataTexture, a7 as Raycaster, X as Object3D, P as Matrix3, J as LinearSRGBColorSpace, y as LinearFilter, C as Camera, K as Loader, F as FileLoader, b as Box3, am as UnsignedShortType, q as FloatType, t as InstancedBufferGeometry, c as BufferAttribute, I as InstancedBufferAttribute, o as DynamicDrawUsage, a2 as REVISION, a6 as RawShaderMaterial, ab as ShaderChunk, ah as Texture$1, D as Data3DTexture } from "./main-BnAZrNRg.mjs";
-========
 import { a7 as Mesh, ae as OrthographicCamera, f as BufferGeometry, J as Float32BufferAttribute, aV as Vector3, aU as Vector2, H as Euler, a5 as Matrix4, ak as Quaternion, i as Color, ax as ShaderMaterial, t as DoubleSide, P as GLSL3, h as Clock, aW as Vector4, a3 as Matrix2, aZ as WebGLCubeRenderTarget, Z as LinearMipMapLinearFilter, an as RGBAFormat, k as CubeCamera, af as PMREMGenerator, ab as MeshStandardMaterial, a_ as WebGLRenderTarget, at as SRGBColorSpace, aR as UnsignedByteType, ag as PerspectiveCamera, n as DataArrayTexture, ap as RGIntegerFormat, aS as UnsignedIntType, ao as RGBAIntegerFormat, aY as WebGLArrayRenderTarget, ac as NearestFilter, o as DataTexture, ar as Raycaster, ad as Object3D, a4 as Matrix3, $ as LinearSRGBColorSpace, Y as LinearFilter, C as Camera, a0 as Loader, I as FileLoader, d as Box3, aT as UnsignedShortType, K as FloatType, S as InstancedBufferGeometry, e as BufferAttribute, R as InstancedBufferAttribute, E as DynamicDrawUsage, am as REVISION, aq as RawShaderMaterial, aw as ShaderChunk, aJ as Texture$1, m as Data3DTexture } from "./main-DNzh1NpN.mjs";
->>>>>>>> upstream/main:js/assets/spark.module-SjoxaPSG.mjs
 const _camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
 class FullscreenTriangleGeometry extends BufferGeometry {
   constructor() {
@@ -20712,8 +20708,4 @@ export {
   unpackSplats,
   utils
 };
-<<<<<<<< HEAD:js/assets/spark.module-Bj6gX_dz.mjs
-//# sourceMappingURL=spark.module-Bj6gX_dz.mjs.map
-========
 //# sourceMappingURL=spark.module-SjoxaPSG.mjs.map
->>>>>>>> upstream/main:js/assets/spark.module-SjoxaPSG.mjs

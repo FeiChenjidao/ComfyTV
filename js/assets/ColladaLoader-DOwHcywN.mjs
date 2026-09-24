@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:js/assets/ColladaLoader-DAUhEU4C.mjs
-import { l as DataTextureLoader, H as LinearMipmapLinearFilter, N as MathUtils, g as Color, h as ColorManagement, a9 as SRGBColorSpace, ao as Vector3, Q as Matrix4, a0 as Quaternion, aq as VectorKeyframeTrack, a1 as QuaternionKeyframeTrack, v as InterpolateDiscrete, u as InterpolateBezier, a as AnimationClip, S as MeshBasicMaterial, T as MeshLambertMaterial, U as MeshPhongMaterial, an as Vector2, n as DoubleSide, r as FrontSide, _ as PerspectiveCamera, Y as OrthographicCamera, A as AmbientLight, ag as SpotLight, $ as PointLight, m as DirectionalLight, d as BufferGeometry, p as Float32BufferAttribute, aj as Triangle, ad as ShapeUtils, ae as Skeleton, B as Bone, s as Group, K as Loader, w as LineBasicMaterial, af as SkinnedMesh, R as Mesh, L as Line, x as LineSegments, a8 as RepeatWrapping, e as ClampToEdgeWrapping, M as LoaderUtils, F as FileLoader, aa as Scene, ai as TextureLoader } from "./main-BnAZrNRg.mjs";
-========
 import { p as DataTextureLoader, _ as LinearMipmapLinearFilter, a2 as MathUtils, i as Color, j as ColorManagement, at as SRGBColorSpace, aV as Vector3, a5 as Matrix4, ak as Quaternion, aX as VectorKeyframeTrack, al as QuaternionKeyframeTrack, U as InterpolateDiscrete, T as InterpolateBezier, c as AnimationClip, a8 as MeshBasicMaterial, a9 as MeshLambertMaterial, aa as MeshPhongMaterial, aU as Vector2, t as DoubleSide, O as FrontSide, ag as PerspectiveCamera, ae as OrthographicCamera, b as AmbientLight, aG as SpotLight, ah as PointLight, s as DirectionalLight, f as BufferGeometry, J as Float32BufferAttribute, aQ as Triangle, ay as ShapeUtils, az as Skeleton, B as Bone, Q as Group, a0 as Loader, W as LineBasicMaterial, aA as SkinnedMesh, a7 as Mesh, V as Line, X as LineSegments, as as RepeatWrapping, g as ClampToEdgeWrapping, a1 as LoaderUtils, I as FileLoader, au as Scene, aK as TextureLoader } from "./main-DNzh1NpN.mjs";
->>>>>>>> upstream/main:js/assets/ColladaLoader-DOwHcywN.mjs
 class TGALoader extends DataTextureLoader {
   /**
    * Constructs a new TGA loader.
@@ -3277,8 +3273,4 @@ class ColladaLoader extends Loader {
 export {
   ColladaLoader
 };
-<<<<<<<< HEAD:js/assets/ColladaLoader-DAUhEU4C.mjs
-//# sourceMappingURL=ColladaLoader-DAUhEU4C.mjs.map
-========
 //# sourceMappingURL=ColladaLoader-DOwHcywN.mjs.map
->>>>>>>> upstream/main:js/assets/ColladaLoader-DOwHcywN.mjs
