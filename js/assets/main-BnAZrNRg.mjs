@@ -58996,7 +58996,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-DQ3Yagig.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-Bj6gX_dz.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -145479,7 +145479,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-Bdq8Z4x2.mjs");
+    const { STLLoader } = await import("./STLLoader-D_R3aGAI.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -145487,7 +145487,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-CbPhMz0n.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-DAUhEU4C.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -244385,6 +244385,34 @@ V2_SHELLS["ComfyTV.ImageVariationsStage"] = makeImageBatchShell({
   linkKind: "multiview",
   footerExtra: [{ name: "variant_count", type: "number", titleKey: "v2.ctl.variantCount" }]
 });
+function imageRef(value) {
+  if (!value || typeof value !== "object") return null;
+  const ref2 = value;
+  if (!ref2.filename) return null;
+  return {
+    filename: String(ref2.filename),
+    subfolder: String(ref2.subfolder ?? ""),
+    type: String(ref2.type || "output")
+  };
+}
+function compositorUiFromLayerGroup(raw) {
+  if (!(raw == null ? void 0 : raw.trimStart().startsWith("{"))) return null;
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  const layers2 = Array.isArray(data.compositor_layers) ? data.compositor_layers.map(imageRef).filter((ref2) => ref2 !== null) : [];
+  if (!layers2.length) return null;
+  const ui = { compositor_layers: layers2 };
+  const preview = imageRef(data.compositor_preview);
+  if (preview) ui.images = [preview];
+  for (const key of ["compositor_inputs", "compositor_bboxes", "compositor_canvas"]) {
+    if (Array.isArray(data[key])) ui[key] = data[key];
+  }
+  return ui;
+}
 const ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="14" height="10" rx="1.5"/><rect x="6" y="9" width="14" height="10" rx="1.5"/><path d="M9 13h8"/></svg>`;
 function el$8(tag, cls, html2) {
   const e = document.createElement(tag);
@@ -244449,6 +244477,17 @@ function attach$5(node, kind, variant) {
   const scope2 = createNodeScope(node);
   scope2.run(() => bindProgressRing(card, stageState));
   scope2.run(() => {
+    watch(
+      () => stageState.output,
+      (raw) => {
+        var _a3;
+        const ui = compositorUiFromLayerGroup(raw);
+        if (ui) (_a3 = anyNode.onExecuted) == null ? void 0 : _a3.call(anyNode, ui);
+      },
+      { immediate: true }
+    );
+  });
+  scope2.run(() => {
     let observer2 = null;
     let frame = 0;
     const attachCompositor = () => {
@@ -244480,7 +244519,7 @@ function attach$5(node, kind, variant) {
       [CustomParamsV2, { node, state: stageState }, customAnchor],
       [ParamsPanelV2, {
         getNode: () => node,
-        exclude: ["psd_file", "selected_id", "captured_image", "captured_images", "compositor"],
+        exclude: ["compositor"],
         boundOnly: true,
         workflowKind: "layer-separation"
       }, paramsAnchor],
@@ -251774,4 +251813,4 @@ export {
   LinearFilter as y,
   LinearMipMapLinearFilter as z
 };
-//# sourceMappingURL=main-tEsaNmQB.mjs.map
+//# sourceMappingURL=main-BnAZrNRg.mjs.map

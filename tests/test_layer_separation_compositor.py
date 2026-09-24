@@ -111,9 +111,15 @@ def test_pack_uses_compositor_preview_not_first_saved_layer():
     data = __import__('json').loads(packed)
     assert data['images'][0]['image_url'] == '/view?filename=ComfyUI_temp_preview.png&subfolder=&type=temp'
     assert data['compositor_layers'][0]['filename'] == 'base.png'
+    ui = m.compositor_ui_from_payload(packed)
+    assert ui['images'] == [{
+        'filename': 'ComfyUI_temp_preview.png',
+        'subfolder': '',
+        'type': 'temp',
+    }]
 
 
-def test_compositor_output_values_split_composite_and_layer_group():
+def test_compositor_layer_group_keeps_preview_and_layer_metadata():
     m = _mod()
     payload = __import__('json').dumps({
         'images': [{'image_url': '/view?filename=preview.png&type=temp'}],
@@ -122,11 +128,19 @@ def test_compositor_output_values_split_composite_and_layer_group():
             {'filename': 'coat.png', 'subfolder': '', 'type': 'temp'},
         ],
         'compositor_bboxes': [{'name': 'background'}, {'name': 'coat'}],
+        'compositor_canvas': [{'w': 1024, 'h': 768}],
     })
-    image, images = m.compositor_output_values(payload)
-    assert image == '/view?filename=preview.png&type=temp'
-    group = __import__('json').loads(images)['images']
-    assert [item['label'] for item in group] == ['background', 'coat']
-    assert [m.view_url_to_image_ref(item['image_url'])['filename'] for item in group] == [
+    group = __import__('json').loads(m.compositor_layer_group(payload))
+    assert [item['label'] for item in group['images']] == ['background', 'coat']
+    assert [m.view_url_to_image_ref(item['image_url'])['filename'] for item in group['images']] == [
         'base.png', 'coat.png',
     ]
+    assert group['compositor_preview']['filename'] == 'preview.png'
+    assert group['compositor_canvas'] == [{'w': 1024, 'h': 768}]
+
+    ui = m.compositor_ui_from_payload(__import__('json').dumps(group))
+    assert ui['images'] == [{
+        'filename': 'preview.png',
+        'subfolder': '',
+        'type': 'temp',
+    }]

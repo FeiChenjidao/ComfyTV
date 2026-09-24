@@ -87,7 +87,7 @@ def _initialize(params: dict) -> dict:
 def _tool_visible(name: str) -> bool:
     if name in ("ask_user", "remember"):
         return bool(BOT_CHAT_ID.get())
-    if name != "skill":
+    if name not in ("skill", "skill_edit"):
         return True
     from .. import skill_store
     return skill_store.skills_enabled()

@@ -13,6 +13,12 @@ BASE_DESCRIPTION = (
     "below, read the skill FIRST and follow its instructions."
 )
 
+EDIT_DESCRIPTION = (
+    "Create, update, validate, or reload user-managed Agent Skills. "
+    "Writes are limited to ComfyTV's user Skill root and only replace "
+    "SKILL.md; built-in Skills and arbitrary files cannot be modified."
+)
+
 
 def _index_lines() -> list[str]:
     lines = []
@@ -63,6 +69,27 @@ async def _skill(args: dict) -> dict:
     raise ValueError(f"unknown action {action!r} (use 'list' or 'read')")
 
 
+async def _skill_edit(args: dict) -> dict:
+    action = args.get("action")
+    if not isinstance(action, str):
+        raise ValueError("action is required")
+    result = skill_store.edit_skill(
+        action,
+        name=args.get("name"),
+        content=args.get("content"),
+    )
+    if isinstance(result.get("skill"), dict):
+        result["skill"] = {
+            k: v for k, v in result["skill"].items() if k != "dir"
+        }
+    if isinstance(result.get("skills"), list):
+        result["skills"] = [
+            {k: v for k, v in entry.items() if k != "dir"}
+            for entry in result["skills"]
+        ]
+    return result
+
+
 SKILL_TOOL = {
     "description": BASE_DESCRIPTION,
     "describe": describe,
@@ -76,4 +103,21 @@ SKILL_TOOL = {
         "additionalProperties": False,
     },
     "handler": _skill,
+}
+
+SKILL_EDIT_TOOL = {
+    "description": EDIT_DESCRIPTION,
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "action": {"type": "string",
+                       "enum": ["create", "update", "validate", "reload"]},
+            "name": {"type": "string"},
+            "content": {"type": "string",
+                         "description": "Complete SKILL.md content"},
+        },
+        "required": ["action"],
+        "additionalProperties": False,
+    },
+    "handler": _skill_edit,
 }

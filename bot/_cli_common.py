@@ -32,6 +32,7 @@ CORE_MCP_TOOLS = [
     "outputs",
     "assets",
     "asset_edit",
+    "asset_import_folder",
     "entries",
     "add_stage",
     "set_stage",
@@ -68,6 +69,7 @@ CORE_MCP_TOOLS = [
     "canvas_focus",
     "arrange_canvas",
     "skill",
+    "skill_edit",
     "ask_user",
     "remember",
 ]

@@ -47,7 +47,7 @@ STAGE_META: dict[str, dict] = {
     'TimelineVideoStage':           {'kind': 'video',        'workflow_kind': 'timeline'},
     'ImageVariationsStage':         {'kind': 'image-batch',  'workflow_kind': 'multiview',
                                      'workflow_kinds': ['multiview', 'sequence']},
-    'LayerSeparationStage':         {'kind': 'image',        'workflow_kind': 'layer-separation'},
+    'LayerSeparationStage':         {'kind': 'image-batch',  'workflow_kind': 'layer-separation'},
     'RelightStage':                 {'kind': 'image',       'variant': 'loader'},
     'MultiangleStage':              {'kind': 'image',        'workflow_kind': 'multiangle'},
     'VideoExtractFrameStage':       {'kind': 'image'},

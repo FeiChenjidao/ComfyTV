@@ -108,6 +108,47 @@ class TestSkillTool:
             {"name": "skill", "arguments": {"action": "explode"}})
         assert response["result"]["isError"] is True
 
+    async def test_skill_edit_create_update_validate_reload(self, skill_dirs):
+        _, user = skill_dirs
+        content = ("---\nname: editable_skill\n"
+                   "description: Editable\n---\n\nBody.\n")
+        payload = _tool_payload(await _dispatch(
+            "tools/call", {"name": "skill_edit", "arguments": {
+                "action": "create", "name": "editable_skill",
+                "content": content}}))
+        assert payload["ok"] is True
+        assert (user / "editable_skill" / "SKILL.md").is_file()
+        assert _tool_payload(await _dispatch(
+            "tools/call", {"name": "skill_edit", "arguments": {
+                "action": "validate", "name": "editable_skill",
+                "content": content}}))["valid"] is True
+        updated = content.replace("Body.", "Updated.")
+        assert _tool_payload(await _dispatch(
+            "tools/call", {"name": "skill_edit", "arguments": {
+                "action": "update", "name": "editable_skill",
+                "content": updated}}))["ok"] is True
+        _tool_payload(await _dispatch(
+            "tools/call", {"name": "skill_edit", "arguments": {
+                "action": "reload"}}))
+        read = _tool_payload(await _dispatch(
+            "tools/call", {"name": "skill", "arguments": {
+                "action": "read", "name": "editable_skill"}}))
+        assert "Updated." in read["content"]
+
+    async def test_skill_edit_rejects_unsafe_and_missing(self, skill_dirs):
+        content = "---\nname: safe\ndescription: d\n---\n\nbody\n"
+        for name in ("../escape", "a/b", "C:\\temp"):
+            response = await _dispatch(
+                "tools/call", {"name": "skill_edit", "arguments": {
+                    "action": "validate", "name": name,
+                    "content": content}})
+            assert response["result"]["isError"] is True
+        missing = content.replace("safe", "missing")
+        response = await _dispatch(
+            "tools/call", {"name": "skill_edit", "arguments": {
+                "action": "update", "name": "missing", "content": missing}})
+        assert response["result"]["isError"] is True
+
 
 class TestPrompts:
     async def test_prompts_roundtrip(self, skill_dirs):
@@ -144,4 +185,5 @@ class TestBotWiring:
     def test_skill_in_core_mcp_tools(self):
         from ComfyTV.bot._cli_common import CORE_MCP_TOOLS
         assert "skill" in CORE_MCP_TOOLS
+        assert "skill_edit" in CORE_MCP_TOOLS
 

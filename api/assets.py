@@ -6,14 +6,16 @@ from pathlib import Path
 from aiohttp import web
 
 from .. import storage
+from ..runners.media_info import AUDIO_EXT, IMAGE_EXT, MODEL_EXT
 from ._common import _log, routes, broadcast_asset_event
 
 MEDIA_SUBFOLDER = "comfytv/media"
 MEDIA_SETTLE_SECONDS = 10.0
 MEDIA_EXTS = {
     "video": {".mp4", ".mov", ".mkv", ".webm", ".m4v", ".avi"},
-    "image": {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"},
-    "audio": {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".opus"},
+    "image": set(IMAGE_EXT),
+    "audio": set(AUDIO_EXT),
+    "model": set(MODEL_EXT),
     "text": {".txt", ".md", ".srt", ".vtt", ".csv"},
 }
 
