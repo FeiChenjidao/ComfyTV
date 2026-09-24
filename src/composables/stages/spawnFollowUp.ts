@@ -484,7 +484,7 @@ const PRODUCT_SHOT_PRESET: ImagePreset = {
   icon: 'pi pi-camera',
   category: 'imageVariant',
   targetClass: 'ComfyTV.ImageEditStage',
-  inputAutogrowGroup: 'images',
+  inputSocket: 'image',
   widgets: {
     workflow: 'Qwen Edit 2511',
     main_prompt: "Turn this 3D viewport render into a professional product "

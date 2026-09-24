@@ -1031,8 +1031,8 @@
       "main_prompt": {
         "tooltip": "Edit instruction (required). Action-based language: 'remove X', 'change X to Y', 'replace X with Y'. Different from Inpaint — this model doesn't use a mask; the instruction is the whole interface."
       },
-      "images": {
-        "name": "Images"
+      "image": {
+        "name": "Image"
       },
       "workflow": {
         "name": "Workflow"

@@ -8,9 +8,8 @@ from aiohttp import web
 from .. import storage
 from ..bot import get_provider, list_providers
 from . import bot_turns
-from . import bot_send as send_core
 from ._common import routes
-from .bot_media import _resolve_attachment_assets, _resolve_refs
+from .bot_media import _prepare_attachment, _resolve_attachment_assets, _resolve_refs
 from .bot_turns import (  # noqa: F401 — re-exported for callers and tests
     ACTIVE_TURNS,
     QUEUED,
@@ -202,24 +201,72 @@ async def bot_send(request: web.Request) -> web.Response:
                 {"error": f"unknown or disabled skill {skill_name!r}"},
                 status=400)
 
-    try:
-        attachments, manifest_lines, display_blocks = \
-            await send_core.prepare_attachments(attachment_assets, [])
-    except ValueError as e:
-        return web.json_response({"error": str(e)}, status=400)
+    attachments = []
+    manifest_lines = []
+    for a in attachment_assets:
+        try:
+            block, line = await asyncio.to_thread(_prepare_attachment, a)
+        except Exception as e:
+            return web.json_response(
+                {"error": f"could not read asset {a['id']} ({e})"},
+                status=400)
+        if block is not None:
+            attachments.append(block)
+        manifest_lines.append(line)
+
+    display_blocks = [
+        {"type": a["media_type"], "url": a["payload_url"], "asset_id": a["id"]}
+        for a in attachment_assets
+    ]
     display_blocks += [{"type": "ref", **r} for r in ref_items]
     if skill_name:
         display_blocks.append({"type": "skill", "name": skill_name})
     if text:
         display_blocks.append({"type": "text", "text": text})
-    provider_text = send_core.compose_provider_text(
-        chat, text, skill_name=skill_name, ref_lines=ref_lines,
-        manifest_lines=manifest_lines)
-    user_msg, assistant_msg = send_core.queue_or_begin(
-        chat, text=text, provider_text=provider_text,
-        attachments=attachments, display_blocks=display_blocks)
-    if assistant_msg is None:
+
+    provider_text = text or (
+        "Look at the attached media and report what you can determine about "
+        "it (for audio/video use media_probe and the manifest facts).")
+    if skill_name:
+        provider_text = (
+            f"Use the ComfyTV skill {skill_name!r} for this task: first call "
+            f"the comfytv MCP tool skill with action='read' and "
+            f"name={skill_name!r}, then follow those instructions.\n\n"
+            + provider_text)
+    if ref_lines:
+        provider_text += "\n\n" + "\n".join(ref_lines)
+    if manifest_lines:
+        provider_text += "\n\n" + "\n".join(manifest_lines)
+    prefs = chat.get("prefs") or []
+    if prefs:
+        provider_text = (
+            "Saved chat preferences (via remember; follow unless the user "
+            "overrides):\n" + "\n".join(f"- {p}" for p in prefs)
+            + "\n\n" + provider_text)
+
+    if chat["id"] in ACTIVE_TURNS:
+        user_msg = storage.create_bot_message(
+            chat_id=chat["id"], role="user",
+            content=json.dumps(display_blocks), status="queued",
+        )
+        QUEUED.setdefault(chat["id"], []).append({
+            "user_msg": user_msg,
+            "text": text,
+            "provider_text": provider_text,
+            "attachments": attachments,
+        })
+        bot_turns._broadcast("message_queued", {
+            "chat_id": chat["id"], "user_message": user_msg,
+        })
         return web.json_response({"queued": True, "user_message": user_msg})
+
+    user_msg = storage.create_bot_message(
+        chat_id=chat["id"], role="user",
+        content=json.dumps(display_blocks),
+    )
+    assistant_msg = _begin_turn(
+        chat, text=text, provider_text=provider_text,
+        attachments=attachments, user_msg=user_msg)
     return web.json_response({
         "user_message": user_msg,
         "assistant_message": assistant_msg,

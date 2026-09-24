@@ -15,14 +15,6 @@
     </span>
     <button
       :class="btnClass"
-      :disabled="!missingCount"
-      :title="$t('assets.select.missing', { count: missingCount })"
-      @click="emit('select-missing')"
-    >
-      <IconFileX class="ctv:size-4" />
-    </button>
-    <button
-      :class="btnClass"
       :disabled="!count"
       :title="$t('assets.select.tags')"
       @click="emit('edit-tags', $event)"
@@ -53,7 +45,6 @@
 
 <script setup lang="ts">
 import IconDownload from '~icons/lucide/download'
-import IconFileX from '~icons/lucide/file-x'
 import IconTag from '~icons/lucide/tag'
 import IconTrash2 from '~icons/lucide/trash-2'
 import IconX from '~icons/lucide/x'
@@ -61,13 +52,11 @@ import IconX from '~icons/lucide/x'
 defineProps<{
   count: number
   allSelected: boolean
-  missingCount: number
   busy?: boolean
 }>()
 
 const emit = defineEmits<{
   'toggle-all': []
-  'select-missing': []
   'edit-tags': [e: MouseEvent]
   'load-nodes': []
   remove: []

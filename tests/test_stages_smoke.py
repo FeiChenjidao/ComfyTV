@@ -429,7 +429,7 @@ class TestEditStageExecute:
     async def test_image_edit(self, reset_db):
         from ComfyTV.nodes.stages.edits import ImageEditStage
         out = await ImageEditStage.execute(project_id="default", main_prompt="x",
-                                           images={"image0": "/view?filename=a.png"})
+                                           image="/view?filename=a.png")
         assert out.values[0]
 
     @pytest.mark.asyncio

@@ -19,7 +19,6 @@ import {
 import { app } from '@/lib/comfyApp'
 
 const PAGE_LIMIT = 500
-const BULK_LIMIT = 500
 const REFRESH_DEBOUNCE_MS = 300
 
 async function fetchAllAssets(): Promise<Asset[]> {
@@ -248,21 +247,17 @@ export const useAssetStore = defineStore('assets', () => {
   }
 
   async function bulkRemove(ids: number[]): Promise<number[] | null> {
-    const deleted: number[] = []
-    for (let i = 0; i < ids.length; i += BULK_LIMIT) {
-      const chunk = ids.slice(i, i + BULK_LIMIT)
-      try {
-        const data = await apiSend(
-          '/comfytv/assets/bulk_delete', 'POST', BulkDeleteAssetsSchema, { ids: chunk },
-        )
-        dropMany(data.deleted)
-        deleted.push(...data.deleted)
-      } catch (e) {
-        console.warn('[ComfyTV/assets] bulk remove failed', chunk.length, e)
-        return null
-      }
+    if (!ids.length) return []
+    try {
+      const data = await apiSend(
+        '/comfytv/assets/bulk_delete', 'POST', BulkDeleteAssetsSchema, { ids },
+      )
+      dropMany(data.deleted)
+      return data.deleted
+    } catch (e) {
+      console.warn('[ComfyTV/assets] bulk remove failed', ids.length, e)
+      return null
     }
-    return deleted
   }
 
   function upsertMany(rows: Asset[]): void {

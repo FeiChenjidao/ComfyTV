@@ -255,14 +255,15 @@ class TestSettingsApi:
         assert resp.status == 200
         rows = (await resp.json())["settings"]
         assert {r["key"] for r in rows} == {
-            "enable-v2", "v2-lod-scale", "v2-lod-fill", "auto-picker",
+            "enable-v2", "v2-lod-scale", "v2-lod-fill", "v2-panel-on-select",
             "enable-db-backup", "db-backup-max-count", "db-backup-path",
             "enable-mcp", "enable-bot",
             "bot-model-claude-code", "bot-model-codex", "bot-model-qwen-code",
+            "bot-model-cursor-cli",
             "bot-model-local-llm", "bot-model-comfyui-llm",
             "bot-comfyui-llm-thinking", "bot-local-llm-url",
             "bot-enable-comfy-mcp", "bot-comfy-mcp-command",
-            "bot-always-allow-runs", "bot-provider", "bot-run-mode",
+            "bot-always-allow-runs",
             "enable-skills", "skills-disabled",
             "enable-collab",
             "enable-eagle", "eagle-api-url", "eagle-library-path",

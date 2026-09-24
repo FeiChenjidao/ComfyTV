@@ -24,15 +24,16 @@ export const IMAGE_VARIANT_PRESETS: ImagePreset[] = [
     widgets: { workflow: 'Story 4',        variant_count: 4 } },
   { id: 'storyboard-25', icon: 'pi pi-images', category: cat, targetClass: 'ComfyTV.ImageVariationsStage', inputSocket: 'image',
     widgets: { workflow: 'Storyboard 25',  variant_count: 25 } },
-  { id: 'cinematic-light', icon: 'pi pi-video', category: cat, targetClass: 'ComfyTV.ImageEditStage', inputAutogrowGroup: 'images',
+  { id: 'layer-separation', icon: 'pi pi-clone', category: cat, targetClass: 'ComfyTV.LayerSeparationStage', inputSocket: 'image' },
+  { id: 'cinematic-light', icon: 'pi pi-video', category: cat, targetClass: 'ComfyTV.ImageEditStage', inputSocket: 'image',
     widgets: {
       main_prompt: 'cinematic key light, dramatic mood, color graded look; relight the image, preserving identity, geometry, and details',
     } },
-  { id: 'frame-3s', icon: 'pi pi-clock', category: cat, targetClass: 'ComfyTV.ImageEditStage', inputAutogrowGroup: 'images',
+  { id: 'frame-3s', icon: 'pi pi-clock', category: cat, targetClass: 'ComfyTV.ImageEditStage', inputSocket: 'image',
     widgets: {
       main_prompt: 'show the scene 3 seconds later, preserving character, environment, and style; continue the action naturally',
     } },
-  { id: 'frame-5s', icon: 'pi pi-clock', category: cat, targetClass: 'ComfyTV.ImageEditStage', inputAutogrowGroup: 'images',
+  { id: 'frame-5s', icon: 'pi pi-clock', category: cat, targetClass: 'ComfyTV.ImageEditStage', inputSocket: 'image',
     widgets: {
       main_prompt: 'show the scene 5 seconds later, preserving character, environment, and style; continue the action naturally',
     } },

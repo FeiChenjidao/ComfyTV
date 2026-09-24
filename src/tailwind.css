@@ -1,12 +1,8 @@
-@layer theme, base, utilities;
+@layer theme, utilities;
 
 @import 'tailwindcss/theme' layer(theme) prefix(ctv);
 @import 'tailwindcss/utilities' layer(utilities) source(none);
-@import 'tw-animate-css';
 
-@plugin './agent/css/iconifyPlugin.ts';
-
-@source './agent';
 @source './collab';
 @source './components';
 @source './composables';
@@ -43,94 +39,9 @@
   --color-modal-card-background: var(--modal-card-background, #232323);
 }
 
-/* Tokens the vendored Comfy Agent panel (src/agent) reads from the host theme. */
-@theme inline {
-  --color-component-node-border: var(--component-node-border, rgba(255, 255, 255, 0.15));
-  --color-node-component-surface: var(--node-component-surface, #262626);
-  --color-node-component-surface-highlight: var(--node-component-surface-highlight, #4ea8ff);
-  --color-node-component-surface-selected: var(--component-surface-selected, #494a50);
-  --color-node-component-tooltip: var(--node-component-tooltip, #fafafa);
-  --color-node-component-tooltip-border: var(--node-component-tooltip-border, #494a50);
-  --color-node-component-tooltip-surface: var(--node-component-tooltip-surface, #171717);
-  --color-node-stroke: var(--node-stroke, rgba(255, 255, 255, 0.2));
-  --color-tertiary-background: var(--tertiary-background, rgba(255, 255, 255, 0.04));
-  --color-tertiary-background-hover: var(--tertiary-background-hover, rgba(255, 255, 255, 0.08));
-  --color-inverted-background-hover: var(--inverted-background-hover, #cfcfcf);
-  --color-warning-foreground: var(--warning-foreground, #ffd866);
-  --color-interface-stroke: var(--interface-stroke, rgba(255, 255, 255, 0.12));
-  --color-charcoal-100: #55565e;
-  --color-charcoal-200: #494a50;
-  --color-charcoal-300: #3c3d42;
-  --color-charcoal-400: #313235;
-  --color-charcoal-500: #2d2e32;
-  --color-charcoal-600: #262729;
-  --color-charcoal-700: #202121;
-  --color-charcoal-800: #171718;
-  --color-charcoal-900: #111111;
-  --color-brand-yellow: var(--brand-yellow, #ffd500);
-  --color-ring: var(--border-default, rgba(255, 255, 255, 0.15));
-  --font-inter: 'Inter', system-ui, sans-serif;
-
-  --color-agent-surface: var(--color-base-background);
-  --color-agent-surface-raised: var(--color-secondary-background);
-  --color-agent-surface-hover: var(--color-secondary-background-hover);
-  --color-agent-fg: var(--color-base-foreground);
-  --color-agent-fg-muted: var(--color-muted-foreground);
-  --color-agent-fg-subtle: var(--color-muted-foreground);
-  --color-agent-border: var(--color-component-node-border);
-  --color-agent-border-strong: var(--color-border-default);
-  --color-agent-accent: var(--color-primary-background);
-  --color-agent-accent-fg: #ffffff;
-  --color-agent-danger: var(--color-destructive-background);
-  --color-agent-success: var(--color-success-background);
-  --color-agent-pill: #303036;
-  --radius-agent: 0.75rem;
-
-  --color-credit: var(--color-credit, #ddbd31);
-  --color-ink-700: var(--color-ink-700, #232025);
-  --color-plum-600: var(--color-plum-600, #49378b);
-  --color-primary-warm-white: var(--color-primary-warm-white, #f0efed);
-  --color-primary-comfy-ink: var(--color-primary-comfy-ink, #211927);
-  --color-transparency-white-t8: rgb(255 255 255 / 0.08);
-  --color-transparency-white-t20: rgb(255 255 255 / 0.2);
-  --color-alpha-smoke-500-20: #c5c5c533;
-  --color-interface-menu-keybind-surface-default: var(--color-interface-menu-keybind-surface-default, #3a3a3a);
-  --shadow-interface: var(--interface-panel-box-shadow, 0 2px 8px rgb(0 0 0 / 0.3));
-}
-
 @theme {
   --text-2xs: 0.625rem;
   --text-2xs--line-height: calc(1 / 0.625);
-  --text-xxs: 0.625rem;
-  --text-xxs--line-height: calc(1 / 0.625);
   --text-3xs: 0.5625rem;
   --text-3xs--line-height: calc(1 / 0.5625);
-  --z-index-1700: 1700;
-  --animate-agent-collapsible-down: agent-collapsible-down 200ms ease-out;
-  --animate-agent-collapsible-up: agent-collapsible-up 200ms ease-out;
-}
-
-@utility highlight {
-  background-color: color-mix(in srgb, currentColor 20%, transparent);
-  font-weight: 700;
-  border-radius: 0.25rem;
-}
-
-@utility scrollbar-gutter-stable {
-  scrollbar-gutter: stable;
-}
-
-@keyframes agent-collapsible-down {
-  from { height: 0; }
-  to { height: var(--reka-collapsible-content-height); }
-}
-
-@keyframes agent-collapsible-up {
-  from { height: var(--reka-collapsible-content-height); }
-  to { height: 0; }
-}
-
-@keyframes agent-shimmer {
-  from { background-position: 150% center; }
-  to { background-position: -50% center; }
 }

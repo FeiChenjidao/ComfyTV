@@ -72,16 +72,6 @@ describe('useAssetSelection', () => {
     expect([...sel.selectedIds.value]).toEqual([4])
   })
 
-  it('selectMissing replaces the selection with the visible missing-file rows', () => {
-    const { sel, visible } = setup()
-    visible.value = [row(1), { ...row(2), file_missing: true }, { ...row(3), file_missing: true }]
-    expect(sel.missingCount.value).toBe(2)
-    sel.enterSelectMode()
-    sel.toggleSelected(1)
-    sel.selectMissing()
-    expect([...sel.selectedIds.value].sort()).toEqual([2, 3])
-  })
-
   it('dragIds carries the selection only for a selected card in select mode', () => {
     const { sel } = setup()
     expect(sel.dragIds(row(1))).toEqual([1])

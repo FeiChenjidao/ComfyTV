@@ -255,31 +255,6 @@ describe('assetStore', () => {
     expect(s.assets.map(a => a.id)).toEqual([2, 1])
   })
 
-  it('bulkRemove splits requests at the server limit', async () => {
-    const fetchApi = (app as any).api.fetchApi as ReturnType<typeof vi.fn>
-    const ids = Array.from({ length: 1201 }, (_, i) => i + 1)
-    const s = useAssetStore()
-    s.assets = ids.map(id => asset({ id })) as any
-    fetchApi.mockImplementation(async (_path: string, init: any) =>
-      jsonResp({ ok: true, deleted: JSON.parse(init.body).ids }))
-    expect(await s.bulkRemove(ids.slice(0, 1100))).toHaveLength(1100)
-    const sizes = fetchApi.mock.calls.map(c => JSON.parse(c[1].body).ids.length)
-    expect(sizes).toEqual([500, 500, 100])
-    expect(s.assets).toHaveLength(101)
-  })
-
-  it('bulkRemove keeps the chunks already deleted when a later chunk fails', async () => {
-    const fetchApi = (app as any).api.fetchApi as ReturnType<typeof vi.fn>
-    const ids = Array.from({ length: 700 }, (_, i) => i + 1)
-    const s = useAssetStore()
-    s.assets = ids.map(id => asset({ id })) as any
-    fetchApi
-      .mockResolvedValueOnce(jsonResp({ ok: true, deleted: ids.slice(0, 500) }))
-      .mockResolvedValueOnce(new Response('boom', { status: 500 }))
-    expect(await s.bulkRemove(ids)).toBeNull()
-    expect(s.assets.map(a => a.id)).toEqual(ids.slice(500))
-  })
-
   it('ws bulk-update and bulk-delete events apply without refetching', async () => {
     const fetchApi = (app as any).api.fetchApi as ReturnType<typeof vi.fn>
     mockHydrate(fetchApi, [], [asset({ id: 2 }), asset({ id: 1 })])

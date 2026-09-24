@@ -1,4 +1,4 @@
-import type { BotBlock } from '@/utils/botMessages'
+import type { BotBlock } from '@/stores/botStore'
 
 export interface ToolCallView {
   key: string

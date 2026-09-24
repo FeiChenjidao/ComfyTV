@@ -229,7 +229,7 @@ const GENERATORS: Record<string, GeneratorConfig> = {
     preview: 'image', linkKind: 'upscale', corner: true,
     footerExtra: [{ name: 'scale' }],
   },
-  'ComfyTV.ImageEditStage':        { preview: 'image', linkKind: 'image-edit', corner: true, refTypes: ['image'] },
+  'ComfyTV.ImageEditStage':        { preview: 'image', linkKind: 'image-edit', corner: true },
   'ComfyTV.CutoutStage':           { preview: 'image', linkKind: 'cutout', corner: true },
   'ComfyTV.VideoStage':            {
     preview: 'video', linkKind: 'video', refTypes: ['image', 'video', 'audio'],

@@ -1031,8 +1031,8 @@
       "main_prompt": {
         "tooltip": "编辑指令(必填)"
       },
-      "images": {
-        "name": "图片"
+      "image": {
+        "name": "图像"
       },
       "workflow": {
         "name": "工作流"

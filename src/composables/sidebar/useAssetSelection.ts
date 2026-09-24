@@ -24,8 +24,6 @@ export function useAssetSelection(visibleAssets: Ref<Asset[]>) {
   const allVisibleSelected = computed(() =>
     visibleAssets.value.length > 0
       && visibleAssets.value.every(a => selectedIds.value.has(a.id)))
-  const visibleMissing = computed(() => visibleAssets.value.filter(a => a.file_missing))
-  const missingCount = computed(() => visibleMissing.value.length)
 
   function isSelected(id: number): boolean {
     return selectedIds.value.has(id)
@@ -74,11 +72,6 @@ export function useAssetSelection(visibleAssets: Ref<Asset[]>) {
       for (const a of visibleAssets.value) next.add(a.id)
     }
     selectedIds.value = next
-  }
-
-  function selectMissing() {
-    selectedIds.value = new Set(visibleMissing.value.map(a => a.id))
-    anchorId = null
   }
 
   function onCardClick(asset: Asset, e: MouseEvent): boolean {
@@ -143,7 +136,6 @@ export function useAssetSelection(visibleAssets: Ref<Asset[]>) {
     selectedAssets,
     selectedCount,
     allVisibleSelected,
-    missingCount,
     removing,
     isSelected,
     enterSelectMode,
@@ -152,7 +144,6 @@ export function useAssetSelection(visibleAssets: Ref<Asset[]>) {
     toggleSelected,
     selectRange,
     toggleSelectAll,
-    selectMissing,
     onCardClick,
     dragIds,
     loadSelectedNodes,

@@ -10,10 +10,10 @@
     </button>
     <div v-if="open" class="v2-params__grid">
       <label v-for="row in rows" :key="row.name" class="v2-params__row" :data-wide="row.type === 'textarea' ? '1' : ''">
-        <span class="v2-params__label">{{ row.name }}</span>
+        <span class="v2-params__label">{{ row.label }}</span>
         <div v-if="row.type === 'combo'" class="v2-params__select">
           <ComfyTVSelect
-            :model-value="String(values[row.name] ?? '')"
+            :model-value="String(valueOf(row.name) ?? '')"
             :options="row.options!"
             :filterable="row.options!.length > 12"
             @update:model-value="(v) => write(row, v)"
@@ -23,7 +23,7 @@
           v-else-if="row.type === 'number'"
           type="number"
           class="v2-params__input"
-          :value="values[row.name]"
+          :value="valueOf(row.name)"
           :min="row.min"
           :max="row.max"
           :step="row.step"
@@ -33,13 +33,13 @@
           v-else-if="row.type === 'boolean'"
           type="button"
           class="v2-params__bool"
-          :data-on="values[row.name] ? '1' : ''"
-          @click.stop="write(row, !values[row.name])"
+          :data-on="valueOf(row.name) ? '1' : ''"
+          @click.stop="write(row, !valueOf(row.name))"
         ><span /></button>
         <textarea
           v-else-if="row.type === 'textarea'"
           class="v2-params__input v2-params__textarea"
-          :value="String(values[row.name] ?? '')"
+          :value="String(valueOf(row.name) ?? '')"
           rows="2"
           @change="(e) => write(row, (e.target as HTMLTextAreaElement).value)"
           @wheel.stop
@@ -48,7 +48,7 @@
           v-else
           type="text"
           class="v2-params__input"
-          :value="String(values[row.name] ?? '')"
+          :value="String(valueOf(row.name) ?? '')"
           @change="(e) => write(row, (e.target as HTMLInputElement).value)"
         />
       </label>
@@ -57,20 +57,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { useBoundOptionKeys } from '@/composables/stages/useBoundOptionKeys'
+import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import type { LGraphNode } from '@/lib/comfyApp'
-import { useNodeUiFlag } from '@/v2/nodeUiFlag'
+import { OPTION_LABEL_KEYS, optionLabelKey } from '@/v2/optionLabels'
 import { useWidgetValues } from '@/v2/useWidgetValues'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   getNode: () => LGraphNode | undefined
   exclude?: string[]
-}>()
+  /** When true, hide widgets until the workflow binds option:<name>. */
+  boundOnly?: boolean
+  workflowKind?: string | null
+}>(), {
+  boundOnly: true,
+  workflowKind: null,
+})
 
 const ALWAYS_SKIP = new Set([
   'force_run_token', 'project_id', 'parent_output_id', 'workflow',
@@ -81,6 +89,7 @@ const ALWAYS_SKIP = new Set([
 
 interface Row {
   name: string
+  label: string
   type: 'combo' | 'number' | 'boolean' | 'text' | 'textarea'
   options?: string[]
   min?: number
@@ -92,44 +101,69 @@ function widgetsOf(): any[] {
   return (props.getNode()?.widgets ?? []) as any[]
 }
 
+const TRACKED = [...Object.keys(OPTION_LABEL_KEYS), 'workflow']
+
+const { widgetOf, write: writeRaw } = useWidgetValues(props.getNode, TRACKED)
+
+const { keys: boundKeys } = useBoundOptionKeys(
+  props.getNode,
+  toRef(props, 'workflowKind'),
+)
+
+function labelOf(name: string): string {
+  const key = optionLabelKey(name)
+  if (key && te(key)) return String(t(key))
+  return name
+}
+
+function valueOf(name: string): unknown {
+  void comboOptionsVersion.value
+  return widgetOf(name)?.value
+}
+
 const rows = computed<Row[]>(() => {
+  void comboOptionsVersion.value
+  void boundKeys.value
   const skip = new Set([...ALWAYS_SKIP, ...(props.exclude ?? [])])
   const out: Row[] = []
   for (const w of widgetsOf()) {
     const name = String(w?.name ?? '')
     if (!name || skip.has(name) || name.startsWith('$$')) continue
+    if (props.boundOnly && !boundKeys.value.has(name)) continue
     const type = String(w?.type ?? '')
     if (type === 'button' || type === 'v2' || type === 'stage' || type === 'project') continue
+    const label = labelOf(name)
     if (type === 'combo') {
       const vals = Array.isArray(w?.options?.values) ? w.options.values.map(String) : []
-      out.push({ name, type: 'combo', options: vals })
+      out.push({ name, label, type: 'combo', options: vals })
     } else if (type === 'number' || type === 'slider' || type === 'int' || type === 'float') {
       out.push({
-        name, type: 'number',
+        name, label, type: 'number',
         min: w?.options?.min, max: w?.options?.max, step: w?.options?.step2 ?? w?.options?.step,
       })
     } else if (type === 'toggle' || type === 'boolean') {
-      out.push({ name, type: 'boolean' })
+      out.push({ name, label, type: 'boolean' })
     } else if (type === 'customtext') {
-      out.push({ name, type: 'textarea' })
+      out.push({ name, label, type: 'textarea' })
     } else if (type === 'text' || type === 'string') {
-      out.push({ name, type: 'text' })
+      out.push({ name, label, type: 'text' })
     }
   }
   return out
 })
 
-const open = useNodeUiFlag(props.getNode, 'v2_params_open')
-const { values, write: writeRaw } = useWidgetValues(
-  props.getNode,
-  rows.value.map(r => r.name),
-)
+const open = ref(false)
 
-function write(row: Row, v: unknown) {
-  let val: unknown = v
-  if (row.type === 'number') val = Number(v)
-  if (row.type === 'boolean') val = !!v
-  writeRaw(row.name, val)
+function write(row: Row, raw: unknown) {
+  if (row.type === 'number') {
+    const n = Number(raw)
+    writeRaw(row.name, Number.isFinite(n) ? n : 0)
+  } else if (row.type === 'boolean') {
+    writeRaw(row.name, Boolean(raw))
+  } else {
+    writeRaw(row.name, raw == null ? '' : String(raw))
+  }
+  comboOptionsVersion.value++
 }
 </script>
 
@@ -175,8 +209,8 @@ function write(row: Row, v: unknown) {
 .v2-params__label {
   color: var(--v2-text-faint);
   font: 500 10px/1 system-ui, sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: 0.02em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

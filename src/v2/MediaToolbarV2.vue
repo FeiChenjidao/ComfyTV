@@ -34,38 +34,39 @@
       <path d="M12 3.5V15M7 10.5l5 5 5-5M4 19.5h16" />
     </svg>
   </button>
-  <ComfyTVPopover v-model:open="moreOpen" align="end" width="420px">
-    <template #trigger>
-      <button
-        type="button"
-        class="v2-toolbar__btn v2-toolbar__btn--icononly"
-        :title="t('v2.moreActions')"
-        @pointerdown.stop
-      >
-        <i class="pi pi-chevron-down v2-vtb__chev" />
-      </button>
-    </template>
-    <div class="v2-vtb__menu">
-      <button
-        v-for="p in set.presets"
-        :key="p.id"
-        type="button"
-        class="v2-vtb__item"
-        :title="t(presetTooltipKey(set.category, p.id))"
-        @click.stop="fireFromMenu(`change:${p.id}`)"
-      >
-        <StageIcon :name="p.icon" class="v2-vtb__icon" />
-        <span>{{ t(presetLabelKey(set.category, p.id)) }}</span>
-      </button>
+  <button
+    ref="moreBtn"
+    type="button"
+    class="v2-toolbar__btn v2-toolbar__btn--icononly"
+    :title="t('v2.moreActions')"
+    @pointerdown.stop
+    @click.stop="toggleMore"
+  >
+    <i class="pi pi-chevron-down v2-vtb__chev" />
+  </button>
+  <Teleport to="body">
+    <div v-if="moreOpen" class="v2-vtb__backdrop" @click="moreOpen = false" @wheel.stop>
+      <div class="v2-vtb__menu" :style="menuStyle" @click.stop>
+        <button
+          v-for="p in set.presets"
+          :key="p.id"
+          type="button"
+          class="v2-vtb__item"
+          :title="t(presetTooltipKey(set.category, p.id))"
+          @click.stop="fireFromMenu(`change:${p.id}`)"
+        >
+          <StageIcon :name="p.icon" class="v2-vtb__icon" />
+          <span>{{ t(presetLabelKey(set.category, p.id)) }}</span>
+        </button>
+      </div>
     </div>
-  </ComfyTVPopover>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import ComfyTVPopover from '@/components/widgets/ComfyTVPopover.vue'
 import StageIcon from '@/components/widgets/StageIcon.vue'
 import {
   actionLabelKey,
@@ -142,6 +143,21 @@ const textItems = computed(() => set.value.text.map(item).filter((x): x is Item 
 const iconItems = computed(() => set.value.icons.map(item).filter((x): x is Item => !!x))
 
 const moreOpen = ref(false)
+const moreBtn = ref<HTMLElement | null>(null)
+const menuStyle = ref<Record<string, string>>({})
+
+function toggleMore() {
+  if (!moreOpen.value) {
+    const r = moreBtn.value?.getBoundingClientRect()
+    if (r) {
+      menuStyle.value = {
+        left: `${Math.max(8, Math.min(r.left, window.innerWidth - 428))}px`,
+        top: `${Math.min(r.bottom + 6, window.innerHeight - 320)}px`,
+      }
+    }
+  }
+  moreOpen.value = !moreOpen.value
+}
 
 function fire(id: string) {
   props.onAction(id)
@@ -161,7 +177,14 @@ function fireFromMenu(id: string) {
   justify-content: center;
 }
 .v2-vtb__chev { font-size: 9px; opacity: 0.7; }
+.v2-vtb__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
 .v2-vtb__menu {
+  position: absolute;
+  width: 420px;
   max-height: 300px;
   overflow-y: auto;
   overscroll-behavior: contain;

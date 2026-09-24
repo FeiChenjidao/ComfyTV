@@ -1,85 +1,76 @@
 ﻿<template>
-  <ComfyTVPopover v-model:open="open" width="340px">
-    <template #anchor>
-      <div
-        ref="rootEl"
-        class="v2-refs"
-        :data-drop="strip.fileDrop.dragActive.value ? '1' : ''"
-        @pointerdown.stop
-        @dragenter="strip.fileDrop.onDragEnter"
-        @dragover="strip.fileDrop.onDragOver"
-        @dragleave="strip.fileDrop.onDragLeave"
-        @drop="strip.fileDrop.onDrop"
-      >
-        <div
-          v-for="(it, i) in visibleItems"
-          :key="`${it.type}:${it.entry.key}`"
-          class="v2-refchip"
-          :data-src="it.entry.src"
-          :data-type="it.type"
-          :data-dragging="drag?.from === i ? '1' : ''"
-          :data-drop-before="drag && drag.over === i && drag.from !== i ? '1' : ''"
-          :title="it.label"
-          @pointerdown="onChipPointerDown($event, i)"
-          @pointermove="onChipPointerMove($event)"
-          @pointerup="onChipPointerUp($event)"
-          @pointercancel="cancelDrag"
-        >
-          <ThumbImg
-            v-if="it.url && it.type === 'image'"
-            :src="it.url"
-            :thumb-max="64"
-            loading="lazy"
-            class="v2-refchip__img"
-            draggable="false"
-          />
-          <video
-            v-else-if="it.url && it.type === 'video'"
-            :src="it.url"
-            muted
-            playsinline
-            preload="metadata"
-            class="v2-refchip__img"
-          />
-          <span v-else-if="it.type === 'audio'" class="v2-refchip__glyph">♪</span>
-          <span v-else class="v2-refchip__glyph v2-refchip__glyph--pending">…</span>
-          <span class="v2-refchip__pos" :style="{ background: it.color }">{{ it.position }}</span>
-          <span v-if="it.entry.src === 'link'" class="v2-refchip__link">⟜</span>
-          <button type="button" class="v2-refchip__x" :title="$t('imageRefs.remove')" @pointerdown.stop @click.stop="strip.remove(it)">×</button>
-        </div>
-        <div v-if="hiddenCount > 0" class="v2-refchip v2-refchip--more">+{{ hiddenCount }}</div>
-        <button
-          type="button"
-          class="v2-refchip v2-refchip--add"
-          :title="$t('imageRefs.add')"
-          @click.stop="open = !open"
-        >＋</button>
-      </div>
-    </template>
-    <AssetPickerPopup
-      :added-ids="strip.addedIds.value"
-      :media-types="strip.acceptedMediaTypes.value"
-      :batch-groups="strip.batchGroups.value"
-      :added-batch-keys="strip.addedBatchKeys.value"
-      @select="strip.onAddAsset"
-      @deselect="strip.onRemoveAsset"
-      @select-batch="strip.onAddBatchImage"
-      @deselect-batch="strip.onRemoveBatchImage"
-      @refresh-batch="strip.onRefreshBatch"
-      @unpin-batch="strip.onUnpinBatch"
-      @close="open = false"
-    />
-  </ComfyTVPopover>
+  <div
+    ref="rootEl"
+    class="v2-refs"
+    :data-drop="strip.fileDrop.dragActive.value ? '1' : ''"
+    @pointerdown.stop
+    @dragenter="strip.fileDrop.onDragEnter"
+    @dragover="strip.fileDrop.onDragOver"
+    @dragleave="strip.fileDrop.onDragLeave"
+    @drop="strip.fileDrop.onDrop"
+  >
+    <div
+      v-for="(it, i) in visibleItems"
+      :key="`${it.type}:${it.entry.key}`"
+      class="v2-refchip"
+      :data-src="it.entry.src"
+      :data-type="it.type"
+      :data-dragging="drag?.from === i ? '1' : ''"
+      :data-drop-before="drag && drag.over === i && drag.from !== i ? '1' : ''"
+      :title="it.label"
+      @pointerdown="onChipPointerDown($event, i)"
+      @pointermove="onChipPointerMove($event)"
+      @pointerup="onChipPointerUp($event)"
+      @pointercancel="cancelDrag"
+    >
+      <ThumbImg
+        v-if="it.url && it.type === 'image'"
+        :src="it.url"
+        :thumb-max="64"
+        loading="lazy"
+        class="v2-refchip__img"
+        draggable="false"
+      />
+      <video
+        v-else-if="it.url && it.type === 'video'"
+        :src="it.url"
+        muted
+        playsinline
+        preload="metadata"
+        class="v2-refchip__img"
+      />
+      <span v-else-if="it.type === 'audio'" class="v2-refchip__glyph">♪</span>
+      <span v-else class="v2-refchip__glyph v2-refchip__glyph--pending">…</span>
+      <span class="v2-refchip__pos" :style="{ background: it.color }">{{ it.position }}</span>
+      <span v-if="it.entry.src === 'link'" class="v2-refchip__link">⟜</span>
+      <button type="button" class="v2-refchip__x" :title="$t('imageRefs.remove')" @pointerdown.stop @click.stop="strip.remove(it)">×</button>
+    </div>
+    <div v-if="hiddenCount > 0" class="v2-refchip v2-refchip--more">+{{ hiddenCount }}</div>
+    <button type="button" class="v2-refchip v2-refchip--add" :title="$t('imageRefs.add')" @click.stop="open = !open">＋</button>
+  </div>
   <div v-if="strip.warnings.value.length" class="v2-refs-warns" @pointerdown.stop>
     <div v-for="(w, i) in strip.warnings.value" :key="i" class="v2-refs-warns__row">{{ w }}</div>
   </div>
+  <AssetPickerPopup
+    v-if="open"
+    :added-ids="strip.addedIds.value"
+    :media-types="strip.acceptedMediaTypes.value"
+    :batch-groups="strip.batchGroups.value"
+    :added-batch-keys="strip.addedBatchKeys.value"
+    @select="strip.onAddAsset"
+    @deselect="strip.onRemoveAsset"
+    @select-batch="strip.onAddBatchImage"
+    @deselect-batch="strip.onRemoveBatchImage"
+    @refresh-batch="strip.onRefreshBatch"
+    @unpin-batch="strip.onUnpinBatch"
+    @close="open = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
 import AssetPickerPopup from '@/components/stages/AssetPickerPopup.vue'
-import ComfyTVPopover from '@/components/widgets/ComfyTVPopover.vue'
 import ThumbImg from '@/components/widgets/ThumbImg.vue'
 import type { MediaType } from '@/composables/stages/mediaOrder'
 import { type StripItem, useMediaStrip } from '@/composables/stages/useMediaStrip'

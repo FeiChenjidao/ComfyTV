@@ -6,21 +6,10 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [vue(), Icons({ compiler: 'vue3', autoInstall: false })],
   resolve: {
-    alias: [
-      { find: '@jtydhr88/pentrado', replacement: resolve(__dirname, './packages/pentrado/src') },
-      { find: /^@agent\//, replacement: resolve(__dirname, './src/agent/host') + '/' },
-      { find: '@comfyorg/tailwind-utils', replacement: resolve(__dirname, './src/agent/host/tailwind-utils.ts') },
-      { find: '@comfyorg/ingest-types/zod', replacement: resolve(__dirname, './src/agent/host/ingest-types/zod.gen.ts') },
-      { find: '@comfyorg/ingest-types', replacement: resolve(__dirname, './src/agent/host/ingest-types/index.ts') },
-      { find: '@comfyorg/shared-frontend-utils/formatUtil', replacement: resolve(__dirname, './src/agent/host/utils/formatUtil.ts') },
-      { find: /^shiki$/, replacement: resolve(__dirname, './src/agent/host/shiki.ts') },
-      { find: /^@\//, replacement: resolve(__dirname, './src') + '/' }
-    ]
-  },
-  define: {
-    __DISTRIBUTION__: JSON.stringify('localhost'),
-    __IS_NIGHTLY__: 'false',
-    __COMFYUI_FRONTEND_VERSION__: JSON.stringify('comfytv')
+    alias: {
+      '@jtydhr88/pentrado': resolve(__dirname, './packages/pentrado/src'),
+      '@': resolve(__dirname, './src')
+    }
   },
   test: {
     environment: 'happy-dom',

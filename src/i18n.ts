@@ -6,22 +6,6 @@ import { app } from '@/lib/comfyApp'
 
 import en from '../locales/en/main.json'
 import zh from '../locales/zh/main.json'
-import agentEn from './agent/locales/en.json'
-import agentZh from './agent/locales/zh.json'
-
-type Messages = Record<string, unknown>
-
-function mergeMessages(base: Messages, extra: Messages): Messages {
-  const out: Messages = { ...base }
-  for (const [key, value] of Object.entries(extra)) {
-    const prev = out[key]
-    out[key] =
-      prev && typeof prev === 'object' && value && typeof value === 'object'
-        ? mergeMessages(prev as Messages, value as Messages)
-        : value
-  }
-  return out
-}
 
 export type SupportedLocale = 'en' | 'zh'
 
@@ -43,8 +27,8 @@ export const i18n = createI18n({
   locale: pickLocale(),
   fallbackLocale: 'en',
   messages: {
-    en: mergeMessages({ ...en, ...pentradoMessages.en }, agentEn) as typeof en,
-    zh: mergeMessages({ ...zh, ...pentradoMessages.zh }, agentZh) as typeof zh,
+    en: { ...en, ...pentradoMessages.en },
+    zh: { ...zh, ...pentradoMessages.zh },
   },
   missingWarn: false,
   fallbackWarn: false,

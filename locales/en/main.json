@@ -26,15 +26,20 @@
     },
     "panelCollapse": "Collapse the panel — keeps a one-line summary and Run",
     "panelExpand": "Expand the panel",
-    "imageStageTitle": "Image · ImageStage",
-    "pickerTitle": "Pick · Image Picker",
-    "cropTitle": "Crop · Edit",
+    "imageStageTitle": "Image Stage",
+    "pickerTitle": "Image Picker",
+    "cropTitle": "Crop",
     "ed": {
       "rotate": "Rotate · Edit",
       "mirror": "Mirror · Edit",
       "grade": "Color Grade · Edit",
       "compare": "Compare · Edit",
       "gridSplit": "Grid Split · Edit",
+      "customSplit": "Custom Split · Edit",
+      "imagesSplit": "Split Images",
+      "imageMerge": "Merge Images",
+      "psdLayerTree": "PSD Layer Tree",
+      "layerSeparation": "Layer Separation",
       "compareHint": "Wire two images into A and B to compare",
       "wired": "wired",
       "empty": "empty"
@@ -48,6 +53,7 @@
     "poolCount": "{n} in pool",
     "clear": "Clear",
     "linkWorkflow": "Link workflow",
+    "apiCostHint": "Estimated ComfyUI API node credits used by the bound workflow",
     "videoColorTitle": "Color · Video FX",
     "videoCurvesTitle": "Curves · Video FX",
     "fxChainTitle": "FX Chain · Render",
@@ -55,8 +61,8 @@
     "outputLabel": "Output",
     "livePreview": "Live",
     "fxChainHint": "Connect an upstream video to preview the chain",
-    "scene3dTitle": "3D Scene · Editor",
-    "relightTitle": "Relight · Light ball",
+    "scene3dTitle": "3D Scene",
+    "relightTitle": "Relight",
     "applying": "Applying…",
     "appliedLive": "Applied · live downstream",
     "dragToApply": "Drag the box to apply",
@@ -269,9 +275,35 @@
       "voice": "Voice",
       "speed": "Speed",
       "referenceText": "Reference transcript",
-      "variantCount": "Variant count"
+      "variantCount": "Variant count",
+      "seed": "Seed",
+      "material": "Material",
+      "mode3d": "Gen mode",
+      "textureQuality": "Texture quality",
+      "geometryQuality": "Geometry quality",
+      "polygonCount": "Polygon count",
+      "texture": "Texture",
+      "pbr": "PBR",
+      "tapose": "T/A pose",
+      "hdTexture": "HD texture",
+      "faceLimit": "Face limit",
+      "negative": "Negative prompt",
+      "modelVersion": "Model version",
+      "quad": "Quad mesh",
+      "smartLowPoly": "Smart low-poly",
+      "autoSize": "Auto size",
+      "orientation": "Orientation",
+      "textureAlignment": "Texture alignment",
+      "geometryFormat": "File format",
+      "textureMode": "Texture mode",
+      "textureDelight": "Texture delight",
+      "addonHighpack": "HighPack",
+      "aspectRatio": "Aspect ratio",
+      "resolution": "Resolution",
+      "batchSize": "Count"
     },
     "toolbar": {
+      "generate": "Generate",
       "hd": "HD",
       "expand": "Expand",
       "angles": "Angles",
@@ -280,6 +312,7 @@
       "erase": "Erase",
       "cutout": "Cutout",
       "grid": "Grid split",
+      "customSplit": "Custom split",
       "panorama": "Panorama",
       "crop": "Crop",
       "download": "Download"
@@ -471,9 +504,9 @@
         "desc": "What fills the card around a letterboxed thumbnail: the checkerboard used by image previews, or a dimmed copy of the same picture stretched to fill.",
         "options": { "checker": "Checkerboard", "image": "Same picture, dimmed" }
       },
-      "auto-picker": {
-        "label": "Auto-attach picker on run",
-        "desc": "When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically."
+      "v2-panel-on-select": {
+        "label": "Show control panel only when selected",
+        "desc": "When enabled, V2 card footers (prompt, workflow, cost badge, run) stay hidden until you select the card — keeps the canvas cleaner."
       },
       "enable-db-backup": {
         "label": "Automatic backup on startup",
@@ -511,6 +544,11 @@
         "desc": "Model passed to qwen -m for bot turns. Blank = the model selected in qwen's own settings.",
         "placeholder": "CLI default"
       },
+      "bot-model-cursor-cli": {
+        "label": "Cursor CLI model",
+        "desc": "Model passed to agent --model for bot turns. Blank = the CLI's own default.",
+        "placeholder": "CLI default"
+      },
       "bot-model-local-llm": {
         "label": "Local LLM model",
         "desc": "Model id on the local endpoint. Blank = the first model the endpoint reports.",
@@ -532,7 +570,7 @@
       },
       "bot-enable-comfy-mcp": {
         "label": "Mount comfy-mcp",
-        "desc": "Also mount the official comfy-mcp server (read-only tool set: node catalog, workflow validation, model/template search) in bot sessions. Claude Code and Qwen Code only — Codex and Local LLM stay comfytv-only."
+        "desc": "Also mount the official comfy-mcp server (read-only tool set: node catalog, workflow validation, model/template search) in bot sessions. Claude Code, Qwen Code, and Cursor CLI only — Codex and Local LLM stay comfytv-only."
       },
       "bot-comfy-mcp-command": {
         "label": "comfy-mcp command",
@@ -750,7 +788,6 @@
       "enter": "Select assets (Ctrl+click also works)",
       "exit": "Exit selection",
       "all": "Select all shown",
-      "missing": "Select only the shown assets whose file is missing ({count})",
       "count": "{count} selected",
       "tags": "Edit tags of selected",
       "loadNodes": "Add selected as nodes to canvas",
@@ -876,6 +913,8 @@
     "customExposedPrompt": "main prompt",
     "customOutputsHint": "Outputs are chosen in the card's Expose I/O panel.",
     "bindTo": "Bind to:",
+    "bindingDefault": "Default",
+    "bindingDefaultHint": "Used when the stage control is empty.",
     "exportPreset": "Export preset.json",
     "exportPresetTooltip": "Download the current bindings as a *_preset.json file. Drop it next to the workflow JSON in workflows/<kind>/ to ship these defaults to other users.",
     "exportPresetFailed": "Export failed: {detail}",
@@ -897,7 +936,8 @@
       "label": "As",
       "text": "Text / value (slot 0)",
       "file": "Saved file (image / video / audio)",
-      "batch": "Saved image batch"
+      "batch": "Saved image batch",
+      "layered": "Layered image"
     },
     "bindingRequired": "Required",
     "mentionStyle": {
@@ -1099,6 +1139,10 @@
         "label": "25-grid Storyboard",
         "tooltip": "25 consecutive storyboard shots"
       },
+      "layer-separation": {
+        "label": "Layer Separation",
+        "tooltip": "Separate the image into composable layers"
+      },
       "cinematic-light": {
         "label": "Cinematic Lighting",
         "tooltip": "Apply cinematic lighting and color grade"
@@ -1152,6 +1196,10 @@
       "grid": {
         "label": "Grid Split",
         "tooltip": "Slice into an R×C grid of tiles (browser-side) → image batch"
+      },
+      "custom-split": {
+        "label": "Custom Split",
+        "tooltip": "Drag free split lines into uneven tiles (browser-side) → image batch"
       },
       "ken-burns": {
         "label": "Ken Burns",
@@ -1636,7 +1684,9 @@
     "unlockRatio": "Unlock aspect ratio",
     "applying": "Applying crop…",
     "applied": "Crop applied — ready for downstream",
-    "adjustToApply": "Drag the rectangle or pick a ratio to apply"
+    "adjustToApply": "Drag the rectangle or pick a ratio to apply",
+    "addBox": "Add box",
+    "removeBox": "Remove"
   },
   "panorama": {
     "empty": "No panorama yet — upload an HDRI / equirect image or click Run with an upstream image",
@@ -1803,6 +1853,55 @@
     "cols": "Cols",
     "border": "Border",
     "outerBorder": "Outer border"
+  },
+  "customSplit": {
+    "connectImage": "Connect an image to split",
+    "hint": "Add split lines and drag them to slice freely",
+    "splitting": "Slicing into {n} tiles…",
+    "done": "Split into {n} tiles — ready for downstream",
+    "addV": "Add vertical",
+    "addH": "Add horizontal",
+    "remove": "Delete line",
+    "annotate": "Label",
+    "annotateHint": "Pick 正 / 左 / 背 / 右, then click a tile. Output order is 正 → 左 → 背 → 右.",
+    "generateModel": "Multi-view → 3D"
+  },
+  "psdLayerTree": {
+    "pick": "Choose PSD",
+    "pickHint": "Choose a local PSD / PSB file",
+    "dropHint": "Drop a PSD / PSB file here",
+    "loading": "Reading PSD…",
+    "compositing": "Compositing layer…",
+    "done": "Composite ready — available downstream",
+    "warning": "Approximate — smart objects / effects may differ from Photoshop",
+    "dims": "{w} × {h}",
+    "memory": "This PSD is too large for the browser to composite. Try a smaller document, or select a single layer instead of the root.",
+    "scaled": "Composited at {w} × {h} (document {dw} × {dh})",
+    "clickHint": "Click to select · Ctrl/⌘ click to add · Shift click for a range",
+    "clipping": "Clipping mask",
+    "expand": "Expand"
+  },
+  "imagesSplit": {
+    "connect": "Connect an image group",
+    "empty": "No layers in this group yet",
+    "truncated": "Only the first {n} layers are split",
+    "selectHint": "Click to select · Ctrl/⌘ add · Shift range",
+    "merge": "Merge selected",
+    "mergeBusy": "Merging…",
+    "mergeFailed": "Merge failed",
+    "variations": "Image Variations"
+  },
+  "imageMerge": {
+    "mode": "Merge",
+    "layers": "Layers",
+    "row": "Row",
+    "aspect11": "1:1",
+    "hint": "Wire any number of images",
+    "needImages": "Wire images to merge",
+    "wired": "{n} wired",
+    "applying": "Merging…",
+    "applied": "Merged — ready for downstream",
+    "adjustToApply": "Pick a merge mode"
   },
   "panoramaView": {
     "connectPanorama": "Connect a panorama upstream",
@@ -2851,7 +2950,7 @@
     "cancelSelect": "Exit selection",
     "batchDeleteConfirm": "Delete the {count} selected chats? This cannot be undone.",
     "noProviderTitle": "No local agent CLI found",
-    "noProviderBody": "The ComfyTV bot drives your canvas through a locally installed agent CLI (Claude Code). Install it, sign in once, then come back - no API key is ever stored.",
+    "noProviderBody": "The ComfyTV bot drives your canvas through a locally installed agent CLI (Claude Code, Cursor CLI, Codex, or Qwen Code). Install one, sign in once, then come back - no API key is ever stored.",
     "recheck": "Check again",
     "attachImage": "Attach media file",
     "removeAttachment": "Remove",

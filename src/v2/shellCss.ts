@@ -2,8 +2,7 @@ import { V2_CSS_PANELS } from '@/v2/shellCssPanels'
 
 const V2_CSS_CHROME = `
 .lg-node[data-v2-shell],
-.v2-lact__backdrop,
-.v2-pop {
+.v2-lact__backdrop {
   --v2-slab-bg: #232327;
   --v2-slab-border: rgba(255,255,255,.05);
   --v2-slab-shadow: 0 3px 10px rgba(0,0,0,.38);
@@ -43,8 +42,7 @@ const V2_CSS_CHROME = `
   --color-datatype-COMFYTV_FXSPEC: #94A3B8;
 }
 html:not(.dark-theme) .lg-node[data-v2-shell],
-html:not(.dark-theme) .v2-lact__backdrop,
-html:not(.dark-theme) .v2-pop {
+html:not(.dark-theme) .v2-lact__backdrop {
   --v2-slot-halo: rgba(0,0,0,.12);
   --v2-slab-bg: #ffffff;
   --v2-slab-border: rgba(0,0,0,.08);

@@ -3,7 +3,7 @@
     "target": "ES2020",
     "useDefineForClassFields": true,
     "module": "ESNext",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "lib": ["ES2020", "ES2021.WeakRef", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -19,13 +19,7 @@
     "paths": {
       "@jtydhr88/pentrado": ["packages/pentrado/src/index.ts"],
       "@jtydhr88/pentrado/*": ["packages/pentrado/src/*"],
-      "@/*": ["src/*"],
-      "@agent/*": ["src/agent/host/*"],
-      "@comfyorg/tailwind-utils": ["src/agent/host/tailwind-utils.ts"],
-      "@comfyorg/ingest-types": ["src/agent/host/ingest-types/index.ts"],
-      "@comfyorg/ingest-types/zod": ["src/agent/host/ingest-types/zod.gen.ts"],
-      "@comfyorg/shared-frontend-utils/formatUtil": ["src/agent/host/utils/formatUtil.ts"],
-      "shiki": ["src/agent/host/shiki.ts"]
+      "@/*": ["src/*"]
     }
   },
   "include": [

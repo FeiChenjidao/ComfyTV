@@ -1,50 +1,47 @@
 <template>
-  <ComfyTVPopover v-model:open="open" width="340px">
-    <template #anchor>
-      <div
-        class="v2-al"
-        :class="{ 'v2-al--drag': fileDrop.dragActive.value }"
-        @dragenter="fileDrop.onDragEnter"
-        @dragover="fileDrop.onDragOver"
-        @dragleave="fileDrop.onDragLeave"
-        @drop="fileDrop.onDrop"
-      >
-        <div class="v2-al__preview" @pointerdown.stop @click="mediaType !== 'model' && (open = true)">
-          <MediaPreviewV2
-            :kind="mediaType"
-            :url="previewUrl"
-            :text="previewText"
-            :hint="$t('v2.assetLoaderHint')"
-            :on-capture-view="mediaType === 'model' && onAction ? onModelCaptured : undefined"
-          />
-        </div>
-        <MediaMetaV2 v-if="mediaType !== 'text'" :url="selectedAsset?.payload_url ?? null" />
-        <div class="v2-al__footer" @pointerdown.stop>
-          <span v-if="selectedAsset?.file_missing" class="v2-al__name v2-al__name--missing">
-            ⚠ {{ selectedAsset.name || '—' }}
-          </span>
-          <span v-else class="v2-al__name">{{ selectedAsset?.name ?? $t('v2.assetLoaderEmpty') }}</span>
-          <span class="v2-al__spacer" />
-          <button type="button" class="v2-al__btn" @click.stop="open = !open">
-            {{ $t('v2.change') }}
-          </button>
-          <button type="button" class="v2-al__btn" :title="$t('v2.upload')" @click.stop="fileInput?.click()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 16V4M7.5 8.5L12 4l4.5 4.5M4 19.5h16" />
-            </svg>
-          </button>
-          <input ref="fileInput" type="file" :accept="fileAccept" multiple class="v2-al__file" @change="onPickFiles" />
-        </div>
-      </div>
-    </template>
-    <AssetPickerPopup
-      :added-ids="addedIds"
-      :media-types="[mediaType]"
-      @select="onSelect"
-      @deselect="clearAsset"
-      @close="open = false"
-    />
-  </ComfyTVPopover>
+  <div
+    class="v2-al"
+    :class="{ 'v2-al--drag': fileDrop.dragActive.value }"
+    @dragenter="fileDrop.onDragEnter"
+    @dragover="fileDrop.onDragOver"
+    @dragleave="fileDrop.onDragLeave"
+    @drop="fileDrop.onDrop"
+  >
+    <div class="v2-al__preview" @pointerdown.stop @click="mediaType !== 'model' && (open = !open)">
+      <MediaPreviewV2
+        :kind="mediaType"
+        :url="previewUrl"
+        :text="previewText"
+        :hint="$t('v2.assetLoaderHint')"
+        :on-capture-view="mediaType === 'model' && onAction ? onModelCaptured : undefined"
+      />
+    </div>
+    <MediaMetaV2 v-if="mediaType !== 'text'" :url="selectedAsset?.payload_url ?? null" />
+    <div class="v2-al__footer" @pointerdown.stop>
+      <span v-if="selectedAsset?.file_missing" class="v2-al__name v2-al__name--missing">
+        ⚠ {{ selectedAsset.name || '—' }}
+      </span>
+      <span v-else class="v2-al__name">{{ selectedAsset?.name ?? $t('v2.assetLoaderEmpty') }}</span>
+      <span class="v2-al__spacer" />
+      <button type="button" class="v2-al__btn" @click.stop="open = !open">
+        {{ $t('v2.change') }}
+      </button>
+      <button type="button" class="v2-al__btn" :title="$t('v2.upload')" @click.stop="fileInput?.click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 16V4M7.5 8.5L12 4l4.5 4.5M4 19.5h16" />
+        </svg>
+      </button>
+      <input ref="fileInput" type="file" :accept="fileAccept" multiple class="v2-al__file" @change="onPickFiles" />
+    </div>
+  </div>
+  <AssetPickerPopup
+    v-if="open"
+    :added-ids="addedIds"
+    :media-types="[mediaType]"
+    @select="onSelect"
+    @deselect="clearAsset"
+    @close="open = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -52,7 +49,6 @@ import { computed, ref, watch } from 'vue'
 
 import type { Asset } from '@/api/schemas'
 import AssetPickerPopup from '@/components/stages/AssetPickerPopup.vue'
-import ComfyTVPopover from '@/components/widgets/ComfyTVPopover.vue'
 import { useAssetLoaderCard } from '@/composables/stages/useAssetLoaderCard'
 import type { LGraphNode } from '@/lib/comfyApp'
 import { assetPreviewUrl } from '@/utils/assetMedia'

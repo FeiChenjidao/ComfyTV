@@ -134,7 +134,6 @@ import ProxiedVideo from '@/components/widgets/ProxiedVideo.vue'
 import VideoPlayerLite from '@/components/widgets/VideoPlayerLite.vue'
 import FxChips from '@/components/widgets/fx/FxChips.vue'
 import ServerSelectV2 from '@/v2/ServerSelectV2.vue'
-import { useNodeUiFlag } from '@/v2/nodeUiFlag'
 import { ChainBlitRenderer } from '@/composables/stages/fxChainPreviewRegistry'
 import { pickSourceImageUrl } from '@/composables/stages/stageInputs'
 import { useChainedFxPreview } from '@/composables/stages/useChainedFxPreview'
@@ -184,7 +183,7 @@ const outFps = useStrWidget(props.node, 'out_fps', 'source')
 const outCodec = useStrWidget(props.node, 'out_codec', 'h264')
 const outQuality = useStrWidget(props.node, 'out_quality', 'standard')
 
-const deliveryOpen = useNodeUiFlag(() => props.node, 'v2_fx_delivery_open')
+const deliveryOpen = ref(false)
 const deliverySummary = computed(() => {
   const size = outSize.value === 'source' ? t('fxChain.sourceOpt') : `${outSize.value}p`
   const fps = outFps.value === 'source' ? '' : ` · ${outFps.value}fps`
