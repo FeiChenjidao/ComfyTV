@@ -750,6 +750,7 @@
       "enter": "Select assets (Ctrl+click also works)",
       "exit": "Exit selection",
       "all": "Select all shown",
+      "missing": "Select only the shown assets whose file is missing ({count})",
       "count": "{count} selected",
       "tags": "Edit tags of selected",
       "loadNodes": "Add selected as nodes to canvas",

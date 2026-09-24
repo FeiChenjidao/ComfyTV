@@ -8161,7 +8161,7 @@ let renderer;
 function ensureRenderer() {
   return renderer || (renderer = createRenderer(rendererOptions));
 }
-const render$2E = ((...args) => {
+const render$2F = ((...args) => {
   ensureRenderer().render(...args);
 });
 const createApp = ((...args) => {
@@ -10770,13 +10770,13 @@ const usePresenceStore = /* @__PURE__ */ defineStore("comfytv-presence", () => {
     applyMessage
   };
 });
-const _hoisted_1$7a = {
+const _hoisted_1$7b = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2D(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$7a, [..._cache2[0] || (_cache2[0] = [
+function render$2E(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$7b, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -10789,7 +10789,18 @@ function render$2D(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconBird = markRaw({ name: "lucide-bird", render: render$2D });
+const IconBird = markRaw({ name: "lucide-bird", render: render$2E });
+const _hoisted_1$7a = {
+  viewBox: "0 0 24 24",
+  width: "1.2em",
+  height: "1.2em"
+};
+function render$2D(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$7a, [..._cache2[0] || (_cache2[0] = [
+    createStaticVNode('<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="m22 11l-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"></path><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"></path><circle cx="13" cy="7" r="1" fill="currentColor"></circle><rect width="14" height="14" x="8" y="2" rx="2"></rect></g>', 1)
+  ])]);
+}
+const IconImages = markRaw({ name: "lucide-images", render: render$2D });
 const _hoisted_1$79 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -10797,17 +10808,6 @@ const _hoisted_1$79 = {
 };
 function render$2C(_ctx, _cache2) {
   return openBlock(), createElementBlock("svg", _hoisted_1$79, [..._cache2[0] || (_cache2[0] = [
-    createStaticVNode('<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="m22 11l-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"></path><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"></path><circle cx="13" cy="7" r="1" fill="currentColor"></circle><rect width="14" height="14" x="8" y="2" rx="2"></rect></g>', 1)
-  ])]);
-}
-const IconImages = markRaw({ name: "lucide-images", render: render$2C });
-const _hoisted_1$78 = {
-  viewBox: "0 0 24 24",
-  width: "1.2em",
-  height: "1.2em"
-};
-function render$2B(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$78, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -10820,14 +10820,14 @@ function render$2B(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconPackage = markRaw({ name: "lucide-package", render: render$2B });
-const _hoisted_1$77 = {
+const IconPackage = markRaw({ name: "lucide-package", render: render$2C });
+const _hoisted_1$78 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2A(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$77, [..._cache2[0] || (_cache2[0] = [
+function render$2B(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$78, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -10855,14 +10855,14 @@ function render$2A(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconServer = markRaw({ name: "lucide-server", render: render$2A });
-const _hoisted_1$76 = {
+const IconServer = markRaw({ name: "lucide-server", render: render$2B });
+const _hoisted_1$77 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2z(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$76, [..._cache2[0] || (_cache2[0] = [
+function render$2A(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$77, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -10879,14 +10879,14 @@ function render$2z(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconSettings = markRaw({ name: "lucide-settings", render: render$2z });
-const _hoisted_1$75 = {
+const IconSettings = markRaw({ name: "lucide-settings", render: render$2A });
+const _hoisted_1$76 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2y(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$75, [..._cache2[0] || (_cache2[0] = [
+function render$2z(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$76, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("path", {
       fill: "none",
       stroke: "currentColor",
@@ -10897,14 +10897,14 @@ function render$2y(_ctx, _cache2) {
     }, null, -1)
   ])]);
 }
-const IconSlidersHorizontal = markRaw({ name: "lucide-sliders-horizontal", render: render$2y });
-const _hoisted_1$74 = {
+const IconSlidersHorizontal = markRaw({ name: "lucide-sliders-horizontal", render: render$2z });
+const _hoisted_1$75 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2x(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$74, [..._cache2[0] || (_cache2[0] = [
+function render$2y(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$75, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -10921,14 +10921,14 @@ function render$2x(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconUsers = markRaw({ name: "lucide-users", render: render$2x });
-const _hoisted_1$73 = {
+const IconUsers = markRaw({ name: "lucide-users", render: render$2y });
+const _hoisted_1$74 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2w(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$73, [..._cache2[0] || (_cache2[0] = [
+function render$2x(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$74, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("path", {
       fill: "none",
       stroke: "currentColor",
@@ -10939,14 +10939,14 @@ function render$2w(_ctx, _cache2) {
     }, null, -1)
   ])]);
 }
-const IconStar = markRaw({ name: "lucide-star", render: render$2w });
-const _hoisted_1$72 = {
+const IconStar = markRaw({ name: "lucide-star", render: render$2x });
+const _hoisted_1$73 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2v(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$72, [..._cache2[0] || (_cache2[0] = [
+function render$2w(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$73, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -10959,14 +10959,14 @@ function render$2v(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconStickyNote = markRaw({ name: "lucide-sticky-note", render: render$2v });
-const _hoisted_1$71 = {
+const IconStickyNote = markRaw({ name: "lucide-sticky-note", render: render$2w });
+const _hoisted_1$72 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2u(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$71, [..._cache2[0] || (_cache2[0] = [
+function render$2v(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$72, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -10992,14 +10992,14 @@ function render$2u(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconWorkflow = markRaw({ name: "lucide-workflow", render: render$2u });
-const _hoisted_1$70 = {
+const IconWorkflow = markRaw({ name: "lucide-workflow", render: render$2v });
+const _hoisted_1$71 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2t(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$70, [..._cache2[0] || (_cache2[0] = [
+function render$2u(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$71, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("path", {
       fill: "none",
       stroke: "currentColor",
@@ -11010,14 +11010,14 @@ function render$2t(_ctx, _cache2) {
     }, null, -1)
   ])]);
 }
-const IconCheck = markRaw({ name: "lucide-check", render: render$2t });
-const _hoisted_1$6$ = {
+const IconCheck = markRaw({ name: "lucide-check", render: render$2u });
+const _hoisted_1$70 = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2s(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6$, [..._cache2[0] || (_cache2[0] = [
+function render$2t(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$70, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11034,7 +11034,18 @@ function render$2s(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconFolderSearch = markRaw({ name: "lucide-folder-search", render: render$2s });
+const IconFolderSearch = markRaw({ name: "lucide-folder-search", render: render$2t });
+const _hoisted_1$6$ = {
+  viewBox: "0 0 24 24",
+  width: "1.2em",
+  height: "1.2em"
+};
+function render$2s(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6$, [..._cache2[0] || (_cache2[0] = [
+    createStaticVNode('<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></g>', 1)
+  ])]);
+}
+const IconLayoutGrid = markRaw({ name: "lucide-layout-grid", render: render$2s });
 const _hoisted_1$6_ = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -11042,10 +11053,17 @@ const _hoisted_1$6_ = {
 };
 function render$2r(_ctx, _cache2) {
   return openBlock(), createElementBlock("svg", _hoisted_1$6_, [..._cache2[0] || (_cache2[0] = [
-    createStaticVNode('<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></g>', 1)
+    createBaseVNode("path", {
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "stroke-width": "2",
+      d: "M5 12h14"
+    }, null, -1)
   ])]);
 }
-const IconLayoutGrid = markRaw({ name: "lucide-layout-grid", render: render$2r });
+const IconMinus = markRaw({ name: "lucide-minus", render: render$2r });
 const _hoisted_1$6Z = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -11059,11 +11077,11 @@ function render$2q(_ctx, _cache2) {
       "stroke-linecap": "round",
       "stroke-linejoin": "round",
       "stroke-width": "2",
-      d: "M5 12h14"
+      d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497zM15 5l4 4"
     }, null, -1)
   ])]);
 }
-const IconMinus = markRaw({ name: "lucide-minus", render: render$2q });
+const IconPencil = markRaw({ name: "lucide-pencil", render: render$2q });
 const _hoisted_1$6Y = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -11077,11 +11095,11 @@ function render$2p(_ctx, _cache2) {
       "stroke-linecap": "round",
       "stroke-linejoin": "round",
       "stroke-width": "2",
-      d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497zM15 5l4 4"
+      d: "M5 12h14m-7-7v14"
     }, null, -1)
   ])]);
 }
-const IconPencil = markRaw({ name: "lucide-pencil", render: render$2p });
+const IconPlus = markRaw({ name: "lucide-plus", render: render$2p });
 const _hoisted_1$6X = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -11089,24 +11107,6 @@ const _hoisted_1$6X = {
 };
 function render$2o(_ctx, _cache2) {
   return openBlock(), createElementBlock("svg", _hoisted_1$6X, [..._cache2[0] || (_cache2[0] = [
-    createBaseVNode("path", {
-      fill: "none",
-      stroke: "currentColor",
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round",
-      "stroke-width": "2",
-      d: "M5 12h14m-7-7v14"
-    }, null, -1)
-  ])]);
-}
-const IconPlus = markRaw({ name: "lucide-plus", render: render$2o });
-const _hoisted_1$6W = {
-  viewBox: "0 0 24 24",
-  width: "1.2em",
-  height: "1.2em"
-};
-function render$2n(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6W, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11123,14 +11123,14 @@ function render$2n(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconSearch = markRaw({ name: "lucide-search", render: render$2n });
-const _hoisted_1$6V = {
+const IconSearch = markRaw({ name: "lucide-search", render: render$2o });
+const _hoisted_1$6W = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2m(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6V, [..._cache2[0] || (_cache2[0] = [
+function render$2n(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6W, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11152,14 +11152,14 @@ function render$2m(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconSettings2 = markRaw({ name: "lucide-settings-2", render: render$2m });
-const _hoisted_1$6U = {
+const IconSettings2 = markRaw({ name: "lucide-settings-2", render: render$2n });
+const _hoisted_1$6V = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2l(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6U, [..._cache2[0] || (_cache2[0] = [
+function render$2m(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6V, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11178,7 +11178,25 @@ function render$2l(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconSquareCheck = markRaw({ name: "lucide-square-check", render: render$2l });
+const IconSquareCheck = markRaw({ name: "lucide-square-check", render: render$2m });
+const _hoisted_1$6U = {
+  viewBox: "0 0 24 24",
+  width: "1.2em",
+  height: "1.2em"
+};
+function render$2l(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6U, [..._cache2[0] || (_cache2[0] = [
+    createBaseVNode("path", {
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "stroke-width": "2",
+      d: "M16 5H3m13 7H3m13 7H3M21 5h.01M21 12h.01M21 19h.01"
+    }, null, -1)
+  ])]);
+}
+const IconTableOfContents = markRaw({ name: "lucide-table-of-contents", render: render$2l });
 const _hoisted_1$6T = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -11192,11 +11210,11 @@ function render$2k(_ctx, _cache2) {
       "stroke-linecap": "round",
       "stroke-linejoin": "round",
       "stroke-width": "2",
-      d: "M16 5H3m13 7H3m13 7H3M21 5h.01M21 12h.01M21 19h.01"
+      d: "M18 6L6 18M6 6l12 12"
     }, null, -1)
   ])]);
 }
-const IconTableOfContents = markRaw({ name: "lucide-table-of-contents", render: render$2k });
+const IconX = markRaw({ name: "lucide-x", render: render$2k });
 const _hoisted_1$6S = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -11210,11 +11228,11 @@ function render$2j(_ctx, _cache2) {
       "stroke-linecap": "round",
       "stroke-linejoin": "round",
       "stroke-width": "2",
-      d: "M18 6L6 18M6 6l12 12"
+      d: "m12.296 3.464l3.02 3.956M20.2 6L3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3zM3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm3.18-5.724l3.1 3.899"
     }, null, -1)
   ])]);
 }
-const IconX = markRaw({ name: "lucide-x", render: render$2j });
+const IconClapperboard = markRaw({ name: "lucide-clapperboard", render: render$2j });
 const _hoisted_1$6R = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -11222,24 +11240,6 @@ const _hoisted_1$6R = {
 };
 function render$2i(_ctx, _cache2) {
   return openBlock(), createElementBlock("svg", _hoisted_1$6R, [..._cache2[0] || (_cache2[0] = [
-    createBaseVNode("path", {
-      fill: "none",
-      stroke: "currentColor",
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round",
-      "stroke-width": "2",
-      d: "m12.296 3.464l3.02 3.956M20.2 6L3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3zM3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm3.18-5.724l3.1 3.899"
-    }, null, -1)
-  ])]);
-}
-const IconClapperboard = markRaw({ name: "lucide-clapperboard", render: render$2i });
-const _hoisted_1$6Q = {
-  viewBox: "0 0 24 24",
-  width: "1.2em",
-  height: "1.2em"
-};
-function render$2h(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6Q, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11252,7 +11252,25 @@ function render$2h(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconDownload = markRaw({ name: "lucide-download", render: render$2h });
+const IconDownload = markRaw({ name: "lucide-download", render: render$2i });
+const _hoisted_1$6Q = {
+  viewBox: "0 0 24 24",
+  width: "1.2em",
+  height: "1.2em"
+};
+function render$2h(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6Q, [..._cache2[0] || (_cache2[0] = [
+    createBaseVNode("path", {
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "stroke-width": "2",
+      d: "M15 3h6v6m0-6l-7 7M3 21l7-7m-1 7H3v-6"
+    }, null, -1)
+  ])]);
+}
+const IconMaximize$1 = markRaw({ name: "lucide-maximize-2", render: render$2h });
 const _hoisted_1$6P = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -11266,11 +11284,11 @@ function render$2g(_ctx, _cache2) {
       "stroke-linecap": "round",
       "stroke-linejoin": "round",
       "stroke-width": "2",
-      d: "M15 3h6v6m0-6l-7 7M3 21l7-7m-1 7H3v-6"
+      d: "M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11zm7.318-19.539l-10.94 10.939"
     }, null, -1)
   ])]);
 }
-const IconMaximize$1 = markRaw({ name: "lucide-maximize-2", render: render$2g });
+const IconSend = markRaw({ name: "lucide-send", render: render$2g });
 const _hoisted_1$6O = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -11278,24 +11296,6 @@ const _hoisted_1$6O = {
 };
 function render$2f(_ctx, _cache2) {
   return openBlock(), createElementBlock("svg", _hoisted_1$6O, [..._cache2[0] || (_cache2[0] = [
-    createBaseVNode("path", {
-      fill: "none",
-      stroke: "currentColor",
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round",
-      "stroke-width": "2",
-      d: "M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11zm7.318-19.539l-10.94 10.939"
-    }, null, -1)
-  ])]);
-}
-const IconSend = markRaw({ name: "lucide-send", render: render$2f });
-const _hoisted_1$6N = {
-  viewBox: "0 0 24 24",
-  width: "1.2em",
-  height: "1.2em"
-};
-function render$2e(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6N, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11313,14 +11313,14 @@ function render$2e(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconTag = markRaw({ name: "lucide-tag", render: render$2e });
-const _hoisted_1$6M = {
+const IconTag = markRaw({ name: "lucide-tag", render: render$2f });
+const _hoisted_1$6N = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2d(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6M, [..._cache2[0] || (_cache2[0] = [
+function render$2e(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6N, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("path", {
       fill: "none",
       stroke: "currentColor",
@@ -11331,8 +11331,8 @@ function render$2d(_ctx, _cache2) {
     }, null, -1)
   ])]);
 }
-const IconTrash = markRaw({ name: "lucide-trash-2", render: render$2d });
-const _hoisted_1$6L = { class: "ctv:flex-1 ctv:truncate" };
+const IconTrash = markRaw({ name: "lucide-trash-2", render: render$2e });
+const _hoisted_1$6M = { class: "ctv:flex-1 ctv:truncate" };
 const _hoisted_2$4m = { class: "ctv:flex-1 ctv:truncate" };
 const _hoisted_3$4d = { class: "ctv:flex-1 ctv:truncate" };
 const _hoisted_4$3I = { class: "ctv:flex-1 ctv:truncate" };
@@ -11371,7 +11371,7 @@ const _sfc_main$4O = /* @__PURE__ */ defineComponent({
             onClick: _cache2[0] || (_cache2[0] = ($event) => emit2("action", "view-full"))
           }, [
             createVNode(unref(IconMaximize$1), { class: "ctv:size-4 ctv:shrink-0" }),
-            createBaseVNode("span", _hoisted_1$6L, toDisplayString$1(_ctx.$t("stage.action.viewFull")), 1)
+            createBaseVNode("span", _hoisted_1$6M, toDisplayString$1(_ctx.$t("stage.action.viewFull")), 1)
           ], 2)) : createCommentVNode("", true),
           __props.asset.media_type !== "model" ? (openBlock(), createElementBlock("button", {
             key: 1,
@@ -11424,13 +11424,13 @@ const _sfc_main$4O = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const _hoisted_1$6K = {
+const _hoisted_1$6L = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2c(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6K, [..._cache2[0] || (_cache2[0] = [
+function render$2d(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6L, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11443,7 +11443,7 @@ function render$2c(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconBox = markRaw({ name: "lucide-box", render: render$2c });
+const IconBox = markRaw({ name: "lucide-box", render: render$2d });
 function assetPreviewUrl(asset) {
   var _a2;
   const preview = (_a2 = asset.metadata) == null ? void 0 : _a2.preview_url;
@@ -11471,13 +11471,13 @@ function thumbUrl(src, max2) {
   if (!IMAGE_EXT_RE.test(clean) && !VIDEO_EXT_RE.test(clean)) return src;
   return `/comfytv/thumb?url=${encodeURIComponent(src)}&max=${max2}`;
 }
-const _hoisted_1$6J = {
+const _hoisted_1$6K = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2b(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6J, [..._cache2[0] || (_cache2[0] = [
+function render$2c(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6K, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11503,14 +11503,14 @@ function render$2b(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconEllipsis = markRaw({ name: "lucide-ellipsis", render: render$2b });
-const _hoisted_1$6I = {
+const IconEllipsis = markRaw({ name: "lucide-ellipsis", render: render$2c });
+const _hoisted_1$6J = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$2a(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6I, [..._cache2[0] || (_cache2[0] = [
+function render$2b(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6J, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11523,14 +11523,14 @@ function render$2a(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconFileText = markRaw({ name: "lucide-file-text", render: render$2a });
-const _hoisted_1$6H = {
+const IconFileText = markRaw({ name: "lucide-file-text", render: render$2b });
+const _hoisted_1$6I = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$29(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6H, [..._cache2[0] || (_cache2[0] = [
+function render$2a(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6I, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("g", {
       fill: "none",
       stroke: "currentColor",
@@ -11555,14 +11555,14 @@ function render$29(_ctx, _cache2) {
     ], -1)
   ])]);
 }
-const IconPause = markRaw({ name: "lucide-pause", render: render$29 });
-const _hoisted_1$6G = {
+const IconPause = markRaw({ name: "lucide-pause", render: render$2a });
+const _hoisted_1$6H = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$28(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6G, [..._cache2[0] || (_cache2[0] = [
+function render$29(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6H, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("path", {
       fill: "none",
       stroke: "currentColor",
@@ -11573,14 +11573,14 @@ function render$28(_ctx, _cache2) {
     }, null, -1)
   ])]);
 }
-const IconPlay = markRaw({ name: "lucide-play", render: render$28 });
-const _hoisted_1$6F = {
+const IconPlay = markRaw({ name: "lucide-play", render: render$29 });
+const _hoisted_1$6G = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$27(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6F, [..._cache2[0] || (_cache2[0] = [
+function render$28(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6G, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("rect", {
       width: "18",
       height: "18",
@@ -11595,14 +11595,14 @@ function render$27(_ctx, _cache2) {
     }, null, -1)
   ])]);
 }
-const IconSquare = markRaw({ name: "lucide-square", render: render$27 });
-const _hoisted_1$6E = {
+const IconSquare = markRaw({ name: "lucide-square", render: render$28 });
+const _hoisted_1$6F = {
   viewBox: "0 0 24 24",
   width: "1.2em",
   height: "1.2em"
 };
-function render$26(_ctx, _cache2) {
-  return openBlock(), createElementBlock("svg", _hoisted_1$6E, [..._cache2[0] || (_cache2[0] = [
+function render$27(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6F, [..._cache2[0] || (_cache2[0] = [
     createBaseVNode("path", {
       fill: "none",
       stroke: "currentColor",
@@ -11613,7 +11613,7 @@ function render$26(_ctx, _cache2) {
     }, null, -1)
   ])]);
 }
-const IconVolume2 = markRaw({ name: "lucide-volume-2", render: render$26 });
+const IconVolume2 = markRaw({ name: "lucide-volume-2", render: render$27 });
 const app$1 = app$2;
 function comfyApi() {
   return app$1.api;
@@ -11716,7 +11716,7 @@ async function persistModelThumbnail(urlOrPath, blob) {
   } catch {
   }
 }
-const _hoisted_1$6D = ["src", "alt"];
+const _hoisted_1$6E = ["src", "alt"];
 const _hoisted_2$4l = {
   key: 1,
   class: "ctv:flex ctv:size-full ctv:items-center ctv:justify-center ctv:text-muted-foreground"
@@ -11755,7 +11755,7 @@ const _sfc_main$4N = /* @__PURE__ */ defineComponent({
         loading: "lazy",
         draggable: "false",
         class: "ctv:size-full ctv:object-cover"
-      }, null, 8, _hoisted_1$6D)) : (openBlock(), createElementBlock("div", _hoisted_2$4l, [
+      }, null, 8, _hoisted_1$6E)) : (openBlock(), createElementBlock("div", _hoisted_2$4l, [
         renderSlot(_ctx.$slots, "default", {}, () => [
           _cache2[0] || (_cache2[0] = createBaseVNode("i", { class: "pi pi-box" }, null, -1))
         ])
@@ -11763,7 +11763,7 @@ const _sfc_main$4N = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const _hoisted_1$6C = ["src"];
+const _hoisted_1$6D = ["src"];
 const _sfc_main$4M = /* @__PURE__ */ defineComponent({
   __name: "ThumbImg",
   props: {
@@ -11788,7 +11788,7 @@ const _sfc_main$4M = /* @__PURE__ */ defineComponent({
       return openBlock(), createElementBlock("img", {
         src: displaySrc.value,
         onError
-      }, null, 40, _hoisted_1$6C);
+      }, null, 40, _hoisted_1$6D);
     };
   }
 });
@@ -18084,14 +18084,14 @@ function useProxiedVideoUrl(source, opts = {}) {
   });
   return { url, isProxy: isProxy2, canProxy, building, pct, requestProxy, wake };
 }
-const _hoisted_1$6B = { class: "ctv:relative ctv:aspect-square ctv:overflow-hidden ctv:rounded-lg ctv:bg-secondary-background" };
+const _hoisted_1$6C = { class: "ctv:relative ctv:aspect-square ctv:overflow-hidden ctv:rounded-lg ctv:bg-secondary-background" };
 const _hoisted_2$4k = ["title"];
 const _hoisted_3$4c = ["src"];
 const _hoisted_4$3H = ["title"];
 const _hoisted_5$3t = ["title"];
 const _hoisted_6$3c = ["title"];
 const _hoisted_7$2E = ["title"];
-const _hoisted_8$2c = {
+const _hoisted_8$2d = {
   key: 5,
   class: "ctv:absolute ctv:bottom-1.5 ctv:left-1.5 ctv:flex ctv:items-center ctv:justify-center ctv:size-5 ctv:rounded ctv:bg-black/65 ctv:text-white/90 ctv:pointer-events-none"
 };
@@ -18159,7 +18159,7 @@ const _sfc_main$4L = /* @__PURE__ */ defineComponent({
         class: normalizeClass(["ctv-asset-card ctv:relative ctv:flex ctv:flex-col ctv:gap-2 ctv:overflow-hidden ctv:rounded-lg ctv:p-2 ctv:cursor-grab ctv:select-none ctv:transition-colors ctv:duration-200 ctv:hover:bg-secondary-background-hover/60", __props.selected && "ctv:bg-secondary-background-selected ctv:ring-2 ctv:ring-primary-background ctv:ring-inset"]),
         draggable: "true"
       }, [
-        createBaseVNode("div", _hoisted_1$6B, [
+        createBaseVNode("div", _hoisted_1$6C, [
           __props.asset.media_type === "video" ? (openBlock(), createElementBlock("div", {
             key: 0,
             title: __props.tooltip,
@@ -18233,7 +18233,7 @@ const _sfc_main$4L = /* @__PURE__ */ defineComponent({
             loading: "lazy",
             class: "ctv-asset-thumb ctv:absolute ctv:inset-0 ctv:size-full ctv:object-cover"
           }, null, 8, ["src", "thumb-max", "alt", "title"])),
-          __props.asset.media_type === "video" || __props.asset.media_type === "audio" ? (openBlock(), createElementBlock("span", _hoisted_8$2c, [
+          __props.asset.media_type === "video" || __props.asset.media_type === "audio" ? (openBlock(), createElementBlock("span", _hoisted_8$2d, [
             __props.asset.media_type === "video" ? (openBlock(), createBlock(unref(IconPlay), {
               key: 0,
               class: "ctv:size-3"
@@ -18315,7 +18315,7 @@ const _export_sfc = (sfc, props) => {
   return target;
 };
 const AssetGridCard = /* @__PURE__ */ _export_sfc(_sfc_main$4L, [["__scopeId", "data-v-1cd6c0c8"]]);
-const _hoisted_1$6A = { class: "ctv:relative ctv:flex ctv:size-8 ctv:shrink-0 ctv:items-center ctv:justify-center ctv:overflow-hidden ctv:rounded-sm ctv:bg-secondary-background" };
+const _hoisted_1$6B = { class: "ctv:relative ctv:flex ctv:size-8 ctv:shrink-0 ctv:items-center ctv:justify-center ctv:overflow-hidden ctv:rounded-sm ctv:bg-secondary-background" };
 const _hoisted_2$4j = ["title"];
 const _hoisted_3$4b = {
   key: 3,
@@ -18325,7 +18325,7 @@ const _hoisted_4$3G = { class: "ctv:flex ctv:min-w-0 ctv:flex-1 ctv:flex-col ctv
 const _hoisted_5$3s = { class: "ctv:flex ctv:min-w-0 ctv:items-center ctv:gap-1" };
 const _hoisted_6$3b = ["title"];
 const _hoisted_7$2D = ["title"];
-const _hoisted_8$2b = ["title"];
+const _hoisted_8$2c = ["title"];
 const _hoisted_9$1$ = {
   key: 1,
   class: "ctv-asset-actions ctv:flex ctv:shrink-0 ctv:items-center ctv:gap-1"
@@ -18371,7 +18371,7 @@ const _sfc_main$4K = /* @__PURE__ */ defineComponent({
             class: "ctv:size-4"
           }))
         ], 34)) : createCommentVNode("", true),
-        createBaseVNode("div", _hoisted_1$6A, [
+        createBaseVNode("div", _hoisted_1$6B, [
           __props.asset.media_type === "video" ? (openBlock(), createBlock(_sfc_main$4M, {
             key: 0,
             src: __props.asset.payload_url,
@@ -18431,7 +18431,7 @@ const _sfc_main$4K = /* @__PURE__ */ defineComponent({
             key: 0,
             class: "ctv:block ctv:truncate ctv:text-xs ctv:leading-none ctv:text-muted-foreground",
             title: secondary.value
-          }, toDisplayString$1(secondary.value), 9, _hoisted_8$2b)) : createCommentVNode("", true)
+          }, toDisplayString$1(secondary.value), 9, _hoisted_8$2c)) : createCommentVNode("", true)
         ]),
         !__props.selectable ? (openBlock(), createElementBlock("div", _hoisted_9$1$, [
           __props.asset.media_type === "image" ? (openBlock(), createElementBlock("button", {
@@ -18455,21 +18455,43 @@ const _sfc_main$4K = /* @__PURE__ */ defineComponent({
   }
 });
 const AssetListItem = /* @__PURE__ */ _export_sfc(_sfc_main$4K, [["__scopeId", "data-v-dae33513"]]);
+const _hoisted_1$6A = {
+  viewBox: "0 0 24 24",
+  width: "1.2em",
+  height: "1.2em"
+};
+function render$26(_ctx, _cache2) {
+  return openBlock(), createElementBlock("svg", _hoisted_1$6A, [..._cache2[0] || (_cache2[0] = [
+    createBaseVNode("g", {
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "stroke-width": "2"
+    }, [
+      createBaseVNode("path", { d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" }),
+      createBaseVNode("path", { d: "M14 2v5a1 1 0 0 0 1 1h5m-5.5 4.5l-5 5m0-5l5 5" })
+    ], -1)
+  ])]);
+}
+const IconFileX = markRaw({ name: "lucide-file-x", render: render$26 });
 const _hoisted_1$6z = { class: "ctv:shrink-0 ctv:flex ctv:items-center ctv:gap-1.5 ctv:py-1.5 ctv:px-2.5 ctv:bg-interface-panel-surface ctv:border-b ctv:border-border-subtle" };
 const _hoisted_2$4i = ["checked", "title"];
 const _hoisted_3$4a = { class: "ctv:flex-1 ctv:truncate ctv:text-xs ctv:font-semibold" };
 const _hoisted_4$3F = ["disabled", "title"];
 const _hoisted_5$3r = ["disabled", "title"];
 const _hoisted_6$3a = ["disabled", "title"];
-const _hoisted_7$2C = ["title"];
+const _hoisted_7$2C = ["disabled", "title"];
+const _hoisted_8$2b = ["title"];
 const _sfc_main$4J = /* @__PURE__ */ defineComponent({
   __name: "AssetSelectionBar",
   props: {
     count: {},
     allSelected: { type: Boolean },
+    missingCount: {},
     busy: { type: Boolean }
   },
-  emits: ["toggle-all", "edit-tags", "load-nodes", "remove", "exit"],
+  emits: ["toggle-all", "select-missing", "edit-tags", "load-nodes", "remove", "exit"],
   setup(__props, { emit: __emit }) {
     const emit2 = __emit;
     const btnClass2 = [
@@ -18490,35 +18512,43 @@ const _sfc_main$4J = /* @__PURE__ */ defineComponent({
         createBaseVNode("span", _hoisted_3$4a, toDisplayString$1(_ctx.$t("assets.select.count", { count: __props.count })), 1),
         createBaseVNode("button", {
           class: normalizeClass(unref(btnClass2)),
-          disabled: !__props.count,
-          title: _ctx.$t("assets.select.tags"),
-          onClick: _cache2[1] || (_cache2[1] = ($event) => emit2("edit-tags", $event))
+          disabled: !__props.missingCount,
+          title: _ctx.$t("assets.select.missing", { count: __props.missingCount }),
+          onClick: _cache2[1] || (_cache2[1] = ($event) => emit2("select-missing"))
         }, [
-          createVNode(unref(IconTag), { class: "ctv:size-4" })
+          createVNode(unref(IconFileX), { class: "ctv:size-4" })
         ], 10, _hoisted_4$3F),
         createBaseVNode("button", {
           class: normalizeClass(unref(btnClass2)),
           disabled: !__props.count,
+          title: _ctx.$t("assets.select.tags"),
+          onClick: _cache2[2] || (_cache2[2] = ($event) => emit2("edit-tags", $event))
+        }, [
+          createVNode(unref(IconTag), { class: "ctv:size-4" })
+        ], 10, _hoisted_5$3r),
+        createBaseVNode("button", {
+          class: normalizeClass(unref(btnClass2)),
+          disabled: !__props.count,
           title: _ctx.$t("assets.select.loadNodes"),
-          onClick: _cache2[2] || (_cache2[2] = ($event) => emit2("load-nodes"))
+          onClick: _cache2[3] || (_cache2[3] = ($event) => emit2("load-nodes"))
         }, [
           createVNode(unref(IconDownload), { class: "ctv:size-4" })
-        ], 10, _hoisted_5$3r),
+        ], 10, _hoisted_6$3a),
         createBaseVNode("button", {
           class: normalizeClass(`${unref(btnClass2)} ctv:hover:text-destructive-background`),
           disabled: !__props.count || __props.busy,
           title: _ctx.$t("assets.select.remove"),
-          onClick: _cache2[3] || (_cache2[3] = ($event) => emit2("remove"))
+          onClick: _cache2[4] || (_cache2[4] = ($event) => emit2("remove"))
         }, [
           createVNode(unref(IconTrash), { class: "ctv:size-4" })
-        ], 10, _hoisted_6$3a),
+        ], 10, _hoisted_7$2C),
         createBaseVNode("button", {
           class: normalizeClass(unref(btnClass2)),
           title: _ctx.$t("assets.select.exit"),
-          onClick: _cache2[4] || (_cache2[4] = ($event) => emit2("exit"))
+          onClick: _cache2[5] || (_cache2[5] = ($event) => emit2("exit"))
         }, [
           createVNode(unref(IconX), { class: "ctv:size-4" })
-        ], 10, _hoisted_7$2C)
+        ], 10, _hoisted_8$2b)
       ]);
     };
   }
@@ -23847,6 +23877,7 @@ function createAssetLoaderNode(asset, pos, opts = {}) {
   return node;
 }
 const PAGE_LIMIT = 500;
+const BULK_LIMIT = 500;
 const REFRESH_DEBOUNCE_MS = 300;
 async function fetchAllAssets() {
   const all = [];
@@ -24045,20 +24076,24 @@ const useAssetStore = /* @__PURE__ */ defineStore("assets", () => {
     }
   }
   async function bulkRemove(ids) {
-    if (!ids.length) return [];
-    try {
-      const data = await apiSend(
-        "/comfytv/assets/bulk_delete",
-        "POST",
-        BulkDeleteAssetsSchema,
-        { ids }
-      );
-      dropMany(data.deleted);
-      return data.deleted;
-    } catch (e) {
-      console.warn("[ComfyTV/assets] bulk remove failed", ids.length, e);
-      return null;
+    const deleted = [];
+    for (let i = 0; i < ids.length; i += BULK_LIMIT) {
+      const chunk = ids.slice(i, i + BULK_LIMIT);
+      try {
+        const data = await apiSend(
+          "/comfytv/assets/bulk_delete",
+          "POST",
+          BulkDeleteAssetsSchema,
+          { ids: chunk }
+        );
+        dropMany(data.deleted);
+        deleted.push(...data.deleted);
+      } catch (e) {
+        console.warn("[ComfyTV/assets] bulk remove failed", chunk.length, e);
+        return null;
+      }
     }
+    return deleted;
   }
   function upsertMany(rows) {
     const byRow = new Map(rows.map((r2) => [r2.id, r2]));
@@ -59921,7 +59956,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-ewdS5AkG.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-SjoxaPSG.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -60285,6 +60320,8 @@ function useAssetSelection(visibleAssets) {
   const selectedAssets = computed(() => store2.assets.filter((a2) => selectedIds2.value.has(a2.id)));
   const selectedCount = computed(() => selectedIds2.value.size);
   const allVisibleSelected = computed(() => visibleAssets.value.length > 0 && visibleAssets.value.every((a2) => selectedIds2.value.has(a2.id)));
+  const visibleMissing = computed(() => visibleAssets.value.filter((a2) => a2.file_missing));
+  const missingCount = computed(() => visibleMissing.value.length);
   function isSelected(id) {
     return selectedIds2.value.has(id);
   }
@@ -60326,6 +60363,10 @@ function useAssetSelection(visibleAssets) {
       for (const a2 of visibleAssets.value) next.add(a2.id);
     }
     selectedIds2.value = next;
+  }
+  function selectMissing() {
+    selectedIds2.value = new Set(visibleMissing.value.map((a2) => a2.id));
+    anchorId = null;
   }
   function onCardClick(asset, e) {
     if (!selectMode.value) {
@@ -60380,6 +60421,7 @@ function useAssetSelection(visibleAssets) {
     selectedAssets,
     selectedCount,
     allVisibleSelected,
+    missingCount,
     removing,
     isSelected,
     enterSelectMode,
@@ -60388,6 +60430,7 @@ function useAssetSelection(visibleAssets) {
     toggleSelected,
     selectRange,
     toggleSelectAll,
+    selectMissing,
     onCardClick,
     dragIds,
     loadSelectedNodes,
@@ -61078,36 +61121,38 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
       return openBlock(), createElementBlock("div", {
         class: "ctv:relative ctv:flex ctv:flex-col ctv:size-full ctv:box-border ctv:overflow-hidden ctv:text-xs ctv:text-base-foreground ctv:outline-none",
         tabindex: "-1",
-        onDragenter: _cache2[24] || (_cache2[24] = //@ts-ignore
+        onDragenter: _cache2[25] || (_cache2[25] = //@ts-ignore
         (...args) => unref(onDragEnter) && unref(onDragEnter)(...args)),
-        onDragover: _cache2[25] || (_cache2[25] = withModifiers(() => {
+        onDragover: _cache2[26] || (_cache2[26] = withModifiers(() => {
         }, ["prevent"])),
-        onDragleave: _cache2[26] || (_cache2[26] = //@ts-ignore
+        onDragleave: _cache2[27] || (_cache2[27] = //@ts-ignore
         (...args) => unref(onDragLeave) && unref(onDragLeave)(...args)),
-        onDrop: _cache2[27] || (_cache2[27] = withModifiers(
+        onDrop: _cache2[28] || (_cache2[28] = withModifiers(
           //@ts-ignore
           (...args) => unref(onDrop) && unref(onDrop)(...args),
           ["prevent"]
         )),
-        onKeydown: _cache2[28] || (_cache2[28] = withKeys(($event) => unref(selection).exitSelectMode(), ["esc"]))
+        onKeydown: _cache2[29] || (_cache2[29] = withKeys(($event) => unref(selection).exitSelectMode(), ["esc"]))
       }, [
         unref(selection).selectMode.value ? (openBlock(), createBlock(_sfc_main$4J, {
           key: 0,
           count: unref(selection).selectedCount.value,
           "all-selected": unref(selection).allVisibleSelected.value,
+          "missing-count": unref(selection).missingCount.value,
           busy: unref(selection).removing.value,
           onToggleAll: _cache2[0] || (_cache2[0] = ($event) => unref(selection).toggleSelectAll()),
+          onSelectMissing: _cache2[1] || (_cache2[1] = ($event) => unref(selection).selectMissing()),
           onEditTags: unref(openSelectionTagEditor),
-          onLoadNodes: _cache2[1] || (_cache2[1] = ($event) => unref(selection).loadSelectedNodes()),
-          onRemove: _cache2[2] || (_cache2[2] = ($event) => unref(selection).removeSelected()),
-          onExit: _cache2[3] || (_cache2[3] = ($event) => unref(selection).exitSelectMode())
-        }, null, 8, ["count", "all-selected", "busy", "onEditTags"])) : (openBlock(), createElementBlock("div", _hoisted_1$6w, [
+          onLoadNodes: _cache2[2] || (_cache2[2] = ($event) => unref(selection).loadSelectedNodes()),
+          onRemove: _cache2[3] || (_cache2[3] = ($event) => unref(selection).removeSelected()),
+          onExit: _cache2[4] || (_cache2[4] = ($event) => unref(selection).exitSelectMode())
+        }, null, 8, ["count", "all-selected", "missing-count", "busy", "onEditTags"])) : (openBlock(), createElementBlock("div", _hoisted_1$6w, [
           createBaseVNode("span", _hoisted_2$4f, toDisplayString$1(_ctx.$t("assets.title")), 1),
           createBaseVNode("button", {
             class: normalizeClass(unref(addBtnClass2)),
             disabled: unref(uploading),
             title: _ctx.$t("assets.addTooltip"),
-            onClick: _cache2[4] || (_cache2[4] = ($event) => {
+            onClick: _cache2[5] || (_cache2[5] = ($event) => {
               var _a2;
               return (_a2 = filePicker.value) == null ? void 0 : _a2.click();
             })
@@ -61119,7 +61164,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
             accept: fileAccept,
             multiple: "",
             class: "ctv:hidden",
-            onChange: _cache2[5] || (_cache2[5] = //@ts-ignore
+            onChange: _cache2[6] || (_cache2[6] = //@ts-ignore
             (...args) => unref(onPickFiles) && unref(onPickFiles)(...args))
           }, null, 544)
         ])),
@@ -61127,7 +61172,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
           createBaseVNode("div", _hoisted_5$3q, [
             createVNode(unref(IconSearch), { class: "ctv:absolute ctv:left-2 ctv:top-1/2 ctv:-translate-y-1/2 ctv:size-3.5 ctv:text-muted-foreground ctv:pointer-events-none" }),
             withDirectives(createBaseVNode("input", {
-              "onUpdate:modelValue": _cache2[6] || (_cache2[6] = ($event) => /* @__PURE__ */ isRef(searchQuery) ? searchQuery.value = $event : null),
+              "onUpdate:modelValue": _cache2[7] || (_cache2[7] = ($event) => /* @__PURE__ */ isRef(searchQuery) ? searchQuery.value = $event : null),
               type: "text",
               placeholder: _ctx.$t("assets.search"),
               class: "ctv:w-full ctv:h-7 ctv:box-border ctv:pl-7 ctv:pr-2 ctv:rounded-lg ctv:text-xs ctv:[font-family:inherit] ctv:bg-secondary-background ctv:border ctv:border-border-subtle ctv:text-base-foreground ctv:placeholder:text-muted-foreground ctv:focus-visible:outline-none ctv:focus:border-border-default"
@@ -61138,14 +61183,14 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
           createBaseVNode("button", {
             class: normalizeClass([unref(iconBtnClass2), unref(selection).selectMode.value && "ctv:bg-secondary-background-selected ctv:border-primary-background/60"]),
             title: _ctx.$t(unref(selection).selectMode.value ? "assets.select.exit" : "assets.select.enter"),
-            onClick: _cache2[7] || (_cache2[7] = ($event) => unref(selection).toggleSelectMode())
+            onClick: _cache2[8] || (_cache2[8] = ($event) => unref(selection).toggleSelectMode())
           }, [
             createVNode(unref(IconSquareCheck), { class: "ctv:size-4" })
           ], 10, _hoisted_7$2B),
           createBaseVNode("button", {
             class: normalizeClass(unref(iconBtnClass2)),
             title: _ctx.$t("assets.view.settings"),
-            onClick: _cache2[8] || (_cache2[8] = //@ts-ignore
+            onClick: _cache2[9] || (_cache2[9] = //@ts-ignore
             (...args) => unref(openSettingsMenu) && unref(openSettingsMenu)(...args))
           }, [
             createVNode(unref(IconSettings2), { class: "ctv:size-4" })
@@ -61154,7 +61199,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
         createBaseVNode("div", _hoisted_9$1_, [
           createBaseVNode("button", {
             class: normalizeClass(chipClass2(unref(activeFilter) === "all")),
-            onClick: _cache2[9] || (_cache2[9] = ($event) => activeFilter.value = "all")
+            onClick: _cache2[10] || (_cache2[10] = ($event) => activeFilter.value = "all")
           }, [
             createTextVNode(toDisplayString$1(_ctx.$t("assets.category.all")) + " ", 1),
             createBaseVNode("span", {
@@ -61163,7 +61208,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
           ], 2),
           createBaseVNode("button", {
             class: normalizeClass(chipClass2(unref(activeFilter) === "none")),
-            onClick: _cache2[10] || (_cache2[10] = ($event) => activeFilter.value = "none")
+            onClick: _cache2[11] || (_cache2[11] = ($event) => activeFilter.value = "none")
           }, [
             createTextVNode(toDisplayString$1(_ctx.$t("assets.category.none")) + " ", 1),
             createBaseVNode("span", {
@@ -61174,7 +61219,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
             return openBlock(), createElementBlock("button", {
               key: cat2.id,
               class: normalizeClass(chipClass2(unref(activeFilter) === cat2.id)),
-              onDragover: _cache2[11] || (_cache2[11] = withModifiers(() => {
+              onDragover: _cache2[12] || (_cache2[12] = withModifiers(() => {
               }, ["prevent"])),
               onDrop: withModifiers(($event) => unref(onChipDrop)(cat2.id, $event), ["prevent", "stop"]),
               onClick: ($event) => activeFilter.value = unref(activeFilter) === cat2.id ? "all" : cat2.id
@@ -61206,7 +61251,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
           createBaseVNode("button", {
             class: normalizeClass(chipClass2(false)),
             title: _ctx.$t("assets.category.new"),
-            onClick: _cache2[12] || (_cache2[12] = //@ts-ignore
+            onClick: _cache2[13] || (_cache2[13] = //@ts-ignore
             (...args) => unref(onCreateCategory) && unref(onCreateCategory)(...args))
           }, [
             createVNode(unref(IconPlus), { class: "ctv:size-3" })
@@ -61230,7 +61275,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
           createBaseVNode("span", _hoisted_17$P, toDisplayString$1(unref(uploadError)), 1),
           createBaseVNode("button", {
             class: "ctv:inline-flex ctv:bg-transparent ctv:border-none ctv:cursor-pointer ctv:text-inherit ctv:opacity-70 ctv:hover:opacity-100",
-            onClick: _cache2[13] || (_cache2[13] = ($event) => uploadError.value = null)
+            onClick: _cache2[14] || (_cache2[14] = ($event) => uploadError.value = null)
           }, [
             createVNode(unref(IconX), { class: "ctv:size-3.5" })
           ])
@@ -61268,18 +61313,18 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
         unref(settingsMenu) ? (openBlock(), createElementBlock("div", {
           key: 6,
           class: "ctv:fixed ctv:inset-0 ctv:z-20",
-          onClick: _cache2[18] || (_cache2[18] = ($event) => unref(closeSettingsMenu)()),
-          onContextmenu: _cache2[19] || (_cache2[19] = withModifiers(($event) => unref(closeSettingsMenu)(), ["prevent"]))
+          onClick: _cache2[19] || (_cache2[19] = ($event) => unref(closeSettingsMenu)()),
+          onContextmenu: _cache2[20] || (_cache2[20] = withModifiers(($event) => unref(closeSettingsMenu)(), ["prevent"]))
         }, [
           createBaseVNode("div", {
             class: "ctv:absolute ctv:w-44 ctv:p-1 ctv:rounded-lg ctv:shadow-md ctv:bg-interface-menu-surface ctv:border ctv:border-interface-menu-stroke",
             style: normalizeStyle({ left: `${unref(settingsMenu).x}px`, top: `${unref(settingsMenu).y}px` }),
-            onClick: _cache2[17] || (_cache2[17] = withModifiers(() => {
+            onClick: _cache2[18] || (_cache2[18] = withModifiers(() => {
             }, ["stop"]))
           }, [
             createBaseVNode("button", {
               class: normalizeClass(unref(menuItemClass2)),
-              onClick: _cache2[14] || (_cache2[14] = ($event) => unref(setViewMode)("list"))
+              onClick: _cache2[15] || (_cache2[15] = ($event) => unref(setViewMode)("list"))
             }, [
               createVNode(unref(IconTableOfContents), { class: "ctv:size-4 ctv:shrink-0" }),
               createBaseVNode("span", _hoisted_22$t, toDisplayString$1(_ctx.$t("assets.view.list")), 1),
@@ -61289,7 +61334,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
             ], 2),
             createBaseVNode("button", {
               class: normalizeClass(unref(menuItemClass2)),
-              onClick: _cache2[15] || (_cache2[15] = ($event) => unref(setViewMode)("grid"))
+              onClick: _cache2[16] || (_cache2[16] = ($event) => unref(setViewMode)("grid"))
             }, [
               createVNode(unref(IconLayoutGrid), { class: "ctv:size-4 ctv:shrink-0" }),
               createBaseVNode("span", _hoisted_23$s, toDisplayString$1(_ctx.$t("assets.view.grid")), 1),
@@ -61297,12 +61342,12 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
                 class: normalizeClass(["ctv:size-4 ctv:shrink-0", unref(viewMode) !== "grid" && "ctv:opacity-0"])
               }, null, 8, ["class"])
             ], 2),
-            _cache2[29] || (_cache2[29] = createBaseVNode("div", { class: "ctv:my-1 ctv:h-px ctv:bg-interface-menu-stroke" }, null, -1)),
+            _cache2[30] || (_cache2[30] = createBaseVNode("div", { class: "ctv:my-1 ctv:h-px ctv:bg-interface-menu-stroke" }, null, -1)),
             createBaseVNode("button", {
               class: normalizeClass(unref(menuItemClass2)),
               disabled: unref(scanning),
               title: unref(mediaDir),
-              onClick: _cache2[16] || (_cache2[16] = //@ts-ignore
+              onClick: _cache2[17] || (_cache2[17] = //@ts-ignore
               (...args) => unref(menuScanFolder) && unref(menuScanFolder)(...args))
             }, [
               createVNode(unref(IconFolderSearch), { class: "ctv:size-4 ctv:shrink-0" }),
@@ -61319,18 +61364,18 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
           key: 7,
           asset: unref(menuAsset),
           style: normalizeStyle(unref(assetMenuStyle)),
-          onClose: _cache2[20] || (_cache2[20] = ($event) => unref(closeAssetMenu)()),
-          onAction: _cache2[21] || (_cache2[21] = ($event) => menuActions[$event]())
+          onClose: _cache2[21] || (_cache2[21] = ($event) => unref(closeAssetMenu)()),
+          onAction: _cache2[22] || (_cache2[22] = ($event) => menuActions[$event]())
         }, null, 8, ["asset", "style"])) : createCommentVNode("", true),
         unref(tagEditor) ? (openBlock(), createElementBlock("div", {
           key: 8,
           class: "ctv:fixed ctv:inset-0 ctv:z-20",
-          onClick: _cache2[23] || (_cache2[23] = ($event) => unref(closeTagEditor)())
+          onClick: _cache2[24] || (_cache2[24] = ($event) => unref(closeTagEditor)())
         }, [
           createBaseVNode("div", {
             class: "ctv:absolute ctv:w-44 ctv:max-h-64 ctv:overflow-y-auto ctv:p-1 ctv:rounded ctv:shadow-md ctv:bg-interface-menu-surface ctv:border ctv:border-border-default",
             style: normalizeStyle(unref(tagEditorStyle)),
-            onClick: _cache2[22] || (_cache2[22] = withModifiers(() => {
+            onClick: _cache2[23] || (_cache2[23] = withModifiers(() => {
             }, ["stop"]))
           }, [
             unref(editorAssets).length > 1 ? (openBlock(), createElementBlock("div", _hoisted_27$l, toDisplayString$1(_ctx.$t("assets.select.count", { count: unref(editorAssets).length })), 1)) : createCommentVNode("", true),
@@ -62532,7 +62577,7 @@ const sidebar$1 = { "tab": { "workflow": "Workflow", "assets": "Assets", "eagle"
 const settings$1 = { "title": "Settings", "hint": "Defaults come from comfytv.properties in the ComfyTV directory. Values saved here are stored in the database and take precedence.", "loading": "Loading…", "save": "Save", "saving": "Saving…", "search": "Search settings…", "noMatch": "No settings match", "experimental": "Experimental", "reset": "Reset to default", "on": "On", "off": "Off", "status": { "checking": "Checking…", "online": "Connected", "offline": "Offline" }, "blender": { "section": "Blender bridge" }, "general": { "section": "General" }, "backup": { "section": "Database backup", "now": "Back up now", "running": "Backing up…", "ok": "Backup written to {path}", "failed": "Backup failed: {error}" }, "fields": { "enable-v2": { "label": "Enable ComfyTV V2 nodes", "desc": "EXPERIMENTAL — expect rough edges. Renders migrated stages with the new content-first V2 shells. Requires ComfyUI's own Node 2.0 (Vue nodes) setting to be enabled first. Refresh the page after changing." }, "v2-lod-scale": { "label": "Poster mode below zoom", "desc": "Below this canvas zoom, V2 cards collapse to a thumbnail with a play/open button; panels come back once you zoom in past it again.", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "Poster backdrop", "desc": "What fills the card around a letterboxed thumbnail: the checkerboard used by image previews, or a dimmed copy of the same picture stretched to fill.", "options": { "checker": "Checkerboard", "image": "Same picture, dimmed" } }, "auto-picker": { "label": "Auto-attach picker on run", "desc": "When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically." }, "enable-db-backup": { "label": "Automatic backup on startup", "desc": "Back up the ComfyTV data directory (database + workflows) every time the server starts, before any migration runs." }, "db-backup-max-count": { "label": "Max backups to keep", "desc": "When the number of snapshots exceeds this, the oldest ones are deleted." }, "db-backup-path": { "label": "Backup location", "desc": "Leave empty to use the db-backup folder inside the ComfyTV directory. Snapshots are timestamped folders like 20260805-093000/comfytv.", "placeholder": "e.g. D:\\backups\\comfytv" }, "enable-mcp": { "label": "Enable MCP server", "desc": "Expose the ComfyTV MCP endpoint (/comfytv/mcp) so agents can read and drive the canvas. Off by default." }, "enable-bot": { "label": "Enable ComfyTV Bot", "desc": "Show the embedded bot sidebar and its chat API. Requires the MCP server to be enabled." }, "bot-model-claude-code": { "label": "Claude Code model", "desc": "Model passed to claude --model for bot turns. Accepts an alias (sonnet, opus, haiku) or a full model id. Blank = the CLI's own default.", "placeholder": "CLI default" }, "bot-model-codex": { "label": "Codex model", "desc": "Model passed to codex -m for bot turns. Blank = the CLI's own default.", "placeholder": "CLI default" }, "bot-model-qwen-code": { "label": "Qwen Code model", "desc": "Model passed to qwen -m for bot turns. Blank = the model selected in qwen's own settings.", "placeholder": "CLI default" }, "bot-model-local-llm": { "label": "Local LLM model", "desc": "Model id on the local endpoint. Blank = the first model the endpoint reports.", "placeholder": "first available" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM model", "desc": "EXPERIMENTAL — a toy provider, not meant for real use; pick Local LLM or one of the CLI providers instead. Text-encoder checkpoint from models/text_encoders used for bot turns (Qwen3 or Gemma family). Blank = the first generation-capable checkpoint found. Runs inside ComfyUI itself — no external server needed.", "placeholder": "first available" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM thinking", "desc": "EXPERIMENTAL — only affects the toy ComfyUI LLM provider. Let Qwen3 models reason in a hidden <think> block before answering. Noticeably smarter tool use, at the cost of extra generation time per turn." }, "bot-local-llm-url": { "label": "Local LLM endpoint", "desc": "OpenAI-compatible base URL of a local model server (LM Studio, llama.cpp llama-server, vLLM, Ollama…). The Local LLM provider stays unavailable until this is set. Keyless local endpoints only — no API keys are ever stored.", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "Mount comfy-mcp", "desc": "Also mount the official comfy-mcp server (read-only tool set: node catalog, workflow validation, model/template search) in bot sessions. Claude Code and Qwen Code only — Codex and Local LLM stay comfytv-only." }, "bot-comfy-mcp-command": { "label": "comfy-mcp command", "desc": "Command that launches the comfy-mcp stdio server. Blank = find comfy-mcp on PATH.", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "Always allow bot runs", "desc": "Run stages immediately without an approval card (the default). Disable this to let chats switched to Ask mode pause for your approval before each run." }, "enable-skills": { "label": "Enable Agent Skills", "desc": "Serve installed skills to agents over MCP (skill tool + prompts) and to the embedded bot." }, "enable-collab": { "label": "Enable collaboration", "desc": "EXPERIMENTAL — do not rely on this in production. Real-time multi-user presence and co-editing over the local network. When off, no collaboration code runs at all (no session, no websocket, no UI). Reload open pages after changing this." }, "enable-eagle": { "label": "Enable Eagle integration", "desc": "Connect the local Eagle (eagle.cool) library to ComfyTV: an Eagle panel appears in the sidebar and assets can be sent to Eagle. Requires the Eagle desktop app." }, "eagle-api-url": { "label": "Eagle API URL", "desc": "Address of Eagle's local API, default port 41595. Local access only, no token needed.", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "Pinned library path", "desc": "The .library directory dedicated to ComfyTV. Sends only happen while Eagle has this library open (queued otherwise); browsing falls back to reading the directory from disk. Empty = follow whatever library Eagle has open (not recommended).", "placeholder": "e.g. Y:\\Eagle\\ComfyTV.library" }, "eagle-send-folder": { "label": "Send target folder", "desc": "Eagle folder that manually sent items are filed into; created automatically if missing. Empty = library root. Auto-archive uses per-project folders instead." }, "eagle-auto-send": { "label": "Auto-archive outputs to Eagle", "desc": "Automatically archive every stage output (image/video/audio) into Eagle: filed into a per-project folder, annotation carries the full generation params (prompt/model/…), tagged with the project name. Uses the queue — piles up while Eagle is closed, never blocks generation." }, "blender-bridge-url": { "label": "Blender bridge URL", "desc": "EXPERIMENTAL — expect rough edges. Address of the blender-web bridge that the Blender Scene / Camera / Animation stages talk to. Start it with blender-for-comfytv.bat; the stages stay unavailable until it responds. Default port 7684, local only.", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent & MCP" }, "eagle": { "section": "Eagle Integration" }, "collab": { "section": "Collaboration" } };
 const servers$1 = { "title": "ComfyUI Servers", "add": "Add", "addTooltip": "Register another ComfyUI instance on your network so stages can run on it", "empty": "No remote servers configured. Stages run on this machine. Add a server to unlock the per-stage server dropdown and run stages on several machines in parallel.", "edit": "Edit", "delete": "Delete", "deleteConfirm": 'Delete server "{label}"? Stages currently pointed at it will fall back to running locally.', "enable": "Enable", "disable": "Disable", "local": "Local (this machine)", "runOn": "Run on", "form": { "label": "Name", "labelPlaceholder": "e.g. GPU rig upstairs", "host": "Host / IP", "port": "Port", "create": "Add server", "save": "Save", "cancel": "Cancel", "saveFailed": "Save failed — is the name already in use?" }, "test": { "action": "Test connection", "testing": "Testing…", "ok": "Connected", "failed": "Connection failed" }, "job": { "started": "Running on {label}", "failed": "Remote run failed", "cancelled": "Remote run cancelled", "fallbackLocal": "Selected server is gone or disabled — this stage will run locally." }, "status": { "online": "Online", "offline": "Offline", "unknown": "Checking…", "idle": "Idle", "queueShort": "Q {n}", "queueDetail": "{running} running, {pending} pending", "fromComfyTV": "{n} from ComfyTV" }, "caps": { "badge": "ComfyTV v{version}", "comfyOnly": "ComfyUI only — ComfyTV not installed", "missingNodes": "{n} nodes missing", "missingTitle": "Nodes missing on this remote — upgrade its ComfyTV:" }, "preflight": { "blockedTitle": "Remote run blocked", "warnTitle": "Remote resource check", "runAnyway": "Run anyway", "noComfyTV": `Remote "{label}" doesn't have ComfyTV installed — install ComfyTV there or run locally.`, "missingNode": 'Remote "{label}" is missing node {node} — upgrade its ComfyTV.', "missingResource": 'Remote "{label}" is missing resource {file} — run anyway?', "resourceMismatch": 'Resource {file} has different content on remote "{label}" — run anyway?' } };
 const stageManager$1 = { "title": "Stage Manager", "refresh": "Refresh list", "import": "Import", "rescan": "Rescan", "rescanTooltip": "Scan the workflow library on disk (comfytv/workflows/ in the ComfyUI user directory) for new, changed, or removed files — no backend restart needed", "rescanFound": "Found {n} new workflow(s)", "rescanNone": "No new workflows found", "rescanNoneDetail": "Make sure the file is a .json inside comfytv/workflows/<kind>/ in the ComfyUI user directory (preset and .api.json sidecars don't count).", "rescanFailed": "Rescan failed", "setDefault": "Set as default", "unsetDefault": "Unset default", "defaultSet": "{label} is now the default workflow for this stage", "defaultCleared": "{label} is no longer the default — the first listed workflow is used", "defaultFailed": "Could not change the default workflow", "hide": "Hide from stage node", "unhide": "Show on stage node", "hiddenSet": "{label} is now hidden from the workflow dropdown on stage nodes", "hiddenCleared": "{label} is shown in the workflow dropdown again", "hiddenFailed": "Could not change workflow visibility", "section": { "workflows": "Workflows", "params": "Parameters" }, "emptyWorkflows": "No workflows registered for this stage yet — import one here, or drop a .json into comfytv/workflows/<kind>/ in the ComfyUI user directory and hit Rescan.", "hint": "Workflows listed here are picked from the workflow dropdown on the matching stage node on the canvas.", "badge": { "linked": "linked", "linkedHint": "Linked from ComfyUI's native workflow folder (not managed by ComfyTV)", "fileMissing": "file missing", "notGui": "not GUI format", "notGuiHint": "Missing a top-level nodes array — open it in ComfyUI and re-save normally, not with Save (API Format)", "noApi": "API not generated", "noApiHint": "The API prompt is generated automatically the first time this workflow runs — normal for a freshly imported workflow.", "new": "new", "newHint": "Discovered in the most recent scan (startup or rescan)", "builtin": "built-in", "builtinHint": "Ships with ComfyTV (tracked in git). Workflows without this badge were imported or dropped in by a user.", "default": "default", "defaultHint": "Newly added stage nodes of this kind start with this workflow selected. If it is deleted or unlinked, the first listed workflow is used instead.", "hidden": "hidden", "hiddenHint": "Not offered in the workflow dropdown on stage nodes. Nodes that already selected it keep working." } };
-const assets$1 = { "title": "Asset Library", "empty": "No assets yet — add images, video, or audio to reuse them across projects.", "emptyCategory": "No assets in this category yet.", "add": "Add media", "addTooltip": "Upload images, video, or audio into the library (or drag & drop them onto this panel)", "uploading": "Uploading {done}/{total}…", "uploadFailed": "Upload failed: {detail}", "dropHint": "Drop files to add them to the library", "search": "Search assets", "noResults": "No assets match your search.", "scanFolder": "Scan media folder", "scanFolderHint": "Drop large files into this folder — they are adopted on scan without uploading", "view": { "settings": "Display settings", "list": "List view", "grid": "Grid view" }, "media": { "all": "All types", "image": "Images", "video": "Video", "audio": "Audio", "model": "3D models", "text": "Text" }, "category": { "all": "All", "none": "Uncategorized", "new": "New category", "newPrompt": "New category name:", "rename": "Rename category", "renamePrompt": "Category name:", "delete": "Delete category", "deleteConfirm": "Delete this category? It is removed from all assets; the assets and files on disk stay." }, "card": { "rename": "Rename", "renamePrompt": "Asset name:", "delete": "Remove from library", "deleteConfirm": "Remove this asset from the library? The file on disk stays.", "tags": "Edit tags", "loadNode": "Add as node to canvas", "makeProxy": "Generate preview proxy", "more": "More options", "playPreview": "Play", "pausePreview": "Pause", "fileMissing": "File missing", "fileMissingHint": "The file on disk was deleted; the library entry remains — re-import it or remove the asset" }, "tagPopover": { "empty": "No categories yet.", "create": "New category" }, "select": { "enter": "Select assets (Ctrl+click also works)", "exit": "Exit selection", "all": "Select all shown", "count": "{count} selected", "tags": "Edit tags of selected", "loadNodes": "Add selected as nodes to canvas", "remove": "Remove selected from library", "removeConfirm": "Remove {count} assets from the library? The files on disk stay." } };
+const assets$1 = { "title": "Asset Library", "empty": "No assets yet — add images, video, or audio to reuse them across projects.", "emptyCategory": "No assets in this category yet.", "add": "Add media", "addTooltip": "Upload images, video, or audio into the library (or drag & drop them onto this panel)", "uploading": "Uploading {done}/{total}…", "uploadFailed": "Upload failed: {detail}", "dropHint": "Drop files to add them to the library", "search": "Search assets", "noResults": "No assets match your search.", "scanFolder": "Scan media folder", "scanFolderHint": "Drop large files into this folder — they are adopted on scan without uploading", "view": { "settings": "Display settings", "list": "List view", "grid": "Grid view" }, "media": { "all": "All types", "image": "Images", "video": "Video", "audio": "Audio", "model": "3D models", "text": "Text" }, "category": { "all": "All", "none": "Uncategorized", "new": "New category", "newPrompt": "New category name:", "rename": "Rename category", "renamePrompt": "Category name:", "delete": "Delete category", "deleteConfirm": "Delete this category? It is removed from all assets; the assets and files on disk stay." }, "card": { "rename": "Rename", "renamePrompt": "Asset name:", "delete": "Remove from library", "deleteConfirm": "Remove this asset from the library? The file on disk stays.", "tags": "Edit tags", "loadNode": "Add as node to canvas", "makeProxy": "Generate preview proxy", "more": "More options", "playPreview": "Play", "pausePreview": "Pause", "fileMissing": "File missing", "fileMissingHint": "The file on disk was deleted; the library entry remains — re-import it or remove the asset" }, "tagPopover": { "empty": "No categories yet.", "create": "New category" }, "select": { "enter": "Select assets (Ctrl+click also works)", "exit": "Exit selection", "all": "Select all shown", "missing": "Select only the shown assets whose file is missing ({count})", "count": "{count} selected", "tags": "Edit tags of selected", "loadNodes": "Add selected as nodes to canvas", "remove": "Remove selected from library", "removeConfirm": "Remove {count} assets from the library? The files on disk stay." } };
 const assetLoader$1 = { "empty": "No matching assets in the library yet — add some in the Assets panel.", "pickHint": "Pick an asset from the library to use as this node's output.", "selected": "Selected: {name}", "fileMissing": "Selected asset {name} no longer exists on disk — re-import it or pick another", "upload": "Upload files into the library and select the last one" };
 const stageParams$1 = { "section": "Parameters", "add": "Add", "addHint": "Attach a parameter defined in the ComfyTV sidebar", "remove": "Detach from this node", "sidebar": { "title": "Stage Parameters", "kind": "Stage", "empty": "No parameters defined for this stage yet.", "customKindNote": "Custom Stage workflows do not use stage parameters — expose the workflow's own widgets from the card's Expose I/O panel instead.", "new": "New parameter", "label": "Label", "type": "Type", "default": "Default", "options": "Options (comma-separated)", "min": "Min", "max": "Max", "step": "Step", "sliderHint": "Set both min & max to show a slider on the node (otherwise a number field).", "multiline": "Multiline", "placeholder": "Placeholder", "create": "Create", "cancel": "Cancel", "delete": "Delete", "deleteConfirm": "Delete this parameter? Workflows binding to it will lose the binding.", "system": "Built-in", "labelRequired": "Label is required" } };
 const promptHelper$1 = { "open": "Prompt helper — quick starters & enhancement tags", "templates": "Templates", "template": { "storyboardGrid": "Storyboard grid", "characterSheet": "Character sheet", "moodBoard": "Mood board", "upscale": "Upscale" }, "quickStart": "Quick starters", "quick": { "portrait": "Portrait", "landscape": "Landscape", "product": "Product", "fantasy": "Fantasy", "scifi": "Sci-Fi", "food": "Food", "architecture": "Architecture", "anime": "Anime" }, "category": { "quality": "Quality", "lighting": "Lighting", "mood": "Mood", "style": "Style" } };
@@ -62716,7 +62761,7 @@ const sidebar = { "tab": { "workflow": "工作流", "assets": "资产库", "eagl
 const settings = { "title": "设置", "hint": "默认值来自 ComfyTV 目录下的 comfytv.properties。此处保存的值写入数据库,并优先生效。", "loading": "加载中…", "save": "保存", "saving": "保存中…", "search": "搜索设置…", "noMatch": "没有匹配的设置项", "experimental": "实验性", "reset": "恢复默认", "on": "开", "off": "关", "status": { "checking": "检测中…", "online": "已连接", "offline": "未连接" }, "blender": { "section": "Blender 桥接" }, "general": { "section": "通用" }, "backup": { "section": "数据库备份", "now": "立即备份", "running": "备份中…", "ok": "备份已写入 {path}", "failed": "备份失败:{error}" }, "fields": { "enable-v2": { "label": "启用 ComfyTV V2 节点", "desc": "实验性功能，可能存在不稳定行为。已迁移的 stage 以内容导向的 V2 外壳渲染。必须先在 ComfyUI 本体设置中开启 Node 2.0（Vue 节点模式）。修改后需刷新页面。" }, "v2-lod-scale": { "label": "海报图模式阈值", "desc": "画布缩放低于此值时，V2 卡片收起为缩略图并显示播放/放大按钮；放大越过阈值后面板恢复。", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "海报图底", "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。", "options": { "checker": "棋盘格", "image": "同图压暗铺满" } }, "auto-picker": { "label": "运行时自动接挑选节点", "desc": "Image 或 Video stage 运行时，如果输出端还没有连线，自动在后面接一个 Picker stage。" }, "enable-db-backup": { "label": "启动时自动备份", "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。" }, "db-backup-max-count": { "label": "最大备份数量", "desc": "快照数量超过该值时,自动删除最旧的备份。" }, "db-backup-path": { "label": "备份位置", "desc": "留空则使用 ComfyTV 目录下的 db-backup 文件夹。快照以时间戳命名,如 20260805-093000/comfytv。", "placeholder": "如 D:\\backups\\comfytv" }, "enable-mcp": { "label": "启用 MCP 服务", "desc": "开放 ComfyTV 的 MCP 端点(/comfytv/mcp),允许 agent 读取并操作画布。默认关闭。" }, "enable-bot": { "label": "启用 ComfyTV Bot", "desc": "显示内嵌 Bot 侧边栏及其聊天接口。前置条件:先启用 MCP 服务。" }, "bot-model-claude-code": { "label": "Claude Code 模型", "desc": "Bot 回合传给 claude --model 的模型,支持别名(sonnet、opus、haiku)或完整模型 id。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-codex": { "label": "Codex 模型", "desc": "Bot 回合传给 codex -m 的模型。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-qwen-code": { "label": "Qwen Code 模型", "desc": "Bot 回合传给 qwen -m 的模型。留空 = 用 qwen 自己设置里选的模型。", "placeholder": "CLI 默认" }, "bot-model-local-llm": { "label": "Local LLM 模型", "desc": "本地端点上的模型 id。留空 = 用端点报告的第一个模型。", "placeholder": "自动取第一个" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM 模型", "desc": "实验性 — 玩具性质的 provider,一般情况不要用,请改用 Local LLM 或 CLI 类 provider。Bot 回合使用的 models/text_encoders 里的文本编码器权重(Qwen3 或 Gemma 系)。留空 = 自动取第一个可生成的权重。推理跑在 ComfyUI 本体内 — 无需外部服务。", "placeholder": "自动取第一个" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM 思考模式", "desc": "实验性 — 只对玩具性质的 ComfyUI LLM provider 生效。让 Qwen3 系模型先在隐藏的 <think> 块里推理再回答。工具调用明显更聪明,代价是每轮多花一些生成时间。" }, "bot-local-llm-url": { "label": "Local LLM 端点", "desc": "本地模型服务的 OpenAI 兼容 base URL(LM Studio、llama.cpp 的 llama-server、vLLM、Ollama 等)。不填时 Local LLM provider 不可用。仅限免 key 的本地端点 — 永远不存 API key。", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "挂载 comfy-mcp", "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex 与 Local LLM 保持只挂 comfytv。" }, "bot-comfy-mcp-command": { "label": "comfy-mcp 命令", "desc": "启动 comfy-mcp stdio 服务的命令。留空 = 在 PATH 上找 comfy-mcp。", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "总是允许 bot 运行", "desc": "不弹运行审批卡,bot 直接执行(默认行为)。关闭后,切到询问模式的会话才会在每次运行前等你批准。" }, "enable-skills": { "label": "启用 Agent Skills", "desc": "把已安装的技能通过 MCP(skill 工具 + prompts)提供给外部 agent 和内嵌 bot。" }, "enable-collab": { "label": "启用多人协作", "desc": "实验性功能——请勿在生产环境依赖。局域网内的实时多人 presence 与共同编辑。关闭时协作代码完全不运行（无会话、无 WebSocket、无 UI）。修改后需刷新已打开的页面。" }, "enable-eagle": { "label": "启用 Eagle 集成", "desc": "把本机的 Eagle(eagle.cool)素材库接入 ComfyTV:侧边栏出现 Eagle 面板,资产可发送到 Eagle。需要 Eagle 桌面应用。" }, "eagle-api-url": { "label": "Eagle API 地址", "desc": "Eagle 本地 API 的地址,默认端口 41595。仅本机访问,不需要 token。", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "钉死的资源库路径", "desc": "ComfyTV 专用的 .library 目录。发送只在 Eagle 打开该库时进行(否则排队),浏览在 Eagle 关闭或切到别的库时直接读磁盘。留空 = 跟随 Eagle 当前打开的库(不推荐)。", "placeholder": "如 Y:\\Eagle资源库\\ComfyTV资源库.library" }, "eagle-send-folder": { "label": "发送目标文件夹", "desc": "手动发送到 Eagle 时归入的文件夹名,不存在会自动创建。留空 = 库根目录。自动沉淀按项目名分文件夹,不走此设置。" }, "eagle-auto-send": { "label": "产出自动沉淀到 Eagle", "desc": "每个 stage 的产出(图片/视频/音频)自动归档进 Eagle:按项目名分文件夹,annotation 带完整生成参数(prompt/模型等),tag 带项目名。走排队机制,Eagle 没开时攒着,不阻塞生成。" }, "blender-bridge-url": { "label": "Blender 桥接地址", "desc": "实验性 — 会有毛边。Blender Scene / Camera / Animation 这几个 stage 连接的 blender-web 桥接服务地址。用 blender-for-comfytv.bat 启动;桥接没响应时这些 stage 不可用。默认端口 7684,仅限本机。", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent 与 MCP" }, "eagle": { "section": "Eagle 集成" }, "collab": { "section": "多人协作" } };
 const servers = { "title": "ComfyUI 服务器", "add": "添加", "addTooltip": "登记局域网内的其他 ComfyUI 实例,让 stage 可以在它上面运行", "empty": "还没有配置远程服务器,所有 stage 都在本机运行。添加服务器后,每个 stage 会出现服务器下拉框,可多机并行运行。", "edit": "编辑", "delete": "删除", "deleteConfirm": "删除服务器「{label}」?指向它的 stage 会回退到本机运行。", "enable": "启用", "disable": "停用", "local": "本机 (Local)", "runOn": "运行于", "form": { "label": "名称", "labelPlaceholder": "例如:楼上那台 4090", "host": "主机 / IP", "port": "端口", "create": "添加服务器", "save": "保存", "cancel": "取消", "saveFailed": "保存失败——名称是不是重复了?" }, "test": { "action": "测试连接", "testing": "测试中…", "ok": "连接成功", "failed": "连接失败" }, "job": { "started": "正在 {label} 上运行", "failed": "远程运行失败", "cancelled": "远程运行已取消", "fallbackLocal": "所选服务器已删除或停用——这个 stage 将在本机运行。" }, "status": { "online": "在线", "offline": "离线", "unknown": "检测中…", "idle": "空闲", "queueShort": "队列 {n}", "queueDetail": "{running} 运行中,{pending} 排队", "fromComfyTV": "其中 {n} 来自 ComfyTV" }, "caps": { "badge": "ComfyTV v{version}", "comfyOnly": "仅 ComfyUI（未装 ComfyTV）", "missingNodes": "缺 {n} 个节点", "missingTitle": "远端缺少的节点——请升级远端 ComfyTV：" }, "preflight": { "blockedTitle": "远程运行被拦截", "warnTitle": "远端资源检查", "runAnyway": "仍要运行", "noComfyTV": "远端「{label}」未安装 ComfyTV——请先在远端安装，或改为本机运行。", "missingNode": "远端「{label}」缺少节点 {node}——请升级远端 ComfyTV。", "missingResource": "远端「{label}」缺少资源 {file}，仍要运行吗？", "resourceMismatch": "资源 {file} 在远端「{label}」上内容不一致，仍要运行吗？" } };
 const stageManager = { "title": "Stage 管理", "refresh": "刷新列表", "import": "导入", "rescan": "重新扫描", "rescanTooltip": "扫描磁盘上的工作流库（ComfyUI user 目录下的 comfytv/workflows/），发现新增、变更或删除的文件 —— 无需重启后端", "rescanFound": "发现 {n} 个新工作流", "rescanNone": "没有发现新工作流", "rescanNoneDetail": "请确认文件是 .json 且放在 ComfyUI user 目录下的 comfytv/workflows/对应类别目录中（preset 和 .api.json 附属文件不算）。", "rescanFailed": "重新扫描失败", "setDefault": "设为默认", "unsetDefault": "取消默认", "defaultSet": "{label} 已设为该 Stage 的默认工作流", "defaultCleared": "{label} 已取消默认 —— 将使用列表中的第一个工作流", "defaultFailed": "修改默认工作流失败", "hide": "从 Stage 节点隐藏", "unhide": "在 Stage 节点显示", "hiddenSet": "{label} 已从 Stage 节点的 workflow 下拉框隐藏", "hiddenCleared": "{label} 已重新显示在 workflow 下拉框中", "hiddenFailed": "修改工作流可见性失败", "section": { "workflows": "工作流", "params": "参数" }, "emptyWorkflows": "该 Stage 下还没有已注册的工作流 —— 点「导入」上传，或把 .json 放入 ComfyUI user 目录下的 comfytv/workflows/对应类别目录后点「重新扫描」。", "hint": "这里列出的工作流，在画布上对应 Stage 节点的 workflow 下拉框中选用。", "badge": { "linked": "外链", "linkedHint": "链接自 ComfyUI 原生工作流目录（不由 ComfyTV 管理）", "fileMissing": "文件丢失", "notGui": "非 GUI 格式", "notGuiHint": "缺少顶层 nodes 数组 —— 在 ComfyUI 中打开后用普通「保存」重新导出，不要用「保存（API 格式）」", "noApi": "API 未生成", "noApiHint": "首次运行该工作流时会自动生成 API prompt，新导入的工作流出现此标记属于正常。", "new": "新", "newHint": "最近一次扫描（启动或重新扫描）新发现的工作流", "builtin": "内置", "builtinHint": "ComfyTV 自带的工作流（git 跟踪）。没有此标记的是用户导入或手动放入的。", "default": "默认", "defaultHint": "新添加的该类 Stage 节点会预选此工作流。若它被删除或取消链接，则回退到列表中的第一个。", "hidden": "已隐藏", "hiddenHint": "不出现在 Stage 节点的 workflow 下拉框中。已选中它的节点不受影响，仍可正常运行。" } };
-const assets = { "title": "资产库", "empty": "还没有资产 —— 添加图片、视频或音频后可跨项目复用。", "emptyCategory": "这个分类下还没有资产。", "add": "添加素材", "addTooltip": "上传图片、视频或音频到资产库（也可以直接拖拽文件到这个面板）", "uploading": "上传中 {done}/{total}…", "uploadFailed": "上传失败: {detail}", "dropHint": "松开把文件添加到资产库", "search": "搜索资产", "noResults": "没有匹配的资产。", "scanFolder": "扫描素材文件夹", "scanFolderHint": "大文件直接放进这个文件夹,扫描时自动收录,无需上传", "view": { "settings": "显示设置", "list": "列表视图", "grid": "网格视图" }, "media": { "all": "全部类型", "image": "图片", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本" }, "category": { "all": "全部", "none": "未分类", "new": "新建分类", "newPrompt": "新分类名称：", "rename": "重命名分类", "renamePrompt": "分类名称：", "delete": "删除分类", "deleteConfirm": "删除这个分类？它会从所有资产上移除；资产和磁盘上的文件保留。" }, "card": { "rename": "重命名", "renamePrompt": "资产名称：", "delete": "从资产库移除", "deleteConfirm": "把这个资产从资产库移除？磁盘上的文件保留。", "tags": "编辑标签", "loadNode": "作为节点添加到画布", "makeProxy": "生成预览代理", "more": "更多操作", "playPreview": "试听", "pausePreview": "暂停", "fileMissing": "文件缺失", "fileMissingHint": "本地文件已被删除，资产条目仍保留；可重新导入或从资产库移除" }, "tagPopover": { "empty": "还没有分类。", "create": "新建分类" }, "select": { "enter": "多选资产（Ctrl+点击也可以）", "exit": "退出多选", "all": "全选当前显示", "count": "已选 {count} 个", "tags": "编辑所选的标签", "loadNodes": "把所选作为节点添加到画布", "remove": "从资产库移除所选", "removeConfirm": "把这 {count} 个资产从资产库移除？磁盘上的文件保留。" } };
+const assets = { "title": "资产库", "empty": "还没有资产 —— 添加图片、视频或音频后可跨项目复用。", "emptyCategory": "这个分类下还没有资产。", "add": "添加素材", "addTooltip": "上传图片、视频或音频到资产库（也可以直接拖拽文件到这个面板）", "uploading": "上传中 {done}/{total}…", "uploadFailed": "上传失败: {detail}", "dropHint": "松开把文件添加到资产库", "search": "搜索资产", "noResults": "没有匹配的资产。", "scanFolder": "扫描素材文件夹", "scanFolderHint": "大文件直接放进这个文件夹,扫描时自动收录,无需上传", "view": { "settings": "显示设置", "list": "列表视图", "grid": "网格视图" }, "media": { "all": "全部类型", "image": "图片", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本" }, "category": { "all": "全部", "none": "未分类", "new": "新建分类", "newPrompt": "新分类名称：", "rename": "重命名分类", "renamePrompt": "分类名称：", "delete": "删除分类", "deleteConfirm": "删除这个分类？它会从所有资产上移除；资产和磁盘上的文件保留。" }, "card": { "rename": "重命名", "renamePrompt": "资产名称：", "delete": "从资产库移除", "deleteConfirm": "把这个资产从资产库移除？磁盘上的文件保留。", "tags": "编辑标签", "loadNode": "作为节点添加到画布", "makeProxy": "生成预览代理", "more": "更多操作", "playPreview": "试听", "pausePreview": "暂停", "fileMissing": "文件缺失", "fileMissingHint": "本地文件已被删除，资产条目仍保留；可重新导入或从资产库移除" }, "tagPopover": { "empty": "还没有分类。", "create": "新建分类" }, "select": { "enter": "多选资产（Ctrl+点击也可以）", "exit": "退出多选", "all": "全选当前显示", "missing": "只勾选当前显示中文件缺失的（{count} 个）", "count": "已选 {count} 个", "tags": "编辑所选的标签", "loadNodes": "把所选作为节点添加到画布", "remove": "从资产库移除所选", "removeConfirm": "把这 {count} 个资产从资产库移除？磁盘上的文件保留。" } };
 const assetLoader = { "empty": "资产库中还没有匹配的素材 —— 请先在资产面板中添加。", "pickHint": "从资产库中选择一个素材作为该节点的输出。", "selected": "已选择：{name}", "fileMissing": "所选资产 {name} 的本地文件已被删除，请重新导入或换一个", "upload": "上传文件到资产库并选中最后一个" };
 const stageParams = { "section": "参数", "add": "添加", "addHint": "挂载一个在 ComfyTV 侧栏中定义好的参数", "remove": "从该节点移除", "sidebar": { "title": "Stage 参数", "kind": "Stage", "empty": "这个 stage 还没有定义任何参数。", "customKindNote": "自定义节点的工作流不使用阶段参数——请在卡片的“暴露输入输出”面板里直接暴露工作流自己的控件。", "new": "新建参数", "label": "名称", "type": "类型", "default": "默认值", "options": "选项（用逗号分隔）", "min": "最小值", "max": "最大值", "step": "步长", "sliderHint": "同时设置最小值和最大值即可在节点上显示滑块（否则是数字输入框）。", "multiline": "多行", "placeholder": "占位提示", "create": "创建", "cancel": "取消", "delete": "删除", "deleteConfirm": "删除这个参数？绑定到它的工作流将失去该绑定。", "system": "内置", "labelRequired": "名称不能为空" } };
 const promptHelper = { "open": "提示词助手 —— 快速起步 & 增强标签", "templates": "模板", "template": { "storyboardGrid": "分镜九宫格", "characterSheet": "角色设定表", "moodBoard": "情绪板", "upscale": "高清放大" }, "quickStart": "快速起步", "quick": { "portrait": "人像", "landscape": "风景", "product": "产品", "fantasy": "奇幻", "scifi": "科幻", "food": "美食", "architecture": "建筑", "anime": "动漫" }, "category": { "quality": "画质", "lighting": "光照", "mood": "氛围", "style": "风格" } };
@@ -86494,7 +86539,7 @@ const _sfc_main$4o = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-cGyRo6km.mjs"),
+      loader: () => import("./AgentPanelRoot-Cz28HyPS.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -109419,11 +109464,11 @@ var VueRenderer = class {
       vNode.appContext = this.editor.appContext;
     }
     if (typeof document !== "undefined" && this.el) {
-      render$2E(vNode, this.el);
+      render$2F(vNode, this.el);
     }
     const destroy = () => {
       if (this.el) {
-        render$2E(null, this.el);
+        render$2F(null, this.el);
       }
       this.el = null;
       vNode = null;
@@ -148804,7 +148849,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-BeP46GDC.mjs");
+    const { STLLoader } = await import("./STLLoader-YPd1igOs.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -148812,7 +148857,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-DhcEY6k7.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-DOwHcywN.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -244683,4 +244728,4 @@ export {
   DropdownMenuRoot_default as y,
   DropdownMenuTrigger_default as z
 };
-//# sourceMappingURL=main-9auLzYG5.mjs.map
+//# sourceMappingURL=main-DNzh1NpN.mjs.map
