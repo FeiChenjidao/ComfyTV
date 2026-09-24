@@ -2,8 +2,8 @@
 import { createPinia, getActivePinia, setActivePinia } from 'pinia'
 
 import ComfyTVSidebar from '@/components/sidebar/ComfyTVSidebar.vue'
-import { syncBotTab } from '@/composables/sidebar/botTab'
-import { useBotStore } from '@/stores/botStore'
+import { installAgentPanel } from '@/agent/mount'
+import { refreshAgentStatus } from '@/agent/status'
 import StageCard from '@/components/stages/StageCard.vue'
 import {
   RICH_STAGE_CARDS,
@@ -48,6 +48,7 @@ import { usePresenceStore } from '@/collab/presenceStore'
 import { execTopbarBadge, installExecBadge } from '@/composables/execBadge'
 import { installMcpCommandBus } from '@/composables/stages/useMcpCommandBus'
 import { installAppModeHint } from '@/composables/appModeHint'
+import { guardGhostPlacement } from '@/composables/ghostPlacementInert'
 import { installWorkflowRegistrySync } from '@/composables/stages/workflowRegistrySync'
 import '@/v2/imageBatchShell'
 import '@/v2/layerSeparationShell'
@@ -94,6 +95,7 @@ let mountKeySeq = 0
   hostApp.use(pinia)
   hostApp.use(i18n)
   hostApp.mount(host)
+  guardGhostPlacement(app, host)
 })()
 
 const GENERIC_STAGE_MIN_HEIGHT = 380
@@ -354,11 +356,8 @@ const extension: ComfyExtension = {
       },
     })
 
-    const botStore = useBotStore(pinia)
-    botStore.installWebSocketSync()
-    void botStore.refreshStatus().then(() => {
-      syncBotTab(a, botStore.enabled)
-    })
+    installAgentPanel(pinia)
+    void refreshAgentStatus()
   },
 
   async beforeRegisterNodeDef(nodeType, nodeData: ComfyNodeDef) {

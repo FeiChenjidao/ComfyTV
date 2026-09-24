@@ -165,7 +165,7 @@ class ImageEditStage(io.ComfyNode):
                                default=default_for('image-edit'),
                                tooltip="Which instruction-edit workflow to run."),
                 _main_prompt_input(placeholder="指令式描述要做什么:\"remove the bicycle\", \"change the dress to red\", \"replace the background with mountains\". Use imperative / action-based language; describe the change, not the whole scene.", ),
-                COMFYTV_IMAGE.Input("image", optional=True),
+                io.Autogrow.Input("images", template=_image_template(12)),
                 _custom_params_input(),
             ],
             outputs=[COMFYTV_IMAGE.Output("image")],
@@ -175,7 +175,7 @@ class ImageEditStage(io.ComfyNode):
 
     @classmethod
     async def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
-                      workflow="", main_prompt="", image="", custom_params="{}"):
+                      workflow="", main_prompt="", images=None, custom_params="{}"):
         return await run_stage_workflow(
             cls,
             custom_params=custom_params,
@@ -184,7 +184,7 @@ class ImageEditStage(io.ComfyNode):
             project_id=project_id,
             parent_output_id=parent_output_id,
             main_prompt=main_prompt,
-            upstream={'images': [image] if image else []},
+            upstream={'images': _autogrow_values(images)},
             options={},
         )
 

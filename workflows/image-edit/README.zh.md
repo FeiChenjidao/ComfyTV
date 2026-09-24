@@ -24,7 +24,7 @@
 
 - **Flux Canny Edit**(`flux-canny-edit.json` + `_preset.json`) , 把上游图作 Canny 边缘图,按提示词重画。只保轮廓,颜色由提示词决定。测试通过。
 - **Qwen Edit 2511**(`qwen-edit-2511.json` + `_preset.json`) , Qwen-Image-Edit 2511 + Lightning 4 步指令编辑。保留主体颜色和材质,指令负责改背景/打光/加元素 —— 描述改动,不用描述整张图。3D 模型节点的**生成产品图**按钮会带默认"渲染图转产品照"指令生成这个工作流。测试通过。
-- **Qwen Image 2.1 Edit**(`qwen-image-2.1-edit.json` + `_preset.json`) , 官方 Qwen Image 2.1 单图编辑:`LoadImage` → `TextEncodeQwenImage21`(Qwen3-VL-8B 编码器),它的 `latent` 输出自带源图尺寸,所以没有 `VAEEncode`。提示词里用 `<image1>` 指代源图(图像编辑 stage 只有一个 image 接口,ComfyTV 的 `@image_N` 提及在这里不生效,多参考图那个才用);输出尺寸跟随输入(建议 ≤ 2K)。25 步,cfg 1,`QwenImage21Cache` 走 auto。多张参考图用图像 stage 的 **Qwen Image 2.1 Multi-Ref Edit**。测试通过(5090 上 1K 约 27 秒)。
+- **Qwen Image 2.1 Edit**(`qwen-image-2.1-edit.json` + `_preset.json`) , 官方 Qwen Image 2.1 编辑图,最多 10 张图:stage 的第一张是编辑目标(输出尺寸跟它),其余是参考图。`LoadImage` ×10 → `TextEncodeQwenImage21`(Qwen3-VL-8B 编码器),它的 `latent` 输出自带目标图尺寸,所以没有 `VAEEncode`;没接的槽位自动剪掉,接 1~10 张都能跑。提示词里用 stage 的 `@image_1`..`@image_10` 提及(打 `@` 选,或把资产拖到媒体条上);preset 设了 `mention_style: qwen_tags`,发给模型时展开成 `<image1>`..`<image10>`("把 `@image_2` 的外套穿到 `@image_1` 的人身上")。25 步,cfg 1,`QwenImage21Cache` 走 auto。测试通过(5090 上 1K 约 20~27 秒)。
 
 ## 需要的模型
 

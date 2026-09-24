@@ -14,7 +14,7 @@ def _bot_turn_state():
 async def _await_ask(chat_id: str, state, spec: dict, *,
                      timeout: float | None = None,
                      keep_pending_on_timeout: bool = False) -> dict:
-    from .. import bot_asks
+    from .. import agent_events, bot_asks
     from ..bot_turns import _broadcast
 
     ask = bot_asks.create_ask(chat_id, state.message_id, spec)
@@ -26,6 +26,7 @@ async def _await_ask(chat_id: str, state, spec: dict, *,
         "chat_id": chat_id, "message_id": state.message_id,
         "ask_id": ask.id, **spec,
     })
+    agent_events.ask(chat_id, state.message_id, ask.id, spec)
     try:
         outcome = await asyncio.wait_for(
             asyncio.shield(ask.future),
@@ -50,6 +51,8 @@ async def _await_ask(chat_id: str, state, spec: dict, *,
         "selected": outcome.get("selected"),
         "other_text": outcome.get("other_text"),
     })
+    agent_events.ask_resolved(chat_id, state.message_id, ask.id,
+                              outcome["status"], outcome.get("selected"))
     return outcome
 
 _PREFS_MAX = 20

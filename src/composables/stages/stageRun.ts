@@ -1,4 +1,5 @@
 import { cancelRemoteJob, remoteRun } from '@/api'
+import { isAutoPickerEnabled } from '@/composables/stages/autoPicker'
 import { outputHasLinks, spawnConsumingNode } from '@/composables/stages/spawnFollowUp'
 import { ensureStageUid } from '@/composables/stages/stageIdentity'
 import { buildRunPrompt } from '@/composables/stages/stagePromptBuild'
@@ -89,8 +90,10 @@ export function createStageRun(opts: {
     const tokenWidget = node.widgets?.find((w: any) => w.name === 'force_run_token')
     if (tokenWidget) tokenWidget.value = Date.now() & 0x7fffffff
 
+    const autoPicker = isAutoPickerEnabled()
     if (
-      node.comfyClass === 'ComfyTV.ImageStage'
+      autoPicker
+      && node.comfyClass === 'ComfyTV.ImageStage'
       && !outputHasLinks(node, 0)
       && !outputHasLinks(node, 1)
     ) {
@@ -98,7 +101,8 @@ export function createStageRun(opts: {
     }
 
     if (
-      node.comfyClass === 'ComfyTV.VideoStage'
+      autoPicker
+      && node.comfyClass === 'ComfyTV.VideoStage'
       && !outputHasLinks(node, 0)
     ) {
       spawnConsumingNode(node, 'ComfyTV.VideoPickerStage', 'batch')

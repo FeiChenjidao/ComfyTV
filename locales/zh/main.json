@@ -26,20 +26,15 @@
     },
     "panelCollapse": "收起面板——只保留一行信息和运行按钮",
     "panelExpand": "展开面板",
-    "imageStageTitle": "图像阶段",
-    "pickerTitle": "图片选择器",
-    "cropTitle": "裁剪",
+    "imageStageTitle": "图片节点 · ImageStage",
+    "pickerTitle": "图片选择 · Picker",
+    "cropTitle": "裁剪 · 编辑",
     "ed": {
       "rotate": "旋转 · 编辑",
       "mirror": "镜像 · 编辑",
       "grade": "调色 · 编辑",
       "compare": "对比 · 编辑",
       "gridSplit": "宫格切分 · 编辑",
-      "customSplit": "自定义分割 · 编辑",
-      "imagesSplit": "图像组分离",
-      "imageMerge": "图片合并",
-      "psdLayerTree": "PSD 图层树",
-      "layerSeparation": "图层分离",
       "compareHint": "接入 A、B 两张图开始对比",
       "wired": "已接入",
       "empty": "未接入"
@@ -53,7 +48,6 @@
     "poolCount": "池内 {n} 张",
     "clear": "清空",
     "linkWorkflow": "关联工作流",
-    "apiCostHint": "绑定工作流内 ComfyUI API 付费节点的预估消耗（credits/Run）",
     "videoColorTitle": "调色 · Video FX",
     "videoCurvesTitle": "曲线 · Video FX",
     "fxChainTitle": "FX 链 · 出片",
@@ -61,8 +55,8 @@
     "outputLabel": "成片",
     "livePreview": "实时",
     "fxChainHint": "连入上游视频即可预览整链",
-    "scene3dTitle": "3D 场景",
-    "relightTitle": "打光",
+    "scene3dTitle": "3D 场景 · 编辑台",
+    "relightTitle": "打光 · 光球",
     "applying": "应用中…",
     "appliedLive": "已应用 · 下游实时",
     "dragToApply": "拖框即应用",
@@ -275,35 +269,9 @@
       "voice": "音色",
       "speed": "语速",
       "referenceText": "参考文本",
-      "variantCount": "变体数量",
-      "seed": "种子",
-      "material": "材质",
-      "mode3d": "生成模式",
-      "textureQuality": "贴图质量",
-      "geometryQuality": "几何质量",
-      "polygonCount": "面数",
-      "texture": "贴图",
-      "pbr": "PBR",
-      "tapose": "T/A 姿势",
-      "hdTexture": "高清贴图",
-      "faceLimit": "面数上限",
-      "negative": "反向提示词",
-      "modelVersion": "模型版本",
-      "quad": "四边面",
-      "smartLowPoly": "智能低模",
-      "autoSize": "真实尺寸",
-      "orientation": "朝向",
-      "textureAlignment": "贴图对齐",
-      "geometryFormat": "导出格式",
-      "textureMode": "贴图模式",
-      "textureDelight": "去光照贴图",
-      "addonHighpack": "HighPack",
-      "aspectRatio": "宽高比",
-      "resolution": "分辨率",
-      "batchSize": "数量"
+      "variantCount": "变体数量"
     },
     "toolbar": {
-      "generate": "生图",
       "hd": "高清",
       "expand": "扩图",
       "angles": "多角度",
@@ -312,7 +280,6 @@
       "erase": "擦除",
       "cutout": "抠图",
       "grid": "宫格切分",
-      "customSplit": "自定义分割",
       "panorama": "全景",
       "crop": "裁剪",
       "download": "下载"
@@ -504,9 +471,9 @@
         "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。",
         "options": { "checker": "棋盘格", "image": "同图压暗铺满" }
       },
-      "v2-panel-on-select": {
-        "label": "仅选中时显示控制面板",
-        "desc": "勾选后，V2 卡片底部的提示词、工作流选择、消耗徽章和运行按钮默认隐藏，只有选中该卡片时才显示，画布更清爽。"
+      "auto-picker": {
+        "label": "运行时自动接挑选节点",
+        "desc": "Image 或 Video stage 运行时，如果输出端还没有连线，自动在后面接一个 Picker stage。"
       },
       "enable-db-backup": {
         "label": "启动时自动备份",
@@ -544,11 +511,6 @@
         "desc": "Bot 回合传给 qwen -m 的模型。留空 = 用 qwen 自己设置里选的模型。",
         "placeholder": "CLI 默认"
       },
-      "bot-model-cursor-cli": {
-        "label": "Cursor CLI 模型",
-        "desc": "Bot 回合传给 agent --model 的模型。留空 = CLI 自己的默认。",
-        "placeholder": "CLI 默认"
-      },
       "bot-model-local-llm": {
         "label": "Local LLM 模型",
         "desc": "本地端点上的模型 id。留空 = 用端点报告的第一个模型。",
@@ -570,7 +532,7 @@
       },
       "bot-enable-comfy-mcp": {
         "label": "挂载 comfy-mcp",
-        "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code、Qwen Code 和 Cursor CLI — Codex 与 Local LLM 保持只挂 comfytv。"
+        "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex 与 Local LLM 保持只挂 comfytv。"
       },
       "bot-comfy-mcp-command": {
         "label": "comfy-mcp 命令",
@@ -788,6 +750,7 @@
       "enter": "多选资产（Ctrl+点击也可以）",
       "exit": "退出多选",
       "all": "全选当前显示",
+      "missing": "只勾选当前显示中文件缺失的（{count} 个）",
       "count": "已选 {count} 个",
       "tags": "编辑所选的标签",
       "loadNodes": "把所选作为节点添加到画布",
@@ -913,8 +876,6 @@
     "customExposedPrompt": "主提示词",
     "customOutputsHint": "输出在卡片的“暴露输入输出”面板里选择。",
     "bindTo": "绑定到：",
-    "bindingDefault": "默认值",
-    "bindingDefaultHint": "舞台控件为空时使用此默认值。",
     "exportPreset": "导出 preset.json",
     "exportPresetTooltip": "把当前绑定导出为 *_preset.json 文件，丢进 workflows/<kind>/ 和工作流 JSON 同目录，其他用户首次启动时会自动应用这套默认。",
     "exportPresetFailed": "导出失败: {detail}",
@@ -936,8 +897,7 @@
       "label": "类型",
       "text": "文本 / 值 (slot 0)",
       "file": "保存的文件 (图片 / 视频 / 音频)",
-      "batch": "保存的图片批次",
-      "layered": "分层图像"
+      "batch": "保存的图片批次"
     },
     "bindingRequired": "必填",
     "mentionStyle": {
@@ -1139,10 +1099,6 @@
         "label": "25 宫格连贯分镜",
         "tooltip": "25 张连贯分镜"
       },
-      "layer-separation": {
-        "label": "图层分离",
-        "tooltip": "把图拆成可合成的分层结果"
-      },
       "cinematic-light": {
         "label": "电影级光影校正",
         "tooltip": "应用电影级打光与色彩"
@@ -1196,10 +1152,6 @@
       "grid": {
         "label": "宫格切分",
         "tooltip": "按 R×C 切成多张（浏览器端）→ 图片批次"
-      },
-      "custom-split": {
-        "label": "自定义分割",
-        "tooltip": "拖拽分割线切成不等宽的多张（浏览器端）→ 图片批次"
       },
       "ken-burns": {
         "label": "静帧推拉",
@@ -1684,9 +1636,7 @@
     "unlockRatio": "解锁纵横比",
     "applying": "应用裁剪中…",
     "applied": "裁剪已应用 — 下游可直接使用",
-    "adjustToApply": "拖动矩形或选择比例以应用",
-    "addBox": "加框",
-    "removeBox": "删框"
+    "adjustToApply": "拖动矩形或选择比例以应用"
   },
   "panorama": {
     "empty": "暂无全景图 — 上传 HDRI / 等距柱状投影图，或接入上游图后点 Run",
@@ -1853,55 +1803,6 @@
     "cols": "列",
     "border": "边框",
     "outerBorder": "包括外框"
-  },
-  "customSplit": {
-    "connectImage": "请连接一张图以切分",
-    "hint": "添加分割线并拖拽，按任意比例切开",
-    "splitting": "切分为 {n} 块中…",
-    "done": "已切分为 {n} 块 — 下游可直接使用",
-    "addV": "加竖线",
-    "addH": "加横线",
-    "remove": "删除线",
-    "annotate": "标注",
-    "annotateHint": "先选 正 / 左 / 背 / 右，再点格子。输出纹理组顺序为正 → 左 → 背 → 右。",
-    "generateModel": "多视图生成模型"
-  },
-  "psdLayerTree": {
-    "pick": "选择 PSD",
-    "pickHint": "选择本地 PSD / PSB 文件",
-    "dropHint": "将 PSD / PSB 拖到这里",
-    "loading": "正在解析 PSD…",
-    "compositing": "正在合成图层…",
-    "done": "已合成 — 下游可直接使用",
-    "warning": "近似合成 — 智能对象/特效可能与 Photoshop 不一致",
-    "dims": "{w} × {h}",
-    "memory": "这份 PSD 太大，浏览器无法完成合成。请换更小的文档，或只点选单个图层而不是文档根。",
-    "scaled": "已按 {w} × {h} 合成（文档 {dw} × {dh}）",
-    "clickHint": "单击选择 · Ctrl/⌘ 加选 · Shift 范围选择",
-    "clipping": "剪切蒙版",
-    "expand": "展开"
-  },
-  "imagesSplit": {
-    "connect": "请接入图像组",
-    "empty": "图像组里还没有图层",
-    "truncated": "仅展开前 {n} 层",
-    "selectHint": "单击选择 · Ctrl/⌘ 加选 · Shift 范围选择",
-    "merge": "合并选中",
-    "mergeBusy": "正在合并…",
-    "mergeFailed": "合并失败",
-    "variations": "图像变体"
-  },
-  "imageMerge": {
-    "mode": "合并方式",
-    "layers": "图层叠加",
-    "row": "横向排布",
-    "aspect11": "1:1",
-    "hint": "可接入任意数量的图片",
-    "needImages": "请接入要合并的图片",
-    "wired": "已接入 {n} 张",
-    "applying": "正在合并…",
-    "applied": "已合并 — 下游可直接使用",
-    "adjustToApply": "选择一种合并方式"
   },
   "panoramaView": {
     "connectPanorama": "请在上游接入全景图",
@@ -2950,7 +2851,7 @@
     "cancelSelect": "退出多选",
     "batchDeleteConfirm": "删除所选的 {count} 个对话?此操作不可撤销。",
     "noProviderTitle": "未检测到本地 agent CLI",
-    "noProviderBody": "ComfyTV Bot 通过本机安装的 agent CLI(Claude Code、Cursor CLI、Codex 或 Qwen Code)驱动画布。安装并登录一次即可,全程不存任何 API key。",
+    "noProviderBody": "ComfyTV Bot 通过本机安装的 agent CLI(Claude Code)驱动画布。安装并登录一次即可,全程不存任何 API key。",
     "recheck": "重新检测",
     "attachImage": "添加媒体文件",
     "removeAttachment": "移除",

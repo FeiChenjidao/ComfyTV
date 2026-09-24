@@ -9,6 +9,7 @@ from server import PromptServer
 
 from .. import storage
 from ..bot import BotEvent, TurnHandle, TurnRequest, get_provider
+from . import agent_events
 
 _log = logging.getLogger(__name__)
 
@@ -195,6 +196,8 @@ async def _run_turn(chat: dict, text: str, state: _TurnState, *,
                     attachments: list[dict] | None = None) -> None:
     chat_id = chat["id"]
     provider = get_provider(chat["provider"])
+    # The agent panel needs the POST ack before the first delta reaches it.
+    await asyncio.sleep(0.1)
 
     async def emit(ev: BotEvent) -> None:
         payload = _apply_event(state, ev)
@@ -202,6 +205,7 @@ async def _run_turn(chat: dict, text: str, state: _TurnState, *,
             return
         payload.update({"chat_id": chat_id, "message_id": state.message_id})
         _broadcast(payload.pop("event"), payload)
+        agent_events.from_bot_event(chat_id, state.message_id, ev, payload)
         now = time.monotonic()
         if ev.t in ("tool_use", "tool_result") or now - state.last_persist > _PERSIST_INTERVAL_S:
             state.last_persist = now
@@ -272,6 +276,9 @@ async def _run_turn(chat: dict, text: str, state: _TurnState, *,
         "title": updates.get("title"),
         "usage": usage,
     })
+    if error and not any(b.get("type") == "text" for b in state.blocks):
+        agent_events.message_delta(chat_id, state.message_id, f"⚠ {error}")
+    agent_events.message_done(chat_id, state.message_id, usage)
     _drain_queue(chat_id)
 
 

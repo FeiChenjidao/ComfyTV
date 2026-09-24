@@ -4,12 +4,10 @@ import { computed, ref, watch } from 'vue'
 import { fetchSettings, runDbBackup, saveSettings } from '@/api'
 import type { BackupResult, SettingRow, SettingValue } from '@/api'
 import { fetchBlenderStatus } from '@/api/blender'
+import { applyAutoPickerSetting } from '@/composables/stages/autoPicker'
 import { applyLodSettings } from '@/v2/lodV2'
-import { applyPanelOnSelectSetting } from '@/v2/panelOnSelect'
 import { fetchEagleStatus } from '@/api/eagle'
-import { syncBotTab } from '@/composables/sidebar/botTab'
-import { app } from '@/lib/comfyApp'
-import { useBotStore } from '@/stores/botStore'
+import { agentProviders, refreshAgentStatus } from '@/agent/status'
 
 type Values = Record<string, SettingValue>
 export type ProbeState = 'checking' | 'online' | 'offline'
@@ -38,7 +36,6 @@ const COLLAPSED_STORAGE_KEY = 'comfytv:sidebar:settings:collapsed'
 const PARENT: Record<string, string> = {
   'v2-lod-scale': 'enable-v2',
   'v2-lod-fill': 'enable-v2',
-  'v2-panel-on-select': 'enable-v2',
   'enable-bot': 'enable-mcp',
   'enable-skills': 'enable-mcp',
   'bot-comfy-mcp-command': 'bot-enable-comfy-mcp',
@@ -91,14 +88,6 @@ function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
 
-function tryBotStore(): ReturnType<typeof useBotStore> | null {
-  try {
-    return useBotStore()
-  } catch {
-    return null
-  }
-}
-
 export function useSettingsPanel(
   isActive: () => boolean | undefined,
   textOf: (key: string) => string = () => '',
@@ -117,8 +106,7 @@ export function useSettingsPanel(
   function modelSuggestions(key: string): string[] {
     if (!key.startsWith(MODEL_KEY_PREFIX)) return []
     const providerId = key.slice(MODEL_KEY_PREFIX.length)
-    return tryBotStore()?.providers.find((p) => p.id === providerId)?.models
-      ?? []
+    return agentProviders.value.find((p) => p.id === providerId)?.models ?? []
   }
 
   const changedKeys = computed(() =>
@@ -242,11 +230,9 @@ export function useSettingsPanel(
       rows.value = (await saveSettings(changed)).settings
       syncValues()
       applyLodSettings(rows.value)
-      applyPanelOnSelectSetting(rows.value)
-      if (Object.keys(changed).some((k) => AGENT_TOGGLE_KEYS.has(k))) {
-        const bot = useBotStore()
-        await bot.refreshStatus()
-        syncBotTab(app, bot.enabled)
+      applyAutoPickerSetting(rows.value)
+      if (Object.keys(changed).some((k) => AGENT_TOGGLE_KEYS.has(k) || k.startsWith('bot-'))) {
+        await refreshAgentStatus()
       }
       void refreshProbes()
     } catch (e) {
@@ -272,7 +258,7 @@ export function useSettingsPanel(
   watch(isActive, (active) => {
     if (active) {
       void load()
-      void tryBotStore()?.refreshStatus()
+      void refreshAgentStatus()
     }
   }, { immediate: true })
 

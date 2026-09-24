@@ -1,8 +1,8 @@
 {
   "id": "00000000-0000-0000-0000-000000000000",
   "revision": 0,
-  "last_node_id": 11,
-  "last_link_id": 11,
+  "last_node_id": 20,
+  "last_link_id": 20,
   "nodes": [
     {
       "id": 1,
@@ -62,7 +62,7 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            3
+            12
           ]
         }
       ],
@@ -94,7 +94,7 @@
           "name": "CLIP",
           "type": "CLIP",
           "links": [
-            4
+            13
           ]
         }
       ],
@@ -127,8 +127,8 @@
           "name": "VAE",
           "type": "VAE",
           "links": [
-            5,
-            6
+            14,
+            15
           ]
         }
       ],
@@ -148,7 +148,7 @@
       ],
       "size": [
         420,
-        220
+        400
       ],
       "flags": {},
       "order": 4,
@@ -157,7 +157,7 @@
         {
           "name": "clip",
           "type": "CLIP",
-          "link": 4
+          "link": 13
         },
         {
           "name": "images.image_1",
@@ -165,9 +165,54 @@
           "link": 2
         },
         {
+          "name": "images.image_2",
+          "type": "IMAGE",
+          "link": 3
+        },
+        {
+          "name": "images.image_3",
+          "type": "IMAGE",
+          "link": 4
+        },
+        {
+          "name": "images.image_4",
+          "type": "IMAGE",
+          "link": 5
+        },
+        {
+          "name": "images.image_5",
+          "type": "IMAGE",
+          "link": 6
+        },
+        {
+          "name": "images.image_6",
+          "type": "IMAGE",
+          "link": 7
+        },
+        {
+          "name": "images.image_7",
+          "type": "IMAGE",
+          "link": 8
+        },
+        {
+          "name": "images.image_8",
+          "type": "IMAGE",
+          "link": 9
+        },
+        {
+          "name": "images.image_9",
+          "type": "IMAGE",
+          "link": 10
+        },
+        {
+          "name": "images.image_10",
+          "type": "IMAGE",
+          "link": 11
+        },
+        {
           "name": "vae",
           "type": "VAE",
-          "link": 5
+          "link": 14
         }
       ],
       "outputs": [
@@ -175,21 +220,21 @@
           "name": "positive",
           "type": "CONDITIONING",
           "links": [
-            7
+            16
           ]
         },
         {
           "name": "negative",
           "type": "CONDITIONING",
           "links": [
-            8
+            17
           ]
         },
         {
           "name": "latent",
           "type": "LATENT",
           "links": [
-            9
+            18
           ]
         }
       ],
@@ -241,6 +286,348 @@
       ]
     },
     {
+      "id": 12,
+      "type": "LoadImage",
+      "pos": [
+        -80,
+        800
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "Reference 2 (image_2)",
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 13,
+      "type": "LoadImage",
+      "pos": [
+        -80,
+        1140
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            4
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "Reference 3 (image_3)",
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "LoadImage",
+      "pos": [
+        -80,
+        1480
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            5
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "Reference 4 (image_4)",
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 15,
+      "type": "LoadImage",
+      "pos": [
+        -80,
+        1820
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            6
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "Reference 5 (image_5)",
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 16,
+      "type": "LoadImage",
+      "pos": [
+        -80,
+        2160
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            7
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "Reference 6 (image_6)",
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 17,
+      "type": "LoadImage",
+      "pos": [
+        -80,
+        2500
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            8
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "Reference 7 (image_7)",
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "LoadImage",
+      "pos": [
+        -80,
+        2840
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            9
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "Reference 8 (image_8)",
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 19,
+      "type": "LoadImage",
+      "pos": [
+        -80,
+        3180
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            10
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "Reference 9 (image_9)",
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
+      "id": 20,
+      "type": "LoadImage",
+      "pos": [
+        -80,
+        3520
+      ],
+      "size": [
+        330,
+        314
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "title": "Reference 10 (image_10)",
+      "widgets_values": [
+        "example.png",
+        "image"
+      ]
+    },
+    {
       "id": 7,
       "type": "KSampler",
       "pos": [
@@ -252,28 +639,28 @@
         262
       ],
       "flags": {},
-      "order": 6,
+      "order": 15,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 3
+          "link": 12
         },
         {
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 7
+          "link": 16
         },
         {
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 8
+          "link": 17
         },
         {
           "name": "latent_image",
           "type": "LATENT",
-          "link": 9
+          "link": 18
         }
       ],
       "outputs": [
@@ -281,7 +668,7 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            10
+            19
           ]
         }
       ],
@@ -310,18 +697,18 @@
         46
       ],
       "flags": {},
-      "order": 7,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
           "name": "samples",
           "type": "LATENT",
-          "link": 10
+          "link": 19
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 6
+          "link": 15
         }
       ],
       "outputs": [
@@ -329,7 +716,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            11
+            20
           ]
         }
       ],
@@ -349,13 +736,13 @@
         400
       ],
       "flags": {},
-      "order": 8,
+      "order": 17,
       "mode": 0,
       "inputs": [
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 11
+          "link": 20
         }
       ],
       "outputs": [],
@@ -386,6 +773,78 @@
     ],
     [
       3,
+      12,
+      0,
+      6,
+      2,
+      "IMAGE"
+    ],
+    [
+      4,
+      13,
+      0,
+      6,
+      3,
+      "IMAGE"
+    ],
+    [
+      5,
+      14,
+      0,
+      6,
+      4,
+      "IMAGE"
+    ],
+    [
+      6,
+      15,
+      0,
+      6,
+      5,
+      "IMAGE"
+    ],
+    [
+      7,
+      16,
+      0,
+      6,
+      6,
+      "IMAGE"
+    ],
+    [
+      8,
+      17,
+      0,
+      6,
+      7,
+      "IMAGE"
+    ],
+    [
+      9,
+      18,
+      0,
+      6,
+      8,
+      "IMAGE"
+    ],
+    [
+      10,
+      19,
+      0,
+      6,
+      9,
+      "IMAGE"
+    ],
+    [
+      11,
+      20,
+      0,
+      6,
+      10,
+      "IMAGE"
+    ],
+    [
+      12,
       2,
       0,
       7,
@@ -393,7 +852,7 @@
       "MODEL"
     ],
     [
-      4,
+      13,
       3,
       0,
       6,
@@ -401,15 +860,15 @@
       "CLIP"
     ],
     [
-      5,
+      14,
       4,
       0,
       6,
-      2,
+      11,
       "VAE"
     ],
     [
-      6,
+      15,
       4,
       0,
       8,
@@ -417,7 +876,7 @@
       "VAE"
     ],
     [
-      7,
+      16,
       6,
       0,
       7,
@@ -425,7 +884,7 @@
       "CONDITIONING"
     ],
     [
-      8,
+      17,
       6,
       1,
       7,
@@ -433,7 +892,7 @@
       "CONDITIONING"
     ],
     [
-      9,
+      18,
       6,
       2,
       7,
@@ -441,7 +900,7 @@
       "LATENT"
     ],
     [
-      10,
+      19,
       7,
       0,
       8,
@@ -449,7 +908,7 @@
       "LATENT"
     ],
     [
-      11,
+      20,
       8,
       0,
       9,

@@ -1,27 +1,167 @@
 {
-  "label":       "Qwen Image 2.1 Edit",
-  "order":       6,
-  "description": "Instruction editing via Qwen Image 2.1 (Qwen3-VL-8B encoder, 25 steps). Describe the change and refer to the source as <image1> (this stage has a single image socket, so @image_N mentions do not apply). Output size follows the input (keep it ≤ 2K). For several reference images use the Image stage's 'Qwen Image 2.1 Multi-Ref Edit'.",
-
-  "result": { "type": "ui_save_url", "node": "9" },
-
+  "label": "Qwen Image 2.1 Edit",
+  "order": 6,
+  "description": "Instruction editing via Qwen Image 2.1 (Qwen3-VL-8B encoder, 25 steps) with up to 10 images: the first image is the edit target (output follows its size), the rest are references. Refer to them with @image_1..@image_10 (type @ in the prompt; they reach the model as <image1>..<image10>), e.g. 'put the jacket from @image_2 on the person in @image_1'.",
+  "result": {
+    "type": "ui_save_url",
+    "node": "9"
+  },
+  "meta": {
+    "mention_style": "qwen_tags"
+  },
   "inputs": {
     "11": {
       "image": {
         "from": "upstream_image:annotated[0]",
         "required": true,
-        "error": "Image edit needs an upstream image — wire one into the stage's image input."
+        "error": "Image edit needs an edit target — wire an image into the stage's first image slot."
       }
     },
     "6": {
       "prompt": {
         "from": "main_prompt",
         "required": true,
-        "error": "Describe the edit — e.g. 'change the background of <image1> to a light-gray studio backdrop, keep the subject unchanged'."
+        "error": "Describe the edit — e.g. 'change the background of @image_1 to a light-gray studio backdrop, keep the subject unchanged'."
+      },
+      "negative_prompt": {
+        "from": "option:negative",
+        "default": ""
       }
     },
     "7": {
-      "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" }
+      "seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      }
+    },
+    "12": {
+      "image": {
+        "from": "upstream_image:annotated[1]"
+      }
+    },
+    "13": {
+      "image": {
+        "from": "upstream_image:annotated[2]"
+      }
+    },
+    "14": {
+      "image": {
+        "from": "upstream_image:annotated[3]"
+      }
+    },
+    "15": {
+      "image": {
+        "from": "upstream_image:annotated[4]"
+      }
+    },
+    "16": {
+      "image": {
+        "from": "upstream_image:annotated[5]"
+      }
+    },
+    "17": {
+      "image": {
+        "from": "upstream_image:annotated[6]"
+      }
+    },
+    "18": {
+      "image": {
+        "from": "upstream_image:annotated[7]"
+      }
+    },
+    "19": {
+      "image": {
+        "from": "upstream_image:annotated[8]"
+      }
+    },
+    "20": {
+      "image": {
+        "from": "upstream_image:annotated[9]"
+      }
     }
-  }
+  },
+  "prune_when_missing": [
+    {
+      "when": "upstream_image:value[1]",
+      "drop_upstream_of": [
+        {
+          "node": "6",
+          "input": "images.image_2"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[2]",
+      "drop_upstream_of": [
+        {
+          "node": "6",
+          "input": "images.image_3"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[3]",
+      "drop_upstream_of": [
+        {
+          "node": "6",
+          "input": "images.image_4"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[4]",
+      "drop_upstream_of": [
+        {
+          "node": "6",
+          "input": "images.image_5"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[5]",
+      "drop_upstream_of": [
+        {
+          "node": "6",
+          "input": "images.image_6"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[6]",
+      "drop_upstream_of": [
+        {
+          "node": "6",
+          "input": "images.image_7"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[7]",
+      "drop_upstream_of": [
+        {
+          "node": "6",
+          "input": "images.image_8"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[8]",
+      "drop_upstream_of": [
+        {
+          "node": "6",
+          "input": "images.image_9"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[9]",
+      "drop_upstream_of": [
+        {
+          "node": "6",
+          "input": "images.image_10"
+        }
+      ]
+    }
+  ]
 }

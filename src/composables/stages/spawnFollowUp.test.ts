@@ -524,7 +524,9 @@ describe('spawnFollowUpStage model handlers', () => {
     spawnFollowUpStage(src, 'model', 'product-shot')
     const node = created[0]
     expect(node.comfyClass).toBe('ComfyTV.ImageEditStage')
-    expect(src.connect).toHaveBeenCalledWith(1, node, 0)
+    const firstImageSlot = node.inputs.findIndex((i: any) => i.name === 'images.image0')
+    expect(firstImageSlot).toBeGreaterThanOrEqual(0)
+    expect(src.connect).toHaveBeenCalledWith(1, node, firstImageSlot)
     expect(widgetValue(node, 'workflow')).toBe('Qwen Edit 2511')
     expect(widgetValue(node, 'main_prompt')).toContain('product')
   })
