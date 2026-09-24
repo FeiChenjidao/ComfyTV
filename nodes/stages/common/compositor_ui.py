@@ -137,7 +137,23 @@ def harvest_compositor_ui(outputs: Any) -> dict[str, Any]:
             ui['compositor_canvas'] = canvas
         images = out.get('images')
         if isinstance(images, list) and images:
-            ui['images'] = images
+            preview_refs = []
+            for image in images:
+                if not isinstance(image, dict):
+                    continue
+                if image.get('filename'):
+                    preview_refs.append({
+                        'filename': str(image['filename']),
+                        'subfolder': str(image.get('subfolder') or ''),
+                        'type': str(image.get('type') or 'temp'),
+                    })
+                    continue
+                url = str(image.get('image_url') or image.get('url') or '').strip()
+                ref = view_url_to_image_ref(url)
+                if ref:
+                    preview_refs.append(ref)
+            if preview_refs:
+                ui['images'] = preview_refs
         best = ui
         best_n = len(layers)
     return best
@@ -183,47 +199,41 @@ def pack_payload_with_compositor_ui(payload: str, ui: dict[str, Any]) -> str:
     return json.dumps({'images': images, **extra})
 
 
-def compositor_output_values(payload: str) -> tuple[str, str]:
-    """Return the composite image URL and the layer image-group payload."""
-    raw = (payload or '').strip()
-    data = None
-    if raw.startswith('{'):
-        try:
-            data = json.loads(raw)
-        except (ValueError, TypeError):
-            pass
+def compositor_layer_group(payload: str) -> str:
+    """Normalize workflow output into a persistent image group with compositor metadata."""
+    ui = compositor_ui_from_payload(payload)
+    refs = _layer_refs(ui.get('compositor_layers'))
+    if not refs:
+        return ''
 
-    preview = ''
-    if isinstance(data, dict):
-        images = data.get('images')
-        if isinstance(images, list) and images and isinstance(images[0], dict):
-            preview = str(images[0].get('image_url') or images[0].get('url') or '').strip()
-        refs = _layer_refs(data.get('compositor_layers'))
-        bboxes = data.get('compositor_bboxes')
-        group = []
-        for index, ref in enumerate(refs):
-            bbox = bboxes[index] if isinstance(bboxes, list) and index < len(bboxes) else None
-            name = bbox.get('name') if isinstance(bbox, dict) else None
-            group.append({
-                'index': str(index + 1),
-                'label': str(name or f'#{index + 1}'),
-                'image_url': '/view?' + urlencode(ref),
-            })
-        if group:
-            return preview, json.dumps({'images': group})
+    raw_data = None
+    try:
+        raw_data = json.loads(payload)
+    except (ValueError, TypeError):
+        pass
+    label_boxes = raw_data.get('compositor_bboxes') if isinstance(raw_data, dict) else None
+    bboxes = ui.get('compositor_bboxes')
+    images = []
+    for index, ref in enumerate(refs):
+        bbox = label_boxes[index] if isinstance(label_boxes, list) and index < len(label_boxes) else None
+        name = bbox.get('name') if isinstance(bbox, dict) else None
+        images.append({
+            'index': str(index + 1),
+            'label': str(name or f'#{index + 1}'),
+            'image_url': '/view?' + urlencode(ref),
+        })
 
-    pairs = _refs_from_payload(payload)
-    if pairs:
-        group = [
-            {
-                'index': str(index + 1),
-                'label': str(name or f'#{index + 1}'),
-                'image_url': '/view?' + urlencode(ref),
-            }
-            for index, (ref, name) in enumerate(pairs)
-        ]
-        return preview or group[0]['image_url'], json.dumps({'images': group})
-    return (raw if is_raster_url(raw) else ''), ''
+    group: dict[str, Any] = {
+        'images': images,
+        'compositor_layers': refs,
+    }
+    for key in ('compositor_inputs', 'compositor_bboxes', 'compositor_canvas'):
+        if key in ui:
+            group[key] = ui[key]
+    preview = ui.get('images')
+    if isinstance(preview, list) and preview:
+        group['compositor_preview'] = preview[0]
+    return json.dumps(group)
 
 
 def compositor_ui_from_payload(payload: str) -> dict[str, Any]:
@@ -237,6 +247,13 @@ def compositor_ui_from_payload(payload: str) -> dict[str, Any]:
         if isinstance(data, dict) and _layer_refs(data.get('compositor_layers')):
             ui = harvest_compositor_ui({'packed': data})
             if ui:
+                preview = data.get('compositor_preview')
+                if isinstance(preview, dict) and preview.get('filename'):
+                    ui['images'] = [{
+                        'filename': str(preview['filename']),
+                        'subfolder': str(preview.get('subfolder') or ''),
+                        'type': str(preview.get('type') or 'temp'),
+                    }]
                 return ui
     pairs = _refs_from_payload(payload)
     if not pairs:

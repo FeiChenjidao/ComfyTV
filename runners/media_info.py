@@ -43,6 +43,13 @@ def probe_media(view_url: str) -> dict:
     return dict(info)
 
 
+def probe_media_path(src: Path) -> dict:
+    """Probe an already-authorized local path without resolving a URL."""
+    src = Path(src)
+    st = src.stat()
+    return _probe_path(src, st.st_size)
+
+
 def _probe_path(src: Path, size: int) -> dict:
     ext = src.suffix.lower()
     base = {'kind': 'other', 'format': ext.lstrip('.').upper(), 'size_bytes': size}

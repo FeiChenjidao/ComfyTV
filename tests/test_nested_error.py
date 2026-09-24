@@ -50,3 +50,32 @@ def test_exec_errors_keep_the_inner_traceback():
     assert "Sam3Segment #3" in entry["error_text"]
     assert entry["traceback_tail"].startswith("ZeroDivisionError: division by zero")
     assert "--- ComfyTV wrapper ---" in entry["traceback_tail"]
+
+
+def test_local_compositor_temp_files_are_persisted(tmp_path, monkeypatch):
+    import folder_paths
+    from ComfyTV.runners._nested_exec import _persist_compositor_ui
+
+    temp_dir = tmp_path / "temp"
+    output_dir = tmp_path / "output"
+    temp_dir.mkdir()
+    output_dir.mkdir()
+    (temp_dir / "preview.png").write_bytes(b"preview")
+    (temp_dir / "layer.png").write_bytes(b"layer")
+    monkeypatch.setattr(folder_paths, "get_temp_directory", lambda: str(temp_dir))
+    monkeypatch.setattr(folder_paths, "get_output_directory", lambda: str(output_dir))
+
+    localized = _persist_compositor_ui({
+        "images": [{"filename": "preview.png", "subfolder": "", "type": "temp"}],
+        "compositor_layers": [
+            {"filename": "layer.png", "subfolder": "", "type": "temp"},
+        ],
+        "compositor_inputs": ["fingerprint"],
+    })
+
+    preview = localized["images"][0]
+    layer = localized["compositor_layers"][0]
+    assert preview["type"] == layer["type"] == "output"
+    assert (output_dir / preview["subfolder"] / preview["filename"]).read_bytes() == b"preview"
+    assert (output_dir / layer["subfolder"] / layer["filename"]).read_bytes() == b"layer"
+    assert localized["compositor_inputs"] == ["fingerprint"]

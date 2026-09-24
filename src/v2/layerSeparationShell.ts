@@ -27,6 +27,7 @@ import MediaStripV2 from '@/v2/MediaStripV2.vue'
 import { V2_SHELLS } from '@/v2/registry'
 import ServerSelectV2 from '@/v2/ServerSelectV2.vue'
 import type { StageKind, StageVariant } from '@/stores/stageStore'
+import { compositorUiFromLayerGroup } from '@/v2/layerSeparationPayload'
 
 const ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="14" height="10" rx="1.5"/><rect x="6" y="9" width="14" height="10" rx="1.5"/><path d="M9 13h8"/></svg>`
 
@@ -103,6 +104,17 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
   scope.run(() => bindProgressRing(card, stageState))
 
   scope.run(() => {
+    watch(
+      () => stageState.output,
+      (raw) => {
+        const ui = compositorUiFromLayerGroup(raw)
+        if (ui) anyNode.onExecuted?.(ui)
+      },
+      { immediate: true },
+    )
+  })
+
+  scope.run(() => {
     let observer: MutationObserver | null = null
     let frame = 0
     const attachCompositor = () => {
@@ -136,13 +148,9 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
       [CustomParamsV2, { node, state: stageState }, customAnchor],
       [ParamsPanelV2, {
         getNode: () => node,
-<<<<<<< HEAD
-        exclude: ['psd_file', 'selected_id', 'captured_image', 'captured_images'],
-=======
-        exclude: ['psd_file', 'selected_id', 'captured_image', 'captured_images', 'compositor'],
+        exclude: ['compositor'],
         boundOnly: true,
         workflowKind: 'layer-separation',
->>>>>>> b15c43d (Fix ComfyTV workflow nodes and bot integration)
       }, paramsAnchor],
       [FooterSelectsV2, { getNode: () => node, linkKind: 'layer-separation', extra: [] }, wfAnchor],
       [ServerSelectV2, { getNode: () => node, state: stageState }, serverAnchor],

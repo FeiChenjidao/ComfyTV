@@ -171,3 +171,54 @@ class TestReadFiles:
         monkeypatch.setattr(skill_store, "FILE_BYTES_MAX", 10)
         with pytest.raises(ValueError):
             skill_store.read_skill_file("alpha", "big.txt")
+
+
+class TestSkillEditing:
+    CONTENT = "---\nname: editable_skill\ndescription: Editable skill\n---\n\nBody.\n"
+
+    @pytest.mark.parametrize("name", ["../escape", "a/b", "a\\b", "C:\\temp", ".."])
+    def test_edit_name_rejects_paths(self, skill_dirs, name):
+        with pytest.raises(ValueError):
+            skill_store.edit_skill("validate", name, self.CONTENT)
+
+    def test_create_update_validate_and_reload(self, skill_dirs):
+        _, user = skill_dirs
+        result = skill_store.edit_skill(
+            "create", "editable_skill", self.CONTENT)
+        assert result["ok"] is True
+        assert (user / "editable_skill" / "SKILL.md").read_text(
+            encoding="utf-8") == self.CONTENT
+        assert not list((user / "editable_skill").glob("*.tmp"))
+
+        with pytest.raises(ValueError, match="already exists"):
+            skill_store.edit_skill("create", "editable_skill", self.CONTENT)
+        missing = self.CONTENT.replace("editable_skill", "missing")
+        with pytest.raises(ValueError, match="does not exist"):
+            skill_store.edit_skill("update", "missing", missing)
+
+        updated = self.CONTENT.replace("Body.", "Updated body.")
+        assert skill_store.edit_skill(
+            "update", "editable_skill", updated)["ok"] is True
+        assert skill_store.read_skill("editable_skill") == updated
+        assert skill_store.edit_skill(
+            "validate", "editable_skill", updated)["valid"] is True
+        refreshed = skill_store.edit_skill("reload")
+        assert refreshed["reloaded"] is True
+        assert any(s["name"] == "editable_skill"
+                   for s in refreshed["skills"])
+
+    @pytest.mark.parametrize("content", [
+        "plain text",
+        "---\nname: other\ndescription: d\n---\n\nbody",
+        "---\nname: editable_skill\ndescription: d\n---\n\n",
+        "---\nname: editable_skill\ndescription:\n---\n\nbody",
+    ])
+    def test_validate_rejects_incomplete_skill(self, skill_dirs, content):
+        with pytest.raises(ValueError):
+            skill_store.edit_skill("validate", "editable_skill", content)
+
+    def test_builtin_skill_is_not_updated(self, skill_dirs):
+        builtin, _ = skill_dirs
+        make_skill(builtin, "editable_skill")
+        with pytest.raises(ValueError, match="built-in"):
+            skill_store.edit_skill("update", "editable_skill", self.CONTENT)

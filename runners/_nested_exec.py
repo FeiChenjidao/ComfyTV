@@ -1,6 +1,11 @@
 import asyncio
 import json
+import shutil
 import urllib.parse
+import uuid
+from pathlib import Path
+
+import folder_paths
 
 
 def _view_url(filename: str, subfolder: str, type_: str) -> str:
@@ -210,6 +215,48 @@ def _compositor_ui():
     return mod
 
 
+def _persist_compositor_ui(ui: dict) -> dict:
+    """Copy local compositor temp files to stable output storage."""
+    temp_root = Path(folder_paths.get_temp_directory()).resolve()
+    output_root = Path(folder_paths.get_output_directory()).resolve()
+    dest_dir = output_root / "comfytv" / "layer-separation" / uuid.uuid4().hex[:12]
+    copied: dict[tuple[str, str, str], dict] = {}
+
+    def persist(ref):
+        if not isinstance(ref, dict) or not ref.get("filename"):
+            return ref
+        if str(ref.get("type") or "temp") != "temp":
+            return dict(ref)
+        key = (
+            str(ref.get("type") or "temp"),
+            str(ref.get("subfolder") or ""),
+            str(ref["filename"]),
+        )
+        if key in copied:
+            return dict(copied[key])
+        source = (temp_root / key[1] / key[2]).resolve()
+        source.relative_to(temp_root)
+        if not source.is_file():
+            return dict(ref)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / source.name
+        shutil.copy2(source, dest)
+        saved = {
+            "filename": dest.name,
+            "subfolder": dest.parent.relative_to(output_root).as_posix(),
+            "type": "output",
+        }
+        copied[key] = saved
+        return dict(saved)
+
+    localized = dict(ui)
+    for key in ("compositor_layers", "images"):
+        refs = ui.get(key)
+        if isinstance(refs, list):
+            localized[key] = [persist(ref) for ref in refs]
+    return localized
+
+
 def _remember_compositor_ui(outputs: dict, payload: str) -> str:
     try:
         cui = _compositor_ui()
@@ -219,6 +266,7 @@ def _remember_compositor_ui(outputs: dict, payload: str) -> str:
     if not ui:
         return payload
     try:
+        ui = _persist_compositor_ui(ui)
         return cui.pack_payload_with_compositor_ui(payload, ui)
     except Exception:
         return payload

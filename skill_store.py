@@ -1,6 +1,9 @@
 import json
 import logging
+import os
 import re
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
@@ -12,7 +15,7 @@ OPENAI_META = Path("agents") / "openai.yaml"
 DISABLED_SETTING = "skills-disabled"
 ENABLE_SETTING = "enable-skills"
 
-NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 NAME_MAX = 64
 DESCRIPTION_MAX = 1024
 FILE_BYTES_MAX = 512 * 1024
@@ -205,3 +208,107 @@ def read_skill_file(name: str, relpath: str) -> str:
     if target.stat().st_size > FILE_BYTES_MAX:
         raise ValueError(f"{relpath!r} is too large to read (>512KB)")
     return target.read_text(encoding="utf-8", errors="replace")
+
+
+def _edit_name(name: str) -> str:
+    if not isinstance(name, str) or not name or len(name) > NAME_MAX:
+        raise ValueError("skill name must be 1-64 safe characters")
+    if not NAME_RE.fullmatch(name):
+        raise ValueError(
+            "skill name may contain only letters, numbers, '-' and '_'")
+    return name
+
+
+def _user_skill_dir(name: str) -> tuple[Path, Path]:
+    name = _edit_name(name)
+    root = user_skills_dir().resolve()
+    target = root / name
+    resolved = target.resolve(strict=False)
+    if resolved.parent != root:
+        raise ValueError("skill path must stay inside the user Skill root")
+    return root, target
+
+
+def validate_skill(name: str, content: str) -> dict:
+    name = _edit_name(name)
+    if not isinstance(content, str):
+        raise ValueError("content must be a string")
+    if not content.strip():
+        raise ValueError("SKILL.md must not be empty")
+    meta, body = parse_frontmatter(content)
+    if meta is None:
+        raise ValueError("SKILL.md has no valid YAML frontmatter")
+    meta_name = meta.get("name")
+    if not isinstance(meta_name, str) or meta_name != name:
+        raise ValueError(
+            f"frontmatter name must match target skill {name!r}")
+    description = meta.get("description")
+    if not isinstance(description, str) or not description.strip():
+        raise ValueError("frontmatter is missing a description")
+    if not body.strip():
+        raise ValueError("SKILL.md body must not be empty")
+    if len(content.encode("utf-8")) > FILE_BYTES_MAX:
+        raise ValueError("SKILL.md is too large (>512KB)")
+    return {
+        "name": name,
+        "description": description.strip()[:DESCRIPTION_MAX],
+    }
+
+
+def _atomic_write(path: Path, content: str) -> None:
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+def reload() -> list[dict]:
+    """Refresh and return the current on-disk Skill registry."""
+    return scan()
+
+
+def edit_skill(action: str, name: str | None = None,
+               content: str | None = None) -> dict:
+    if action == "validate":
+        if name is None or content is None:
+            raise ValueError("name and content are required for validation")
+        return {"valid": True, **validate_skill(name, content)}
+    if action == "reload":
+        entries = reload()
+        return {"reloaded": True, "skills": entries}
+    if action not in ("create", "update"):
+        raise ValueError(
+            f"unknown action {action!r} (use 'create', 'update', "
+            "'validate' or 'reload')")
+    if name is None or content is None:
+        raise ValueError(f"name and content are required for action={action!r}")
+    metadata = validate_skill(name, content)
+    root, target = _user_skill_dir(name)
+    if action == "create":
+        if target.exists() or target.is_symlink() or find(name) is not None:
+            raise ValueError(f"skill {name!r} already exists")
+        root.mkdir(parents=True, exist_ok=True)
+        created_dir = False
+        try:
+            target.mkdir()
+            created_dir = True
+            _atomic_write(target / SKILL_FILE, content)
+        except Exception:
+            if created_dir:
+                shutil.rmtree(target, ignore_errors=True)
+            raise
+    else:
+        if target.is_symlink() or not target.is_dir():
+            if find(name) is not None:
+                raise ValueError(f"built-in skill {name!r} cannot be updated")
+            raise ValueError(f"skill {name!r} does not exist")
+        _atomic_write(target / SKILL_FILE, content)
+    fresh = next((entry for entry in reload() if entry["name"] == name), None)
+    return {"ok": True, "action": action, "skill": fresh or metadata}

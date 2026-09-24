@@ -163,6 +163,57 @@ class TestLoaderExecute:
         out = ImageMergeStage.execute(project_id="default")
         assert out.values[0] == ""
 
+    def test_layer_separation_outputs_layer_group_with_compositor_preview(self, monkeypatch):
+        import asyncio
+        from ComfyTV.nodes.stages import layer_separation
+
+        schema = layer_separation.LayerSeparationStage.define_schema().kw
+        input_names = [item.args[0] for item in schema["inputs"] if item.args]
+        assert not {"psd_file", "selected_id", "captured_image", "captured_images"} & set(input_names)
+        assert [item.args[0] for item in schema["outputs"]] == ["layers"]
+
+        payload = json.dumps({
+            "images": [{
+                "index": "1",
+                "label": "composite",
+                "image_url": "/view?filename=preview.png&type=temp",
+            }],
+            "compositor_layers": [
+                {"filename": "background.png", "subfolder": "", "type": "temp"},
+                {"filename": "subject.png", "subfolder": "", "type": "temp"},
+            ],
+            "compositor_bboxes": [
+                {"name": "Background"},
+                {"name": "Subject"},
+            ],
+        })
+
+        async def fake_invoke_runner(**_kwargs):
+            return payload
+
+        def fake_emit(cls, *, payload_str, extra_ui=None, **_kwargs):
+            return layer_separation.io.NodeOutput(
+                payload_str,
+                ui={"output": [payload_str], **(extra_ui or {})},
+            )
+
+        layer_separation._LAST_RUN.clear()
+        monkeypatch.setattr(layer_separation, "invoke_runner", fake_invoke_runner)
+        monkeypatch.setattr(layer_separation, "_stage_emit", fake_emit)
+
+        out = asyncio.run(layer_separation.LayerSeparationStage.execute(
+            workflow="Local Compositor Test (No API)",
+        ))
+
+        assert len(out.values) == 1
+        group = json.loads(out.values[0])
+        assert [item["label"] for item in group["images"]] == ["Background", "Subject"]
+        assert group["compositor_preview"]["filename"] == "preview.png"
+        assert out.ui["output"] == [out.values[0]]
+        assert [item["filename"] for item in out.ui["compositor_layers"]] == [
+            "background.png", "subject.png",
+        ]
+
     def test_model_loader_execute(self, reset_db):
         from ComfyTV.nodes.stages.loaders import ModelLoaderStage
         out = ModelLoaderStage.execute(project_id="default", model="3d/robot.glb")
