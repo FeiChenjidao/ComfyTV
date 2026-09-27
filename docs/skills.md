@@ -46,7 +46,7 @@ The format is **progressive**: agents first see just the name + description, rea
 
 A user skill with the same `name` as a built-in one **overrides** it.
 
-ComfyTV ships one built-in skill today: **`h3-cinematic-director`** — a director-level methodology for MiniMax H3 video production: shot design, the exact H3 prompt schema (T2VA/I2VA/FL2VA/L2VA/Ref2VA), continuity auditing, and single-variable repair. Try it with the shipped [H3 workflows](generate.md#video-stage).
+ComfyTV ships built-in skills for brainstorming, canvas layout, H3 direction, image-layer separation, image-style routing, and video editing. User skills can extend or override these without modifying the plugin.
 
 ## Managing skills
 
