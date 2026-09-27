@@ -354,17 +354,3 @@ class TestLatestOutputsBatch:
     def test_empty_items(self, reset_db):
         from ComfyTV import storage
         assert storage.latest_outputs_by_uids("default", []) == []
-
-
-class TestThumbWarmup:
-    def test_persist_output_warms_thumbs(self, reset_db, monkeypatch):
-        from ComfyTV import storage
-        from ComfyTV.runners import thumbs as thumbs_mod
-        seen = []
-        monkeypatch.setattr(thumbs_mod, "warm_thumbs", lambda urls, sizes=(512, 1024): seen.append(list(urls)))
-        storage.persist_output(
-            project_id="default", stage_class="ImageStage", stage_node_id="1",
-            output_type="images", payload_url="/view?filename=a.png",
-            payload_json={"images": [{"index": "1", "image_url": "/view?filename=b.png"}]},
-        )
-        assert seen == [["/view?filename=a.png", "/view?filename=b.png"]]

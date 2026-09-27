@@ -49,21 +49,29 @@ export function bindStageWidgets(opts: {
     if (isPoolPickerKind(kind) || kind === 'image-batch') {
       const idxWidget = node.widgets?.find((w: any) => w.name === 'selected_index')
       if (idxWidget) {
-        const initial = Number(idxWidget.value)
-        const safe = Number.isFinite(initial) && initial >= 1 ? Math.floor(initial) : 1
-        if (idxWidget.value !== safe) idxWidget.value = safe
-        state.pickedIndex = safe
+        const syncPickedIndex = () => {
+          const value = Number(idxWidget.value)
+          const safe = Number.isFinite(value) && value >= 1 ? Math.floor(value) : 1
+          if (idxWidget.value !== safe) idxWidget.value = safe
+          state.pickedIndex = safe
+        }
+        syncPickedIndex()
         idxWidget.callback = useChainCallback(idxWidget.callback, () => {
           const idx = Number(idxWidget.value) || 1
           if (idx === state.pickedIndex) return
           applyPickedIndex(idx)
         })
+        node.onConfigure = useChainCallback(node.onConfigure, syncPickedIndex)
       }
     }
 
     if (isPoolPickerKind(kind)) {
       const poolWidget = node.widgets?.find((w: any) => w.name === 'pool')
-      state.pool = poolWidget ? (String(poolWidget.value ?? '') || null) : null
+      const syncPool = () => {
+        state.pool = poolWidget ? (String(poolWidget.value ?? '') || null) : null
+      }
+      syncPool()
+      node.onConfigure = useChainCallback(node.onConfigure, syncPool)
     }
     return
   }

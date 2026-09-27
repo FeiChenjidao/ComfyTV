@@ -191,9 +191,12 @@ def _auto_prune_unbound(workflow: dict, config: dict, ctx: RunnerContext) -> set
             m = _UPSTREAM_PAT.match(str(spec.get("from") or ""))
             if not m or m.group(1) not in _MEDIA_KINDS:
                 continue
+            kind, suffix, idx_str = m.group(1), m.group(2), m.group(3)
             if spec.get("required") or spec.get("default") is not None:
                 continue
-            kind, idx_str = m.group(1), m.group(3)
+            if suffix == "masked" and not str(ctx.options.get("mask_data") or "").strip():
+                roots.add(str(node_id))
+                break
             idx = int(idx_str) if idx_str else 0
             upstream = ctx.upstream.get(_UPSTREAM_BUCKET_BY_KIND[kind]) or []
             if isinstance(upstream, str):

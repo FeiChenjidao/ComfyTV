@@ -79,19 +79,7 @@ def persist_output(
             ).delete(synchronize_session=False)
             s.commit()
         row = _output_to_dict(out)
-    _warm_output_thumbs(payload_url, payload_json)
     return row
-
-
-def _warm_output_thumbs(payload_url: str, payload_json: Any) -> None:
-    urls = [payload_url]
-    if isinstance(payload_json, dict):
-        urls += [im.get("image_url") for im in payload_json.get("images") or [] if isinstance(im, dict)]
-    try:
-        from ..runners.thumbs import warm_thumbs
-        warm_thumbs(urls)
-    except Exception:
-        logger.debug("[ComfyTV] thumb warm-up skipped", exc_info=True)
 
 
 def list_outputs(

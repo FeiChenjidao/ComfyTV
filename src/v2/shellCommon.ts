@@ -2,8 +2,10 @@ import { useResizeObserver, useTimeoutFn } from '@vueuse/core'
 import { effectScope, watch, type EffectScope } from 'vue'
 
 import { app, type ComfyNode } from '@/lib/comfyApp'
+import { isPanelOnSelectEnabled, measurePanelStackHeight } from '@/v2/panelOnSelect'
 
 const RING_FADE_MS = 400
+const PREVIEW_HEIGHT_PROP = 'v2_preview_height'
 
 export const I = (d: string, sw = 1.7) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}">${d}</svg>`
@@ -31,10 +33,9 @@ export function stopNativeAutoGrow(node: ComfyNode) {
   ;(node as any).computeSize = () => [node.size[0], node.size[1]]
 }
 
-// The card owns the node height: height = chrome + the flexible block's wanted height,
-// where chrome is every fixed block measured together. Absolute, so calling it twice is a
-// no-op and no trigger can double-count a chrome change. Nothing is persisted: litegraph
-// already saves the node height and wanted is derived back out of it.
+// The card owns the node height: height = chrome + the flexible block's wanted height.
+// Persist wanted separately because panel-on-select can hide the chrome before a workflow
+// remounts; node.size alone cannot distinguish preview from preview + panel in that state.
 export function bindCardHeight(node: ComfyNode, opts: {
   scope: EffectScope
   card: HTMLElement
@@ -49,31 +50,53 @@ export function bindCardHeight(node: ComfyNode, opts: {
 
   let chrome = -1
   let applied = -1
-  let wanted = 0
+  const stored = Number(anyNode.properties?.[PREVIEW_HEIGHT_PROP])
+  let hasStoredWanted = Number.isFinite(stored) && stored >= min
+  let wanted = hasStoredWanted ? Math.max(min, Math.round(stored)) : 0
   // the card is taller than node.size by a constant (the hidden title row); measure it
   // whenever the DOM and node.size are known to agree, and work in DOM space throughout.
   let offset = 0
   let live = false
 
-  // Panels hydrate asynchronously after mount — islands, and a media strip that waits on the
-  // server. Absorbing that into the preview is what flexbox would do and keeps a saved node at
-  // the height it was saved at, so only take over once the user is demonstrably working here.
-  const sample = () => {
-    chrome = chromeOf()
-    offset = card.offsetHeight - node.size[1]
-    wanted = Math.max(min, flexible.offsetHeight)
-    applied = node.size[1]
+  const rememberWanted = (height: number) => {
+    wanted = Math.max(min, Math.round(height))
+    ;(anyNode.properties ??= {})[PREVIEW_HEIGHT_PROP] = wanted
+    hasStoredWanted = true
   }
 
-  const goLive = () => {
-    if (live || !measurable()) return
+  const initialWanted = (): number | null => {
+    if (hasStoredWanted) return wanted
+    let height = flexible.offsetHeight
+    if (isPanelOnSelectEnabled() && !anyNode.selected) {
+      const panelH = measurePanelStackHeight(card)
+      if (panelH <= 0) return null
+      // Old workflows saved the selected height. On an unselected remount flex gives
+      // the hidden panel's space to the preview, so migrate that extra height once.
+      const withoutPanel = height - panelH
+      if (withoutPanel >= min) height = withoutPanel
+    }
+    return Math.max(min, height)
+  }
+
+  const sample = (initial: boolean): boolean => {
+    const height = initial ? initialWanted() : Math.max(min, flexible.offsetHeight)
+    if (height == null) return false
+    chrome = chromeOf()
+    offset = card.offsetHeight - node.size[1]
+    rememberWanted(height)
+    applied = node.size[1]
+    return true
+  }
+
+  const activate = (): boolean => {
+    if (live) return true
+    if (!measurable() || !sample(true)) return false
     live = true
-    sample()
+    return true
   }
 
   const apply = () => {
-    goLive()
-    if (!live || !laidOut()) return
+    if (!activate() || !laidOut()) return
     chrome = chromeOf()
     const h = chrome + wanted - offset
     applied = h
@@ -83,24 +106,29 @@ export function bindCardHeight(node: ComfyNode, opts: {
   }
 
   card.dataset.v2Height = '1'
-  card.addEventListener('pointerdown', goLive, { capture: true })
+  card.addEventListener('pointerdown', apply, { capture: true })
   const prevConn = anyNode.onConnectionsChange
   anyNode.onConnectionsChange = function (...args: unknown[]) {
-    goLive()
+    apply()
     return prevConn?.apply(this, args)
   }
 
   opts.scope.run(() => {
     const onResize = () => {
       if (!laidOut()) return
-      if (!live) { chrome = chromeOf(); return }
+      if (!live) {
+        if (hasStoredWanted) apply()
+        else chrome = chromeOf()
+        return
+      }
       // chrome moved: we drive the node. chrome steady but the card moved: the user did.
       if (chromeOf() !== chrome) apply()
-      else if (measurable() && Math.abs(node.size[1] - applied) >= 1) sample()
+      else if (measurable() && Math.abs(node.size[1] - applied) >= 1) sample(false)
     }
     useResizeObserver(card, onResize)
     useResizeObserver(flexible, onResize)
   })
+  if (hasStoredWanted) requestAnimationFrame(() => requestAnimationFrame(apply))
   return apply
 }
 

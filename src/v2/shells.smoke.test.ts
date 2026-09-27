@@ -589,30 +589,96 @@ describe('V2 shell smoke', () => {
     let panelH = 0
     const PREVIEW = 280
     const preview = card.querySelector('.v2-preview') as HTMLElement
+    const panel = card.querySelector('.v2-panel') as HTMLElement
     Object.defineProperty(preview, 'offsetHeight', { get: () => PREVIEW })
     Object.defineProperty(card, 'offsetHeight', { get: () => PREVIEW + panelH })
+    Object.defineProperty(panel, 'offsetHeight', { get: () => (panelH > 0 ? panelH : 180) })
+    // Unselected: CSS would hide the panel; keep measurePanelStackHeight honest.
+    panel.style.setProperty('display', 'none', 'important')
 
     // User corner-resized while unselected (compact).
     const dragH = PREVIEW + 40
     node.setSize([320, dragH])
     card.dispatchEvent(new PointerEvent('pointerdown'))
-    // RO-style sample after drag (chrome steady, size moved).
     const sync = (node as any).__comfytvSyncHeight as () => void
-    // Force sample path: size already set; sync apply with current chrome.
     sync()
     const afterDrag = node.size[1]
+    expect(afterDrag).toBeGreaterThan(200)
 
-    // Select → panel chrome appears → apply once grows by panel, keeps preview wanted.
+    // Select: the panel changes total height, not the persisted preview height.
     panelH = 180
+    panel.style.removeProperty('display')
+    node.selected = true
     root.setAttribute('data-v2-selected', '')
     sync()
-    expect(node.size[1]).toBe(afterDrag + 180)
+    expect(node.size[1]).toBe(afterDrag + panelH)
+    expect(node.properties.v2_preview_height).toBe(PREVIEW)
 
-    // Deselect → chrome drops → apply shrinks back; no drift.
     panelH = 0
+    panel.style.setProperty('display', 'none', 'important')
+    node.selected = false
     root.removeAttribute('data-v2-selected')
     sync()
     expect(node.size[1]).toBe(afterDrag)
+    expect(node.properties.v2_preview_height).toBe(PREVIEW)
+
+    root.remove()
+    document.body.removeAttribute('data-v2-panel-on-select')
+    node.onRemoved?.()
+  })
+
+  it('manageHeight tab remount restores preview height separately from the hidden panel', () => {
+    document.body.setAttribute('data-v2-panel-on-select', '')
+    const PANEL = 200
+    const PREVIEW = 300
+    const node = makeNode('ComfyTV.Model3DStage')
+    node.selected = false
+    node.properties.v2_preview_height = PREVIEW
+    node.setSize([320, 500])
+    V2_SHELLS['ComfyTV.Model3DStage'](node as any, 'model', 'generator')
+    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
+    const root = document.createElement('div')
+    root.setAttribute('data-node-id', String(node.id))
+    root.setAttribute('data-v2-shell', '')
+    root.appendChild(card)
+    document.body.appendChild(root)
+
+    const preview = card.querySelector('.v2-preview') as HTMLElement
+    const panel = card.querySelector('.v2-panel') as HTMLElement
+    let panelVisible = false
+    Object.defineProperty(preview, 'offsetHeight', {
+      configurable: true,
+      get: () => PREVIEW + (panelVisible ? 0 : PANEL),
+    })
+    Object.defineProperty(card, 'offsetHeight', {
+      configurable: true,
+      get: () => PREVIEW + PANEL,
+    })
+    Object.defineProperty(panel, 'offsetHeight', {
+      configurable: true,
+      get: () => PANEL,
+    })
+    panel.style.setProperty('display', 'none', 'important')
+
+    const sync = (node as any).__comfytvSyncHeight as () => void
+    // Remount path: connections / pointer while still unselected (panel hidden).
+    node.onConnectionsChange?.(1, 0, true, null, null)
+    sync()
+    const afterRemount = node.size[1]
+    expect(Math.abs(afterRemount - PREVIEW)).toBeLessThan(20)
+    expect(node.properties.v2_preview_height).toBe(PREVIEW)
+
+    // Selecting adds only the panel; the preview remains at its restored height.
+    panelVisible = true
+    panel.style.removeProperty('display')
+    node.selected = true
+    root.setAttribute('data-v2-selected', '')
+    sync()
+    expect(node.size[1]).toBe(afterRemount + PANEL)
+    expect(node.properties.v2_preview_height).toBe(PREVIEW)
+
+    const shell = node.widgets.find((w: any) => w.name === 'v2_shell')
+    expect(shell.options.getMinHeight()).toBe(Math.max(170, Math.round(node.size[1])))
 
     root.remove()
     document.body.removeAttribute('data-v2-panel-on-select')
@@ -661,6 +727,36 @@ describe('V2 shell smoke', () => {
       expect(await stackFor(5), cls).toBe('2')
       node.onRemoved?.()
     }
+  })
+
+  it('keeps the saved picker index when the upstream batch is first restored', async () => {
+    const batch = (prefix: string) => JSON.stringify({
+      images: Array.from({ length: 3 }, (_, i) => ({
+        index: String(i + 1),
+        image_url: `/view?filename=${prefix}-${i + 1}.png`,
+      })),
+    })
+    const node = makeNode('ComfyTV.ImagePickerStage')
+    node.graph = { links: {}, getNodeById: () => undefined }
+    node.widgets.push({ name: 'append_results', value: false })
+    const api = V2_SHELLS['ComfyTV.ImagePickerStage'](node as any, 'image-picker', 'generator')!
+    const selected = node.widgets.find((w: any) => w.name === 'selected_index')
+    const pool = node.widgets.find((w: any) => w.name === 'pool')
+    selected.value = 3
+    pool.value = batch('saved')
+    node.onConfigure?.({})
+    await nextTick()
+
+    api.state.inputs = [{ slot: 'batch', type: 'COMFYTV_IMAGES', source: 'upstream', content: batch('restored') }]
+    await nextTick()
+    expect(api.state.pickedIndex).toBe(3)
+    expect(selected.value).toBe(3)
+
+    api.state.inputs = [{ slot: 'batch', type: 'COMFYTV_IMAGES', source: 'upstream', content: batch('new') }]
+    await nextTick()
+    expect(api.state.pickedIndex).toBe(1)
+    expect(selected.value).toBe(1)
+    node.onRemoved?.()
   })
 
   for (const [cls, attach] of shellEntries) {

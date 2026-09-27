@@ -11,6 +11,8 @@ THUMB_SIZES = (256, 512, 1024)
 THUMB_SUBFOLDER = 'comfytv/thumbs'
 THUMB_SKIP_FACTOR = 1.25
 THUMB_QUALITY = 85
+THUMB_MAX_FILES = 512
+THUMB_MAX_BYTES = 256 * 1024 * 1024
 IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.webp', '.bmp'}
 VIDEO_EXTS = {'.3g2', '.3gp', '.avi', '.m4v', '.mkv', '.mov', '.mp4',
               '.mpeg', '.mpg', '.ogv', '.webm'}
@@ -40,6 +42,34 @@ def _save_webp(im, dest: Path) -> None:
     tmp = dest.with_name(f'{dest.stem}.{uuid.uuid4().hex[:8]}.tmp')
     im.save(tmp, format='webp', quality=THUMB_QUALITY)
     os.replace(tmp, dest)
+    _prune_thumb_cache(dest)
+
+
+def _prune_thumb_cache(keep: Path) -> None:
+    files = []
+    total = 0
+    for path in thumb_dir().glob('*.webp'):
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        files.append((path, st.st_mtime_ns, st.st_size))
+        total += st.st_size
+    if len(files) <= THUMB_MAX_FILES and total <= THUMB_MAX_BYTES:
+        return
+
+    files.sort(key=lambda item: (item[0] == keep, item[1]), reverse=True)
+    kept_files = 0
+    kept_bytes = 0
+    for path, _mtime, size in files:
+        if path == keep or (kept_files < THUMB_MAX_FILES and kept_bytes + size <= THUMB_MAX_BYTES):
+            kept_files += 1
+            kept_bytes += size
+            continue
+        try:
+            path.unlink()
+        except OSError:
+            pass
 
 
 def _video_thumb(src: Path, size: int) -> Path:
@@ -103,32 +133,11 @@ def thumb_for_path(src: Path, max_edge: int) -> Path:
         tmp = dest.with_name(f'{dest.stem}.{uuid.uuid4().hex[:8]}.tmp')
         im.save(tmp, format='webp', quality=THUMB_QUALITY)
     os.replace(tmp, dest)
+    _prune_thumb_cache(dest)
     return dest
 
 
 __all__ = ['resolve_thumb', 'thumb_for_path', 'snap_size', 'thumb_dir', 'THUMB_SIZES',
            'THUMB_SUBFOLDER', 'THUMB_SKIP_FACTOR', 'THUMB_QUALITY',
+           'THUMB_MAX_FILES', 'THUMB_MAX_BYTES',
            'IMAGE_EXTS', 'VIDEO_EXTS']
-
-
-_WARM_POOL = None
-
-
-def warm_thumbs(view_urls, sizes=(512, 1024)) -> None:
-    global _WARM_POOL
-    urls = [u for u in view_urls if isinstance(u, str) and u.startswith('/view')]
-    if not urls:
-        return
-    if _WARM_POOL is None:
-        from concurrent.futures import ThreadPoolExecutor
-        _WARM_POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix='ctv-thumb')
-
-    def one(url: str, size: int) -> None:
-        try:
-            resolve_thumb(url, size)
-        except Exception:
-            pass
-
-    for url in urls:
-        for size in sizes:
-            _WARM_POOL.submit(one, url, size)

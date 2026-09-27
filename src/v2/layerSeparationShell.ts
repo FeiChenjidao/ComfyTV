@@ -27,9 +27,13 @@ import MediaStripV2 from '@/v2/MediaStripV2.vue'
 import { V2_SHELLS } from '@/v2/registry'
 import ServerSelectV2 from '@/v2/ServerSelectV2.vue'
 import type { StageKind, StageVariant } from '@/stores/stageStore'
-import { compositorUiFromLayerGroup } from '@/v2/layerSeparationPayload'
+import {
+  compositorUiFromLayerGroup,
+  compositorUiFromPersisted,
+} from '@/v2/layerSeparationPayload'
 
 const ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="14" height="10" rx="1.5"/><rect x="6" y="9" width="14" height="10" rx="1.5"/><path d="M9 13h8"/></svg>`
+const COMPOSITOR_STATE_PROP = 'comfytv_layer_separation_compositor'
 
 function el(tag: string, cls: string, html?: string) {
   const e = document.createElement(tag)
@@ -62,6 +66,57 @@ function installOfficialCompositor(node: ComfyNode) {
     if (ownConstructor) Object.defineProperty(anyNode, 'constructor', ownConstructor)
     else delete anyNode.constructor
   }
+}
+
+function saveCompositorUi(node: ComfyNode, ui: Record<string, unknown>): void {
+  const anyNode = node as any
+  const saved = JSON.parse(JSON.stringify(ui))
+  if (JSON.stringify(anyNode.properties?.[COMPOSITOR_STATE_PROP]) === JSON.stringify(saved)) return
+  anyNode.properties = anyNode.properties ?? {}
+  anyNode.properties[COMPOSITOR_STATE_PROP] = saved
+  anyNode.graph?.change?.()
+}
+
+function restoreCompositorUi(node: ComfyNode): void {
+  const anyNode = node as any
+  const ui = compositorUiFromPersisted(anyNode.properties?.[COMPOSITOR_STATE_PROP])
+  if (ui) anyNode.onExecuted?.(ui)
+}
+
+function compositorPreviewUrl(ui: Record<string, unknown>): string | null {
+  const preview = Array.isArray(ui.images) ? ui.images[0] : null
+  if (!preview || typeof preview !== 'object') return null
+  const ref = preview as Record<string, unknown>
+  if (!ref.filename) return null
+  const query = new URLSearchParams({
+    filename: String(ref.filename),
+    subfolder: String(ref.subfolder ?? ''),
+    type: String(ref.type || 'output'),
+  })
+  return `/view?${query.toString()}`
+}
+
+function showCompositorPreviewFallback(anchor: HTMLElement, ui: Record<string, unknown>): void {
+  const area = anchor.querySelector<HTMLElement>('[data-testid="compositor-preview-area"]')
+  if (!area) return
+  const native = area.querySelector<HTMLImageElement>('[data-testid="compositor-preview"]')
+  const fallback = area.querySelector<HTMLImageElement>('.comfytv-compositor-preview-fallback')
+  if (native) {
+    if (fallback) fallback.hidden = true
+    return
+  }
+  const src = compositorPreviewUrl(ui)
+  if (!src) return
+  const image = fallback ?? document.createElement('img')
+  image.className = 'comfytv-compositor-preview-fallback'
+  image.src = src
+  image.alt = ''
+  image.draggable = false
+  image.hidden = false
+  image.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;'
+  if (!fallback) area.appendChild(image)
+  const empty = area.querySelector<HTMLElement>('[data-testid="compositor-empty"]')
+  if (empty) empty.hidden = true
 }
 
 function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
@@ -104,11 +159,21 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
   scope.run(() => bindProgressRing(card, stageState))
 
   scope.run(() => {
+    let restored = false
     watch(
       () => stageState.output,
       (raw) => {
         const ui = compositorUiFromLayerGroup(raw)
-        if (ui) anyNode.onExecuted?.(ui)
+        if (ui) {
+          saveCompositorUi(node, ui)
+          anyNode.onExecuted?.(ui)
+          queueMicrotask(() => showCompositorPreviewFallback(compositorAnchor, ui))
+        } else if (!restored) {
+          restored = true
+          restoreCompositorUi(node)
+          const saved = compositorUiFromPersisted(anyNode.properties?.[COMPOSITOR_STATE_PROP])
+          if (saved) queueMicrotask(() => showCompositorPreviewFallback(compositorAnchor, saved))
+        }
       },
       { immediate: true },
     )
@@ -129,7 +194,14 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
       }
       const widget = Array.from(root.querySelectorAll<HTMLElement>('.lg-node-widget'))
         .find(el => !el.contains(compositorAnchor) && el.querySelector('[data-testid="compositor-open-button"]'))
-      if (widget && widget.parentElement !== compositorAnchor) compositorAnchor.appendChild(widget)
+      if (widget) {
+        if (widget.parentElement !== compositorAnchor) compositorAnchor.appendChild(widget)
+        const saved = compositorUiFromPersisted(anyNode.properties?.[COMPOSITOR_STATE_PROP])
+        if (saved) {
+          restoreCompositorUi(node)
+          showCompositorPreviewFallback(compositorAnchor, saved)
+        }
+      }
     }
     frame = requestAnimationFrame(attachCompositor)
     onScopeDispose(() => {
@@ -164,6 +236,7 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
   const prevConfigure = anyNode.onConfigure
   anyNode.onConfigure = function (...args: unknown[]) {
     prevConfigure?.apply(this, args)
+    restoreCompositorUi(this)
     queueMicrotask(mountApps)
   }
 

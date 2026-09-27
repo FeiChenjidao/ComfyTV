@@ -19,6 +19,7 @@ import { useAssetStore } from '@/stores/assetStore'
 import {
   validateNode as validateWorkflowInputs,
   applySlotWarnings,
+  loadWorkflowInfo,
   type SlotWarningMap,
 } from '@/composables/stages/useWorkflowValidator'
 import {
@@ -102,6 +103,37 @@ export function useStageNode(
   const meta = getStageMeta(node.comfyClass)
   const workflowKind = meta?.workflow_kind || null
 
+  function syncMaskInput(): void {
+    if (workflowKind !== 'image') return
+    const input = node.inputs?.find((item: any) => item.name === 'mask')
+    if (!input) return
+    const wfWidget = node.widgets?.find((w: any) => w.name === 'workflow')
+    const label = wfWidget ? String(wfWidget.value ?? '') : ''
+    if (!label) {
+      input.hidden = input.link == null
+      node.setDirtyCanvas?.(true, true)
+      return
+    }
+    void loadWorkflowInfo().then(info => {
+      const entry = info[workflowKind]?.[label]
+      if (!entry) {
+        input.hidden = input.link == null
+        node.setDirtyCanvas?.(true, true)
+        return
+      }
+      const usesMask = Boolean(entry.uses_mask)
+      if (!usesMask && input.link != null) {
+        const inputIndex = node.inputs.indexOf(input)
+        node.disconnectInput?.(inputIndex)
+      }
+      const hidden = usesMask ? false : true
+      if (input.hidden !== hidden) {
+        input.hidden = hidden
+        node.setDirtyCanvas?.(true, true)
+      }
+    })
+  }
+
   let _applyDefaults: ApplyDefaultsMode = 'all'
 
   function syncOptionEnums(): void {
@@ -138,6 +170,7 @@ export function useStageNode(
         if (label) clearBoundOptionEnumsCache(workflowKind, label)
       }
       if (variant === 'generator') {
+        queueMicrotask(syncMaskInput)
         queueMicrotask(reValidate)
         queueMicrotask(syncOptionEnums)
       }
@@ -150,6 +183,7 @@ export function useStageNode(
       const selectionStore = useSelectionStore()
       wfWidget.callback = useChainCallback(wfWidget.callback, () => {
         _applyDefaults = 'all'
+        queueMicrotask(syncMaskInput)
         queueMicrotask(reValidate)
         queueMicrotask(triggerPrepForCurrentWorkflow)
         queueMicrotask(() => selectionStore.refreshFromCanvas())
@@ -165,20 +199,24 @@ export function useStageNode(
   onNodeConfigure(node, () => {
     _applyDefaults = false
     queueMicrotask(syncMedia)
+    if (variant === 'generator') queueMicrotask(syncMaskInput)
   })
   node.onConnectionsChange = useChainCallback(node.onConnectionsChange, () => {
     queueMicrotask(syncMedia)
     queueMicrotask(refresh)
+    if (variant === 'generator') queueMicrotask(syncMaskInput)
     queueMicrotask(() => store.notifyConsumers(state))
     if (variant === 'generator') queueMicrotask(reValidate)
   })
   node.onConnectInput = useChainCallback(node.onConnectInput, () => {
     queueMicrotask(syncMedia)
     queueMicrotask(refresh)
+    if (variant === 'generator') queueMicrotask(syncMaskInput)
   })
 
   queueMicrotask(syncMedia)
   queueMicrotask(refresh)
+  if (variant === 'generator') queueMicrotask(syncMaskInput)
   if (variant === 'generator') queueMicrotask(reValidate)
 
   const stopTickWatch = watch(
@@ -187,6 +225,7 @@ export function useStageNode(
   )
 
   let lastMergedBatch = ''
+  let pickerHydrated = false
   const stopPickerWatch = isPoolPickerKind(kind)
     ? watch(
         () => {
@@ -197,6 +236,8 @@ export function useStageNode(
           const inp = state.inputs.find(i => i.slot === 'batch')
 
           if (inp && inp.source === 'upstream' && inp.content && inp.content !== lastMergedBatch) {
+            const restoring = !pickerHydrated
+            pickerHydrated = true
             lastMergedBatch = inp.content
             const appendW = node.widgets?.find((w: any) => w.name === 'append_results')
             const append = !appendW || appendW.value !== false
@@ -205,7 +246,7 @@ export function useStageNode(
             store.setPickerPool(node, state, merged)
             const added = imagePoolCount(merged) - before
 
-            if (!append || added > 0) {
+            if (!restoring && (!append || added > 0)) {
               state.pickedIndex = 1
               setWidget(node, 'selected_index', 1)
             }

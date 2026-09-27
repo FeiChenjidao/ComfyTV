@@ -4,7 +4,7 @@ import { fetchWorkflowConfig } from '@/api'
 import { useBoundOptionKeys } from '@/composables/stages/useBoundOptionKeys'
 import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
 import type { LGraphNode } from '@/lib/comfyApp'
-import { getWidget } from '@/utils/widget'
+import { bindWidgetCallback, getWidget, onNodeConfigure } from '@/utils/widget'
 
 export type BoundOptionControl =
   | 'toggle'
@@ -84,16 +84,34 @@ export function useBoundOptionMeta(
     return k == null ? '' : String(k)
   }
 
+  let refreshId = 0
+  let activeRequest = ''
+
   async function refresh() {
+    const currentRefreshId = ++refreshId
     const kind = kindOf()
     const label = String(getWidget(getNode(), 'workflow')?.value ?? '')
     const keys = boundKeys.value
+    const keySignature = [...keys].sort().join('\0')
+    const request = `${kind}:${label}:${keySignature}`
+    if (request !== activeRequest) {
+      activeRequest = request
+      metaByKey.value = new Map()
+    }
     if (!kind || !label || keys.size === 0) {
       metaByKey.value = new Map()
       return
     }
     try {
       const cfg = await fetchWorkflowConfig(kind, label)
+      const currentLabel = String(getWidget(getNode(), 'workflow')?.value ?? '')
+      const currentKeys = [...boundKeys.value].sort().join('\0')
+      if (
+        currentRefreshId !== refreshId
+        || currentLabel !== label
+        || kind !== kindOf()
+        || currentKeys !== keySignature
+      ) return
       const next = new Map<string, BoundOptionMeta>()
       for (const w of cfg.exposed_widgets ?? []) {
         const binding = w.stage_binding
@@ -104,7 +122,7 @@ export function useBoundOptionMeta(
       }
       metaByKey.value = next
     } catch {
-      metaByKey.value = new Map()
+      if (currentRefreshId === refreshId) metaByKey.value = new Map()
     }
   }
 
@@ -118,6 +136,11 @@ export function useBoundOptionMeta(
     () => { void refresh() },
     { immediate: true },
   )
+
+  bindWidgetCallback(getNode(), 'workflow', () => {
+    queueMicrotask(() => { void refresh() })
+  })
+  onNodeConfigure(getNode(), () => { void refresh() })
 
   return { metaByKey, refresh }
 }

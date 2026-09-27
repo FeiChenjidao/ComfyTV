@@ -1,4 +1,6 @@
 """Image thumbnail service + endpoint tests."""
+import os
+import time
 from pathlib import Path
 
 import pytest
@@ -134,13 +136,30 @@ class TestResolveThumb:
         assert first.stat().st_mtime_ns == mtime
 
     def test_source_change_makes_new_thumb(self, image_path, image_url):
-        import os
         from ComfyTV.runners.thumbs import resolve_thumb
         first = resolve_thumb(image_url, 512)
         st = image_path.stat()
         os.utime(image_path, ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000))
         second = resolve_thumb(image_url, 512)
         assert second != first
+
+    def test_prunes_oldest_cached_thumbs(self, tmp_path, monkeypatch):
+        from ComfyTV.runners import thumbs
+        paths = []
+        now = time.time()
+        for i in range(4):
+            path = tmp_path / f'{i}.webp'
+            path.write_bytes(b'x' * 10)
+            os.utime(path, (now + i, now + i))
+            paths.append(path)
+        monkeypatch.setattr(thumbs, 'thumb_dir', lambda: tmp_path)
+        monkeypatch.setattr(thumbs, 'THUMB_MAX_FILES', 3)
+        monkeypatch.setattr(thumbs, 'THUMB_MAX_BYTES', 30)
+
+        thumbs._prune_thumb_cache(paths[-1])
+
+        assert not paths[0].exists()
+        assert all(path.exists() for path in paths[1:])
 
 
 @pytest.fixture()
