@@ -455,22 +455,26 @@ const GENERATE_IMAGE_PRESET: ImagePreset = {
 }
 
 function makeImageActionHandlers(srcSlot: number): Record<string, SpawnHandler> {
+  const outputSlot = (src: any) => {
+    const named = findNamedOutputSlot(src, 'image')
+    return named >= 0 ? named : srcSlot
+  }
   return {
-    'generate':   src => spawnImagePreset(src, GENERATE_IMAGE_PRESET, srcSlot),
-    'panorama':   src => spawnConsumingNode(src, 'ComfyTV.PanoramaStage',   'image', srcSlot),
-    'multiangle': src => spawnConsumingNode(src, 'ComfyTV.MultiangleStage', 'image', srcSlot),
-    'relight':    src => spawnRelightPair(src, srcSlot),
-    'material':   src => spawnConsumingNode(src, 'ComfyTV.MaterialStage',   'image', srcSlot),
+    'generate':   src => spawnImagePreset(src, GENERATE_IMAGE_PRESET, outputSlot(src)),
+    'panorama':   src => spawnConsumingNode(src, 'ComfyTV.PanoramaStage',   'image', outputSlot(src)),
+    'multiangle': src => spawnConsumingNode(src, 'ComfyTV.MultiangleStage', 'image', outputSlot(src)),
+    'relight':    src => spawnRelightPair(src, outputSlot(src)),
+    'material':   src => spawnConsumingNode(src, 'ComfyTV.MaterialStage',   'image', outputSlot(src)),
     ...Object.fromEntries(
       IMAGE_VARIANT_PRESETS.map(p => [
         `preset:${p.id}`,
-        (src: any) => spawnImagePreset(src, p, srcSlot),
+        (src: any) => spawnImagePreset(src, p, outputSlot(src)),
       ]),
     ),
     ...Object.fromEntries(
       IMAGE_EDIT_PRESETS.map(p => [
         `edit:${p.id}`,
-        (src: any) => spawnImagePreset(src, p, srcSlot),
+        (src: any) => spawnImagePreset(src, p, outputSlot(src)),
       ]),
     ),
   }

@@ -1,6 +1,13 @@
 import { apiFetch, WorkflowInfoSchema } from '@/api'
 import { missingRequiredPositions } from '@/composables/stages/assetSlots'
-import { currentMediaTable, type MediaEntry, nodeAcceptsMedia } from '@/composables/stages/mediaOrder'
+import {
+  autogrowKey,
+  currentMediaTable,
+  fixedMediaSocketNames,
+  type MediaEntry,
+  namedAutogrowSocketNames,
+  nodeAcceptsMedia,
+} from '@/composables/stages/mediaOrder'
 import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
 
 export type SlotWarningStatus = 'wired_but_unused' | 'required_but_missing'
@@ -131,6 +138,10 @@ export async function validateNode(
   if (nodeAcceptsMedia(node, 'image')) {
     const required = requiredSlotsOf(entry, 'image')
     if (required.length) {
+      const imageSlots = [
+        ...fixedMediaSocketNames(node, 'image'),
+        ...namedAutogrowSocketNames(node, 'image'),
+      ]
       const count = imageEntries.filter(e =>
         e.src !== 'asset' || (e.asset_id != null && assetExists(e.asset_id))).length
       const missing = missingRequiredPositions(required, count)
@@ -140,7 +151,10 @@ export async function validateNode(
           ? `"${label}" requires an image — wire one into this slot or add an image reference.`
           : `"${label}" needs image ${idx + 1} — wire one in or add an image ` +
             `reference (${total - missing.length}/${total} ready).`
-        out[`images.image${idx}`] = { status: 'required_but_missing', message: msg }
+        out[imageSlots[idx] ?? autogrowKey('image', idx)] = {
+          status: 'required_but_missing',
+          message: msg,
+        }
       }
     }
   }

@@ -117,6 +117,10 @@ def workflow_info_payload() -> dict:
                     "requires":       {k_: False for k_ in _KINDS},
                     "required_slots": {k_: []    for k_ in _KINDS},
                     "max_inputs":     {k_: 0     for k_ in _KINDS},
+                    "uses_computed": {
+                        key: False for key in ("width", "height", "length")
+                    },
+                    "uses_options":   {},
                     "uses_mask":      False,
                 }
 

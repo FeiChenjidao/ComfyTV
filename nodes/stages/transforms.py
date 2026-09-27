@@ -56,7 +56,7 @@ class CropStage(io.ComfyNode):
                 COMFYTV_IMAGE.Input("image", optional=True),
                 _selected_index_input(),
             ],
-            outputs=[COMFYTV_IMAGES.Output("images"), COMFYTV_IMAGE.Output("image")],
+            outputs=[COMFYTV_IMAGE.Output("image"), COMFYTV_IMAGES.Output("images")],
             is_output_node=True,
             hidden=[io.Hidden.unique_id],
         )
@@ -66,7 +66,7 @@ class CropStage(io.ComfyNode):
                 crop_x=0, crop_y=0, crop_w=0, crop_h=0, crop_boxes="[]",
                 image="", selected_index=1):
         import json as _json
-        return io.NodeOutput(_json.dumps({"images": [image] if image else []}), image)
+        return io.NodeOutput(image, _json.dumps({"images": [image] if image else []}))
 
 
 class RotateStage(io.ComfyNode):

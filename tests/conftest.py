@@ -105,6 +105,9 @@ def _ensure_comfyui_stubs():
             class TemplatePrefix(_Input):
                 pass
 
+            class TemplateNames(_Input):
+                pass
+
             class Type(_Input):
                 pass
 
@@ -115,6 +118,7 @@ def _ensure_comfyui_stubs():
 
         class _Int(_Input):
             Input = _Input
+            Output = _Input
 
         class _Float(_Input):
             Input = _Input

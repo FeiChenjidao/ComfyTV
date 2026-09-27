@@ -9,7 +9,7 @@ const uploadCanvas = vi.hoisted(() => vi.fn(async (_c: unknown, opts: { filename
   `/view?filename=${opts.filename}&subfolder=comfytv/cropper&type=input`))
 
 vi.mock('@/utils/uploadCanvas', () => ({
-  uploadCanvas: (...a: unknown[]) => uploadCanvas(...a),
+  uploadCanvas: (...a: Parameters<typeof uploadCanvas>) => uploadCanvas(...a),
 }))
 
 import {

@@ -66,7 +66,7 @@ describe('lodPosterUrl', () => {
     pickedIndex: 1,
     inputs: [],
     ...partial,
-  } as Parameters<typeof lodPosterUrl>[0])
+  } as unknown as Parameters<typeof lodPosterUrl>[0])
 
   it('prefers a connected still image over split output crops', () => {
     expect(lodPosterUrl(state({

@@ -13,14 +13,6 @@ from ._common import (
 from .common.compositor_ui import compositor_layer_group, compositor_ui_from_payload
 
 
-_LAST_RUN: dict[str, tuple[tuple[int, str, str, str, str], str]] = {}
-
-
-def _node_uid(cls) -> str:
-    uid = getattr(getattr(cls, 'hidden', None), 'unique_id', None)
-    return str(uid) if uid is not None else ''
-
-
 class LayerSeparationStage(io.ComfyNode):
     """Run a workflow and expose its compositor layers as an image group."""
 
@@ -68,28 +60,14 @@ class LayerSeparationStage(io.ComfyNode):
     async def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
                       workflow="", main_prompt="", image="", compositor=None,
                       custom_params="{}"):
-        uid = _node_uid(cls)
-        run_key = (
-            int(force_run_token or 0),
-            str(workflow or ''),
-            str(main_prompt or '').strip(),
-            str(image or ''),
-            str(custom_params or '{}'),
+        payload = await invoke_runner(
+            custom_params=custom_params,
+            kind='layer-separation',
+            label=workflow,
+            main_prompt=(main_prompt or '').strip(),
+            upstream={'images': [image] if image else []},
+            options={},
         )
-        cached = _LAST_RUN.get(uid) if uid else None
-        if cached is not None and cached[0] == run_key:
-            payload = cached[1]
-        else:
-            payload = await invoke_runner(
-                custom_params=custom_params,
-                kind='layer-separation',
-                label=workflow,
-                main_prompt=(main_prompt or '').strip(),
-                upstream={'images': [image] if image else []},
-                options={},
-            )
-            if uid:
-                _LAST_RUN[uid] = (run_key, payload)
 
         layer_group = compositor_layer_group(payload)
         if not layer_group:

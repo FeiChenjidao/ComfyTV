@@ -188,7 +188,11 @@ class TestLoaderExecute:
             ],
         })
 
+        invoke_count = 0
+
         async def fake_invoke_runner(**_kwargs):
+            nonlocal invoke_count
+            invoke_count += 1
             return payload
 
         def fake_emit(cls, *, payload_str, extra_ui=None, **_kwargs):
@@ -197,14 +201,17 @@ class TestLoaderExecute:
                 ui={"output": [payload_str], **(extra_ui or {})},
             )
 
-        layer_separation._LAST_RUN.clear()
         monkeypatch.setattr(layer_separation, "invoke_runner", fake_invoke_runner)
         monkeypatch.setattr(layer_separation, "_stage_emit", fake_emit)
 
         out = asyncio.run(layer_separation.LayerSeparationStage.execute(
             workflow="Local Compositor Test (No API)",
         ))
+        asyncio.run(layer_separation.LayerSeparationStage.execute(
+            workflow="Local Compositor Test (No API)",
+        ))
 
+        assert invoke_count == 2
         assert len(out.values) == 1
         group = json.loads(out.values[0])
         assert [item["label"] for item in group["images"]] == ["Background", "Subject"]
@@ -482,11 +489,16 @@ class TestTransformStageExecute:
 
     def test_crop(self, reset_db):
         from ComfyTV.nodes.stages.edits import CropStage
+        schema = CropStage.define_schema().kw
+        assert [item.args[0] for item in schema["outputs"]] == ["image", "images"]
         out = CropStage.execute(project_id="default",
                                 image="/view?filename=a.png",
                                 crop_x=0, crop_y=0, crop_w=100, crop_h=100,
                                 crop_boxes="[]")
-        assert out.values[0]
+        assert out.values[0] == "/view?filename=a.png"
+        assert json.loads(out.values[1]) == {
+            "images": ["/view?filename=a.png"],
+        }
 
     def test_rotate(self, reset_db):
         from ComfyTV.nodes.stages.edits import RotateStage

@@ -465,6 +465,13 @@ describe('spawnFollowUpStage image handlers', () => {
     expect(src.connect).toHaveBeenCalledWith(1, created[0], 0)
   })
 
+  it('uses the named image output when a batch editor preserves legacy slot order', () => {
+    const src = makeNode()
+    src.outputs = [{ name: 'image' }, { name: 'images' }]
+    spawnFollowUpStage(src, 'image-batch', 'panorama')
+    expect(src.connect).toHaveBeenCalledWith(0, created[0], 0)
+  })
+
   it('variant preset spawns target class and seeds widgets', () => {
     const src = makeNode()
     spawnFollowUpStage(src, 'image', 'preset:face-3view')

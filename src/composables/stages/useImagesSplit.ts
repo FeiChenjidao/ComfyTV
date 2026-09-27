@@ -103,7 +103,9 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
 
   if (node) {
     const orig = node.onConfigure
-    node.onConfigure = function (info: unknown) {
+    node.onConfigure = function (
+      info: Parameters<NonNullable<LGraphNode['onConfigure']>>[0],
+    ) {
       orig?.call(this, info)
       apply(state.inputs.find(i => i.slot === 'images')?.content ?? '')
     }

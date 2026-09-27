@@ -224,7 +224,7 @@ export function bindLodPoster(
   open.addEventListener('click', (e) => {
     e.stopPropagation()
     const url = pickedMediaItem(state, source)?.url
-    if (url) openLightbox([{ url }])
+    if (url) openLightbox([{ url, kind: lightboxKind({ url }) }])
   })
   preview.appendChild(open)
   nodeScope.run(() => {

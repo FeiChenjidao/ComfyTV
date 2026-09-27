@@ -152,7 +152,12 @@ def caps_payload() -> dict:
         key = f"option:{p['key']}"
         entry = by_kind.get(kind)
         if entry is None:
-            entry = {"upstream_kinds": [], "option_keys": [], "computed_keys": []}
+            entry = {
+                "upstream_kinds": [],
+                "option_keys": [],
+                "computed_keys": [],
+                "supports_mask": False,
+            }
             by_kind[kind] = entry
         if key not in entry["option_keys"]:
             entry["option_keys"].append(key)

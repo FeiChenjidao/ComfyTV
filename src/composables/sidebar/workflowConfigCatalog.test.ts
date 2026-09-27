@@ -16,7 +16,7 @@ const { CAPS } = vi.hoisted(() => ({
       'option:batch_size': 'Stage batch size', 'option:duration_s': 'Stage duration (s)',
       'option:generate_audio': 'Stage generate audio', 'option:lyrics': 'Stage lyrics',
       'option:mask_data': 'Stage mask (painter output)', 'option:pad_left': 'Stage pad left',
-    },
+    } as Record<string, string>,
   },
 }))
 
