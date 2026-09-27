@@ -128,7 +128,7 @@ claude mcp add --transport http comfytv http://127.0.0.1:8188/comfytv/mcp
 
 画布写操作由打开着的 ComfyTV 页面执行（Comfy Desktop 或浏览器）。端点与 ComfyUI 共用同一信任边界——8188 端口的暴露请自行斟酌。搭配官方 [comfy-mcp](https://github.com/Comfy-Org/comfy-mcp) 覆盖机器层（装节点、下模型）。[指南 →](docs/mcp.zh.md)
 
-**Agent Skills** —— 可安装的 `SKILL.md` 指令包（开放的 Agent Skills 格式）,把你的方法论教给 agent。上面所有 agent 都能自动发现;在 Bot 里打 `/` 显式调用,在 Claude Code 里则是 `/mcp__comfytv__<名字>` 斜杠命令。内置一个技能：`h3-cinematic-director`,导演级的 MiniMax H3 生产方法论。[指南 →](docs/skills.zh.md)
+**Agent Skills** —— 可安装的 `SKILL.md` 指令包（开放的 Agent Skills 格式）,把你的方法论教给 agent。上面所有 agent 都能自动发现;在 Bot 里打 `/` 显式调用,在 Claude Code 里则是 `/mcp__comfytv__<名字>` 斜杠命令。内置技能覆盖头脑风暴、画布布局、H3 导演、图像图层分离、图像风格路由和视频剪辑。[指南 →](docs/skills.zh.md)
 
 ---
 

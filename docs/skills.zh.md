@@ -46,7 +46,7 @@ agent 要遵循的分步指令……
 
 用户技能与内置技能同 `name` 时,**用户版覆盖内置版**。
 
-ComfyTV 目前内置一个技能:**`h3-cinematic-director`** —— MiniMax H3 视频生产的导演级方法论:分镜设计、H3 提示词精确 schema(T2VA/I2VA/FL2VA/L2VA/Ref2VA)、一致性审片、单点修复。配合自带的 [H3 工作流](generate.zh.md#video-stage)使用。
+ComfyTV 内置头脑风暴、画布布局、H3 导演、图像图层分离、图像风格路由和视频剪辑技能。用户技能无需修改插件即可扩展或覆盖这些技能。
 
 ## 管理技能
 
