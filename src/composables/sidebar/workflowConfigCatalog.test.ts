@@ -3,11 +3,11 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 const { CAPS } = vi.hoisted(() => ({
   CAPS: {
     caps_by_kind: {
-      image:    { upstream_kinds: ['image', 'text'],          option_keys: ['option:negative', 'option:seed', 'option:batch_size'], computed_keys: ['computed:width', 'computed:height'] },
+      image:    { upstream_kinds: ['image', 'text'],          option_keys: ['option:negative', 'option:seed', 'option:batch_size', 'option:mask_data'], computed_keys: ['computed:width', 'computed:height'], supports_mask: true },
       video:    { upstream_kinds: ['image', 'video', 'text'], option_keys: ['option:negative', 'option:seed', 'option:duration_s', 'option:generate_audio'], computed_keys: ['computed:width', 'computed:height', 'computed:length'] },
       audio:    { upstream_kinds: ['text', 'audio'],          option_keys: ['option:seed', 'option:duration_s', 'option:lyrics'], computed_keys: ['computed:length'] },
-      inpaint:  { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:negative', 'option:mask_data'], computed_keys: [] },
-      erase:    { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:mask_data'], computed_keys: [] },
+      inpaint:  { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:negative', 'option:mask_data'], computed_keys: [], supports_mask: true },
+      erase:    { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:mask_data'], computed_keys: [], supports_mask: true },
       outpaint: { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:negative', 'option:pad_left'], computed_keys: [] },
     },
     fallback_caps: { upstream_kinds: ['image', 'video', 'audio', 'text'], option_keys: ['option:negative', 'option:seed', 'option:batch_size'], computed_keys: ['computed:width', 'computed:height', 'computed:length'] },
@@ -115,7 +115,7 @@ describe('buildBindingOptions', () => {
       const vals = buildBindingOptions([], kind).map(o => o.value)
       expect(vals).toContain('upstream_image:masked[0]')
     }
-    for (const kind of ['image', 'outpaint', 'video']) {
+    for (const kind of ['outpaint', 'video']) {
       const vals = buildBindingOptions([], kind).map(o => o.value)
       expect(vals).not.toContain('upstream_image:masked[0]')
     }

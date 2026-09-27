@@ -4,6 +4,7 @@ export const CapsSchema = z.object({
   upstream_kinds: z.array(z.string()),
   option_keys:    z.array(z.string()),
   computed_keys:  z.array(z.string()),
+  supports_mask:  z.boolean().optional(),
 })
 export type CapsResponse = z.infer<typeof CapsSchema>
 export const CapsPayloadSchema = z.object({

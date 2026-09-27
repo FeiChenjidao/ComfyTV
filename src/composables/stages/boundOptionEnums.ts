@@ -98,6 +98,7 @@ type BoundPayload = {
 }
 
 const cache = new Map<string, BoundPayload>()
+const syncRequestIds = new WeakMap<object, number>()
 
 /** option:<key> → configured fallback shown on the V2 panel. */
 export function defaultsFromExposedWidgets(widgets: ExposedLike[]): Record<string, string> {
@@ -389,6 +390,8 @@ export async function syncBoundOptionEnums(
   opts?: { applyDefaults?: ApplyDefaultsMode },
 ): Promise<boolean> {
   if (!node?.widgets || !kind) return false
+  const requestId = (syncRequestIds.get(node) ?? 0) + 1
+  syncRequestIds.set(node, requestId)
   const stageCombos = stageComboWidgetNames(node)
   const applyDefaults = opts?.applyDefaults ?? false
   const needsEnums = stageCombos.length > 0
@@ -397,21 +400,27 @@ export async function syncBoundOptionEnums(
   const payload = label
     ? await loadBoundOptionPayload(kind, label, stageCombos.length ? stageCombos : BOUND_OPTION_WIDGETS)
     : { enums: {}, defaults: {} }
+  const workflowWidget = node.widgets.find((w: any) => w?.name === 'workflow')
+  const currentLabel = String(workflowWidget?.value ?? '')
+  if (
+    syncRequestIds.get(node) !== requestId
+    || (workflowWidget && currentLabel !== String(label ?? ''))
+  ) return false
   let changed = false
   for (const name of stageCombos) {
     const fromEnum = payload.enums[name]
-    if (!fromEnum?.length) continue
+    const fallback = STAGE_DEFAULTS[name]
+    const next = fromEnum?.length ? fromEnum.map(String) : fallback ? [...fallback] : null
+    if (!next?.length) continue
     const w = node.widgets.find((x: any) => x?.name === name) as any
     if (!w) continue
     if (!w.options) w.options = {}
-    const next = fromEnum.map(String)
     const prev = Array.isArray(w.options.values) ? w.options.values.map(String) : []
     const listSame = prev.length === next.length && prev.every((v: string, i: number) => v === next[i])
     if (listSame) continue
     w.options.values = next
     changed = true
-    const fallback = STAGE_DEFAULTS[name] ?? next
-    const picked = pickValue(next, w.value, fallback)
+    const picked = pickValue(next, w.value, fallback ?? next)
     if (String(w.value ?? '') !== picked) {
       w.value = picked
       w.callback?.(picked)

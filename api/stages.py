@@ -48,6 +48,7 @@ def _compute_input_usage(bindings: list[dict]) -> dict:
     required_slots: dict[str, set[int]] = {k: set() for k in _KINDS}
     max_inputs: dict[str, int | None] = {k: 0 for k in _KINDS}
     uses_main_prompt = False
+    uses_mask = False
     uses_computed = {"width": False, "height": False, "length": False}
     uses_options: dict[str, bool] = {}
 
@@ -65,11 +66,15 @@ def _compute_input_usage(bindings: list[dict]) -> dict:
             key = src.split(":", 1)[1]
             if key:
                 uses_options[key] = True
+                if key == "mask_data":
+                    uses_mask = True
             continue
         m = _UPSTREAM_PAT.match(src)
         if not m:
             continue
         kind = m.group(1)
+        if kind == "image" and m.group(2) == "masked":
+            uses_mask = True
         idx = int(m.group(3)) if m.group(3) else 0
         uses[kind] = True
         if cell.get("required") is True:
@@ -90,6 +95,7 @@ def _compute_input_usage(bindings: list[dict]) -> dict:
         "max_inputs": max_inputs,
         "uses_computed": uses_computed,
         "uses_options": uses_options,
+        "uses_mask": uses_mask,
     }
 
 
@@ -111,6 +117,7 @@ def workflow_info_payload() -> dict:
                     "requires":       {k_: False for k_ in _KINDS},
                     "required_slots": {k_: []    for k_ in _KINDS},
                     "max_inputs":     {k_: 0     for k_ in _KINDS},
+                    "uses_mask":      False,
                 }
 
     return out

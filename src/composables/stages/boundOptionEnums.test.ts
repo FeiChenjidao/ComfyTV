@@ -196,7 +196,7 @@ describe('syncBoundOptionEnums', () => {
     expect(comboOptionsVersion.value).toBe(1)
   })
 
-  it('leaves Stage combo lists alone when the workflow has no matching COMBOs', async () => {
+  it('restores Stage combo lists when the workflow has no matching COMBOs', async () => {
     vi.mocked(fetchWorkflowConfig).mockResolvedValueOnce({
       id: 1,
       exposed_widgets: [],
@@ -210,8 +210,34 @@ describe('syncBoundOptionEnums', () => {
     }
 
     await syncBoundOptionEnums(node, 'image', 'Local SD')
-    expect(node.widgets[0].options.values).toEqual(['auto', '1:1'])
+    expect(node.widgets[0].options.values).toEqual([...ASPECT_RATIOS_DEFAULT])
+    expect(node.widgets[1].options.values).toEqual([...RESOLUTIONS])
+  })
+
+  it('restores defaults when switching from a bound workflow to an unbound one', async () => {
+    vi.mocked(fetchWorkflowConfig).mockImplementation(async (_kind, label) => label === 'Nano'
+      ? {
+          id: 2,
+          exposed_widgets: [{
+            stage_binding: 'option:resolution',
+            widget_type: 'COMBO',
+            widget_props: { values: ['1K', '2K'] },
+          }],
+        } as any
+      : { id: 3, exposed_widgets: [] } as any)
+
+    const node: any = {
+      widgets: [
+        { name: 'workflow', value: 'Nano' },
+        { name: 'resolution', type: 'combo', value: '1K', options: { values: [...RESOLUTIONS] }, callback: vi.fn() },
+      ],
+    }
+
+    await syncBoundOptionEnums(node, 'image', 'Nano')
     expect(node.widgets[1].options.values).toEqual(['1K', '2K'])
+    node.widgets[0].value = 'GPT'
+    await syncBoundOptionEnums(node, 'image', 'GPT')
+    expect(node.widgets[1].options.values).toEqual([...RESOLUTIONS])
   })
 
   it('syncs Stage scale from bound target_resolution (2K/4K/8K)', async () => {

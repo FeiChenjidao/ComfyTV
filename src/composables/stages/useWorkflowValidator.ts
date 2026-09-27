@@ -24,6 +24,7 @@ interface UsageEntry {
   requires:   Record<Kind, boolean>
   required_slots?: Record<Kind, number[]>
   max_inputs: Record<Kind, number | null>
+  uses_mask?: boolean
 }
 
 type WorkflowInfo = Record<string, Record<string, UsageEntry>>

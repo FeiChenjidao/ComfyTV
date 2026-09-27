@@ -196,6 +196,7 @@ export interface Caps {
   upstream_kinds: UpstreamKind[]
   option_keys:    string[]
   computed_keys:  string[]
+  supports_mask?: boolean
 }
 
 export const STAGE_COMPUTED_LABELS: Record<string, string> = {
@@ -309,7 +310,7 @@ export function buildBindingOptions(
         `${label} ${i + 1}`,
       )
     }
-    if (ukind === 'image' && caps.option_keys.includes('option:mask_data')) {
+    if (ukind === 'image' && caps.supports_mask) {
       pushOpt(
         'upstream_image:masked[0]',
         'Upstream image + painted mask (alpha)',

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { compositorUiFromLayerGroup } from './layerSeparationPayload'
+import {
+  compositorUiFromLayerGroup,
+  compositorUiFromPersisted,
+} from './layerSeparationPayload'
 
 describe('compositorUiFromLayerGroup', () => {
   it('restores the official compositor preview from a layer group', () => {
@@ -31,5 +34,23 @@ describe('compositorUiFromLayerGroup', () => {
   it('rejects payloads without compositor layers', () => {
     expect(compositorUiFromLayerGroup('{"images":[]}')).toBeNull()
     expect(compositorUiFromLayerGroup('/view?filename=image.png')).toBeNull()
+  })
+
+  it('restores the saved compositor UI including its preview', () => {
+    const ui = compositorUiFromPersisted({
+      images: [{ filename: 'composite.png', subfolder: 'layers', type: 'output' }],
+      compositor_layers: [
+        { filename: 'background.png', subfolder: 'layers', type: 'output' },
+      ],
+      compositor_inputs: ['a'],
+    })
+
+    expect(ui).toEqual({
+      images: [{ filename: 'composite.png', subfolder: 'layers', type: 'output' }],
+      compositor_layers: [
+        { filename: 'background.png', subfolder: 'layers', type: 'output' },
+      ],
+      compositor_inputs: ['a'],
+    })
   })
 })

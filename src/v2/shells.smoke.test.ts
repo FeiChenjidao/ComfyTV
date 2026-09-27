@@ -605,32 +605,35 @@ describe('V2 shell smoke', () => {
     const afterDrag = node.size[1]
     expect(afterDrag).toBeGreaterThan(200)
 
-    // Select → must not re-add the full panel stack on top of a flex-swollen wanted.
+    // Select: the panel changes total height, not the persisted preview height.
     panelH = 180
     panel.style.removeProperty('display')
     node.selected = true
     root.setAttribute('data-v2-selected', '')
     sync()
-    expect(node.size[1]).toBeLessThan(afterDrag + 40)
-    expect(node.size[1]).toBeGreaterThan(afterDrag - 40)
+    expect(node.size[1]).toBe(afterDrag + panelH)
+    expect(node.properties.v2_preview_height).toBe(PREVIEW)
 
     panelH = 0
     panel.style.setProperty('display', 'none', 'important')
     node.selected = false
     root.removeAttribute('data-v2-selected')
     sync()
-    expect(node.size[1]).toBeLessThan(afterDrag + 40)
-    expect(node.size[1]).toBeGreaterThan(afterDrag - 40)
+    expect(node.size[1]).toBe(afterDrag)
+    expect(node.properties.v2_preview_height).toBe(PREVIEW)
 
     root.remove()
     document.body.removeAttribute('data-v2-panel-on-select')
     node.onRemoved?.()
   })
 
-  it('manageHeight tab remount does not inflate when goLive fires while panel is hidden', () => {
+  it('manageHeight tab remount restores preview height separately from the hidden panel', () => {
     document.body.setAttribute('data-v2-panel-on-select', '')
+    const PANEL = 200
+    const PREVIEW = 300
     const node = makeNode('ComfyTV.Model3DStage')
     node.selected = false
+    node.properties.v2_preview_height = PREVIEW
     node.setSize([320, 500])
     V2_SHELLS['ComfyTV.Model3DStage'](node as any, 'model', 'generator')
     const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
@@ -640,8 +643,6 @@ describe('V2 shell smoke', () => {
     root.appendChild(card)
     document.body.appendChild(root)
 
-    const PANEL = 200
-    const PREVIEW = 300
     const preview = card.querySelector('.v2-preview') as HTMLElement
     const panel = card.querySelector('.v2-panel') as HTMLElement
     let panelVisible = false
@@ -664,17 +665,17 @@ describe('V2 shell smoke', () => {
     node.onConnectionsChange?.(1, 0, true, null, null)
     sync()
     const afterRemount = node.size[1]
-    expect(afterRemount).toBeGreaterThan(450)
-    expect(afterRemount).toBeLessThan(520)
+    expect(Math.abs(afterRemount - PREVIEW)).toBeLessThan(20)
+    expect(node.properties.v2_preview_height).toBe(PREVIEW)
 
-    // Select must not stack panel height on top of a flex-swollen wanted.
+    // Selecting adds only the panel; the preview remains at its restored height.
     panelVisible = true
     panel.style.removeProperty('display')
     node.selected = true
     root.setAttribute('data-v2-selected', '')
     sync()
-    expect(Math.abs(node.size[1] - afterRemount)).toBeLessThan(20)
-    expect(node.size[1]).toBeLessThan(500 + PANEL)
+    expect(node.size[1]).toBe(afterRemount + PANEL)
+    expect(node.properties.v2_preview_height).toBe(PREVIEW)
 
     const shell = node.widgets.find((w: any) => w.name === 'v2_shell')
     expect(shell.options.getMinHeight()).toBe(Math.max(170, Math.round(node.size[1])))
@@ -726,6 +727,36 @@ describe('V2 shell smoke', () => {
       expect(await stackFor(5), cls).toBe('2')
       node.onRemoved?.()
     }
+  })
+
+  it('keeps the saved picker index when the upstream batch is first restored', async () => {
+    const batch = (prefix: string) => JSON.stringify({
+      images: Array.from({ length: 3 }, (_, i) => ({
+        index: String(i + 1),
+        image_url: `/view?filename=${prefix}-${i + 1}.png`,
+      })),
+    })
+    const node = makeNode('ComfyTV.ImagePickerStage')
+    node.graph = { links: {}, getNodeById: () => undefined }
+    node.widgets.push({ name: 'append_results', value: false })
+    const api = V2_SHELLS['ComfyTV.ImagePickerStage'](node as any, 'image-picker', 'generator')!
+    const selected = node.widgets.find((w: any) => w.name === 'selected_index')
+    const pool = node.widgets.find((w: any) => w.name === 'pool')
+    selected.value = 3
+    pool.value = batch('saved')
+    node.onConfigure?.({})
+    await nextTick()
+
+    api.state.inputs = [{ slot: 'batch', type: 'COMFYTV_IMAGES', source: 'upstream', content: batch('restored') }]
+    await nextTick()
+    expect(api.state.pickedIndex).toBe(3)
+    expect(selected.value).toBe(3)
+
+    api.state.inputs = [{ slot: 'batch', type: 'COMFYTV_IMAGES', source: 'upstream', content: batch('new') }]
+    await nextTick()
+    expect(api.state.pickedIndex).toBe(1)
+    expect(selected.value).toBe(1)
+    node.onRemoved?.()
   })
 
   for (const [cls, attach] of shellEntries) {

@@ -16073,7 +16073,8 @@ const WorkflowUsageEntrySchema = object({
   required_slots: record(string(), array(number$1())).optional(),
   max_inputs: record(string(), number$1().nullable()),
   uses_computed: record(string(), boolean()).optional(),
-  uses_options: record(string(), boolean()).optional()
+  uses_options: record(string(), boolean()).optional(),
+  uses_mask: boolean().optional()
 });
 const WorkflowInfoSchema = record(
   string(),
@@ -16118,7 +16119,8 @@ const StageDefaultsSchema = object({
 const CapsSchema = object({
   upstream_kinds: array(string()),
   option_keys: array(string()),
-  computed_keys: array(string())
+  computed_keys: array(string()),
+  supports_mask: boolean().optional()
 });
 const CapsPayloadSchema = object({
   caps_by_kind: record(string(), CapsSchema),
@@ -58996,7 +58998,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-Bj6gX_dz.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module--M2NOHu6.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -83882,7 +83884,7 @@ function buildBindingOptions(widgets, workflowKind, forWidget) {
         `${label} ${i + 1}`
       );
     }
-    if (ukind === "image" && caps.option_keys.includes("option:mask_data")) {
+    if (ukind === "image" && caps.supports_mask) {
       pushOpt(
         "upstream_image:masked[0]",
         "Upstream image + painted mask (alpha)"
@@ -84718,6 +84720,7 @@ const LEAF_TO_OPTION_KEY = {
   texture_alignment: "texture_alignment"
 };
 const cache$2 = /* @__PURE__ */ new Map();
+const syncRequestIds = /* @__PURE__ */ new WeakMap();
 function defaultsFromExposedWidgets(widgets) {
   const out = {};
   for (const w2 of widgets) {
@@ -84942,27 +84945,32 @@ function pickValue(next, current, fallback) {
 async function syncBoundOptionEnums(node, kind, label, opts) {
   var _a3;
   if (!(node == null ? void 0 : node.widgets) || !kind) return false;
+  const requestId = (syncRequestIds.get(node) ?? 0) + 1;
+  syncRequestIds.set(node, requestId);
   const stageCombos = stageComboWidgetNames(node);
   const applyDefaults = (opts == null ? void 0 : opts.applyDefaults) ?? false;
   const needsEnums = stageCombos.length > 0;
   const needsDefaults = !!applyDefaults;
   if (!needsEnums && !needsDefaults) return false;
   const payload = label ? await loadBoundOptionPayload(kind, label, stageCombos.length ? stageCombos : BOUND_OPTION_WIDGETS) : { enums: {}, defaults: {} };
+  const workflowWidget = node.widgets.find((w2) => (w2 == null ? void 0 : w2.name) === "workflow");
+  const currentLabel = String((workflowWidget == null ? void 0 : workflowWidget.value) ?? "");
+  if (syncRequestIds.get(node) !== requestId || workflowWidget && currentLabel !== String(label ?? "")) return false;
   let changed = false;
   for (const name of stageCombos) {
     const fromEnum = payload.enums[name];
-    if (!(fromEnum == null ? void 0 : fromEnum.length)) continue;
+    const fallback = STAGE_DEFAULTS[name];
+    const next = (fromEnum == null ? void 0 : fromEnum.length) ? fromEnum.map(String) : fallback ? [...fallback] : null;
+    if (!(next == null ? void 0 : next.length)) continue;
     const w2 = node.widgets.find((x) => (x == null ? void 0 : x.name) === name);
     if (!w2) continue;
     if (!w2.options) w2.options = {};
-    const next = fromEnum.map(String);
     const prev = Array.isArray(w2.options.values) ? w2.options.values.map(String) : [];
     const listSame = prev.length === next.length && prev.every((v3, i) => v3 === next[i]);
     if (listSame) continue;
     w2.options.values = next;
     changed = true;
-    const fallback = STAGE_DEFAULTS[name] ?? next;
-    const picked = pickValue(next, w2.value, fallback);
+    const picked = pickValue(next, w2.value, fallback ?? next);
     if (String(w2.value ?? "") !== picked) {
       w2.value = picked;
       (_a3 = w2.callback) == null ? void 0 : _a3.call(w2, picked);
@@ -112650,26 +112658,37 @@ const _sfc_main$4f = /* @__PURE__ */ defineComponent({
 });
 function useBoundOptionKeys(getNode2, workflowKind) {
   const keys2 = /* @__PURE__ */ ref(/* @__PURE__ */ new Set());
+  let refreshId = 0;
+  let activeIdentity = "";
   function kindOf() {
     const k2 = typeof workflowKind === "function" ? workflowKind() : workflowKind.value;
     return k2 == null ? "" : String(k2);
   }
   async function refresh() {
-    var _a3, _b2, _c;
+    var _a3, _b2, _c, _d;
+    const currentRefreshId = ++refreshId;
     const kind = kindOf();
     const label = String(((_a3 = getWidget(getNode2(), "workflow")) == null ? void 0 : _a3.value) ?? "");
     if (!kind || !label) {
+      activeIdentity = "";
       keys2.value = /* @__PURE__ */ new Set();
       return;
+    }
+    const identity = `${kind}:${label}`;
+    if (identity !== activeIdentity) {
+      activeIdentity = identity;
+      keys2.value = /* @__PURE__ */ new Set();
     }
     try {
       const info = await loadWorkflowInfo();
       const opts = ((_c = (_b2 = info == null ? void 0 : info[kind]) == null ? void 0 : _b2[label]) == null ? void 0 : _c.uses_options) ?? {};
+      const currentLabel = String(((_d = getWidget(getNode2(), "workflow")) == null ? void 0 : _d.value) ?? "");
+      if (currentRefreshId !== refreshId || currentLabel !== label || kind !== kindOf()) return;
       keys2.value = new Set(
         Object.entries(opts).filter(([, on]) => on).map(([k2]) => k2)
       );
     } catch {
-      keys2.value = /* @__PURE__ */ new Set();
+      if (currentRefreshId === refreshId) keys2.value = /* @__PURE__ */ new Set();
     }
   }
   watch(
@@ -112686,6 +112705,14 @@ function useBoundOptionKeys(getNode2, workflowKind) {
     },
     { immediate: true }
   );
+  bindWidgetCallback(getNode2(), "workflow", () => {
+    queueMicrotask(() => {
+      void refresh();
+    });
+  });
+  onNodeConfigure(getNode2(), () => {
+    void refresh();
+  });
   return {
     keys: keys2,
     isBound: (name) => keys2.value.has(name),
@@ -112731,17 +112758,29 @@ function useBoundOptionMeta(getNode2, workflowKind) {
     const k2 = typeof workflowKind === "function" ? workflowKind() : workflowKind.value;
     return k2 == null ? "" : String(k2);
   }
+  let refreshId = 0;
+  let activeRequest = "";
   async function refresh() {
-    var _a3;
+    var _a3, _b2;
+    const currentRefreshId = ++refreshId;
     const kind = kindOf();
     const label = String(((_a3 = getWidget(getNode2(), "workflow")) == null ? void 0 : _a3.value) ?? "");
     const keys2 = boundKeys.value;
+    const keySignature = [...keys2].sort().join("\0");
+    const request = `${kind}:${label}:${keySignature}`;
+    if (request !== activeRequest) {
+      activeRequest = request;
+      metaByKey.value = /* @__PURE__ */ new Map();
+    }
     if (!kind || !label || keys2.size === 0) {
       metaByKey.value = /* @__PURE__ */ new Map();
       return;
     }
     try {
       const cfg = await fetchWorkflowConfig(kind, label);
+      const currentLabel = String(((_b2 = getWidget(getNode2(), "workflow")) == null ? void 0 : _b2.value) ?? "");
+      const currentKeys = [...boundKeys.value].sort().join("\0");
+      if (currentRefreshId !== refreshId || currentLabel !== label || kind !== kindOf() || currentKeys !== keySignature) return;
       const next = /* @__PURE__ */ new Map();
       for (const w2 of cfg.exposed_widgets ?? []) {
         const binding = w2.stage_binding;
@@ -112752,7 +112791,7 @@ function useBoundOptionMeta(getNode2, workflowKind) {
       }
       metaByKey.value = next;
     } catch {
-      metaByKey.value = /* @__PURE__ */ new Map();
+      if (currentRefreshId === refreshId) metaByKey.value = /* @__PURE__ */ new Map();
     }
   }
   watch(
@@ -112770,6 +112809,14 @@ function useBoundOptionMeta(getNode2, workflowKind) {
     },
     { immediate: true }
   );
+  bindWidgetCallback(getNode2(), "workflow", () => {
+    queueMicrotask(() => {
+      void refresh();
+    });
+  });
+  onNodeConfigure(getNode2(), () => {
+    void refresh();
+  });
   return { metaByKey, refresh };
 }
 function parseParamItems(raw) {
@@ -145479,7 +145526,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-D_R3aGAI.mjs");
+    const { STLLoader } = await import("./STLLoader-BLlhISc6.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -145487,7 +145534,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-DAUhEU4C.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-B5-miMyy.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -232853,20 +232900,28 @@ function bindStageWidgets(opts) {
     if (isPoolPickerKind(kind) || kind === "image-batch") {
       const idxWidget = (_b2 = node.widgets) == null ? void 0 : _b2.find((w2) => w2.name === "selected_index");
       if (idxWidget) {
-        const initial = Number(idxWidget.value);
-        const safe = Number.isFinite(initial) && initial >= 1 ? Math.floor(initial) : 1;
-        if (idxWidget.value !== safe) idxWidget.value = safe;
-        state2.pickedIndex = safe;
+        const syncPickedIndex = () => {
+          const value = Number(idxWidget.value);
+          const safe = Number.isFinite(value) && value >= 1 ? Math.floor(value) : 1;
+          if (idxWidget.value !== safe) idxWidget.value = safe;
+          state2.pickedIndex = safe;
+        };
+        syncPickedIndex();
         idxWidget.callback = useChainCallback(idxWidget.callback, () => {
           const idx = Number(idxWidget.value) || 1;
           if (idx === state2.pickedIndex) return;
           applyPickedIndex(idx);
         });
+        node.onConfigure = useChainCallback(node.onConfigure, syncPickedIndex);
       }
     }
     if (isPoolPickerKind(kind)) {
       const poolWidget = (_c = node.widgets) == null ? void 0 : _c.find((w2) => w2.name === "pool");
-      state2.pool = poolWidget ? String(poolWidget.value ?? "") || null : null;
+      const syncPool = () => {
+        state2.pool = poolWidget ? String(poolWidget.value ?? "") || null : null;
+      };
+      syncPool();
+      node.onConfigure = useChainCallback(node.onConfigure, syncPool);
     }
     return;
   }
@@ -232969,6 +233024,38 @@ function useStageNode(node, kind, variant = "generator") {
   let _prepUnsub = null;
   const meta = getStageMeta(node.comfyClass);
   const workflowKind = (meta == null ? void 0 : meta.workflow_kind) || null;
+  function syncMaskInput() {
+    var _a4, _b2, _c;
+    if (workflowKind !== "image") return;
+    const input = (_a4 = node.inputs) == null ? void 0 : _a4.find((item) => item.name === "mask");
+    if (!input) return;
+    const wfWidget = (_b2 = node.widgets) == null ? void 0 : _b2.find((w2) => w2.name === "workflow");
+    const label = wfWidget ? String(wfWidget.value ?? "") : "";
+    if (!label) {
+      input.hidden = input.link == null;
+      (_c = node.setDirtyCanvas) == null ? void 0 : _c.call(node, true, true);
+      return;
+    }
+    void loadWorkflowInfo().then((info) => {
+      var _a5, _b3, _c3, _d;
+      const entry = (_a5 = info[workflowKind]) == null ? void 0 : _a5[label];
+      if (!entry) {
+        input.hidden = input.link == null;
+        (_b3 = node.setDirtyCanvas) == null ? void 0 : _b3.call(node, true, true);
+        return;
+      }
+      const usesMask = Boolean(entry.uses_mask);
+      if (!usesMask && input.link != null) {
+        const inputIndex = node.inputs.indexOf(input);
+        (_c3 = node.disconnectInput) == null ? void 0 : _c3.call(node, inputIndex);
+      }
+      const hidden = usesMask ? false : true;
+      if (input.hidden !== hidden) {
+        input.hidden = hidden;
+        (_d = node.setDirtyCanvas) == null ? void 0 : _d.call(node, true, true);
+      }
+    });
+  }
   let _applyDefaults = "all";
   function syncOptionEnums() {
     var _a4;
@@ -233006,6 +233093,7 @@ function useStageNode(node, kind, variant = "generator") {
         if (label) clearBoundOptionEnumsCache(workflowKind, label);
       }
       if (variant === "generator") {
+        queueMicrotask(syncMaskInput);
         queueMicrotask(reValidate);
         queueMicrotask(syncOptionEnums);
       }
@@ -233017,6 +233105,7 @@ function useStageNode(node, kind, variant = "generator") {
       const selectionStore = useSelectionStore();
       wfWidget.callback = useChainCallback(wfWidget.callback, () => {
         _applyDefaults = "all";
+        queueMicrotask(syncMaskInput);
         queueMicrotask(reValidate);
         queueMicrotask(triggerPrepForCurrentWorkflow);
         queueMicrotask(() => selectionStore.refreshFromCanvas());
@@ -233033,19 +233122,23 @@ function useStageNode(node, kind, variant = "generator") {
   onNodeConfigure(node, () => {
     _applyDefaults = false;
     queueMicrotask(syncMedia);
+    if (variant === "generator") queueMicrotask(syncMaskInput);
   });
   node.onConnectionsChange = useChainCallback(node.onConnectionsChange, () => {
     queueMicrotask(syncMedia);
     queueMicrotask(refresh);
+    if (variant === "generator") queueMicrotask(syncMaskInput);
     queueMicrotask(() => store2.notifyConsumers(state2));
     if (variant === "generator") queueMicrotask(reValidate);
   });
   node.onConnectInput = useChainCallback(node.onConnectInput, () => {
     queueMicrotask(syncMedia);
     queueMicrotask(refresh);
+    if (variant === "generator") queueMicrotask(syncMaskInput);
   });
   queueMicrotask(syncMedia);
   queueMicrotask(refresh);
+  if (variant === "generator") queueMicrotask(syncMaskInput);
   if (variant === "generator") queueMicrotask(reValidate);
   const stopTickWatch = watch(
     () => store2.stateTick,
@@ -233054,6 +233147,7 @@ function useStageNode(node, kind, variant = "generator") {
     }
   );
   let lastMergedBatch = "";
+  let pickerHydrated = false;
   const stopPickerWatch = isPoolPickerKind(kind) ? watch(
     () => {
       const inp = state2.inputs.find((i) => i.slot === "batch");
@@ -233063,6 +233157,8 @@ function useStageNode(node, kind, variant = "generator") {
       var _a4;
       const inp = state2.inputs.find((i) => i.slot === "batch");
       if (inp && inp.source === "upstream" && inp.content && inp.content !== lastMergedBatch) {
+        const restoring = !pickerHydrated;
+        pickerHydrated = true;
         lastMergedBatch = inp.content;
         const appendW = (_a4 = node.widgets) == null ? void 0 : _a4.find((w2) => w2.name === "append_results");
         const append3 = !appendW || appendW.value !== false;
@@ -233070,7 +233166,7 @@ function useStageNode(node, kind, variant = "generator") {
         const merged = nextPickerPool(state2.pool, toImagePoolJson(inp.content), append3);
         store2.setPickerPool(node, state2, merged);
         const added = imagePoolCount(merged) - before;
-        if (!append3 || added > 0) {
+        if (!restoring && (!append3 || added > 0)) {
           state2.pickedIndex = 1;
           setWidget(node, "selected_index", 1);
         }
@@ -234617,6 +234713,7 @@ function installWorkflowRegistrySync(app2) {
   return true;
 }
 const RING_FADE_MS = 400;
+const PREVIEW_HEIGHT_PROP = "v2_preview_height";
 const I = (d2, sw = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}">${d2}</svg>`;
 const ICON_STOP = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>`;
 const RUN_BUTTON_HTML = `<span class="v2-run__up">${I(`<path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/>`, 2.4)}</span><span class="v2-run__stop">${ICON_STOP}</span>`;
@@ -234637,74 +234734,82 @@ function stopNativeAutoGrow(node) {
   node.computeSize = () => [node.size[0], node.size[1]];
 }
 function bindCardHeight(node, opts) {
+  var _a3;
   const anyNode = node;
   const { card, flexible, min: min2 } = opts;
   const laidOut = () => card.offsetHeight > 0;
   const measurable = () => laidOut() && flexible.offsetHeight > 0;
   const chromeOf = () => card.offsetHeight - flexible.offsetHeight;
-  const effectiveChrome = () => {
-    let c2 = chromeOf();
-    if (isPanelOnSelectEnabled() && !anyNode.selected) {
-      const panelH = measurePanelStackHeight(card);
-      if (panelH > 0) c2 += panelH;
-    }
-    return c2;
-  };
-  const effectiveWanted = () => {
-    let w2 = Math.max(min2, flexible.offsetHeight);
-    if (isPanelOnSelectEnabled() && !anyNode.selected) {
-      const panelH = measurePanelStackHeight(card);
-      if (panelH > 0 && w2 > panelH) w2 -= panelH;
-    }
-    return Math.max(min2, w2);
-  };
   let chrome2 = -1;
   let applied = -1;
-  let wanted = 0;
+  const stored = Number((_a3 = anyNode.properties) == null ? void 0 : _a3[PREVIEW_HEIGHT_PROP]);
+  let hasStoredWanted = Number.isFinite(stored) && stored >= min2;
+  let wanted = hasStoredWanted ? Math.max(min2, Math.round(stored)) : 0;
   let offset2 = 0;
   let live = false;
-  const sample2 = () => {
-    chrome2 = effectiveChrome();
-    offset2 = card.offsetHeight - node.size[1];
-    wanted = effectiveWanted();
-    applied = node.size[1];
+  const rememberWanted = (height) => {
+    wanted = Math.max(min2, Math.round(height));
+    (anyNode.properties ?? (anyNode.properties = {}))[PREVIEW_HEIGHT_PROP] = wanted;
+    hasStoredWanted = true;
   };
-  const goLive = () => {
-    if (live || !measurable()) return;
+  const initialWanted = () => {
+    if (hasStoredWanted) return wanted;
+    let height = flexible.offsetHeight;
+    if (isPanelOnSelectEnabled() && !anyNode.selected) {
+      const panelH = measurePanelStackHeight(card);
+      if (panelH <= 0) return null;
+      const withoutPanel = height - panelH;
+      if (withoutPanel >= min2) height = withoutPanel;
+    }
+    return Math.max(min2, height);
+  };
+  const sample2 = (initial) => {
+    const height = initial ? initialWanted() : Math.max(min2, flexible.offsetHeight);
+    if (height == null) return false;
+    chrome2 = chromeOf();
+    offset2 = card.offsetHeight - node.size[1];
+    rememberWanted(height);
+    applied = node.size[1];
+    return true;
+  };
+  const activate = () => {
+    if (live) return true;
+    if (!measurable() || !sample2(true)) return false;
     live = true;
-    sample2();
+    return true;
   };
   const apply2 = () => {
-    var _a3, _b2;
-    goLive();
-    if (!live || !laidOut()) return;
-    chrome2 = effectiveChrome();
+    var _a4, _b2;
+    if (!activate() || !laidOut()) return;
+    chrome2 = chromeOf();
     const h2 = chrome2 + wanted - offset2;
     applied = h2;
     if (Math.abs(h2 - node.size[1]) < 1) return;
     node.setSize([node.size[0], h2]);
-    (_b2 = (_a3 = app.graph) == null ? void 0 : _a3.setDirtyCanvas) == null ? void 0 : _b2.call(_a3, true, true);
+    (_b2 = (_a4 = app.graph) == null ? void 0 : _a4.setDirtyCanvas) == null ? void 0 : _b2.call(_a4, true, true);
   };
   card.dataset.v2Height = "1";
-  card.addEventListener("pointerdown", goLive, { capture: true });
+  card.addEventListener("pointerdown", apply2, { capture: true });
   const prevConn = anyNode.onConnectionsChange;
   anyNode.onConnectionsChange = function(...args) {
-    goLive();
+    apply2();
     return prevConn == null ? void 0 : prevConn.apply(this, args);
   };
   opts.scope.run(() => {
     const onResize = () => {
       if (!laidOut()) return;
       if (!live) {
-        chrome2 = effectiveChrome();
+        if (hasStoredWanted) apply2();
+        else chrome2 = chromeOf();
         return;
       }
-      if (effectiveChrome() !== chrome2) apply2();
-      else if (measurable() && Math.abs(node.size[1] - applied) >= 1) sample2();
+      if (chromeOf() !== chrome2) apply2();
+      else if (measurable() && Math.abs(node.size[1] - applied) >= 1) sample2(false);
     };
     useResizeObserver(card, onResize);
     useResizeObserver(flexible, onResize);
   });
+  if (hasStoredWanted) requestAnimationFrame(() => requestAnimationFrame(apply2));
   return apply2;
 }
 function bindPromptResize(node, promptAnchor, scope2) {
@@ -244385,6 +244490,16 @@ V2_SHELLS["ComfyTV.ImageVariationsStage"] = makeImageBatchShell({
   linkKind: "multiview",
   footerExtra: [{ name: "variant_count", type: "number", titleKey: "v2.ctl.variantCount" }]
 });
+function parseObject(value) {
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
 function imageRef(value) {
   if (!value || typeof value !== "object") return null;
   const ref2 = value;
@@ -244395,25 +244510,32 @@ function imageRef(value) {
     type: String(ref2.type || "output")
   };
 }
-function compositorUiFromLayerGroup(raw) {
-  if (!(raw == null ? void 0 : raw.trimStart().startsWith("{"))) return null;
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    return null;
-  }
+function compositorUiFromObject(data, includeImages) {
   const layers2 = Array.isArray(data.compositor_layers) ? data.compositor_layers.map(imageRef).filter((ref2) => ref2 !== null) : [];
   if (!layers2.length) return null;
   const ui = { compositor_layers: layers2 };
   const preview = imageRef(data.compositor_preview);
   if (preview) ui.images = [preview];
+  else if (includeImages && Array.isArray(data.images)) {
+    const images = data.images.map(imageRef).filter((ref2) => ref2 !== null);
+    if (images.length) ui.images = images;
+  }
   for (const key of ["compositor_inputs", "compositor_bboxes", "compositor_canvas"]) {
     if (Array.isArray(data[key])) ui[key] = data[key];
   }
   return ui;
 }
+function compositorUiFromLayerGroup(raw) {
+  if (!(raw == null ? void 0 : raw.trimStart().startsWith("{"))) return null;
+  const data = parseObject(raw);
+  return data ? compositorUiFromObject(data, false) : null;
+}
+function compositorUiFromPersisted(value) {
+  const data = parseObject(value);
+  return data ? compositorUiFromObject(data, true) : null;
+}
 const ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="14" height="10" rx="1.5"/><rect x="6" y="9" width="14" height="10" rx="1.5"/><path d="M9 13h8"/></svg>`;
+const COMPOSITOR_STATE_PROP = "comfytv_layer_separation_compositor";
 function el$8(tag, cls, html2) {
   const e = document.createElement(tag);
   e.className = cls;
@@ -244441,6 +244563,55 @@ function installOfficialCompositor(node) {
     if (ownConstructor) Object.defineProperty(anyNode, "constructor", ownConstructor);
     else delete anyNode.constructor;
   }
+}
+function saveCompositorUi(node, ui) {
+  var _a3, _b2, _c;
+  const anyNode = node;
+  const saved = JSON.parse(JSON.stringify(ui));
+  if (JSON.stringify((_a3 = anyNode.properties) == null ? void 0 : _a3[COMPOSITOR_STATE_PROP]) === JSON.stringify(saved)) return;
+  anyNode.properties = anyNode.properties ?? {};
+  anyNode.properties[COMPOSITOR_STATE_PROP] = saved;
+  (_c = (_b2 = anyNode.graph) == null ? void 0 : _b2.change) == null ? void 0 : _c.call(_b2);
+}
+function restoreCompositorUi(node) {
+  var _a3, _b2;
+  const anyNode = node;
+  const ui = compositorUiFromPersisted((_a3 = anyNode.properties) == null ? void 0 : _a3[COMPOSITOR_STATE_PROP]);
+  if (ui) (_b2 = anyNode.onExecuted) == null ? void 0 : _b2.call(anyNode, ui);
+}
+function compositorPreviewUrl(ui) {
+  const preview = Array.isArray(ui.images) ? ui.images[0] : null;
+  if (!preview || typeof preview !== "object") return null;
+  const ref2 = preview;
+  if (!ref2.filename) return null;
+  const query = new URLSearchParams({
+    filename: String(ref2.filename),
+    subfolder: String(ref2.subfolder ?? ""),
+    type: String(ref2.type || "output")
+  });
+  return `/view?${query.toString()}`;
+}
+function showCompositorPreviewFallback(anchor2, ui) {
+  const area2 = anchor2.querySelector('[data-testid="compositor-preview-area"]');
+  if (!area2) return;
+  const native = area2.querySelector('[data-testid="compositor-preview"]');
+  const fallback = area2.querySelector(".comfytv-compositor-preview-fallback");
+  if (native) {
+    if (fallback) fallback.hidden = true;
+    return;
+  }
+  const src = compositorPreviewUrl(ui);
+  if (!src) return;
+  const image = fallback ?? document.createElement("img");
+  image.className = "comfytv-compositor-preview-fallback";
+  image.src = src;
+  image.alt = "";
+  image.draggable = false;
+  image.hidden = false;
+  image.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;";
+  if (!fallback) area2.appendChild(image);
+  const empty2 = area2.querySelector('[data-testid="compositor-empty"]');
+  if (empty2) empty2.hidden = true;
 }
 function attach$5(node, kind, variant) {
   installV2ShellCss();
@@ -244477,12 +244648,22 @@ function attach$5(node, kind, variant) {
   const scope2 = createNodeScope(node);
   scope2.run(() => bindProgressRing(card, stageState));
   scope2.run(() => {
+    let restored = false;
     watch(
       () => stageState.output,
       (raw) => {
-        var _a3;
+        var _a3, _b2;
         const ui = compositorUiFromLayerGroup(raw);
-        if (ui) (_a3 = anyNode.onExecuted) == null ? void 0 : _a3.call(anyNode, ui);
+        if (ui) {
+          saveCompositorUi(node, ui);
+          (_a3 = anyNode.onExecuted) == null ? void 0 : _a3.call(anyNode, ui);
+          queueMicrotask(() => showCompositorPreviewFallback(compositorAnchor, ui));
+        } else if (!restored) {
+          restored = true;
+          restoreCompositorUi(node);
+          const saved = compositorUiFromPersisted((_b2 = anyNode.properties) == null ? void 0 : _b2[COMPOSITOR_STATE_PROP]);
+          if (saved) queueMicrotask(() => showCompositorPreviewFallback(compositorAnchor, saved));
+        }
       },
       { immediate: true }
     );
@@ -244491,6 +244672,7 @@ function attach$5(node, kind, variant) {
     let observer2 = null;
     let frame = 0;
     const attachCompositor = () => {
+      var _a3;
       const root = card.closest(".lg-node");
       if (!root) {
         frame = requestAnimationFrame(attachCompositor);
@@ -244501,7 +244683,14 @@ function attach$5(node, kind, variant) {
         observer2.observe(root, { childList: true, subtree: true });
       }
       const widget = Array.from(root.querySelectorAll(".lg-node-widget")).find((el2) => !el2.contains(compositorAnchor) && el2.querySelector('[data-testid="compositor-open-button"]'));
-      if (widget && widget.parentElement !== compositorAnchor) compositorAnchor.appendChild(widget);
+      if (widget) {
+        if (widget.parentElement !== compositorAnchor) compositorAnchor.appendChild(widget);
+        const saved = compositorUiFromPersisted((_a3 = anyNode.properties) == null ? void 0 : _a3[COMPOSITOR_STATE_PROP]);
+        if (saved) {
+          restoreCompositorUi(node);
+          showCompositorPreviewFallback(compositorAnchor, saved);
+        }
+      }
     };
     frame = requestAnimationFrame(attachCompositor);
     onScopeDispose(() => {
@@ -244534,6 +244723,7 @@ function attach$5(node, kind, variant) {
   const prevConfigure = anyNode.onConfigure;
   anyNode.onConfigure = function(...args) {
     prevConfigure == null ? void 0 : prevConfigure.apply(this, args);
+    restoreCompositorUi(this);
     queueMicrotask(mountApps);
   };
   scope2.run(() => {
@@ -251813,4 +252003,4 @@ export {
   LinearFilter as y,
   LinearMipMapLinearFilter as z
 };
-//# sourceMappingURL=main-BnAZrNRg.mjs.map
+//# sourceMappingURL=main-BoMPKPOa.mjs.map

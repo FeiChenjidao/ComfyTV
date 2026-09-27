@@ -801,6 +801,8 @@ class TestAutoPruneUnbound:
             "MiniMaxH3ReferenceToVideo": _stub_class(required=("prompt",)),
             "SaveVideo": _stub_class(required=("video",), output=True),
             "LoadImage": _stub_class(required=("image",)),
+            "LoadImageMask": _stub_class(required=("image",)),
+            "OpenAIGPTImageNodeV2": _stub_class(required=()),
             "SaveImage": _stub_class(required=("images",), output=True),
         })
 
@@ -825,6 +827,27 @@ class TestAutoPruneUnbound:
         assert pruned == {"301", "302"}
         assert set(wf) == {"h3", "save"}
         assert wf["h3"]["inputs"] == {"prompt": "x"}
+
+    def test_unwired_optional_mask_drops_mask_link(self, comfy_nodes):
+        self._register(comfy_nodes)
+        wf = {
+            "mask": {"class_type": "LoadImageMask", "inputs": {"image": "mask.png"}},
+            "gpt": {"class_type": "OpenAIGPTImageNodeV2", "inputs": {
+                "model.mask": ["mask", 0],
+            }},
+            "save": {"class_type": "SaveImage", "inputs": {"images": ["gpt", 0]}},
+        }
+        cfg = {"inputs": {"mask": {"image": {"from": "upstream_image:masked[0]"}}}}
+        ctx = self._ctx(kind="image", upstream={
+            "images": ["/view?filename=source.png"],
+            "videos": [], "audio": [], "texts": [],
+        })
+
+        pruned = lc._auto_prune_unbound(wf, cfg, ctx)
+
+        assert "mask" in pruned
+        assert "model.mask" not in wf["gpt"]["inputs"]
+        assert set(wf) == {"gpt", "save"}
 
     def test_wired_upstream_left_alone(self, comfy_nodes):
         self._register(comfy_nodes)

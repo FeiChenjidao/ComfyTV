@@ -1,16 +1,17 @@
-def _caps(upstream_kinds, option_keys, computed_keys) -> dict:
+def _caps(upstream_kinds, option_keys, computed_keys, supports_mask=False) -> dict:
     return {
         "upstream_kinds": list(upstream_kinds),
         "option_keys":    list(option_keys),
         "computed_keys":  list(computed_keys),
+        "supports_mask":  bool(supports_mask),
     }
 
 
 CAPS_BY_KIND: dict[str, dict] = {
     'text':          _caps(['text', 'image', 'video'],     ['option:seed'],
                            []),
-    'image':         _caps(['image', 'text'],              ['option:negative', 'option:seed', 'option:batch_size', 'option:aspect_ratio', 'option:resolution'],
-                           ['computed:width', 'computed:height']),
+    'image':         _caps(['image', 'text'],              ['option:negative', 'option:seed', 'option:batch_size', 'option:aspect_ratio', 'option:resolution', 'option:mask_data'],
+                           ['computed:width', 'computed:height'], True),
     'shot-images':   _caps(['image', 'text'],              ['option:negative', 'option:seed', 'option:batch_size', 'option:aspect_ratio', 'option:resolution'],
                            ['computed:width', 'computed:height']),
     'video':         _caps(['image', 'video', 'text', 'audio'], ['option:negative', 'option:seed', 'option:duration_s', 'option:generate_audio', 'option:aspect_ratio', 'option:resolution'],
@@ -28,9 +29,9 @@ CAPS_BY_KIND: dict[str, dict] = {
     'outpaint':      _caps(['image'],                      ['option:seed', 'option:negative', 'option:pad_left', 'option:pad_top', 'option:pad_right', 'option:pad_bottom', 'option:feathering'],
                            []),
     'inpaint':       _caps(['image'],                      ['option:seed', 'option:negative', 'option:mask_data'],
-                           []),
+                           [], True),
     'erase':         _caps(['image'],                      ['option:seed', 'option:mask_data'],
-                           []),
+                           [], True),
     'cutout':        _caps(['image'],                      [],
                            []),
     'multiangle':    _caps(['image'],                      ['option:seed'],
@@ -140,6 +141,7 @@ def caps_payload() -> dict:
             "upstream_kinds": list(v["upstream_kinds"]),
             "option_keys":    list(v["option_keys"]),
             "computed_keys":  list(v["computed_keys"]),
+            "supports_mask":  bool(v.get("supports_mask")),
         }
         for k, v in CAPS_BY_KIND.items()
     }

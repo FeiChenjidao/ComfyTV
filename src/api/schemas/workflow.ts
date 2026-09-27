@@ -171,6 +171,7 @@ const WorkflowUsageEntrySchema = z.object({
   max_inputs: z.record(z.string(), z.number().nullable()),
   uses_computed: z.record(z.string(), z.boolean()).optional(),
   uses_options: z.record(z.string(), z.boolean()).optional(),
+  uses_mask: z.boolean().optional(),
 })
 export const WorkflowInfoSchema = z.record(
   z.string(),

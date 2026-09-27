@@ -30,3 +30,8 @@ def test_usage_tracks_all_option_bindings():
         "tapose": True,
     }
     assert "aspect_ratio" not in out["uses_options"]
+
+
+def test_usage_marks_mask_bindings():
+    assert _compute_input_usage([{"from": "option:mask_data"}])["uses_mask"] is True
+    assert _compute_input_usage([{"from": "upstream_image:masked[0]"}])["uses_mask"] is True

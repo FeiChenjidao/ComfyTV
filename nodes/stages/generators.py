@@ -1,8 +1,36 @@
 import logging
 
+import uuid
+from pathlib import Path
+
 from ._common import *  # noqa: F401, F403
 
 _log = logging.getLogger(__name__)
+
+
+def _mask_to_annotated(mask) -> str:
+    if mask is None:
+        return ""
+    from PIL import Image
+
+    if not hasattr(mask, "detach"):
+        raise RuntimeError("Image Stage mask must be a ComfyUI MASK tensor")
+    mask = mask.detach().float().cpu()
+    if mask.ndim == 3:
+        mask = mask[0]
+    if mask.ndim != 2:
+        raise RuntimeError(f"Image Stage mask has unsupported shape {tuple(mask.shape)}")
+
+    alpha = (mask.clamp(0.0, 1.0) * 255.0).byte().numpy()
+    alpha_image = Image.fromarray(alpha, mode="L")
+    image = Image.new("RGBA", alpha_image.size, (255, 255, 255, 0))
+    image.putalpha(alpha_image)
+
+    out_dir = Path(folder_paths.get_input_directory()) / "comfytv" / "mask"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    name = f"comfytv-mask-{uuid.uuid4().hex[:8]}.png"
+    image.save(out_dir / name, format="PNG", compress_level=4)
+    return f"comfytv/mask/{name} [input]"
 
 
 class ProjectStage(io.ComfyNode):
@@ -106,6 +134,8 @@ class ImageStage(io.ComfyNode):
                 _main_prompt_input(tooltip="Primary prompt — the user's intent for this stage. Upstream text inputs are treated as additional context."),
                 io.Autogrow.Input("texts",  template=_text_template(8)),
                 io.Autogrow.Input("images", template=_image_template(12)),
+                io.Mask.Input("mask", optional=True,
+                              tooltip="Optional mask used when the selected workflow binds a mask parameter."),
                 _selected_index_input(),
                 _custom_params_input(),
             ],
@@ -118,6 +148,7 @@ class ImageStage(io.ComfyNode):
     @classmethod
     async def execute(cls, force_run_token=0, project_id="", parent_output_id=0,workflow="", resolution="",
                 aspect_ratio="", batch_size=1, main_prompt="", texts=None, images=None,
+                mask=None,
                 selected_index=1, custom_params="{}"):
 
         text_vals = _autogrow_values(texts)
@@ -134,6 +165,7 @@ class ImageStage(io.ComfyNode):
                 'resolution':   resolution,
                 'aspect_ratio': aspect_ratio,
                 'batch_size':   int(batch_size or 1),
+                'mask_data':    _mask_to_annotated(mask),
             },
             custom_params=custom_params,
         )
