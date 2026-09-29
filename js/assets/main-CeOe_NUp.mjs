@@ -23309,10 +23309,10 @@ function handleAssetDrop(e, resolveAsset2) {
     });
   });
 }
-let installed = false;
+let installed$2 = false;
 function installAssetCanvasDrop(pinia2) {
-  if (installed) return;
-  installed = true;
+  if (installed$2) return;
+  installed$2 = true;
   const resolveAsset2 = (id) => useAssetStore(pinia2).byId(id) ?? null;
   let tries = 0;
   const tryInstall = () => {
@@ -58998,7 +58998,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module--M2NOHu6.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-DaK9aWwT.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -77340,7 +77340,7 @@ function bindLodPoster(card, preview, state2, source, nodeScope, opts) {
   open.addEventListener("click", (e) => {
     e.stopPropagation();
     const url = lodPosterUrl(state2, source, opts);
-    if (url) openLightbox([{ url, kind: isVideo ? "video" : "image" }]);
+    if (url) openLightbox([{ url, kind: lightboxKind({ url }) }]);
   });
   preview.appendChild(open);
   nodeScope.run(() => {
@@ -83663,13 +83663,13 @@ const useSelectionStore = /* @__PURE__ */ defineStore("comfytv-selection", () =>
   function refreshFromCanvas() {
     var _a3;
     const app2 = window.app;
-    const selectedNodes = (_a3 = app2 == null ? void 0 : app2.canvas) == null ? void 0 : _a3.selected_nodes;
+    const selectedNodes2 = (_a3 = app2 == null ? void 0 : app2.canvas) == null ? void 0 : _a3.selected_nodes;
     let nodes = [];
-    if (selectedNodes) {
-      if (typeof selectedNodes[Symbol.iterator] === "function") {
-        nodes = Array.from(selectedNodes);
+    if (selectedNodes2) {
+      if (typeof selectedNodes2[Symbol.iterator] === "function") {
+        nodes = Array.from(selectedNodes2);
       } else {
-        nodes = Object.values(selectedNodes);
+        nodes = Object.values(selectedNodes2);
       }
     }
     if (nodes.length !== 1) {
@@ -84419,12 +84419,19 @@ async function validateNode(node, _stageKind, opts = {}) {
   if (nodeAcceptsMedia(node, "image")) {
     const required2 = requiredSlotsOf(entry, "image");
     if (required2.length) {
+      const imageSlots = [
+        ...fixedMediaSocketNames(node, "image"),
+        ...namedAutogrowSocketNames(node, "image")
+      ];
       const count2 = imageEntries.filter((e) => e.src !== "asset" || e.asset_id != null && assetExists(e.asset_id)).length;
       const missing = missingRequiredPositions(required2, count2);
       const total2 = required2.length;
       for (const idx of missing) {
         const msg = total2 === 1 ? `"${label}" requires an image — wire one into this slot or add an image reference.` : `"${label}" needs image ${idx + 1} — wire one in or add an image reference (${total2 - missing.length}/${total2} ready).`;
-        out[`images.image${idx}`] = { status: "required_but_missing", message: msg };
+        out[imageSlots[idx] ?? autogrowKey("image", idx)] = {
+          status: "required_but_missing",
+          message: msg
+        };
       }
     }
   }
@@ -145526,7 +145533,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-BLlhISc6.mjs");
+    const { STLLoader } = await import("./STLLoader-BV7_Zmab.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -145534,7 +145541,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-B5-miMyy.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-D0ZDXwwS.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -150243,6 +150250,7 @@ function spawnOrFocusImagesSplit(srcNode) {
   return spawnConsumingNode(srcNode, "ComfyTV.ImagesSplitStage", "images", srcSlot);
 }
 const IMAGE_VARIATIONS_CLASS = "ComfyTV.ImageVariationsStage";
+const IMAGE_LOADER_CLASS$1 = "ComfyTV.ImageLoaderStage";
 function connectSrcSlotsToAutogrow(srcNode, srcSlots, dstNode, _type = "image") {
   ensureMergeImageSockets(dstNode);
   const wire = (i, attempt) => {
@@ -150534,22 +150542,26 @@ const GENERATE_IMAGE_PRESET = {
   inputAutogrowGroup: "images"
 };
 function makeImageActionHandlers(srcSlot) {
+  const outputSlot = (src) => {
+    const named = findNamedOutputSlot(src, "image");
+    return named >= 0 ? named : srcSlot;
+  };
   return {
-    "generate": (src) => spawnImagePreset(src, GENERATE_IMAGE_PRESET, srcSlot),
-    "panorama": (src) => spawnConsumingNode(src, "ComfyTV.PanoramaStage", "image", srcSlot),
-    "multiangle": (src) => spawnConsumingNode(src, "ComfyTV.MultiangleStage", "image", srcSlot),
-    "relight": (src) => spawnRelightPair(src, srcSlot),
-    "material": (src) => spawnConsumingNode(src, "ComfyTV.MaterialStage", "image", srcSlot),
+    "generate": (src) => spawnImagePreset(src, GENERATE_IMAGE_PRESET, outputSlot(src)),
+    "panorama": (src) => spawnConsumingNode(src, "ComfyTV.PanoramaStage", "image", outputSlot(src)),
+    "multiangle": (src) => spawnConsumingNode(src, "ComfyTV.MultiangleStage", "image", outputSlot(src)),
+    "relight": (src) => spawnRelightPair(src, outputSlot(src)),
+    "material": (src) => spawnConsumingNode(src, "ComfyTV.MaterialStage", "image", outputSlot(src)),
     ...Object.fromEntries(
       IMAGE_VARIANT_PRESETS.map((p2) => [
         `preset:${p2.id}`,
-        (src) => spawnImagePreset(src, p2, srcSlot)
+        (src) => spawnImagePreset(src, p2, outputSlot(src))
       ])
     ),
     ...Object.fromEntries(
       IMAGE_EDIT_PRESETS.map((p2) => [
         `edit:${p2.id}`,
-        (src) => spawnImagePreset(src, p2, srcSlot)
+        (src) => spawnImagePreset(src, p2, outputSlot(src))
       ])
     )
   };
@@ -150625,6 +150637,7 @@ function spawnFollowUpStage(srcNode, srcKind, actionId, context2) {
 }
 const spawnFollowUp = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  IMAGE_LOADER_CLASS: IMAGE_LOADER_CLASS$1,
   IMAGE_MERGE_CLASS,
   IMAGE_VARIATIONS_CLASS,
   connectSrcSlotsToAutogrow,
@@ -194729,7 +194742,7 @@ function useLayerEditorCanvas(editor, viewportEl) {
     setSpaceDown
   };
 }
-function isTextEditingTarget(target) {
+function isTextEditingTarget$1(target) {
   const el2 = target;
   const tag = el2 == null ? void 0 : el2.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || Boolean(el2 == null ? void 0 : el2.isContentEditable);
@@ -194737,7 +194750,7 @@ function isTextEditingTarget(target) {
 function useLayerEditorHotkeys(editor, opts) {
   function onKeyDown2(e) {
     e.stopPropagation();
-    if (editor.floating.value && !isTextEditingTarget(e.target)) {
+    if (editor.floating.value && !isTextEditingTarget$1(e.target)) {
       if (e.key === "Enter") {
         e.preventDefault();
         editor.anchorFloating();
@@ -194749,7 +194762,7 @@ function useLayerEditorHotkeys(editor, opts) {
         return;
       }
     }
-    if (editor.tool.value === "pen" && !isTextEditingTarget(e.target)) {
+    if (editor.tool.value === "pen" && !isTextEditingTarget$1(e.target)) {
       if (e.key === "Enter" && editor.penDrafting()) {
         e.preventDefault();
         editor.penCommit();
@@ -194760,7 +194773,7 @@ function useLayerEditorHotkeys(editor, opts) {
         return;
       }
     }
-    if (editor.tool.value === "crop" && !isTextEditingTarget(e.target)) {
+    if (editor.tool.value === "crop" && !isTextEditingTarget$1(e.target)) {
       if (e.key === "Enter" && editor.cropPending.value) {
         e.preventDefault();
         editor.applyCrop();
@@ -194773,7 +194786,7 @@ function useLayerEditorHotkeys(editor, opts) {
         return;
       }
     }
-    if (editor.tool.value === "transform" && !isTextEditingTarget(e.target)) {
+    if (editor.tool.value === "transform" && !isTextEditingTarget$1(e.target)) {
       if (e.key === "Enter") {
         e.preventDefault();
         editor.transformApply();
@@ -194791,7 +194804,7 @@ function useLayerEditorHotkeys(editor, opts) {
       opts.exitFullscreen();
       return;
     }
-    if (isTextEditingTarget(e.target)) return;
+    if (isTextEditingTarget$1(e.target)) return;
     if (e.code === "Space") {
       opts.setSpaceDown(true);
       e.preventDefault();
@@ -203946,7 +203959,7 @@ function useStoryboardHotkeys(sb, next) {
     if (target) sb.selectBoard(target.uid);
   }
   function onKeyDown2(e) {
-    if (!isTextEditingTarget(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (!isTextEditingTarget$1(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
       const uid2 = sb.currentBoard.value.uid;
       switch (e.code) {
         case "Comma":
@@ -207315,9 +207328,9 @@ function applyMatte(d2) {
 }
 function frameFit(src) {
   const v3 = src;
-  const isVideo2 = typeof v3.videoWidth === "number";
-  const w2 = isVideo2 ? v3.videoWidth : src.width;
-  const h2 = isVideo2 ? v3.videoHeight : src.height;
+  const isVideo = typeof v3.videoWidth === "number";
+  const w2 = isVideo ? v3.videoWidth : src.width;
+  const h2 = isVideo ? v3.videoHeight : src.height;
   const mw = w2 || 16;
   const mh = h2 || 9;
   const f2 = computeFit$1(CHROMA_PREVIEW_W, CHROMA_PREVIEW_H, mw, mh);
@@ -234582,6 +234595,148 @@ function installMcpCommandBus(app2, deps) {
     app2.__comfytvMcpCommandBusInstalled = false;
   };
 }
+const PHOTOSHOP_LAYER_EVENT = "comfytv-photoshop-layer";
+const IMAGE_LOADER_CLASS = "ComfyTV.ImageLoaderStage";
+function selectedNodes(canvas) {
+  const selected = canvas == null ? void 0 : canvas.selected_nodes;
+  if (!selected) return [];
+  if (typeof selected[Symbol.iterator] === "function") return Array.from(selected);
+  return Object.values(selected);
+}
+function isImageLoader(node) {
+  return String((node == null ? void 0 : node.comfyClass) ?? "") === IMAGE_LOADER_CLASS;
+}
+function selectedTarget(host) {
+  const selected = selectedNodes(host == null ? void 0 : host.canvas);
+  if (selected.length === 1 && isImageLoader(selected[0])) return selected[0];
+  return null;
+}
+function createTarget(host) {
+  var _a3, _b2, _c, _d, _e2, _f, _g;
+  const node = (_b2 = (_a3 = window.LiteGraph) == null ? void 0 : _a3.createNode) == null ? void 0 : _b2.call(_a3, IMAGE_LOADER_CLASS);
+  if (!node) return null;
+  (_d = (_c = host == null ? void 0 : host.graph) == null ? void 0 : _c.add) == null ? void 0 : _d.call(_c, node);
+  const cursor = (_e2 = host == null ? void 0 : host.canvas) == null ? void 0 : _e2.graph_mouse;
+  const origin = Array.isArray(cursor) && cursor.length >= 2 ? [Number(cursor[0]) || 0, Number(cursor[1]) || 0] : [40, 40];
+  node.pos = findFreePos(
+    host == null ? void 0 : host.graph,
+    origin,
+    [Number((_f = node.size) == null ? void 0 : _f[0]) || 280, Number((_g = node.size) == null ? void 0 : _g[1]) || 340],
+    node
+  );
+  return node;
+}
+function applyPhotoshopLayer(host, payload) {
+  var _a3, _b2, _c, _d, _e2, _f, _g;
+  if (!(payload == null ? void 0 : payload.name) || !(payload == null ? void 0 : payload.subfolder) || payload.type !== "input") return null;
+  const selected = selectedTarget(host);
+  const node = selected ?? createTarget(host);
+  if (!node) return null;
+  node.properties ?? (node.properties = {});
+  node.properties.comfytv_photoshop_document = payload.document;
+  node.properties.comfytv_photoshop_layer = payload.layer;
+  if (payload.layer) node.title = `Photoshop: ${payload.layer}`;
+  const value = `${payload.subfolder}/${payload.name}`;
+  const widget = getWidget(node, "image");
+  const values = (_a3 = widget == null ? void 0 : widget.options) == null ? void 0 : _a3.values;
+  if (Array.isArray(values) && !values.includes(value)) values.push(value);
+  writeWidget(node, "image", value);
+  (_c = (_b2 = host == null ? void 0 : host.graph) == null ? void 0 : _b2.setDirtyCanvas) == null ? void 0 : _c.call(_b2, true, true);
+  if (selected) (_e2 = (_d = host == null ? void 0 : host.canvas) == null ? void 0 : _d.selectNode) == null ? void 0 : _e2.call(_d, node);
+  (_g = (_f = host == null ? void 0 : host.canvas) == null ? void 0 : _f.centerOnNode) == null ? void 0 : _g.call(_f, node);
+  return node;
+}
+let installed$1 = false;
+function installPhotoshopBridge(host = app) {
+  var _a3, _b2;
+  if (installed$1) return;
+  installed$1 = true;
+  (_b2 = (_a3 = host == null ? void 0 : host.api) == null ? void 0 : _a3.addEventListener) == null ? void 0 : _b2.call(_a3, PHOTOSHOP_LAYER_EVENT, (event) => {
+    var _a4, _b3, _c;
+    const payload = (event == null ? void 0 : event.detail) ?? event;
+    const node = applyPhotoshopLayer(host, payload);
+    (_c = (_b3 = (_a4 = host == null ? void 0 : host.extensionManager) == null ? void 0 : _a4.toast) == null ? void 0 : _b3.add) == null ? void 0 : _c.call(_b3, {
+      severity: node ? "success" : "error",
+      summary: "Photoshop",
+      detail: node ? `${payload.layer || payload.name} received` : "Image loader could not be created",
+      life: 4e3
+    });
+  });
+}
+const UPLOAD_SUBFOLDER = "comfytv/uploads";
+function imageFiles(data) {
+  return Array.from((data == null ? void 0 : data.items) ?? []).filter((item) => item.kind === "file" && item.type.startsWith("image/")).map((item) => item.getAsFile()).filter((file) => file !== null);
+}
+function isTextEditingTarget(target) {
+  if (!(target instanceof Element)) return false;
+  return target.closest('input, textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"]') !== null;
+}
+function cursorPosition(host) {
+  var _a3;
+  const cursor = (_a3 = host == null ? void 0 : host.canvas) == null ? void 0 : _a3.graph_mouse;
+  return Array.isArray(cursor) && cursor.length >= 2 ? [Number(cursor[0]) || 0, Number(cursor[1]) || 0] : [40, 40];
+}
+function selectedImageLoader(host) {
+  var _a3, _b2;
+  const selected = (_a3 = host == null ? void 0 : host.canvas) == null ? void 0 : _a3.selected_nodes;
+  if (!selected) return null;
+  const nodes = typeof selected[Symbol.iterator] === "function" ? Array.from(selected) : Object.values(selected);
+  return nodes.length === 1 && ((_b2 = nodes[0]) == null ? void 0 : _b2.comfyClass) === IMAGE_LOADER_CLASS$1 ? nodes[0] : null;
+}
+async function uploadIntoNode(node, file, index2) {
+  var _a3;
+  const uploaded = await uploadBlobNamed(file, {
+    subfolder: UPLOAD_SUBFOLDER,
+    filename: file.name || `clipboard-${Date.now()}-${index2}.png`
+  });
+  const value = `${UPLOAD_SUBFOLDER}/${uploaded.name}`;
+  const widget = getWidget(node, "image");
+  const values = (_a3 = widget == null ? void 0 : widget.options) == null ? void 0 : _a3.values;
+  if (Array.isArray(values) && !values.includes(value)) values.push(value);
+  writeWidget(node, "image", value);
+}
+async function pasteClipboardImages(host, files) {
+  var _a3, _b2, _c, _d, _e2, _f;
+  const origin = cursorPosition(host);
+  const selected = selectedImageLoader(host);
+  if (selected) {
+    for (const [index2, file] of files.entries()) await uploadIntoNode(selected, file, index2);
+    (_b2 = (_a3 = host == null ? void 0 : host.graph) == null ? void 0 : _a3.setDirtyCanvas) == null ? void 0 : _b2.call(_a3, true, true);
+    return [selected];
+  }
+  const created = [];
+  for (const [index2, file] of files.entries()) {
+    const node = createNodeAt(IMAGE_LOADER_CLASS$1, [origin[0] + index2 * 32, origin[1] + index2 * 32]);
+    if (!node) continue;
+    await uploadIntoNode(node, file, index2);
+    created.push(node);
+  }
+  const last = created.at(-1);
+  if (last) {
+    (_d = (_c = host == null ? void 0 : host.graph) == null ? void 0 : _c.setDirtyCanvas) == null ? void 0 : _d.call(_c, true, true);
+    (_f = (_e2 = host == null ? void 0 : host.canvas) == null ? void 0 : _e2.selectNode) == null ? void 0 : _f.call(_e2, last);
+  }
+  return created;
+}
+function handleClipboardImagePaste(host, event) {
+  if (event.defaultPrevented || isTextEditingTarget(event.target)) return false;
+  const files = imageFiles(event.clipboardData);
+  if (!files.length) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  void pasteClipboardImages(host, files).catch((error2) => {
+    console.error("[ComfyTV/clipboard] image paste failed", error2);
+    toastLoaderUploadFailed(error2);
+  });
+  return true;
+}
+let installed = false;
+function installClipboardImagePaste(host = app) {
+  if (installed) return;
+  installed = true;
+  document.addEventListener("paste", (event) => handleClipboardImagePaste(host, event), true);
+}
 const ID = "comfytv-app-mode-hint";
 function hasStages(graph) {
   return ((graph == null ? void 0 : graph._nodes) ?? []).some((n) => String((n == null ? void 0 : n.comfyClass) ?? (n == null ? void 0 : n.type) ?? "").startsWith("ComfyTV."));
@@ -251721,6 +251876,8 @@ const extension = {
       resolveApp: () => a2,
       resolveProjectId: () => useProjectStore(pinia).currentProjectId
     });
+    installPhotoshopBridge(a2);
+    installClipboardImagePaste(a2);
     installCollabPresence(a2, {
       resolveProjectId: () => useProjectStore(pinia).currentProjectId,
       resolveApp: () => a2,
@@ -252003,4 +252160,4 @@ export {
   LinearFilter as y,
   LinearMipMapLinearFilter as z
 };
-//# sourceMappingURL=main-BoMPKPOa.mjs.map
+//# sourceMappingURL=main-CeOe_NUp.mjs.map

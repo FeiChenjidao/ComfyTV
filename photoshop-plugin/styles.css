@@ -1,0 +1,66 @@
+:root {
+  color: #e7e7e7;
+  background: #202020;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #202020;
+}
+
+main {
+  padding: 10px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  color: #bdbdbd;
+}
+
+.server-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+input,
+button {
+  min-height: 30px;
+  border: 1px solid #484848;
+  border-radius: 4px;
+  color: inherit;
+  background: #2b2b2b;
+  font: inherit;
+}
+
+input { min-width: 0; flex: 1; padding: 0 8px; }
+button { padding: 0 10px; cursor: pointer; }
+button:hover { background: #383838; }
+button:disabled { opacity: 0.55; cursor: default; }
+button.primary { width: 100%; border-color: #2c76c9; background: #1769aa; color: #fff; }
+
+.status-row {
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  color: #bdbdbd;
+  border-bottom: 1px solid #333;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #777;
+}
+
+.status-dot.connected { background: #42a85a; }
+.status-dot.error { background: #d05252; }

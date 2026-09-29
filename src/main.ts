@@ -47,6 +47,8 @@ import { collabTopbarBadge } from '@/collab/topbarBadge'
 import { usePresenceStore } from '@/collab/presenceStore'
 import { execTopbarBadge, installExecBadge } from '@/composables/execBadge'
 import { installMcpCommandBus } from '@/composables/stages/useMcpCommandBus'
+import { installPhotoshopBridge } from '@/composables/stages/photoshopBridge'
+import { installClipboardImagePaste } from '@/composables/stages/clipboardImagePaste'
 import { installAppModeHint } from '@/composables/appModeHint'
 import { guardGhostPlacement } from '@/composables/ghostPlacementInert'
 import { installWorkflowRegistrySync } from '@/composables/stages/workflowRegistrySync'
@@ -263,6 +265,9 @@ const extension: ComfyExtension = {
       resolveApp: () => a,
       resolveProjectId: () => useProjectStore(pinia).currentProjectId,
     })
+
+    installPhotoshopBridge(a)
+    installClipboardImagePaste(a)
 
     installCollabPresence(a, {
       resolveProjectId: () => useProjectStore(pinia).currentProjectId,

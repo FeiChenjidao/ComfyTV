@@ -175,13 +175,10 @@ export function useBindingWriter(
       newBinding === 'option:generate_audio'
     ) {
       cast = 'bool'
-<<<<<<< HEAD
-=======
       defaultValue = seedDefaultFromWidget(w)
     } else if (newBinding.startsWith('option:') || newBinding.startsWith('computed:')) {
       cast = inferCast(w.widget_type)
       defaultValue = seedDefaultFromWidget(w)
->>>>>>> b15c43d (Fix ComfyTV workflow nodes and bot integration)
     }
     const isUpstream = newBinding.startsWith('upstream_')
     w.stage_binding  = newBinding
