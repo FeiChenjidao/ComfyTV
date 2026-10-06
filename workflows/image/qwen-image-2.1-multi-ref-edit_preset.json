@@ -12,7 +12,7 @@
       "image": {
         "from": "upstream_image:annotated[0]",
         "required": true,
-        "error": "Multi-ref edit needs an edit target — wire it into the stage's first image slot."
+        "error": "Multi-ref edit needs an edit target — add a reference image with ＋ on the card, or wire one in; image 1 is the one that gets edited."
       }
     },
     "12": { "image": { "from": "upstream_image:annotated[1]" } },
@@ -23,8 +23,7 @@
         "from": "main_prompt",
         "required": true,
         "error": "Describe the edit and name the images — e.g. 'put the shirt from <image2> on the character in <image1>, keep pose and background'."
-      },
-      "negative_prompt": { "from": "option:negative", "default": "" }
+      }
     },
     "7": {
       "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" }

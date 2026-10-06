@@ -26,8 +26,8 @@
     },
     "panelCollapse": "收起面板——只保留一行信息和运行按钮",
     "panelExpand": "展开面板",
-    "imageStageTitle": "图片节点 · ImageStage",
-    "pickerTitle": "图片选择 · Picker",
+    "imageStageTitle": "图像阶段 · 生成",
+    "pickerTitle": "图片选择器 · 挑选",
     "cropTitle": "裁剪 · 编辑",
     "ed": {
       "rotate": "旋转 · 编辑",
@@ -299,7 +299,8 @@
     "cancel": "取消",
     "preparingWorkflow": "准备工作流中…",
     "noWorkflowShort": "没有可用工作流 — 请上传 / 链接",
-    "noWorkflowInstalled": "没有可用的 {kind} 工作流 — 用卡片上的上传 / 链接按钮导入一个，或到侧栏 ComfyTV → Stages 里添加。",
+    "noWorkflowInstalled": "没有可用的 {kind} 工作流 — 用卡片上的「关联工作流」按钮导入一个，或到侧栏 ComfyTV → 阶段管理里添加。",
+    "promptNotBound": "「{label}」没有绑定阶段提示词，卡片上的提示词不会生效。到侧栏 ComfyTV → 工作流，把提示词节点的 text 绑定到「阶段提示词」。",
     "outputDurationHint": "生成耗时",
     "section": {
       "context": "上游输入",
@@ -361,7 +362,9 @@
     "dismiss": "清除",
     "cancelled": "已取消",
     "upstreamNotReady": "上游未就绪",
-    "upstreamNotReadyDetail": "上游未就绪:{list}。请先运行这些 stage 生成快照,然后再运行此 stage。",
+    "upstreamNotReadyDetail": "上游未就绪:{list}。请先运行这些阶段生成快照,然后再运行此阶段。",
+    "refMissing": "参考素材已失效",
+    "refMissingDetail": "{list} 对应的资产已从资产库移除，或文件已丢失。从参考区移除后重新添加，再运行。",
     "droppedFromQueue": "尚未运行就被移出队列 — 队列被清空或该任务被删除。",
     "workerDied": "后端未返回结果就停止了。prompt worker 可能已崩溃(通常是清理阶段 CUDA OOM)。重启 ComfyUI 后恢复。"
   },
@@ -422,7 +425,7 @@
       "assets": "资产库",
       "eagle": "Eagle",
       "entries": "条目",
-      "params": "Stage 管理",
+      "params": "阶段管理",
       "presets": "预设",
       "resources": "资源",
       "servers": "服务器",
@@ -433,6 +436,10 @@
   "settings": {
     "title": "设置",
     "hint": "默认值来自 ComfyTV 目录下的 comfytv.properties。此处保存的值写入数据库,并优先生效。",
+    "modelRoutes": {
+      "desktop-account": "桌面账号",
+      "api-key": "API Key"
+    },
     "loading": "加载中…",
     "save": "保存",
     "saving": "保存中…",
@@ -459,7 +466,7 @@
     "fields": {
       "enable-v2": {
         "label": "启用 ComfyTV V2 节点",
-        "desc": "实验性功能，可能存在不稳定行为。已迁移的 stage 以内容导向的 V2 外壳渲染。必须先在 ComfyUI 本体设置中开启 Node 2.0（Vue 节点模式）。修改后需刷新页面。"
+        "desc": "实验性功能，可能存在不稳定行为。已迁移的阶段节点以内容导向的 V2 外壳渲染。必须先在 ComfyUI 本体设置中开启 Nodes 2.0（Vue 节点模式）。修改后需刷新页面。"
       },
       "v2-lod-scale": {
         "label": "海报图模式阈值",
@@ -473,7 +480,11 @@
       },
       "auto-picker": {
         "label": "运行时自动接挑选节点",
-        "desc": "Image 或 Video stage 运行时，如果输出端还没有连线，自动在后面接一个 Picker stage。"
+        "desc": "图像阶段或视频阶段运行时，如果输出端还没有连线，自动在后面接一个图片 / 视频选择器。"
+      },
+      "drop-files-as-loaders": {
+        "label": "拖入媒体文件生成资产加载节点",
+        "desc": "图片、视频、音频拖到画布空白处时，导入资产库并生成 ComfyTV 资产加载节点，而不是交给 ComfyUI 加载（PNG 里保存的工作流不会再被打开）。拖到节点上的和其他类型的文件仍由 ComfyUI 处理。"
       },
       "v2-panel-on-select": {
         "label": "仅选中时显示控制面板",
@@ -536,7 +547,7 @@
       },
       "bot-enable-comfy-mcp": {
         "label": "挂载 comfy-mcp",
-        "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex 与 Local LLM 保持只挂 comfytv。"
+        "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex、DeepSeek Harness、Local LLM 与 ComfyUI LLM 保持只挂 comfytv。"
       },
       "bot-comfy-mcp-command": {
         "label": "comfy-mcp 命令",
@@ -546,6 +557,11 @@
       "bot-always-allow-runs": {
         "label": "总是允许 bot 运行",
         "desc": "不弹运行审批卡,bot 直接执行(默认行为)。关闭后,切到询问模式的会话才会在每次运行前等你批准。"
+      },
+      "bot-model-deepseek-harness": {
+        "label": "DeepSeek Harness 模型",
+        "desc": "模型同时决定计费方式：桌面账号或 API Key。留空 = 桌面账号下的第一个模型，不会自动改用 API Key。",
+        "placeholder": "桌面账号默认"
       },
       "enable-skills": {
         "label": "启用 Agent Skills",
@@ -575,11 +591,11 @@
       },
       "eagle-auto-send": {
         "label": "产出自动沉淀到 Eagle",
-        "desc": "每个 stage 的产出(图片/视频/音频)自动归档进 Eagle:按项目名分文件夹,annotation 带完整生成参数(prompt/模型等),tag 带项目名。走排队机制,Eagle 没开时攒着,不阻塞生成。"
+        "desc": "每个阶段节点的产出(图片/视频/音频)自动归档进 Eagle:按项目名分文件夹,annotation 带完整生成参数(prompt/模型等),tag 带项目名。走排队机制,Eagle 没开时攒着,不阻塞生成。"
       },
       "blender-bridge-url": {
         "label": "Blender 桥接地址",
-        "desc": "实验性 — 会有毛边。Blender Scene / Camera / Animation 这几个 stage 连接的 blender-web 桥接服务地址。用 blender-for-comfytv.bat 启动;桥接没响应时这些 stage 不可用。默认端口 7684,仅限本机。",
+        "desc": "实验性 — 会有毛边。Blender Scene / Camera / Animation 这几个阶段节点连接的 blender-web 桥接服务地址。用 blender-for-comfytv.bat 启动;桥接没响应时这些阶段节点不可用。默认端口 7684,仅限本机。",
         "placeholder": "http://127.0.0.1:7684"
       }
     },
@@ -653,7 +669,7 @@
     }
   },
   "stageManager": {
-    "title": "Stage 管理",
+    "title": "阶段管理",
     "refresh": "刷新列表",
     "import": "导入",
     "rescan": "重新扫描",
@@ -664,20 +680,20 @@
     "rescanFailed": "重新扫描失败",
     "setDefault": "设为默认",
     "unsetDefault": "取消默认",
-    "defaultSet": "{label} 已设为该 Stage 的默认工作流",
+    "defaultSet": "{label} 已设为该阶段的默认工作流",
     "defaultCleared": "{label} 已取消默认 —— 将使用列表中的第一个工作流",
     "defaultFailed": "修改默认工作流失败",
-    "hide": "从 Stage 节点隐藏",
-    "unhide": "在 Stage 节点显示",
-    "hiddenSet": "{label} 已从 Stage 节点的 workflow 下拉框隐藏",
+    "hide": "从阶段节点隐藏",
+    "unhide": "在阶段节点显示",
+    "hiddenSet": "{label} 已从阶段节点的 workflow 下拉框隐藏",
     "hiddenCleared": "{label} 已重新显示在 workflow 下拉框中",
     "hiddenFailed": "修改工作流可见性失败",
     "section": {
       "workflows": "工作流",
       "params": "参数"
     },
-    "emptyWorkflows": "该 Stage 下还没有已注册的工作流 —— 点「导入」上传，或把 .json 放入 ComfyUI user 目录下的 comfytv/workflows/对应类别目录后点「重新扫描」。",
-    "hint": "这里列出的工作流，在画布上对应 Stage 节点的 workflow 下拉框中选用。",
+    "emptyWorkflows": "该阶段下还没有已注册的工作流 —— 点「导入」上传，或把 .json 放入 ComfyUI user 目录下的 comfytv/workflows/对应类别目录后点「重新扫描」。",
+    "hint": "这里列出的工作流，在画布上对应阶段节点的 workflow 下拉框中选用。",
     "badge": {
       "linked": "外链",
       "linkedHint": "链接自 ComfyUI 原生工作流目录（不由 ComfyTV 管理）",
@@ -691,9 +707,9 @@
       "builtin": "内置",
       "builtinHint": "ComfyTV 自带的工作流（git 跟踪）。没有此标记的是用户导入或手动放入的。",
       "default": "默认",
-      "defaultHint": "新添加的该类 Stage 节点会预选此工作流。若它被删除或取消链接，则回退到列表中的第一个。",
+      "defaultHint": "新添加的该类阶段节点会预选此工作流。若它被删除或取消链接，则回退到列表中的第一个。",
       "hidden": "已隐藏",
-      "hiddenHint": "不出现在 Stage 节点的 workflow 下拉框中。已选中它的节点不受影响，仍可正常运行。"
+      "hiddenHint": "不出现在阶段节点的 workflow 下拉框中。已选中它的节点不受影响，仍可正常运行。"
     }
   },
   "assets": {
@@ -775,11 +791,13 @@
     "addHint": "挂载一个在 ComfyTV 侧栏中定义好的参数",
     "remove": "从该节点移除",
     "sidebar": {
-      "title": "Stage 参数",
-      "kind": "Stage",
+      "title": "阶段参数",
+      "kind": "阶段",
       "empty": "这个 stage 还没有定义任何参数。",
       "customKindNote": "自定义节点的工作流不使用阶段参数——请在卡片的“暴露输入输出”面板里直接暴露工作流自己的控件。",
       "new": "新建参数",
+      "edit": "编辑参数",
+      "save": "保存",
       "label": "名称",
       "type": "类型",
       "default": "默认值",
@@ -848,7 +866,8 @@
     "refreshFailed": "刷新失败 —— 找不到来源 stage 或其没有批次输出。",
     "remove": "移除",
     "warnOverflow": "该工作流只绑定了 {total} 张参考图 —— 本节点最后 {count} 张不会被使用。",
-    "warnNoSlots": "该工作流没有可接收参考图的图片输入 —— 运行时这些图会被忽略。"
+    "warnNoSlots": "该工作流没有可接收参考图的图片输入 —— 运行时这些图会被忽略。",
+    "missing": "已失效：资产已移除或文件已丢失"
   },
   "mediaStrip": {
     "wired": "连线输入",
@@ -869,13 +888,59 @@
     "slotClaimed": "已占用",
     "slotEmpty": "这个工作流还没绑定参考图槽位 —— 先在侧边栏工作流配置里把 LoadImage 绑到「Upstream image #N」。"
   },
+  "validator": {
+    "kind": { "image": "图片", "video": "视频", "audio": "音频", "text": "文本", "model": "3D 模型" },
+    "unused": "「{label}」不接收{kind}输入 —— 这条连线运行时会被忽略。",
+    "extra": "「{label}」只接收 {max} 个{kind}输入 —— 这条多出来的连线运行时会被忽略。",
+    "needImage": "「{label}」需要一张图片 —— 点卡片上的 ＋ 添加参考图，或连一张图进来。",
+    "needImageN": "「{label}」需要第 {n} 张图片 —— 点 ＋ 添加参考图，或连一张图进来（已就绪 {ready}/{total}）。",
+    "needInput": "「{label}」需要一个{kind}输入 —— 连一个进这个接口。",
+    "needInputN": "「{label}」需要 {needed} 个{kind}输入 —— 连一个进这个接口（已连 {wired}/{needed}）。"
+  },
+  "bindTo": {
+    "useValue": "（使用此值）",
+    "prompt": "阶段提示词",
+    "width": "阶段宽度",
+    "height": "阶段高度",
+    "length": "阶段视频帧数",
+    "upstream": {
+      "image": "上游图片",
+      "video": "上游视频",
+      "audio": "上游音频",
+      "text": "上游文本",
+      "model": "上游 3D 模型"
+    },
+    "maskedImage": "上游图片 + 绘制蒙版（alpha）",
+    "option": {
+      "seed": "阶段种子",
+      "batch_size": "阶段张数",
+      "duration_s": "阶段时长（秒）",
+      "generate_audio": "阶段生成音频",
+      "lyrics": "阶段歌词",
+      "bpm": "阶段 BPM",
+      "timesignature": "阶段拍号",
+      "keyscale": "阶段调性",
+      "voice": "阶段音色",
+      "language": "阶段语言",
+      "speed": "阶段语速",
+      "reference_text": "阶段参考文本",
+      "max_length": "阶段 LLM 最大输出长度",
+      "scale": "阶段放大倍数",
+      "pad_left": "阶段左侧扩展",
+      "pad_top": "阶段顶部扩展",
+      "pad_right": "阶段右侧扩展",
+      "pad_bottom": "阶段底部扩展",
+      "feathering": "阶段羽化",
+      "mask_data": "阶段蒙版（绘制输出）"
+    }
+  },
   "configSidebar": {
     "title": "工作流配置",
-    "empty": "在画布上选中某个 Stage 节点以编辑它的工作流配置。导入的工作流在节点的 workflow 下拉框中选用 —— 全部清单见「Stage 管理」页。",
-    "noWorkflowPicked": "该 Stage 还没选工作流 —— 先在下拉里挑一个。",
+    "empty": "在画布上选中某个阶段节点以编辑它的工作流配置。导入的工作流在节点的 workflow 下拉框中选用 —— 全部清单见「阶段管理」页。",
+    "noWorkflowPicked": "该阶段还没选工作流 —— 先在下拉里挑一个。",
     "loading": "加载中…",
-    "noExposedWidgets": "这个工作流没有可编辑的 widget，或者还没准备过 —— 先在画布上任一 Stage 选中它，浏览器侧 graphToPrompt 跑一遍后才有 widget 元数据。",
-    "pickWorkflowFirst": "先在画布上任一 Stage 上选中这个工作流 —— 浏览器侧 graphToPrompt 跑过一遍才有 widget 元数据。",
+    "noExposedWidgets": "这个工作流没有可编辑的 widget，或者还没准备过 —— 先在画布上任一阶段节点选中它，浏览器侧 graphToPrompt 跑一遍后才有 widget 元数据。",
+    "pickWorkflowFirst": "先在画布上任一阶段节点上选中这个工作流 —— 浏览器侧 graphToPrompt 跑过一遍才有 widget 元数据。",
     "customExposed": "已由卡片暴露为",
     "customExposedPrompt": "主提示词",
     "customOutputsHint": "输出在卡片的“暴露输入输出”面板里选择。",
@@ -904,6 +969,9 @@
       "batch": "保存的图片批次"
     },
     "bindingRequired": "必填",
+    "outputs": "输出",
+    "useNodeOutput": "（使用节点输出）",
+    "outputsTakenOver": "输出已全部绑定到 stage，这些参数不再生效。",
     "mentionStyle": {
       "label": "引用",
       "natural": "自然文本（图1）",
@@ -983,7 +1051,7 @@
     "video": {
       "extend": {
         "label": "延伸",
-        "tooltip": "抽出本段末帧,派生新 VideoStage 用作 I2V 起始帧 —— 写个 prompt 描述接下来要发生什么"
+        "tooltip": "抽出本段末帧,派生新的视频阶段用作 I2V 起始帧 —— 写个 prompt 描述接下来要发生什么"
       },
       "change": {
         "label": "修改视频",
@@ -999,7 +1067,7 @@
     "text": {
       "refine": {
         "label": "改写",
-        "tooltip": "在新 TextStage 中继续改写"
+        "tooltip": "在新的文本阶段中继续改写"
       }
     },
     "panorama": {
@@ -1043,7 +1111,7 @@
     "saveFailed": "保存预设失败",
     "nameReserved": "该名称已被内置预设占用",
     "panel": {
-      "title": "Stage 预设",
+      "title": "阶段预设",
       "empty": "还没有预设。使用 stage 节点上的保存按钮创建。",
       "rename": "重命名预设"
     }
@@ -1996,6 +2064,7 @@
     "video": "视频"
   },
   "mention": {
+    "promptPlaceholder": "提示词 — 输入 {'@'} 插入已保存的片段",
     "newTag": "新建",
     "create": "+ 新建",
     "newFragment": "新建片段",

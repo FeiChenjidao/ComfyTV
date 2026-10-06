@@ -3,6 +3,8 @@ from .._common import broadcast_asset_event
 from .._common import broadcast_entry_event
 from ..assets import _with_file_missing, fill_media_meta
 
+_ENTRY_PREVIEW_CHARS = 200
+
 
 async def _outputs(args: dict) -> dict:
     pid = args.get("project_id")
@@ -208,7 +210,19 @@ async def _entries(args: dict) -> dict:
         kind = args.get("kind")
         if kind:
             rows = [r for r in rows if r["kind"] == kind]
-        return {"entries": rows}
+        return {"entries": [
+            {**{k: v for k, v in r.items() if k != "content"},
+             "preview": r["content"][:_ENTRY_PREVIEW_CHARS],
+             "content_chars": len(r["content"])}
+            for r in rows]}
+    if action == "get":
+        eid, label = args.get("id"), str(args.get("label") or "").strip()
+        kind = args.get("kind")
+        for r in storage.list_entries(pid):
+            if (r["id"] == eid if eid is not None else
+                    r["label"] == label and (not kind or r["kind"] == kind)):
+                return {"entry": r}
+        raise ValueError(f"entry {eid if eid is not None else label!r} not found")
     if action == "upsert":
         kind = str(args.get("kind") or "")
         label = str(args.get("label") or "").strip()
@@ -240,7 +254,7 @@ async def _entries(args: dict) -> dict:
             raise ValueError(f"entry {eid} not found")
         broadcast_entry_event("delete", pid, {"id": eid})
         return {"ok": True}
-    raise ValueError(f"unknown action {action!r} — valid: list, upsert, delete")
+    raise ValueError(f"unknown action {action!r} — valid: list, get, upsert, delete")
 
 async def _pick_output(args: dict) -> dict:
     oid = args.get("output_id")
@@ -330,8 +344,8 @@ TOOLS: dict[str, dict] = {
                 "new_name": {"type": "string"},
                 "payload_url": {"type": "string"},
                 "media_type": {"type": "string"},
-                "categories": {"type": "array"},
-                "remove_categories": {"type": "array"},
+                "categories": {"type": "array", "items": {"type": ["string", "integer"]}},
+                "remove_categories": {"type": "array", "items": {"type": ["string", "integer"]}},
             },
             "required": ["action"],
             "additionalProperties": False,
@@ -345,7 +359,9 @@ TOOLS: dict[str, dict] = {
             "'prompt' (full prompt templates; when inserted they expand, and "
 
             "should only @-mention media positions like @image_1 — not other "
-            "entries). action 'list' (optional kind filter), 'upsert' (kind, "
+            "entries). action 'list' (optional kind filter; returns id/kind/"
+            "label plus a short content preview), 'get' (id, or label with "
+            "optional kind; returns the full content), 'upsert' (kind, "
             "label, content, optional metadata; an existing (kind, label) "
             "is updated in place and keeps its id, pass id to rename one — "
             "labels start with a letter/underscore, CJK fine), 'delete' (id). "
@@ -355,7 +371,7 @@ TOOLS: dict[str, dict] = {
             "type": "object",
             "properties": {
                 "action": {"type": "string",
-                           "enum": ["list", "upsert", "delete"]},
+                           "enum": ["list", "get", "upsert", "delete"]},
                 "project_id": {"type": "string"},
                 "kind": {"type": "string"},
                 "label": {"type": "string"},

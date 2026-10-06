@@ -17,6 +17,7 @@
           class="v2-refchip"
           :data-src="it.entry.src"
           :data-type="it.type"
+          :data-missing="it.missing ? '1' : ''"
           :data-dragging="drag?.from === i ? '1' : ''"
           :data-drop-before="drag && drag.over === i && drag.from !== i ? '1' : ''"
           :title="it.label"
@@ -42,6 +43,7 @@
             class="v2-refchip__img"
           />
           <span v-else-if="it.type === 'audio'" class="v2-refchip__glyph">♪</span>
+          <span v-else-if="it.missing" class="v2-refchip__glyph v2-refchip__glyph--missing">!</span>
           <span v-else class="v2-refchip__glyph v2-refchip__glyph--pending">…</span>
           <span class="v2-refchip__pos" :style="{ background: it.color }">{{ it.position }}</span>
           <span v-if="it.entry.src === 'link'" class="v2-refchip__link">⟜</span>
@@ -212,6 +214,8 @@ onMounted(() => strip.init())
   font: 500 14px/1 system-ui, sans-serif;
 }
 .v2-refchip__glyph--pending { color: var(--v2-text-muted); }
+.v2-refchip__glyph--missing { color: #f87171; font-weight: 700; }
+.v2-refchip[data-missing="1"] { border-color: #f87171; }
 .v2-refchip__pos {
   position: absolute;
   left: 2px;

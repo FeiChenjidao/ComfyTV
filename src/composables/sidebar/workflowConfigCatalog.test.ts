@@ -3,20 +3,16 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 const { CAPS } = vi.hoisted(() => ({
   CAPS: {
     caps_by_kind: {
-      image:    { upstream_kinds: ['image', 'text'],          option_keys: ['option:negative', 'option:seed', 'option:batch_size', 'option:mask_data'], computed_keys: ['computed:width', 'computed:height'], supports_mask: true },
-      video:    { upstream_kinds: ['image', 'video', 'text'], option_keys: ['option:negative', 'option:seed', 'option:duration_s', 'option:generate_audio'], computed_keys: ['computed:width', 'computed:height', 'computed:length'] },
-      audio:    { upstream_kinds: ['text', 'audio'],          option_keys: ['option:seed', 'option:duration_s', 'option:lyrics'], computed_keys: ['computed:length'] },
-      inpaint:  { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:negative', 'option:mask_data'], computed_keys: [], supports_mask: true },
-      erase:    { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:mask_data'], computed_keys: [], supports_mask: true },
-      outpaint: { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:negative', 'option:pad_left'], computed_keys: [] },
+      image:    { upstream_kinds: ['image', 'text'],          option_keys: ['option:seed', 'option:batch_size'], computed_keys: ['computed:width', 'computed:height'], option_labels: { 'option:seed': 'Stage seed', 'option:batch_size': 'Stage batch size' } },
+      video:    { upstream_kinds: ['image', 'video', 'text'], option_keys: ['option:seed', 'option:duration_s', 'option:generate_audio'], computed_keys: ['computed:width', 'computed:height', 'computed:length'], option_labels: { 'option:seed': 'Stage seed', 'option:duration_s': 'Stage duration (s)', 'option:generate_audio': 'Stage generate audio' } },
+      audio:    { upstream_kinds: ['text', 'audio'],          option_keys: ['option:seed', 'option:duration_s', 'option:lyrics'], computed_keys: ['computed:length'], option_labels: { 'option:seed': 'Stage seed', 'option:duration_s': 'Stage duration (s)', 'option:lyrics': 'Stage lyrics' } },
+      inpaint:  { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:mask_data'], computed_keys: [], option_labels: { 'option:seed': 'Stage seed', 'option:mask_data': 'Stage mask (painter output)' } },
+      erase:    { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:mask_data'], computed_keys: [], option_labels: { 'option:seed': 'Stage seed', 'option:mask_data': 'Stage mask (painter output)' } },
+      outpaint: { upstream_kinds: ['image'],                  option_keys: ['option:seed', 'option:pad_left'], computed_keys: [], option_labels: { 'option:seed': 'Stage seed', 'option:pad_left': 'Stage pad left' } },
+      'image-edit': { upstream_kinds: ['image'],              option_keys: ['option:seed', 'option:custom_size'], computed_keys: [], option_labels: { 'option:seed': 'Stage seed', 'option:custom_size': 'Use custom size' } },
+      speech:   { upstream_kinds: ['text'],                   option_keys: ['option:seed', 'option:custom_size'], computed_keys: [], option_labels: { 'option:seed': 'Stage seed', 'option:custom_size': 'Emotion' } },
     },
-    fallback_caps: { upstream_kinds: ['image', 'video', 'audio', 'text'], option_keys: ['option:negative', 'option:seed', 'option:batch_size'], computed_keys: ['computed:width', 'computed:height', 'computed:length'] },
-    option_labels: {
-      'option:negative': 'Stage negative prompt', 'option:seed': 'Stage seed',
-      'option:batch_size': 'Stage batch size', 'option:duration_s': 'Stage duration (s)',
-      'option:generate_audio': 'Stage generate audio', 'option:lyrics': 'Stage lyrics',
-      'option:mask_data': 'Stage mask (painter output)', 'option:pad_left': 'Stage pad left',
-    } as Record<string, string>,
+    fallback_caps: { upstream_kinds: ['image', 'video', 'audio', 'text'], option_keys: ['option:seed', 'option:batch_size'], computed_keys: ['computed:width', 'computed:height', 'computed:length'], option_labels: {} },
   },
 }))
 
@@ -35,7 +31,6 @@ import {
   groupExposedWidgets,
   isResultNodeCandidate,
   loadCaps,
-  reloadCaps,
   resultTypesForKind,
   type ExposedWidget,
 } from './workflowConfigCatalog'
@@ -64,7 +59,6 @@ describe('buildBindingOptions', () => {
   it('emits option/computed/upstream entries for the kind', () => {
     const opts = buildBindingOptions([], 'image')
     const vals = opts.map(o => o.value)
-    expect(vals).toContain('option:negative')
     expect(vals).toContain('option:seed')
     expect(vals).toContain('option:batch_size')
     expect(vals).toContain('computed:width')
@@ -78,6 +72,13 @@ describe('buildBindingOptions', () => {
     const opts = buildBindingOptions([], 'audio')
     const lyrics = opts.find(o => o.value === 'option:lyrics')
     expect(lyrics?.label).toBe('Stage lyrics')
+  })
+
+  it('labels a custom key with the label of the workflow kind that owns it', () => {
+    const edit = buildBindingOptions([], 'image-edit').find(o => o.value === 'option:custom_size')
+    const speech = buildBindingOptions([], 'speech').find(o => o.value === 'option:custom_size')
+    expect(edit?.label).toBe('Use custom size')
+    expect(speech?.label).toBe('Emotion')
   })
 
   it('text-kind upstream uses :value suffix, image uses :annotated', () => {
@@ -115,7 +116,7 @@ describe('buildBindingOptions', () => {
       const vals = buildBindingOptions([], kind).map(o => o.value)
       expect(vals).toContain('upstream_image:masked[0]')
     }
-    for (const kind of ['outpaint', 'video']) {
+    for (const kind of ['image', 'outpaint', 'video']) {
       const vals = buildBindingOptions([], kind).map(o => o.value)
       expect(vals).not.toContain('upstream_image:masked[0]')
     }
@@ -128,16 +129,6 @@ describe('buildBindingOptions', () => {
     expect(vals.some(v => v.startsWith('upstream_video:'))).toBe(true)
     expect(vals.some(v => v.startsWith('upstream_audio:'))).toBe(true)
     expect(vals.some(v => v.startsWith('upstream_text:'))).toBe(true)
-  })
-
-  it('promotes matching Stage option for aspect_ratio / resolution widgets', async () => {
-    CAPS.caps_by_kind.image.option_keys.push('option:aspect_ratio', 'option:resolution')
-    CAPS.option_labels['option:aspect_ratio'] = 'Stage aspect ratio'
-    CAPS.option_labels['option:resolution'] = 'Stage resolution'
-    await reloadCaps()
-    const opts = buildBindingOptions([], 'image', { widget_name: 'model.aspect_ratio' })
-    expect(opts[1]?.value).toBe('option:aspect_ratio')
-    expect(opts[1]?.label).toContain('★')
   })
 
   it('every kind from caps produces a valid options list', () => {
@@ -339,15 +330,9 @@ describe('resultTypesForKind', () => {
 
   it('falls back to all types for unknown/empty kind', () => {
     expect(resultTypesForKind(undefined)).toEqual(
-      ['graph_output_first', 'ui_save_batch', 'ui_save_url', 'ui_save_layered'],
+      ['graph_output_first', 'ui_save_batch', 'ui_save_url'],
     )
-    expect(resultTypesForKind('')).toHaveLength(4)
-  })
-
-  it('offers layered for layer-separation', () => {
-    expect(resultTypesForKind('layer-separation')).toEqual([
-      'ui_save_layered', 'ui_save_batch', 'ui_save_url',
-    ])
+    expect(resultTypesForKind('')).toHaveLength(3)
   })
 })
 
@@ -368,5 +353,38 @@ describe('custom exposure index', () => {
   it('lists exposed outputs', () => {
     expect(customExposedOutputs({ kind: 'custom', meta })).toEqual([{ kind: 'image', label: 'Original' }])
     expect(customExposedOutputs({ kind: 'video', meta })).toEqual([])
+  })
+})
+
+import { outputBindingOptions, outputsTakenOver } from '@/composables/sidebar/workflowConfigCatalog'
+
+describe('output bindings', () => {
+  const out = (slot: number, binding: string | null = null) => widget({
+    widget_name: `output:${slot}`, widget_type: 'OUTPUT',
+    widget_props: { output_type: 'INT', output_name: slot ? 'height' : 'width' },
+    current_value: null, stage_binding: binding,
+  })
+
+  it('offers only stage values for numeric outputs', () => {
+    const vals = outputBindingOptions(buildBindingOptions([], 'image'), 'INT').map(o => o.value)
+    expect(vals).toContain('computed:width')
+    expect(vals).toContain('option:seed')
+    expect(vals).not.toContain('__VALUE__')
+    expect(vals).not.toContain('main_prompt')
+    expect(vals.some(v => v.startsWith('upstream_'))).toBe(false)
+  })
+
+  it('adds the prompt and upstream text for string outputs', () => {
+    const vals = outputBindingOptions(buildBindingOptions([], 'image'), 'STRING').map(o => o.value)
+    expect(vals).toContain('main_prompt')
+    expect(vals).toContain('upstream_text:value[0]')
+    expect(vals).not.toContain('upstream_image:annotated[0]')
+  })
+
+  it('takes over the node only when every output is bound', () => {
+    const node = (widgets: ExposedWidget[]) => ({ node_id: '115', node_title: 'RS', node_type: 'ResolutionSelector', widgets })
+    expect(outputsTakenOver(node([widget(), out(0, 'computed:width'), out(1)]))).toBe(false)
+    expect(outputsTakenOver(node([widget(), out(0, 'computed:width'), out(1, 'computed:height')]))).toBe(true)
+    expect(outputsTakenOver(node([widget({ stage_binding: 'option:seed' })]))).toBe(false)
   })
 })

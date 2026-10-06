@@ -42,6 +42,11 @@ const info = {
       required_slots: { image: [0, 1], video: [], audio: [], text: [] },
       max_inputs: { image: 2, video: 0, audio: 0, text: null },
     },
+    'Linked, nothing bound': {
+      uses: { image: false, video: false, audio: false, text: false },
+      requires: { image: false, video: false, audio: false, text: false },
+      max_inputs: { image: 0, video: 0, audio: 0, text: 0 },
+    },
   },
 }
 
@@ -64,6 +69,23 @@ describe('validateNode', () => {
     })
     const w = await validateNode(node, 'image')
     expect(w.image?.status).toBe('wired_but_unused')
+  })
+
+  it('warns when the card has a prompt box but the workflow binds no prompt', async () => {
+    const { validateNode } = await loadModuleWithInfo(info)
+    const node = makeNode({
+      widgets: [{ name: 'workflow', value: 'Linked, nothing bound' }, { name: 'main_prompt', value: '' }],
+    })
+    const w = await validateNode(node, 'image')
+    expect(w.main_prompt?.status).toBe('wired_but_unused')
+  })
+
+  it('does not warn about the prompt once it is bound', async () => {
+    const { validateNode } = await loadModuleWithInfo(info)
+    const node = makeNode({
+      widgets: [{ name: 'workflow', value: 'Z-Image Turbo' }, { name: 'main_prompt', value: 'a cat' }],
+    })
+    expect((await validateNode(node, 'image')).main_prompt).toBeUndefined()
   })
 
   it('flags missing required image input', async () => {

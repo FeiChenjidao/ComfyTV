@@ -45,6 +45,17 @@ async def _rpc(client, method: str, params: dict | None = None, msg_id=1) -> dic
     return await resp.json()
 
 
+def _assert_arrays_have_items(path: str, schema):
+    if isinstance(schema, dict):
+        if schema.get("type") == "array" or "array" in (schema.get("type") or []):
+            assert "items" in schema, f"{path}: array schema missing items"
+        for k, v in schema.items():
+            _assert_arrays_have_items(f"{path}.{k}", v)
+    elif isinstance(schema, list):
+        for i, v in enumerate(schema):
+            _assert_arrays_have_items(f"{path}[{i}]", v)
+
+
 async def _call_tool(client, name: str, arguments: dict | None = None) -> dict:
     data = await _rpc(client, "tools/call", {"name": name, "arguments": arguments or {}})
     assert "result" in data, data
@@ -161,6 +172,7 @@ class TestProtocol:
         for t in tools.values():
             assert t["description"]
             assert t["inputSchema"]["type"] == "object"
+            _assert_arrays_have_items(t["name"], t["inputSchema"])
 
     async def test_unknown_tool_is_protocol_error(self, client):
         data = await _rpc(client, "tools/call", {"name": "nope", "arguments": {}})

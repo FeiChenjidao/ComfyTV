@@ -8,7 +8,7 @@ import { bindNodeDrag } from '@/v2/nodeDrag'
 import { bindShellChrome } from '@/v2/shellChrome'
 import { bindProgressRing, createNodeScope, ensureMinSize, hideNativeWidgets, ICON_GRIP } from '@/v2/shellCommon'
 import { installV2ShellCss } from '@/v2/shellCss'
-import { bindWheelCapture } from '@/v2/wheelCapture'
+import { bindWheelCapture, isTextEntry } from '@/v2/wheelCapture'
 import MediaCornerV2 from '@/v2/MediaCornerV2.vue'
 import MediaPreviewV2 from '@/v2/MediaPreviewV2.vue'
 import { createIslandGroup } from '@/v2/islands'
@@ -265,13 +265,41 @@ function makePoolPicker(previewKind: 'image' | 'video' | 'audio') {
 
     navPrev.addEventListener('pointerdown', (e) => e.stopPropagation())
     navNext.addEventListener('pointerdown', (e) => e.stopPropagation())
+    const stepPrev = () => applyPick(pickedIdx <= 1 ? batchList.length : pickedIdx - 1)
+    const stepNext = () => applyPick(pickedIdx >= batchList.length ? 1 : pickedIdx + 1)
     navPrev.addEventListener('click', (e) => {
       e.stopPropagation()
-      applyPick(pickedIdx <= 1 ? batchList.length : pickedIdx - 1)
+      stepPrev()
     })
     navNext.addEventListener('click', (e) => {
       e.stopPropagation()
-      applyPick(pickedIdx >= batchList.length ? 1 : pickedIdx + 1)
+      stepNext()
+    })
+
+    preview.tabIndex = -1
+    preview.style.outline = 'none'
+    let prevFocus: HTMLElement | null = null
+    preview.addEventListener('pointerenter', () => {
+      const active = document.activeElement as HTMLElement | null
+      if (batchList.length < 2 || preview.contains(active) || isTextEntry(active)) return
+      prevFocus = active
+      preview.focus({ preventScroll: true })
+    })
+    preview.addEventListener('pointerleave', () => {
+      if (document.activeElement === preview) {
+        preview.blur()
+        if (prevFocus && prevFocus !== document.body) prevFocus.focus({ preventScroll: true })
+      }
+      prevFocus = null
+    })
+    preview.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || batchList.length < 2) return
+      if (e.target instanceof HTMLMediaElement || isTextEntry(e.target as Element)) return
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'ArrowLeft') stepPrev()
+      else stepNext()
     })
     chip.addEventListener('pointerdown', (e) => e.stopPropagation())
     chip.addEventListener('click', (e) => {

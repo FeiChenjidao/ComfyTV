@@ -57,6 +57,7 @@ export interface StripItem {
   label: string
   color: string
   pending: boolean
+  missing: boolean
 }
 
 export function useMediaStrip(
@@ -115,15 +116,19 @@ export function useMediaStrip(
       if (!acceptedTypes.value[type]) continue
       table[type].forEach((entry, index) => {
         const url = mediaEntryUrl(node, entry)
+        const missing = entry.src !== 'link'
+          && (!url || (entry.src === 'asset' && !!assetStore.byId(entry.asset_id!)?.file_missing))
+        const label = `${t(`mention.${type}Expand`, { n: index + 1 })} · ${entryLabel(entry, type)}`
         out.push({
           type,
           position: index + 1,
           index,
           entry,
           url,
-          label: `${t(`mention.${type}Expand`, { n: index + 1 })} · ${entryLabel(entry, type)}`,
+          label: missing ? `${label} — ${t('imageRefs.missing')}` : label,
           color: slotColor(index + 1),
           pending: entry.src === 'link' && !url,
+          missing,
         })
       })
     }
@@ -260,6 +265,7 @@ export function useMediaStrip(
 
   function init() {
     assetStore.ensureHydrated()
+    assetStore.installWebSocketSync()
     void scheduleWarnings()
   }
 

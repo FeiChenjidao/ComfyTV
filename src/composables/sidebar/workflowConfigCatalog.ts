@@ -19,6 +19,7 @@ export interface GuiNode {
   title?: string | null
   is_output?: boolean | null
   out_type?: string | null
+  in_type?: string | null
 }
 
 export interface ConfigPayload {
@@ -66,20 +67,14 @@ export function customExposedOutputs(config: Pick<ConfigPayload, 'kind' | 'meta'
     .map((o: any) => ({ kind: String(o.kind ?? ''), label: String(o.label ?? o.kind ?? '') }))
 }
 
-export type ResultType =
-  | 'graph_output_first'
-  | 'ui_save_batch'
-  | 'ui_save_url'
-  | 'ui_save_layered'
+export type ResultType = 'graph_output_first' | 'ui_save_batch' | 'ui_save_url'
 
 const TEXT_RESULT_KINDS = new Set(['text', 'storyboard'])
 const BATCH_RESULT_KINDS = new Set(['image', 'shot-images', 'multiview', 'sequence'])
-const LAYERED_RESULT_KINDS = new Set(['layer-separation'])
 
 export function resultTypesForKind(kind: string | null | undefined): ResultType[] {
-  if (!kind) return ['graph_output_first', 'ui_save_batch', 'ui_save_url', 'ui_save_layered']
+  if (!kind) return ['graph_output_first', 'ui_save_batch', 'ui_save_url']
   if (TEXT_RESULT_KINDS.has(kind)) return ['graph_output_first']
-  if (LAYERED_RESULT_KINDS.has(kind)) return ['ui_save_layered', 'ui_save_batch', 'ui_save_url']
   if (BATCH_RESULT_KINDS.has(kind)) return ['ui_save_batch', 'ui_save_url']
   return ['ui_save_url']
 }
@@ -112,6 +107,26 @@ export function buildResultNodeOptions(
     out.push({ value: id, label: `${title}(${n.type}) #${id}` })
   }
   return out
+}
+
+export function isOutputRow(w: ExposedWidget): boolean {
+  return w.widget_type === 'OUTPUT'
+}
+
+export function outputsTakenOver(node: NodeBlock): boolean {
+  const outputs = node.widgets.filter(isOutputRow)
+  return outputs.length > 0 && outputs.every(w => !!w.stage_binding)
+}
+
+export function outputBindingOptions(
+  options: Array<{ value: string; label: string }>,
+  outputType: string,
+): Array<{ value: string; label: string }> {
+  const text = outputType === 'STRING'
+  return options
+    .filter(o => o.value !== '__VALUE__')
+    .filter(o => o.value.startsWith('option:') || o.value.startsWith('computed:')
+      || (text && (o.value === 'main_prompt' || o.value.startsWith('upstream_text:'))))
 }
 
 export interface NodeBlock {
@@ -189,6 +204,7 @@ export function groupExposedWidgets(widgets: ExposedWidget[]): WidgetGroup[] {
 import { reactive } from 'vue'
 
 import { fetchCaps } from '@/api'
+import { i18n, t } from '@/i18n'
 
 export type UpstreamKind = 'image' | 'video' | 'audio' | 'text' | 'model'
 
@@ -196,31 +212,28 @@ export interface Caps {
   upstream_kinds: UpstreamKind[]
   option_keys:    string[]
   computed_keys:  string[]
-  supports_mask?: boolean
+  option_labels:  Record<string, string>
 }
 
-export const STAGE_COMPUTED_LABELS: Record<string, string> = {
-  'computed:width':  'Stage width',
-  'computed:height': 'Stage height',
-  'computed:length': 'Stage video length',
+const STAGE_COMPUTED_LABEL_KEYS: Record<string, string> = {
+  'computed:width':  'bindTo.width',
+  'computed:height': 'bindTo.height',
+  'computed:length': 'bindTo.length',
 }
 
-export const UPSTREAM_KIND_LABELS: Record<string, string> = {
-  image: 'Upstream image', video: 'Upstream video',
-  audio: 'Upstream audio', text:  'Upstream text',
-  model: 'Upstream 3D model',
+export function stageParamLabel(key: string, fallback: string): string {
+  const k = `bindTo.option.${key}`
+  return i18n.global.te(k) ? t(k) : fallback
 }
 
 interface CapsState {
   byKind:   Record<string, Caps>
   fallback: Caps | null
-  optionLabels: Record<string, string>
 }
 
 const capsState = reactive<CapsState>({
   byKind:   {},
   fallback: null,
-  optionLabels: {},
 })
 
 let capsPromise: Promise<void> | null = null
@@ -230,7 +243,6 @@ export function loadCaps(): Promise<void> {
     capsPromise = fetchCaps().then((payload) => {
       capsState.byKind   = payload.caps_by_kind as Record<string, Caps>
       capsState.fallback = payload.fallback_caps as Caps
-      capsState.optionLabels = (payload.option_labels ?? {}) as Record<string, string>
     }).catch((e) => {
       capsPromise = null
       console.error('[ComfyTV] fetchCaps failed — caps are served from the backend; fix the API', e)
@@ -262,123 +274,37 @@ function maxUsedUpstreamIndex(widgets: ExposedWidget[], kind: string): number {
 export function buildBindingOptions(
   widgets: ExposedWidget[],
   workflowKind: string | null | undefined,
-  forWidget?: Pick<ExposedWidget, 'widget_name'> | null,
 ): Array<{ value: string; label: string }> {
   void loadCaps().catch(() => {})
   const caps = (workflowKind ? capsState.byKind[workflowKind] : null) ?? capsState.fallback
   const out: Array<{ value: string; label: string }> = [
-    { value: '__VALUE__', label: '(use this value)' },
-    { value: 'main_prompt', label: 'Stage prompt' },
+    { value: '__VALUE__', label: t('bindTo.useValue') },
+    { value: 'main_prompt', label: t('bindTo.prompt') },
   ]
-  if (!caps) return markRecommendedBindings(out, forWidget?.widget_name)
-
-  const seen = new Set(out.map(o => o.value))
-  function pushOpt(value: string, label?: string) {
-    if (seen.has(value)) return
-    seen.add(value)
-    out.push({ value, label: label ?? capsState.optionLabels[value] ?? value })
-  }
-
+  if (!caps) return out
   for (const k of caps.option_keys) {
-    pushOpt(k, capsState.optionLabels[k] ?? k)
+    out.push({ value: k, label: stageParamLabel(k.replace(/^option:/, ''), caps.option_labels[k] ?? k) })
   }
-
-  // Layer C: allow binding option:<leaf> for the current widget even when caps
-  // / StageParams have not declared that key yet.
-  const leaf = forWidget?.widget_name
-    ? (forWidget.widget_name.includes('.')
-      ? forWidget.widget_name.slice(forWidget.widget_name.lastIndexOf('.') + 1)
-      : forWidget.widget_name)
-    : ''
-  if (leaf) {
-    const rec = recommendedOptionForWidget(forWidget?.widget_name)
-    if (rec) pushOpt(rec, capsState.optionLabels[rec] ?? rec)
-    else pushOpt(`option:${leaf}`, `option:${leaf}`)
-  }
-
   for (const k of caps.computed_keys) {
-    pushOpt(k, STAGE_COMPUTED_LABELS[k] ?? k)
+    out.push({ value: k, label: STAGE_COMPUTED_LABEL_KEYS[k] ? t(STAGE_COMPUTED_LABEL_KEYS[k]) : k })
   }
   for (const ukind of caps.upstream_kinds) {
     const maxUsed = maxUsedUpstreamIndex(widgets, ukind)
     const showUpTo = Math.min(8, maxUsed + 1)
     const suffix = ukind === 'text' ? 'value' : 'annotated'
-    const label  = UPSTREAM_KIND_LABELS[ukind]
+    const label  = t(`bindTo.upstream.${ukind}`)
     for (let i = 0; i <= showUpTo; i++) {
-      pushOpt(
-        `upstream_${ukind}:${suffix}[${i}]`,
-        `${label} ${i + 1}`,
-      )
+      out.push({
+        value: `upstream_${ukind}:${suffix}[${i}]`,
+        label: `${label} ${i + 1}`,
+      })
     }
-    if (ukind === 'image' && caps.supports_mask) {
-      pushOpt(
-        'upstream_image:masked[0]',
-        'Upstream image + painted mask (alpha)',
-      )
+    if (ukind === 'image' && caps.option_keys.includes('option:mask_data')) {
+      out.push({
+        value: 'upstream_image:masked[0]',
+        label: t('bindTo.maskedImage'),
+      })
     }
   }
-  return markRecommendedBindings(out, forWidget?.widget_name)
-}
-
-/** Leaf widget names that line up with a Stage option:key. */
-const WIDGET_TO_OPTION: Record<string, string> = {
-  aspect_ratio: 'option:aspect_ratio',
-  resolution: 'option:resolution',
-  seed: 'option:seed',
-  Seed: 'option:seed',
-  model_seed: 'option:seed',
-  image_seed: 'option:seed',
-  texture_seed: 'option:seed',
-  batch_size: 'option:batch_size',
-  negative: 'option:negative',
-  negative_prompt: 'option:negative',
-  scale: 'option:scale',
-  scale_factor: 'option:scale',
-  Scale: 'option:scale',
-  target_resolution: 'option:scale',
-  Target_Resolution: 'option:scale',
-  texture: 'option:texture',
-  pbr: 'option:pbr',
-  texture_quality: 'option:texture_quality',
-  geometry_quality: 'option:geometry_quality',
-  model_version: 'option:model_version',
-  face_limit: 'option:face_limit',
-  quad: 'option:quad',
-  smart_low_poly: 'option:smart_low_poly',
-  auto_size: 'option:auto_size',
-  orientation: 'option:orientation',
-  texture_alignment: 'option:texture_alignment',
-  material: 'option:material',
-  Material_Type: 'option:material',
-  mode: 'option:mode',
-  polygon_count: 'option:polygon_count',
-  Polygon_count: 'option:polygon_count',
-  geometry_file_format: 'option:geometry_file_format',
-  texture_mode: 'option:texture_mode',
-  TAPose: 'option:tapose',
-  tapose: 'option:tapose',
-  hd_texture: 'option:hd_texture',
-  texture_delight: 'option:texture_delight',
-  addon_highpack: 'option:addon_highpack',
-}
-
-export function recommendedOptionForWidget(widgetName: string | null | undefined): string | null {
-  if (!widgetName) return null
-  const leaf = widgetName.includes('.') ? widgetName.slice(widgetName.lastIndexOf('.') + 1) : widgetName
-  if (!leaf) return null
-  return WIDGET_TO_OPTION[leaf] ?? `option:${leaf}`
-}
-
-function markRecommendedBindings(
-  options: Array<{ value: string; label: string }>,
-  widgetName?: string | null,
-): Array<{ value: string; label: string }> {
-  const rec = recommendedOptionForWidget(widgetName)
-  if (!rec) return options
-  const idx = options.findIndex(o => o.value === rec)
-  if (idx < 0) return options
-  const next = options.slice()
-  const [hit] = next.splice(idx, 1)
-  next.splice(1, 0, { ...hit!, label: `${hit!.label} ★` })
-  return next
+  return out
 }

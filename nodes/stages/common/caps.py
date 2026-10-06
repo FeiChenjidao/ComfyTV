@@ -1,20 +1,19 @@
-def _caps(upstream_kinds, option_keys, computed_keys, supports_mask=False) -> dict:
+def _caps(upstream_kinds, option_keys, computed_keys) -> dict:
     return {
         "upstream_kinds": list(upstream_kinds),
         "option_keys":    list(option_keys),
         "computed_keys":  list(computed_keys),
-        "supports_mask":  bool(supports_mask),
     }
 
 
 CAPS_BY_KIND: dict[str, dict] = {
     'text':          _caps(['text', 'image', 'video'],     ['option:seed'],
                            []),
-    'image':         _caps(['image', 'text'],              ['option:negative', 'option:seed', 'option:batch_size', 'option:aspect_ratio', 'option:resolution', 'option:mask_data'],
-                           ['computed:width', 'computed:height'], True),
-    'shot-images':   _caps(['image', 'text'],              ['option:negative', 'option:seed', 'option:batch_size', 'option:aspect_ratio', 'option:resolution'],
+    'image':         _caps(['image', 'text'],              ['option:seed', 'option:batch_size'],
                            ['computed:width', 'computed:height']),
-    'video':         _caps(['image', 'video', 'text', 'audio'], ['option:negative', 'option:seed', 'option:duration_s', 'option:generate_audio', 'option:aspect_ratio', 'option:resolution'],
+    'shot-images':   _caps(['image', 'text'],              ['option:seed', 'option:batch_size'],
+                           ['computed:width', 'computed:height']),
+    'video':         _caps(['image', 'video', 'text', 'audio'], ['option:seed', 'option:duration_s', 'option:generate_audio'],
                            ['computed:width', 'computed:height', 'computed:length']),
     'audio':         _caps([],                             ['option:seed', 'option:duration_s', 'option:lyrics', 'option:bpm', 'option:timesignature', 'option:keyscale', 'option:language'],
                            ['computed:length']),
@@ -22,16 +21,16 @@ CAPS_BY_KIND: dict[str, dict] = {
                            ['computed:length']),
     'storyboard':    _caps(['text'],                       ['option:max_length'],
                            []),
-    'panorama':      _caps(['image'],                      ['option:seed', 'option:aspect_ratio', 'option:resolution'],
+    'panorama':      _caps(['image'],                      ['option:seed'],
                            []),
     'upscale':       _caps(['image'],                      ['option:seed', 'option:scale'],
                            []),
-    'outpaint':      _caps(['image'],                      ['option:seed', 'option:negative', 'option:pad_left', 'option:pad_top', 'option:pad_right', 'option:pad_bottom', 'option:feathering'],
+    'outpaint':      _caps(['image'],                      ['option:seed', 'option:pad_left', 'option:pad_top', 'option:pad_right', 'option:pad_bottom', 'option:feathering'],
                            []),
-    'inpaint':       _caps(['image'],                      ['option:seed', 'option:negative', 'option:mask_data'],
-                           [], True),
+    'inpaint':       _caps(['image'],                      ['option:seed', 'option:mask_data'],
+                           []),
     'erase':         _caps(['image'],                      ['option:seed', 'option:mask_data'],
-                           [], True),
+                           []),
     'cutout':        _caps(['image'],                      [],
                            []),
     'multiangle':    _caps(['image'],                      ['option:seed'],
@@ -42,25 +41,13 @@ CAPS_BY_KIND: dict[str, dict] = {
                            []),
     'sequence':      _caps(['image'],                      ['option:seed'],
                            []),
-    'layer-separation': _caps(['image'],                   ['option:seed'],
-                           []),
     'timeline':      _caps([],                             [],
                            []),
     'audio-vocal':   _caps(['video'],                      [],
                            []),
     'audio-bg':      _caps(['video'],                      [],
                            []),
-    'model':         _caps(['model', 'image', 'text'],
-                           ['option:seed', 'option:negative',
-                            'option:texture', 'option:pbr',
-                            'option:texture_quality', 'option:geometry_quality',
-                            'option:model_version', 'option:face_limit',
-                            'option:quad', 'option:smart_low_poly', 'option:auto_size',
-                            'option:orientation', 'option:texture_alignment',
-                            'option:material', 'option:mode', 'option:polygon_count',
-                            'option:geometry_file_format', 'option:texture_mode',
-                            'option:tapose', 'option:hd_texture', 'option:texture_delight',
-                            'option:addon_highpack'],
+    'model':         _caps(['model', 'image', 'text'],     ['option:seed'],
                            []),
     'custom':        _caps(['image', 'video', 'audio', 'text', 'model'], [],
                            []),
@@ -69,17 +56,14 @@ CAPS_BY_KIND: dict[str, dict] = {
 
 FALLBACK_CAPS: dict = _caps(
     ['image', 'video', 'audio', 'text'],
-    ['option:negative', 'option:seed', 'option:batch_size'],
+    ['option:seed', 'option:batch_size'],
     ['computed:width', 'computed:height', 'computed:length'],
 )
 
 
 BUILTIN_OPTION_META: dict[str, tuple[str, str]] = {
-    'negative':       ('Stage negative prompt', 'string'),
     'seed':           ('Stage seed', 'int'),
     'batch_size':     ('Stage batch size', 'int'),
-    'aspect_ratio':   ('Stage aspect ratio', 'string'),
-    'resolution':     ('Stage resolution', 'string'),
     'duration_s':     ('Stage duration (s)', 'float'),
     'generate_audio': ('Stage generate audio', 'boolean'),
     'lyrics':         ('Stage lyrics', 'string'),
@@ -98,26 +82,6 @@ BUILTIN_OPTION_META: dict[str, tuple[str, str]] = {
     'pad_bottom':     ('Stage pad bottom', 'int'),
     'feathering':     ('Stage feathering', 'int'),
     'mask_data':      ('Stage mask (painter output)', 'string'),
-    'texture':        ('Stage texture maps', 'boolean'),
-    'pbr':            ('Stage PBR materials', 'boolean'),
-    'texture_quality': ('Stage texture quality', 'string'),
-    'geometry_quality': ('Stage geometry quality', 'string'),
-    'model_version':  ('Stage 3D model version', 'string'),
-    'face_limit':     ('Stage face limit', 'int'),
-    'quad':           ('Stage quad mesh', 'boolean'),
-    'smart_low_poly': ('Stage smart low-poly', 'boolean'),
-    'auto_size':      ('Stage auto real-world size', 'boolean'),
-    'orientation':    ('Stage image orientation', 'string'),
-    'texture_alignment': ('Stage texture alignment', 'string'),
-    'material':       ('Stage 3D material', 'string'),
-    'mode':           ('Stage 3D generation mode', 'string'),
-    'polygon_count':  ('Stage polygon count', 'string'),
-    'geometry_file_format': ('Stage 3D file format', 'string'),
-    'texture_mode':   ('Stage texture mode', 'string'),
-    'tapose':         ('Stage T/A pose', 'boolean'),
-    'hd_texture':     ('Stage HD texture', 'boolean'),
-    'texture_delight': ('Stage texture delight', 'boolean'),
-    'addon_highpack': ('Stage HighPack addon', 'boolean'),
 }
 
 
@@ -139,11 +103,10 @@ def caps_payload() -> dict:
             "upstream_kinds": list(v["upstream_kinds"]),
             "option_keys":    [],
             "computed_keys":  list(v["computed_keys"]),
-            "supports_mask":  bool(v.get("supports_mask")),
+            "option_labels":  {},
         }
         for k, v in CAPS_BY_KIND.items()
     }
-    option_labels: dict[str, str] = {}
 
     for p in storage.list_stage_params():
         kind = p["kind"]
@@ -152,19 +115,13 @@ def caps_payload() -> dict:
         key = f"option:{p['key']}"
         entry = by_kind.get(kind)
         if entry is None:
-            entry = {
-                "upstream_kinds": [],
-                "option_keys": [],
-                "computed_keys": [],
-                "supports_mask": False,
-            }
+            entry = {"upstream_kinds": [], "option_keys": [], "computed_keys": [], "option_labels": {}}
             by_kind[kind] = entry
         if key not in entry["option_keys"]:
             entry["option_keys"].append(key)
-        option_labels[key] = p["label"]
+        entry["option_labels"][key] = p["label"]
 
     return {
         "caps_by_kind": by_kind,
         "fallback_caps": FALLBACK_CAPS,
-        "option_labels": option_labels,
     }

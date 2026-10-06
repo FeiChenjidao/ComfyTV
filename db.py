@@ -137,6 +137,7 @@ class AssetCategory(Base):
 
 class Asset(Base):
     __tablename__ = "comfytv_assets"
+    __table_args__ = {"sqlite_autoincrement": True}
 
     id:          Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name:        Mapped[str] = mapped_column(String, default="")
@@ -372,6 +373,7 @@ def _init_engine() -> None:
 
     Base.metadata.create_all(_engine)
     _migrate_additive_columns(_engine)
+    _migrate_asset_autoincrement(_engine)
     _Session = sessionmaker(bind=_engine, expire_on_commit=False)
 
 
@@ -463,6 +465,63 @@ def _migrate_additive_columns(engine) -> None:
             logging.info("[ComfyTV] migrated: comfytv_workflows + meta_json")
     except Exception as e:
         logging.warning("[ComfyTV] additive migration failed: %s", e)
+
+
+def _migrate_asset_autoincrement(engine) -> None:
+    """Rebuild comfytv_assets with AUTOINCREMENT (SQLite cannot ALTER it in).
+
+    Follows SQLite's create-copy-drop-rename recipe with foreign keys off, so
+    comfytv_asset_category_links keeps pointing at comfytv_assets and its rows
+    are neither cascaded away nor rewritten."""
+    from sqlalchemy.schema import CreateTable
+    if engine.dialect.name != "sqlite":
+        return
+    raw = engine.raw_connection()
+    dbapi = raw.driver_connection
+    prev_isolation = dbapi.isolation_level
+    dbapi.isolation_level = None
+    try:
+        cur = raw.cursor()
+        row = cur.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='comfytv_assets'"
+        ).fetchone()
+        if row is None or "AUTOINCREMENT" in (row[0] or "").upper():
+            return
+        fk_on = cur.execute("PRAGMA foreign_keys").fetchone()[0]
+        cur.execute("PRAGMA foreign_keys=OFF")
+        try:
+            table = Asset.__table__
+            cols = ", ".join(c.name for c in table.columns)
+            ddl = str(CreateTable(table).compile(engine)).replace(
+                "CREATE TABLE comfytv_assets", "CREATE TABLE comfytv_assets_new", 1)
+            cur.execute("BEGIN")
+            cur.execute(ddl)
+            cur.execute(f"INSERT INTO comfytv_assets_new ({cols}) SELECT {cols} FROM comfytv_assets")
+            cur.execute("DROP TABLE comfytv_assets")
+            cur.execute("ALTER TABLE comfytv_assets_new RENAME TO comfytv_assets")
+            for index in table.indexes:
+                cur.execute(
+                    f"CREATE INDEX IF NOT EXISTS {index.name} ON comfytv_assets "
+                    f"({', '.join(c.name for c in index.columns)})")
+            bad = [
+                r for t in Base.metadata.sorted_tables
+                if any(fk.column.table is table for fk in t.foreign_keys)
+                for r in cur.execute(f"PRAGMA foreign_key_check({t.name})").fetchall()
+            ]
+            if bad:
+                raise RuntimeError(f"foreign key check failed: {bad[:5]}")
+            cur.execute("COMMIT")
+        except Exception:
+            cur.execute("ROLLBACK")
+            raise
+        finally:
+            cur.execute(f"PRAGMA foreign_keys={'ON' if fk_on else 'OFF'}")
+        logging.info("[ComfyTV] migrated: comfytv_assets ids no longer reused (AUTOINCREMENT)")
+    except Exception as e:
+        logging.warning("[ComfyTV] asset id migration failed: %s", e)
+    finally:
+        dbapi.isolation_level = prev_isolation
+        raw.close()
 
 
 def init() -> None:

@@ -4,14 +4,20 @@ import { computed, ref, watch } from 'vue'
 import { fetchSettings, runDbBackup, saveSettings } from '@/api'
 import type { BackupResult, SettingRow, SettingValue } from '@/api'
 import { fetchBlenderStatus } from '@/api/blender'
+import { applyCanvasDropSetting } from '@/composables/sidebar/assetCanvasDrop'
 import { applyAutoPickerSetting } from '@/composables/stages/autoPicker'
 import { applyLodSettings } from '@/v2/lodV2'
-import { applyPanelOnSelectSetting } from '@/v2/panelOnSelect'
 import { fetchEagleStatus } from '@/api/eagle'
 import { agentProviders, refreshAgentStatus } from '@/agent/status'
 
 type Values = Record<string, SettingValue>
 export type ProbeState = 'checking' | 'online' | 'offline'
+
+export interface ModelSuggestion {
+  value: string
+  label: string
+  group?: string
+}
 
 export interface SettingSection {
   id: string
@@ -29,7 +35,7 @@ const MASTER: Record<string, string> = {
   collab: 'enable-collab',
 }
 const MASTER_KEYS = new Set(Object.values(MASTER))
-const HIDDEN_KEYS = new Set(['skills-disabled'])
+const HIDDEN_KEYS = new Set(['skills-disabled', 'bot-provider', 'bot-run-mode'])
 const AGENT_TOGGLE_KEYS = new Set(['enable-mcp', 'enable-bot'])
 const MODEL_KEY_PREFIX = 'bot-model-'
 const COLLAPSED_STORAGE_KEY = 'comfytv:sidebar:settings:collapsed'
@@ -104,10 +110,20 @@ export function useSettingsPanel(
   const probes = ref<Record<string, ProbeState>>({})
   const collapsedStore = useStorage<Record<string, boolean>>(COLLAPSED_STORAGE_KEY, {})
 
-  function modelSuggestions(key: string): string[] {
+  function modelSuggestions(key: string): ModelSuggestion[] {
     if (!key.startsWith(MODEL_KEY_PREFIX)) return []
     const providerId = key.slice(MODEL_KEY_PREFIX.length)
-    return agentProviders.value.find((p) => p.id === providerId)?.models ?? []
+    const provider = agentProviders.value.find((p) => p.id === providerId)
+    if (!provider) return []
+    const rows = provider.model_options ?? []
+    if (rows.length) {
+      return rows.map((r) => ({
+        value: r.value,
+        label: r.label,
+        group: r.group,
+      }))
+    }
+    return (provider.models ?? []).map((m) => ({ value: m, label: m }))
   }
 
   const changedKeys = computed(() =>
@@ -232,7 +248,7 @@ export function useSettingsPanel(
       syncValues()
       applyLodSettings(rows.value)
       applyAutoPickerSetting(rows.value)
-      applyPanelOnSelectSetting(rows.value)
+      applyCanvasDropSetting(rows.value)
       if (Object.keys(changed).some((k) => AGENT_TOGGLE_KEYS.has(k) || k.startsWith('bot-'))) {
         await refreshAgentStatus()
       }

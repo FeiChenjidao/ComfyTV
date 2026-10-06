@@ -109,10 +109,10 @@ describe('addWorkflowUploadButton', () => {
     expect(node.widgets.length).toBe(count)
   })
 
-  function makeSizedNode(fromSave: boolean) {
+  function makeSizedNode(configured: boolean) {
     const node = makeNode()
     node.size = [400, 290]
-    node.__comfytvFromSave = fromSave
+    node.__comfytvConfigured = configured
     node.setSize = (s: number[]) => { node.size = [...s] }
     const addWidget = node.addWidget.bind(node)
     node.addWidget = (...args: any[]) => {

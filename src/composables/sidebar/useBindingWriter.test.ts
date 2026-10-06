@@ -218,6 +218,14 @@ describe('useBindingWriter — mutation flows', () => {
     })
   })
 
+  it('onBindingChange to a custom option casts by the target widget type', async () => {
+    const { onBindingChange, postBinding } = setup()
+    await onBindingChange(widget({ widget_type: 'INT' }), 'option:steps')
+    expect(postBinding).toHaveBeenCalledWith(expect.objectContaining({ from: 'option:steps', cast: 'int' }))
+    await onBindingChange(widget({ widget_type: 'STRING' }), 'option:lyrics')
+    expect(postBinding).toHaveBeenLastCalledWith(expect.objectContaining({ from: 'option:lyrics', cast: null }))
+  })
+
   it('onBindingChange to an upstream_* binding marks `required: true`', async () => {
     const { onBindingChange, postBinding } = setup()
     const w = widget()

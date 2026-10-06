@@ -53,6 +53,34 @@ class TestEntriesUpsert:
         assert b["entry"]["label"] == "new"
 
 
+class TestEntriesListAndGet:
+    async def test_list_previews_so_long_entries_do_not_hide_others(self, reset_db):
+        from ComfyTV import storage
+        from ComfyTV.api.mcp_tools import _entries
+        storage.ensure_default_project()
+        await _entries({"action": "upsert", "kind": "fragment",
+                        "label": "a_long", "content": "x" * 20000})
+        await _entries({"action": "upsert", "kind": "fragment",
+                        "label": "长安回声", "content": "short"})
+        rows = {r["label"]: r for r in (await _entries({"action": "list"}))["entries"]}
+        assert {"a_long", "长安回声"} <= rows.keys()
+        assert all("content" not in r for r in rows.values())
+        assert rows["a_long"]["content_chars"] == 20000
+        assert len(rows["a_long"]["preview"]) < 20000
+
+    async def test_get_by_label_or_id_returns_full_content(self, reset_db):
+        from ComfyTV import storage
+        from ComfyTV.api.mcp_tools import _entries
+        storage.ensure_default_project()
+        a = await _entries({"action": "upsert", "kind": "fragment",
+                            "label": "guide", "content": "y" * 9000})
+        by_label = await _entries({"action": "get", "label": "guide"})
+        by_id = await _entries({"action": "get", "id": a["entry"]["id"]})
+        assert by_label["entry"]["content"] == by_id["entry"]["content"] == "y" * 9000
+        with pytest.raises(ValueError):
+            await _entries({"action": "get", "label": "missing"})
+
+
 class TestAssetProbe:
     def test_adopt_fills_dimensions_and_mime(self, png):
         from ComfyTV.api.assets import adopt_media_folder

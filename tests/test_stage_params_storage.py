@@ -25,6 +25,11 @@ class TestStageParamCreate:
         assert a["key"] == "top_p"
         assert b["key"] == "top_p_2"
 
+    def test_non_ascii_label_keeps_its_characters(self, reset_db):
+        from ComfyTV import storage
+        a = _mk(storage, label="是否使用自定义尺寸 (v2)", type="boolean")
+        assert a["key"] == "是否使用自定义尺寸_v2"
+
     def test_same_label_different_kind_keeps_key(self, reset_db):
         from ComfyTV import storage
         a = _mk(storage, kind="audio", label="Strength", type="float")
@@ -114,6 +119,19 @@ class TestStageParamSeed:
         again = storage.seed_system_stage_params()
         assert again == 0
         assert len(storage.list_stage_params()) == first
+
+    def test_seed_prunes_retired_system_rows(self, reset_db):
+        from ComfyTV import db, storage
+        from ComfyTV.db import StageParam
+        storage.seed_system_stage_params()
+        with db.get_session() as s:
+            s.add(StageParam(kind="image", key="negative", label="Stage negative prompt",
+                             type="string", origin=0, order_=0))
+            s.commit()
+        storage.seed_system_stage_params()
+        keys = {p["key"] for p in storage.list_stage_params("image")}
+        assert "negative" not in keys
+        assert "seed" in keys
 
     def test_seed_coexists_with_user_rows(self, reset_db):
         from ComfyTV import storage

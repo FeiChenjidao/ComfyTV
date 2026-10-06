@@ -158,17 +158,16 @@
             </button>
 
             <div v-if="!isNodeCollapsed(node.node_id)" class="ctv:flex ctv:flex-col ctv:gap-1.5 ctv:p-2">
+              <span v-if="outputsTakenOver(node)" class="ctv:text-3xs ctv:italic ctv:text-muted-foreground">
+                {{ $t('configSidebar.outputsTakenOver') }}
+              </span>
               <div
-                v-for="w in node.widgets"
+                v-for="w in node.widgets.filter(w => !isOutputRow(w))"
                 :key="`${w.node_id}/${w.widget_name}`"
-                class="ctv:flex ctv:flex-col ctv:gap-1 ctv:[&_+_&]:pt-1.5 ctv:[&_+_&]:border-t ctv:[&_+_&]:border-solid ctv:[&_+_&]:border-border-subtle"
+                class="ctv:flex ctv:flex-col ctv:gap-1 ctv:[&_+_&]:pt-1.5 ctv:[&_+_&]:border-t ctv:[&_+_&]:border-border-subtle"
               >
                 <div class="ctv:text-2xs">
                   <span class="ctv:font-mono ctv:text-muted-foreground">.{{ w.widget_name }}</span>
-                  <span v-if="canEditBindingDefault(w)"
-                        class="ctv:ml-1.5 ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground/70">
-                    {{ $t('configSidebar.bindingDefault') }}
-                  </span>
                 </div>
                 <ComfyTVWidget
                   :kind="w.widget_type"
@@ -179,13 +178,9 @@
                   :step="numProp(w, 'step')"
                   :precision="numProp(w, 'precision')"
                   :multiline="!!w.widget_props?.multiline"
-                  :disabled="!!exposedOf(w) || (isStageBound(w) && !canEditBindingDefault(w))"
+                  :disabled="isStageBound(w) || !!exposedOf(w) || outputsTakenOver(node)"
                   @update:model-value="onValueChange(w, $event)"
                 />
-                <p v-if="canEditBindingDefault(w)"
-                   class="ctv:m-0 ctv:text-3xs ctv:leading-snug ctv:text-muted-foreground/70">
-                  {{ $t('configSidebar.bindingDefaultHint') }}
-                </p>
                 <div v-if="exposedOf(w)" class="ctv:flex ctv:items-center ctv:gap-1.5 ctv:mt-0.5 ctv:text-3xs ctv:text-muted-foreground">
                   <span class="ctv:uppercase ctv:tracking-wide">{{ $t('configSidebar.customExposed') }}</span>
                   <span class="ctv:py-px ctv:px-1.5 ctv:rounded-lg ctv:bg-base-foreground/5 ctv:text-base-foreground">
@@ -196,7 +191,7 @@
                   <span class="ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground">{{ $t('configSidebar.bindTo') }}</span>
                   <ComfyTVSelect
                     :model-value="dropdownValueFor(w)"
-                    :options="bindingOptionsFor(w)"
+                    :options="bindingOptions"
                     @update:model-value="onBindingChange(w, $event as string)"
                   />
                 </div>
@@ -212,6 +207,12 @@
                   {{ $t('configSidebar.bindingRequired') }}
                 </label>
               </div>
+              <NodeOutputBindings
+                v-if="node.widgets.some(isOutputRow)"
+                :outputs="node.widgets.filter(isOutputRow)"
+                :options="bindingOptions"
+                @change="onBindingChange"
+              />
             </div>
           </div>
         </div>
@@ -329,6 +330,7 @@ import IconSearch from '~icons/lucide/search'
 
 import ComfyTVWidget from '@/components/widgets/ComfyTVWidget.vue'
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
+import NodeOutputBindings from '@/components/sidebar/NodeOutputBindings.vue'
 import { useBindingWriter } from '@/composables/sidebar/useBindingWriter'
 import { useCollapsedFlag, useCollapsedNodeIds } from '@/composables/sidebar/useCollapsedState'
 import {
@@ -345,6 +347,8 @@ import {
   buildBindingOptions,
   customExposedOutputs,
   customExposureIndex,
+  isOutputRow,
+  outputsTakenOver,
   type ExposedWidget,
   type NodeBlock,
 } from '@/composables/sidebar/workflowConfigCatalog'
@@ -396,13 +400,12 @@ const { isCollapsed, toggle: toggleCollapsed } = useCollapsedNodeIds(workflowId)
 const { collapsed: notesCollapsed, toggle: toggleNotesCollapsed } =
   useCollapsedFlag(workflowId, 'comfytv:sidebar:notes-collapsed:')
 
-function bindingOptionsFor(w: ExposedWidget) {
-  return buildBindingOptions(
+const bindingOptions = computed(() =>
+  buildBindingOptions(
     config.value?.exposed_widgets ?? [],
     selected.value?.workflowKind,
-    w,
-  )
-}
+  ),
+)
 
 const {
   searchQuery,
@@ -421,7 +424,6 @@ function isNodeCollapsed(nodeId: string): boolean {
 const {
   isStageBound,
   isUpstreamBound,
-  canEditBindingDefault,
   dropdownValueFor,
   effectiveValue,
   comboOptions,

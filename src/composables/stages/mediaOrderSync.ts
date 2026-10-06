@@ -1,7 +1,11 @@
 import { remapMentionTokens } from '@/composables/stages/imageSlotMentions'
 import {
   applyPositions,
+  AUTOGROW_KEY_RE,
   dropLegacyRefs,
+  liveLinks,
+  lookupLink,
+  matchLiveLink,
   type MediaEntry,
   type MediaTable,
   type MediaType,
@@ -43,6 +47,7 @@ export function syncMediaTable(
   node: unknown,
   graph: any = (app as any)?.graph,
 ): { changed: boolean; removed: RemovedToken[] } {
+  relinkPastedMedia(node)
   const result = reconcileTable(node, graph)
   if (result.hadLegacy) dropLegacyRefs(node)
   if (!result.changed) return { changed: false, removed: [] }
@@ -53,6 +58,31 @@ export function syncMediaTable(
     console.warn(`[ComfyTV/media] @${r.type}_${r.position} removed from prompt — its media left the stage`)
   }
   return { changed: true, removed }
+}
+
+function relinkPastedMedia(node: any): void {
+  const graph = node?.graph
+  if (!graph) return
+  const table = readMediaTable(node)
+  for (const type of MEDIA_TYPES) {
+    const live = liveLinks(node, type, graph)
+    const claimed = new Set<number>()
+    for (const e of table[type]) {
+      if (e.src !== 'link') continue
+      const match = matchLiveLink(e, live, claimed)
+      if (match) { claimed.add(match.link); continue }
+      const src = lookupLink(graph, e.link!)
+      if (!src || String(src.target_id) === String(node.id)) continue
+      const origin = graph.getNodeById?.(src.origin_id)
+      const slot = (node.inputs ?? []).findIndex((i: any) => i?.link == null && typeof i?.name === 'string'
+        && (AUTOGROW_KEY_RE[type].test(i.name) || (type === 'audio' && i.name === 'audio')))
+      if (!origin || slot < 0) continue
+      node.__comfytvRelinking = true
+      const link = origin.connect(src.origin_slot, node, slot)
+      node.__comfytvRelinking = false
+      if (link) claimed.add(Number(link.id))
+    }
+  }
 }
 
 function commit(node: unknown, prev: MediaTable, next: MediaTable): RemovedToken[] {

@@ -161,7 +161,7 @@ export function usePromptEditorCore(opts: PromptEditorCoreOpts) {
       Text,
       HardBreak,
       Placeholder.configure({
-        placeholder: opts.placeholder() || 'Prompt — type @ to insert a saved fragment',
+        placeholder: opts.placeholder() || t('mention.promptPlaceholder'),
       }),
       Mention.configure({
         renderText: ({ node }) => `@${node.attrs.label}`,
@@ -188,6 +188,8 @@ export function usePromptEditorCore(opts: PromptEditorCoreOpts) {
       }),
     ],
     editorProps: {
+      transformPastedHTML: (html: string) =>
+        /<!--StartFragment-->([\s\S]*)<!--EndFragment-->/.exec(html)?.[1] ?? html,
       transformPasted: (slice: Slice) =>
         new Slice(chipifyFragment(slice.content), slice.openStart, slice.openEnd),
       attributes: {

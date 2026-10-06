@@ -164,6 +164,7 @@ describe('reconcileTable', () => {
     writeMediaTable(n, { image: [{ key: 'l99', src: 'link', link: 99, from: [5, 0] }, assetEntry(1)], video: [], audio: [] })
     const r = reconcileTable(n, graph)
     expect(r.table.image.map(e => e.key)).toEqual(['l13', 'a1'])
+    expect(r.remap).toEqual({})
   })
 
   it('is stable when nothing changed', () => {

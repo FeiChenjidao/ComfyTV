@@ -6,6 +6,8 @@ from typing import Any, Optional
 from sqlalchemy import select
 
 from ... import db
+from .._workflow_resolve import OUTPUT_BINDING_PREFIX
+from .bindings import drop_stale_api
 
 
 _log = logging.getLogger(__name__)
@@ -86,6 +88,7 @@ def get_workflow_for_invoke(kind: str, label: str) -> Optional[dict]:
         ).scalar_one_or_none()
         if row is None:
             return None
+        drop_stale_api(s, row)
         api_obj: Optional[dict] = None
         if row.api_json:
             try:
@@ -119,120 +122,7 @@ def get_workflow_for_invoke(kind: str, label: str) -> Optional[dict]:
         }
 
 
-_WIDGET_TYPES = frozenset({"INT", "FLOAT", "STRING", "BOOLEAN"})
-_MAX_DYNAMIC_COMBO_DEPTH = 4
-
-
-def _widgets_from_input_spec(
-    name: str, spec: Any, depth: int = 0, *, selected: Any = None,
-) -> list[dict]:
-    """Widget meta rows for one INPUT_TYPES entry (expands ``COMFY_*COMBO*``).
-
-    Dynamic-combo nodes (Nano Banana 2, Seedream, …) store nested knobs as
-    dotted API keys (``model.aspect_ratio``). The config sidebar only lists
-    what this returns, so we must surface those dotted names — not only the
-    top-level selector.
-
-    When ``selected`` is set (the live API value of this combo), only that
-    option's sub-widgets are expanded so Stage enums match the active model.
-    """
-    if not spec:
-        return []
-    if isinstance(spec, str):
-        if spec.upper() in _WIDGET_TYPES:
-            return [{"name": name, "type": spec.upper(), "options": {}}]
-        return []
-    if not isinstance(spec, (list, tuple)) or not spec:
-        return []
-
-    t = spec[0]
-    opts = spec[1] if len(spec) > 1 and isinstance(spec[1], dict) else {}
-    if opts.get("forceInput") or opts.get("defaultInput"):
-        return []
-
-    if isinstance(t, (list, tuple)):
-        return [{
-            "name": name, "type": "COMBO",
-            "options": {"values": list(t), **opts},
-        }]
-
-    if not isinstance(t, str):
-        return []
-    upper = t.upper()
-    if upper == "COMBO":
-        values = opts.get("options")
-        if values is None:
-            values = opts.get("values")
-        return [{
-            "name": name, "type": "COMBO",
-            "options": {**opts, "values": list(values or [])},
-        }]
-    if upper in _WIDGET_TYPES:
-        return [{"name": name, "type": upper, "options": opts}]
-
-    if not (t.startswith("COMFY_") and "COMBO" in t):
-        return []
-    if depth >= _MAX_DYNAMIC_COMBO_DEPTH:
-        return []
-
-    options = opts.get("options") or []
-    keys = [
-        o.get("key") for o in options
-        if isinstance(o, dict) and o.get("key") is not None
-    ]
-    out: list[dict] = [{
-        "name": name, "type": "COMBO",
-        "options": {
-            **{k: v for k, v in opts.items() if k != "options"},
-            "values": keys,
-        },
-    }]
-    matched = [
-        o for o in options
-        if isinstance(o, dict) and (selected is None or o.get("key") == selected)
-    ]
-    # Selected key can skew after model rename / convert — still surface knobs.
-    if not matched:
-        matched = [o for o in options if isinstance(o, dict)]
-    for option in matched:
-        sub_def = option.get("inputs")
-        if not isinstance(sub_def, dict):
-            continue
-        for section in ("required", "optional"):
-            section_def = sub_def.get(section) or {}
-            if not isinstance(section_def, dict):
-                continue
-            for sub_name, sub_spec in section_def.items():
-                out.extend(
-                    _widgets_from_input_spec(
-                        f"{name}.{sub_name}", sub_spec, depth + 1,
-                    )
-                )
-    return out
-
-
-def _merge_widget_meta(entries: list[dict]) -> list[dict]:
-    """Dedupe by name; union COMBO values when several dynamic options share a knob."""
-    order: list[str] = []
-    by_name: dict[str, dict] = {}
-    for entry in entries:
-        name = entry["name"]
-        prev = by_name.get(name)
-        if prev is None:
-            by_name[name] = entry
-            order.append(name)
-            continue
-        if entry["type"] == "COMBO" and prev["type"] == "COMBO":
-            prev_opts = prev.setdefault("options", {})
-            seen = list(prev_opts.get("values") or [])
-            for v in (entry.get("options") or {}).get("values") or []:
-                if v not in seen:
-                    seen.append(v)
-            prev_opts["values"] = seen
-    return [by_name[n] for n in order]
-
-
-def _node_widget_meta(class_type: str, api_inputs: dict | None = None) -> list:
+def _node_widget_meta(class_type: str) -> dict:
     import nodes
     cls = (
         getattr(nodes, "NODE_CLASS_MAPPINGS", {}).get(class_type)
@@ -247,14 +137,34 @@ def _node_widget_meta(class_type: str, api_inputs: dict | None = None) -> list:
                      class_type, e)
         return []
 
-    collected: list[dict] = []
+    out: list[dict] = []
+
+    _WIDGET_TYPES = {"INT", "FLOAT", "STRING", "BOOLEAN"}
     for section in ("required", "optional"):
         for name, spec in (input_types.get(section) or {}).items():
-            selected = (api_inputs or {}).get(name)
-            collected.extend(
-                _widgets_from_input_spec(name, spec, selected=selected),
-            )
-    return _merge_widget_meta(collected)
+            if not spec:
+                continue
+            if isinstance(spec, (list, tuple)):
+                t = spec[0] if spec else None
+                opts = spec[1] if len(spec) > 1 and isinstance(spec[1], dict) else {}
+                if isinstance(t, (list, tuple)):
+                    out.append({
+                        "name": name, "type": "COMBO",
+                        "options": {"values": list(t), **(opts or {})},
+                    })
+                elif isinstance(t, str) and t.upper() == "COMBO":
+                    values = opts.get("options")
+                    if values is None:
+                        values = opts.get("values")
+                    out.append({
+                        "name": name, "type": "COMBO",
+                        "options": {**(opts or {}), "values": list(values or [])},
+                    })
+                elif isinstance(t, str) and t.upper() in _WIDGET_TYPES:
+                    out.append({"name": name, "type": t.upper(), "options": opts})
+            elif isinstance(spec, str) and spec.upper() in _WIDGET_TYPES:
+                out.append({"name": name, "type": spec.upper(), "options": {}})
+    return out
 
 
 def _exposed_widgets(workflow_id: int, file_path: str,
@@ -328,6 +238,13 @@ def _exposed_widgets(workflow_id: int, file_path: str,
                 composite = f"{top_id}:{inner_id}"
                 yield composite, inner, sg_title
 
+    referenced_outputs = {
+        (str(v[0]), v[1])
+        for api_node in api_json.values() if isinstance(api_node, dict)
+        for v in (api_node.get("inputs") or {}).values()
+        if isinstance(v, list) and len(v) == 2
+    }
+
     out: list[dict] = []
     for node_id, n, group_title in iter_nodes_with_ids():
         class_type = n.get("type") or ""
@@ -339,32 +256,53 @@ def _exposed_widgets(workflow_id: int, file_path: str,
             continue
         api_inputs = api_node.get("inputs") or {}
 
-        title       = n.get("title") or class_type
-        widget_meta = _node_widget_meta(class_type, api_inputs)
+        title = n.get("title") or class_type
 
-        for wm in widget_meta:
+        def row(name: str, type_: str, props: dict, current: Any) -> dict:
+            binding = bindings_by_key.get((node_id, name))
+            return {
+                "node_id":      node_id,
+                "node_title":   title,
+                "node_type":    class_type,
+                "group_title":  group_title,
+                "widget_name":  name,
+                "widget_type":  type_,
+                "widget_props": props,
+                "current_value": current,
+                "stage_binding": binding.from_ if binding else None,
+                "override_value": binding.default_value if binding else None,
+                "cast":           binding.cast_ if binding else None,
+                "required":       bool(binding.required) if binding else False,
+            }
+
+        for wm in _node_widget_meta(class_type):
             wname = wm["name"]
             if wname not in api_inputs:
                 continue
             current = api_inputs[wname]
             if isinstance(current, list) and len(current) == 2:
                 continue
+            out.append(row(wname, wm["type"], wm.get("options") or {}, current))
 
-            binding = bindings_by_key.get((node_id, wname))
-            out.append({
-                "node_id":      node_id,
-                "node_title":   title,
-                "node_type":    class_type,
-                "group_title":  group_title,
-                "widget_name":  wname,
-                "widget_type":  wm["type"],
-                "widget_props": wm.get("options") or {},
-                "current_value": current,
-                "stage_binding": binding.from_ if binding else None,
-                "override_value": binding.default_value if binding else None,
-                "cast":           binding.cast_ if binding else None,
-                "required":       bool(binding.required) if binding else False,
-            })
+        for slot, otype, oname in node_primitive_outputs(class_type):
+            if (node_id, slot) in referenced_outputs:
+                out.append(row(f"{OUTPUT_BINDING_PREFIX}{slot}", "OUTPUT",
+                               {"output_type": otype, "output_name": oname}, None))
+    return out
+
+
+def node_primitive_outputs(class_type: str) -> list[tuple[int, str, str]]:
+    import nodes
+    cls = nodes.NODE_CLASS_MAPPINGS.get(class_type)
+    if cls is None:
+        return []
+    types = getattr(cls, "RETURN_TYPES", ()) or ()
+    names = getattr(cls, "RETURN_NAMES", None) or types
+    out = []
+    for slot, t in enumerate(types):
+        t = t.value if hasattr(t, "value") else t
+        if isinstance(t, str) and t in ("INT", "FLOAT", "STRING", "BOOLEAN"):
+            out.append((slot, t, str(names[slot]) if slot < len(names) else t))
     return out
 
 
@@ -385,6 +323,13 @@ def _node_output_meta(class_type: str) -> tuple[Optional[bool], Optional[str]]:
         if isinstance(val, str):
             out0 = val
     return is_output, out0
+
+
+def _node_input_type(node: dict) -> Optional[str]:
+    for inp in node.get("inputs") or []:
+        if isinstance(inp, dict) and inp.get("link") is not None and isinstance(inp.get("type"), str):
+            return inp["type"]
+    return None
 
 
 def _extract_gui_view(file_path: str) -> dict:
@@ -425,6 +370,7 @@ def _extract_gui_view(file_path: str) -> dict:
             "mode":      n.get("mode", 0),
             "is_output": is_output,
             "out_type":  out_type,
+            "in_type":   _node_input_type(n),
         })
 
     gui_groups = []

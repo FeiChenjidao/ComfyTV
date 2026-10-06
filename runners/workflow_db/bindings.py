@@ -7,6 +7,7 @@ from typing import Any, Optional
 from sqlalchemy import select
 
 from ... import db
+from .labels import _is_gui_format
 
 
 _log = logging.getLogger(__name__)
@@ -315,7 +316,6 @@ def list_workflows() -> list[dict]:
 
 
 def _gui_valid_for(path: Path) -> Optional[bool]:
-    from .seed import _is_gui_format
     if not path.exists():
         return None
     try:
@@ -377,6 +377,20 @@ def list_workflows_overview(kind: Optional[str] = None) -> list[dict]:
         return out
 
 
+def drop_stale_api(s, row) -> bool:
+    """True when the sidecar supplied api_json; otherwise wipes it if the file changed on disk."""
+    if _refresh_api_from_sidecar(s, row):
+        return True
+    path = Path(row.file_path)
+    cur_mtime = path.stat().st_mtime if path.exists() else None
+    if cur_mtime is not None and row.file_mtime is not None \
+            and cur_mtime != row.file_mtime:
+        row.api_json = None
+        row.file_mtime = cur_mtime
+        s.commit()
+    return False
+
+
 def get_workflow_state(kind: str, label: str) -> Optional[dict]:
     db.init()
     with db.get_session() as s:
@@ -386,21 +400,14 @@ def get_workflow_state(kind: str, label: str) -> Optional[dict]:
         if row is None:
             return None
         path = Path(row.file_path)
-        cur_mtime = path.stat().st_mtime if path.exists() else None
 
-        if _refresh_api_from_sidecar(s, row):
+        if drop_stale_api(s, row):
             return {
                 "has_api":     True,
                 "file_path":   row.file_path,
                 "file_mtime":  row.file_mtime,
                 "file_exists": path.exists(),
             }
-
-        if cur_mtime is not None and row.file_mtime is not None \
-                and cur_mtime != row.file_mtime:
-            row.api_json = None
-            row.file_mtime = cur_mtime
-            s.commit()
 
         if row.api_json:
             try:

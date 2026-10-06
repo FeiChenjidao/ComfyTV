@@ -1,14 +1,7 @@
 import { apiFetch, WorkflowInfoSchema } from '@/api'
 import { missingRequiredPositions } from '@/composables/stages/assetSlots'
-import {
-  autogrowKey,
-  currentMediaTable,
-  fixedMediaSocketNames,
-  type MediaEntry,
-  namedAutogrowSocketNames,
-  nodeAcceptsMedia,
-} from '@/composables/stages/mediaOrder'
-import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
+import { currentMediaTable, type MediaEntry, nodeAcceptsMedia } from '@/composables/stages/mediaOrder'
+import { t } from '@/i18n'
 
 export type SlotWarningStatus = 'wired_but_unused' | 'required_but_missing'
 
@@ -31,7 +24,6 @@ interface UsageEntry {
   requires:   Record<Kind, boolean>
   required_slots?: Record<Kind, number[]>
   max_inputs: Record<Kind, number | null>
-  uses_mask?: boolean
 }
 
 type WorkflowInfo = Record<string, Record<string, UsageEntry>>
@@ -58,9 +50,9 @@ export function loadWorkflowInfo(): Promise<WorkflowInfo> {
 
 export function invalidateWorkflowInfo() {
   _infoPromise = null
-  // Bound-option panels (StageControls / ParamsPanel) watch this.
-  comboOptionsVersion.value++
 }
+
+const kindName = (kind: Kind) => t(`validator.kind.${kind}`)
 
 function slotKind(type: string | undefined | null): Kind | null {
   switch (type) {
@@ -107,6 +99,13 @@ export async function validateNode(
   }
   if (!entry) return out
 
+  if (entry.max_inputs.text === 0 && node?.widgets?.some((w: any) => w.name === 'main_prompt')) {
+    out.main_prompt = {
+      status: 'wired_but_unused',
+      message: t('stage.promptNotBound', { label }),
+    }
+  }
+
   const imageEntries = opts.imageEntries ?? currentMediaTable(node).image
   const assetExists = opts.assetExists ?? (() => true)
 
@@ -122,15 +121,12 @@ export async function validateNode(
     if (max === 0) {
       out[slotName] = {
         status: 'wired_but_unused',
-        message: `"${label}" doesn't consume ${kind} input — this ` +
-          `connection will be ignored at run time.`,
+        message: t('validator.unused', { label, kind: kindName(kind) }),
       }
     } else if (max !== null && wiredCount[kind] > max) {
       out[slotName] = {
         status: 'wired_but_unused',
-        message: `"${label}" only consumes ${max} ${kind} input` +
-          `${max === 1 ? '' : 's'} — this extra connection will be ` +
-          `ignored at run time.`,
+        message: t('validator.extra', { label, max, kind: kindName(kind) }),
       }
     }
   }
@@ -138,23 +134,15 @@ export async function validateNode(
   if (nodeAcceptsMedia(node, 'image')) {
     const required = requiredSlotsOf(entry, 'image')
     if (required.length) {
-      const imageSlots = [
-        ...fixedMediaSocketNames(node, 'image'),
-        ...namedAutogrowSocketNames(node, 'image'),
-      ]
       const count = imageEntries.filter(e =>
         e.src !== 'asset' || (e.asset_id != null && assetExists(e.asset_id))).length
       const missing = missingRequiredPositions(required, count)
       const total = required.length
       for (const idx of missing) {
         const msg = total === 1
-          ? `"${label}" requires an image — wire one into this slot or add an image reference.`
-          : `"${label}" needs image ${idx + 1} — wire one in or add an image ` +
-            `reference (${total - missing.length}/${total} ready).`
-        out[imageSlots[idx] ?? autogrowKey('image', idx)] = {
-          status: 'required_but_missing',
-          message: msg,
-        }
+          ? t('validator.needImage', { label })
+          : t('validator.needImageN', { label, n: idx + 1, ready: total - missing.length, total })
+        out[`images.image${idx}`] = { status: 'required_but_missing', message: msg }
       }
     }
   }
@@ -171,9 +159,8 @@ export async function validateNode(
     const empties = emptySlotsOfKind(node, kind).slice(0, missing)
     for (const target of empties) {
       const msg = needed === 1
-        ? `"${label}" requires a ${kind} input — wire one into this slot.`
-        : `"${label}" requires ${needed} ${kind} inputs — wire one into this slot ` +
-          `(${wired}/${needed} wired so far).`
+        ? t('validator.needInput', { label, kind: kindName(kind) })
+        : t('validator.needInputN', { label, needed, wired, kind: kindName(kind) })
       out[String(target.name || '')] = {
         status: 'required_but_missing',
         message: msg,

@@ -147,7 +147,7 @@ export async function buildRunPrompt(node: any, store: Store): Promise<BuiltRunP
     if (MEDIA_TYPES.some(tp => table[tp].length > 0)) tablesByNode.set(String(nid), table)
     if (MEDIA_TYPES.some(tp => table[tp].some(e => e.src === 'asset'))) needsAssets = true
   }
-  if (needsAssets) await assetStore.hydrate()
+  if (needsAssets) await assetStore.refresh()
 
   const resolveUrl = (e: MediaEntry, _type: MediaType): string | null => {
     if (e.src === 'batch') {
@@ -155,6 +155,29 @@ export async function buildRunPrompt(node: any, store: Store): Promise<BuiltRunP
       return urls[e.batch_index!] ?? null
     }
     if (e.src === 'asset') return assetStore.byId(e.asset_id!)?.payload_url ?? null
+    return null
+  }
+
+  const brokenRefs: string[] = []
+  for (const [nid, table] of tablesByNode) {
+    const title = graphNodeOf(nid)?.title || `#${nid}`
+    for (const type of MEDIA_TYPES) {
+      table[type].forEach((e, i) => {
+        if (e.src === 'link') return
+        const fileMissing = e.src === 'asset' && !!assetStore.byId(e.asset_id!)?.file_missing
+        if (fileMissing || !resolveUrl(e, type)) {
+          brokenRefs.push(`${title} · ${t(`mention.${type}Expand`, { n: i + 1 })}`)
+        }
+      })
+    }
+  }
+  if (brokenRefs.length > 0) {
+    ;(app as any)?.extensionManager?.toast?.add?.({
+      severity: 'error',
+      summary: t('error.refMissing'),
+      detail: t('error.refMissingDetail', { list: brokenRefs.join('、') }),
+      life: 8000,
+    })
     return null
   }
 

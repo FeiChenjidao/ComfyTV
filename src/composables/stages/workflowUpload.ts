@@ -43,7 +43,7 @@ export function addWorkflowUploadButton(node: any, wfWidget: any, kind: string):
   if (node.widgets?.some((w: any) => w.__comfytvUpload)) return
 
   // addWidget expands the node to fit; a restored node keeps its saved size
-  const saved = node.__comfytvFromSave && node.size?.length >= 2
+  const saved = node.__comfytvConfigured && node.size?.length >= 2
     ? [node.size[0], node.size[1]]
     : null
 

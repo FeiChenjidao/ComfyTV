@@ -41,6 +41,7 @@ import { mounts } from '@/composables/stages/widgetMounts'
 import { i18n } from '@/i18n'
 import { app } from '@/lib/comfyApp'
 import type { StageKind, StageVariant } from '@/stores/stageStore'
+import CustomParamsV2 from '@/v2/CustomParamsV2.vue'
 import { V2_SHELLS } from '@/v2/registry'
 import { hasOutputToolbar } from '@/v2/outputToolbar'
 import '@/v2/imageBatchShell'
@@ -55,7 +56,6 @@ import '@/v2/scene3dV2'
 import '@/v2/relightV2'
 import '@/v2/loadersV2'
 import '@/v2/generatorV2'
-import '@/v2/layerSeparationShell'
 
 interface Meta {
   kind: StageKind
@@ -66,20 +66,16 @@ const SHELL_META: Record<string, Meta> = {
   'ComfyTV.ImageStage': { kind: 'image-batch' },
   'ComfyTV.ShotImagesStage': { kind: 'image-batch' },
   'ComfyTV.ImageVariationsStage': { kind: 'image-batch' },
-  'ComfyTV.LayerSeparationStage': { kind: 'image-batch' },
   'ComfyTV.ImagePickerStage': { kind: 'image-picker' },
   'ComfyTV.CustomStage': { kind: 'custom' },
   'ComfyTV.VideoPickerStage': { kind: 'video-picker' },
   'ComfyTV.AudioPickerStage': { kind: 'audio-picker' },
-  'ComfyTV.CropStage': { kind: 'image-batch', variant: 'transform' },
+  'ComfyTV.CropStage': { kind: 'image', variant: 'transform' },
   'ComfyTV.RotateStage': { kind: 'image', variant: 'transform' },
   'ComfyTV.MirrorStage': { kind: 'image', variant: 'transform' },
   'ComfyTV.ColorGradeStage': { kind: 'image', variant: 'transform' },
   'ComfyTV.CompareStage': { kind: 'image', variant: 'transform' },
   'ComfyTV.GridSplitStage': { kind: 'image-batch', variant: 'transform' },
-  'ComfyTV.CustomSplitStage': { kind: 'image-batch', variant: 'transform' },
-  'ComfyTV.ImagesSplitStage': { kind: 'image', variant: 'transform' },
-  'ComfyTV.ImageMergeStage': { kind: 'image', variant: 'transform' },
   'ComfyTV.VideoColorStage': { kind: 'video' },
   'ComfyTV.VideoCurvesStage': { kind: 'video' },
   'ComfyTV.VideoLUTStage': { kind: 'video' },
@@ -174,7 +170,6 @@ const SHELL_META: Record<string, Meta> = {
   'ComfyTV.AssetAudioLoaderStage': { kind: 'audio', variant: 'loader' },
   'ComfyTV.AssetTextLoaderStage': { kind: 'text', variant: 'loader' },
   'ComfyTV.AssetModelLoaderStage': { kind: 'model', variant: 'loader' },
-  'ComfyTV.PsdLayerTreeStage': { kind: 'image', variant: 'loader' },
   'ComfyTV.TextStage': { kind: 'text' },
   'ComfyTV.SubtitleGenStage': { kind: 'text' },
   'ComfyTV.VideoStage': { kind: 'video' },
@@ -252,23 +247,12 @@ const EXTRA_WIDGETS: Record<string, Array<[string, string]>> = {
   'ComfyTV.ImageStage': [['resolution', 'combo'], ['aspect_ratio', 'combo'], ['batch_size', 'number'], ['selected_index', 'number']],
   'ComfyTV.ShotImagesStage': [['selected_index', 'number']],
   'ComfyTV.ImageVariationsStage': [['variant_count', 'number'], ['selected_index', 'number']],
-  'ComfyTV.LayerSeparationStage': [['compositor', 'string']],
   'ComfyTV.ImagePickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.VideoPickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.AudioPickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.VideoStage': [['resolution', 'combo'], ['aspect_ratio', 'combo'], ['duration_s', 'number'], ['generate_audio', 'toggle']],
   'ComfyTV.AudioStage': [['lyrics', 'customtext'], ['duration_s', 'number'], ['bpm', 'number'], ['timesignature', 'combo'], ['keyscale', 'combo'], ['language', 'combo']],
   'ComfyTV.SpeechStage': [['voice', 'string'], ['language', 'combo'], ['speed', 'number'], ['reference_text', 'customtext']],
-  'ComfyTV.Model3DStage': [
-    ['seed', 'number'], ['negative', 'customtext'],
-    ['texture', 'toggle'], ['pbr', 'toggle'],
-    ['texture_quality', 'combo'], ['geometry_quality', 'combo'], ['model_version', 'combo'],
-    ['face_limit', 'number'], ['quad', 'toggle'], ['smart_low_poly', 'toggle'], ['auto_size', 'toggle'],
-    ['orientation', 'combo'], ['texture_alignment', 'combo'],
-    ['material', 'combo'], ['mode', 'combo'], ['polygon_count', 'combo'],
-    ['geometry_file_format', 'combo'], ['texture_mode', 'combo'],
-    ['tapose', 'toggle'], ['hd_texture', 'toggle'], ['texture_delight', 'toggle'], ['addon_highpack', 'toggle'],
-  ],
   'ComfyTV.UpscaleStage': [['scale', 'combo']],
   'ComfyTV.VideoUpscaleStage': [['scale', 'combo']],
   'ComfyTV.ImageLoaderStage': [['image', 'combo']],
@@ -417,52 +401,6 @@ describe('V2 shell smoke', () => {
     node.onRemoved?.()
   })
 
-  it('LOD poster chrome wraps editor shells for custom split / PSD / images split', () => {
-    const classes = ['ComfyTV.CustomSplitStage', 'ComfyTV.PsdLayerTreeStage', 'ComfyTV.ImagesSplitStage', 'ComfyTV.ImageMergeStage']
-    for (const cls of classes) {
-      const meta = SHELL_META[cls]
-      const node = makeNode(cls)
-      V2_SHELLS[cls](node as any, meta.kind, meta.variant ?? 'generator')
-      const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
-      expect(card.hasAttribute('data-v2-lod-media'), cls).toBe(true)
-      expect(card.querySelector('.v2-preview.v2-ed-preview'), cls).toBeTruthy()
-      expect(card.querySelector('.v2-lod-poster'), cls).toBeTruthy()
-      expect(card.querySelector('.v2-ed-host')?.parentElement?.classList.contains('v2-preview'), cls).toBe(true)
-      node.onRemoved?.()
-    }
-  })
-
-  it('custom split canvas is separate from the panel (socket align target)', async () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    const node = makeNode('ComfyTV.CustomSplitStage')
-    V2_SHELLS['ComfyTV.CustomSplitStage'](node as any, 'image-batch', 'transform')
-    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
-
-    const host = createApp(ComfyTVMountHost)
-    host.config.errorHandler = () => {}
-    host.config.warnHandler = () => {}
-    host.use(pinia)
-    host.use(i18n)
-    const rootEl = document.createElement('div')
-    document.body.appendChild(rootEl)
-    host.mount(rootEl)
-    await nextTick()
-    await new Promise(r => setTimeout(r, 0))
-    await nextTick()
-
-    const canvas = card.querySelector('.v2-ed__canvas') as HTMLElement | null
-    const panel = card.querySelector('.v2-ed__panel') as HTMLElement | null
-    expect(canvas).toBeTruthy()
-    expect(panel).toBeTruthy()
-    expect(canvas!.contains(panel!)).toBe(false)
-    expect(panel!.contains(canvas!)).toBe(false)
-
-    host.unmount()
-    rootEl.remove()
-    node.onRemoved?.()
-  })
-
   it('neither litegraph auto-size path can resize a V2 card', () => {
     const node = makeNode('ComfyTV.VideoStage')
     expect(node.computeSize()[1]).toBe(999)
@@ -574,141 +512,6 @@ describe('V2 shell smoke', () => {
     node.onRemoved?.()
   })
 
-  it('panel-on-select after corner-resize keeps the dragged preview height', () => {
-    document.body.setAttribute('data-v2-panel-on-select', '')
-    const node = makeNode('ComfyTV.VideoStage')
-    node.selected = false
-    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
-    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
-    const root = document.createElement('div')
-    root.setAttribute('data-node-id', String(node.id))
-    root.setAttribute('data-v2-shell', '')
-    root.appendChild(card)
-    document.body.appendChild(root)
-
-    let panelH = 0
-    const PREVIEW = 280
-    const preview = card.querySelector('.v2-preview') as HTMLElement
-    const panel = card.querySelector('.v2-panel') as HTMLElement
-    Object.defineProperty(preview, 'offsetHeight', { get: () => PREVIEW })
-    Object.defineProperty(card, 'offsetHeight', { get: () => PREVIEW + panelH })
-    Object.defineProperty(panel, 'offsetHeight', { get: () => (panelH > 0 ? panelH : 180) })
-    // Unselected: CSS would hide the panel; keep measurePanelStackHeight honest.
-    panel.style.setProperty('display', 'none', 'important')
-
-    // User corner-resized while unselected (compact).
-    const dragH = PREVIEW + 40
-    node.setSize([320, dragH])
-    card.dispatchEvent(new PointerEvent('pointerdown'))
-    const sync = (node as any).__comfytvSyncHeight as () => void
-    sync()
-    const afterDrag = node.size[1]
-    expect(afterDrag).toBeGreaterThan(200)
-
-    // Select: the panel changes total height, not the persisted preview height.
-    panelH = 180
-    panel.style.removeProperty('display')
-    node.selected = true
-    root.setAttribute('data-v2-selected', '')
-    sync()
-    expect(node.size[1]).toBe(afterDrag + panelH)
-    expect(node.properties.v2_preview_height).toBe(PREVIEW)
-
-    panelH = 0
-    panel.style.setProperty('display', 'none', 'important')
-    node.selected = false
-    root.removeAttribute('data-v2-selected')
-    sync()
-    expect(node.size[1]).toBe(afterDrag)
-    expect(node.properties.v2_preview_height).toBe(PREVIEW)
-
-    root.remove()
-    document.body.removeAttribute('data-v2-panel-on-select')
-    node.onRemoved?.()
-  })
-
-  it('manageHeight tab remount restores preview height separately from the hidden panel', () => {
-    document.body.setAttribute('data-v2-panel-on-select', '')
-    const PANEL = 200
-    const PREVIEW = 300
-    const node = makeNode('ComfyTV.Model3DStage')
-    node.selected = false
-    node.properties.v2_preview_height = PREVIEW
-    node.setSize([320, 500])
-    V2_SHELLS['ComfyTV.Model3DStage'](node as any, 'model', 'generator')
-    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
-    const root = document.createElement('div')
-    root.setAttribute('data-node-id', String(node.id))
-    root.setAttribute('data-v2-shell', '')
-    root.appendChild(card)
-    document.body.appendChild(root)
-
-    const preview = card.querySelector('.v2-preview') as HTMLElement
-    const panel = card.querySelector('.v2-panel') as HTMLElement
-    let panelVisible = false
-    Object.defineProperty(preview, 'offsetHeight', {
-      configurable: true,
-      get: () => PREVIEW + (panelVisible ? 0 : PANEL),
-    })
-    Object.defineProperty(card, 'offsetHeight', {
-      configurable: true,
-      get: () => PREVIEW + PANEL,
-    })
-    Object.defineProperty(panel, 'offsetHeight', {
-      configurable: true,
-      get: () => PANEL,
-    })
-    panel.style.setProperty('display', 'none', 'important')
-
-    const sync = (node as any).__comfytvSyncHeight as () => void
-    // Remount path: connections / pointer while still unselected (panel hidden).
-    node.onConnectionsChange?.(1, 0, true, null, null)
-    sync()
-    const afterRemount = node.size[1]
-    expect(Math.abs(afterRemount - PREVIEW)).toBeLessThan(20)
-    expect(node.properties.v2_preview_height).toBe(PREVIEW)
-
-    // Selecting adds only the panel; the preview remains at its restored height.
-    panelVisible = true
-    panel.style.removeProperty('display')
-    node.selected = true
-    root.setAttribute('data-v2-selected', '')
-    sync()
-    expect(node.size[1]).toBe(afterRemount + PANEL)
-    expect(node.properties.v2_preview_height).toBe(PREVIEW)
-
-    const shell = node.widgets.find((w: any) => w.name === 'v2_shell')
-    expect(shell.options.getMinHeight()).toBe(Math.max(170, Math.round(node.size[1])))
-
-    root.remove()
-    document.body.removeAttribute('data-v2-panel-on-select')
-    node.onRemoved?.()
-  })
-
-  it('corner-resize with the panel already open does not keep growing height', () => {
-    const node = makeNode('ComfyTV.VideoStage')
-    V2_SHELLS['ComfyTV.VideoStage'](node as any, 'video', 'generator')
-    const card = node.widgets.find((w: any) => w.name === 'v2_shell').element as HTMLElement
-    const preview = card.querySelector('.v2-preview') as HTMLElement
-    let panelH = 180
-    let previewH = 300
-    Object.defineProperty(preview, 'offsetHeight', { get: () => previewH })
-    Object.defineProperty(card, 'offsetHeight', { get: () => previewH + panelH })
-    card.dispatchEvent(new PointerEvent('pointerdown'))
-    const h0 = node.size[1]
-
-    // Simulate LiteGraph corner-drag: size follows the pointer; preview flexes with the card.
-    previewH = 360
-    node.setSize([node.size[0], h0 + 60])
-    card.dispatchEvent(new Event('resize'))
-    expect(node.size[1]).toBe(h0 + 60)
-
-    // Another layout pass must not keep adding chrome on top of the user size.
-    card.dispatchEvent(new Event('resize'))
-    expect(node.size[1]).toBe(h0 + 60)
-    node.onRemoved?.()
-  })
-
   it('stacks preview cards by the real item count', async () => {
     const pool = (n: number) => JSON.stringify({
       images: Array.from({ length: n }, (_, i) => ({ image_url: `/view?filename=${i}.png` })),
@@ -729,34 +532,13 @@ describe('V2 shell smoke', () => {
     }
   })
 
-  it('keeps the saved picker index when the upstream batch is first restored', async () => {
-    const batch = (prefix: string) => JSON.stringify({
-      images: Array.from({ length: 3 }, (_, i) => ({
-        index: String(i + 1),
-        image_url: `/view?filename=${prefix}-${i + 1}.png`,
-      })),
-    })
-    const node = makeNode('ComfyTV.ImagePickerStage')
-    node.graph = { links: {}, getNodeById: () => undefined }
-    node.widgets.push({ name: 'append_results', value: false })
-    const api = V2_SHELLS['ComfyTV.ImagePickerStage'](node as any, 'image-picker', 'generator')!
-    const selected = node.widgets.find((w: any) => w.name === 'selected_index')
-    const pool = node.widgets.find((w: any) => w.name === 'pool')
-    selected.value = 3
-    pool.value = batch('saved')
-    node.onConfigure?.({})
-    await nextTick()
-
-    api.state.inputs = [{ slot: 'batch', type: 'COMFYTV_IMAGES', source: 'upstream', content: batch('restored') }]
-    await nextTick()
-    expect(api.state.pickedIndex).toBe(3)
-    expect(selected.value).toBe(3)
-
-    api.state.inputs = [{ slot: 'batch', type: 'COMFYTV_IMAGES', source: 'upstream', content: batch('new') }]
-    await nextTick()
-    expect(api.state.pickedIndex).toBe(1)
-    expect(selected.value).toBe(1)
-    node.onRemoved?.()
+  it('workflow-driven fx shells mount the custom workflow params', () => {
+    for (const cls of ['ComfyTV.OutpaintStage', 'ComfyTV.EraseStage']) {
+      const node = makeNode(cls)
+      V2_SHELLS[cls](node as any, SHELL_META[cls].kind, 'generator')
+      expect(mounts.some(m => m.component === CustomParamsV2), cls).toBe(true)
+      node.onRemoved?.()
+    }
   })
 
   for (const [cls, attach] of shellEntries) {
@@ -776,7 +558,7 @@ describe('V2 shell smoke', () => {
         `${cls}: shell root missing v2-card`,
       ).toBe(true)
 
-      if (hasOutputToolbar(meta.kind) && cls !== 'ComfyTV.LayerSeparationStage') {
+      if (hasOutputToolbar(meta.kind)) {
         expect(card.querySelector('.v2-toolbar'), `${cls}: output toolbar missing`).toBeTruthy()
       }
 

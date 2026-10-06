@@ -362,7 +362,6 @@ class LocalLlmProvider(AgentProvider):
                             "messages": messages,
                             "tools": tools,
                             "tool_choice": "auto",
-                            "max_tokens": 4096,
                             "temperature": 0.2,
                         },
                         timeout=_LLM_TIMEOUT_S,
@@ -410,7 +409,10 @@ class LocalLlmProvider(AgentProvider):
                         except Exception as e:
                             result_text = f"[error] {type(e).__name__}: {e}"
                             tool_failed = True
-                        result_text = result_text[:TOOL_RESULT_CAP]
+                        if len(result_text) > TOOL_RESULT_CAP:
+                            result_text = (
+                                result_text[:TOOL_RESULT_CAP]
+                                + f"\n…[truncated {len(result_text) - TOOL_RESULT_CAP} chars]")
                         await emit(BotEvent(
                             t="tool_result", name=name, text=result_text,
                             id=tc_id, is_error=tool_failed))

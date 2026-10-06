@@ -1,6 +1,6 @@
 const SCROLLABLE_OVERFLOW = /(auto|scroll|overlay)/
 
-function isTextEntry(el: Element | null): boolean {
+export function isTextEntry(el: Element | null): boolean {
   if (!el) return false
   return el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || (el as HTMLElement).isContentEditable
 }
