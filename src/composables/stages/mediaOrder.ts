@@ -238,7 +238,17 @@ function reconcileType(
   prev.forEach((e, i) => {
     const match = e.src === 'link' ? matchLiveLink(e, live, claimed) : undefined
     if (e.src === 'link' && !match) {
-      remap.set(i + 1, null)
+      // A replaced wire has a new link id and may point to a new source.
+      // Reuse the next unclaimed live wire at this position before treating
+      // the old media reference as removed.
+      const replacement = live.find(l => !claimed.has(l.link))
+      if (replacement) {
+        claimed.add(replacement.link)
+        if (next.length !== i) remap.set(i + 1, next.length + 1)
+        next.push(linkEntry(replacement))
+      } else {
+        remap.set(i + 1, null)
+      }
       return
     }
     if (match) claimed.add(match.link)

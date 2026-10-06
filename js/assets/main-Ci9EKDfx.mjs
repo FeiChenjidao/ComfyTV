@@ -59818,7 +59818,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-BKolRFJb.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-BWErdORW.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -65597,7 +65597,14 @@ function reconcileType(prev, live) {
   prev.forEach((e, i) => {
     const match = e.src === "link" ? matchLiveLink(e, live, claimed) : void 0;
     if (e.src === "link" && !match) {
-      remap.set(i + 1, null);
+      const replacement = live.find((l) => !claimed.has(l.link));
+      if (replacement) {
+        claimed.add(replacement.link);
+        if (next.length !== i) remap.set(i + 1, next.length + 1);
+        next.push(linkEntry(replacement));
+      } else {
+        remap.set(i + 1, null);
+      }
       return;
     }
     if (match) claimed.add(match.link);
@@ -86697,7 +86704,7 @@ const _sfc_main$4y = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-CRvjTIrb.mjs"),
+      loader: () => import("./AgentPanelRoot-78XlBsa_.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -150045,7 +150052,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-DKE7_6Tz.mjs");
+    const { STLLoader } = await import("./STLLoader-CfWqa2QS.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -150053,7 +150060,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-n3OMnaBX.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-YA9lucFu.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -257186,4 +257193,4 @@ export {
   DropdownMenuRoot_default as y,
   DropdownMenuTrigger_default as z
 };
-//# sourceMappingURL=main-BbrIlogg.mjs.map
+//# sourceMappingURL=main-Ci9EKDfx.mjs.map

@@ -167,6 +167,14 @@ describe('reconcileTable', () => {
     expect(r.remap).toEqual({})
   })
 
+  it('keeps the media position when a wire is replaced by another source', () => {
+    const n = node([['images.image0', 12]])
+    writeMediaTable(n, { image: [{ key: 'l11', src: 'link', link: 11, from: [3, 0] }], video: [], audio: [] })
+    const r = reconcileTable(n, graph)
+    expect(r.table.image.map(e => e.key)).toEqual(['l12'])
+    expect(r.remap).toEqual({})
+  })
+
   it('is stable when nothing changed', () => {
     const n = node([['images.image0', 11]])
     writeMediaTable(n, reconcileTable(n, graph).table)
