@@ -7,6 +7,7 @@ import { fetchBlenderStatus } from '@/api/blender'
 import { applyCanvasDropSetting } from '@/composables/sidebar/assetCanvasDrop'
 import { applyAutoPickerSetting } from '@/composables/stages/autoPicker'
 import { applyLodSettings } from '@/v2/lodV2'
+import { applyPanelOnSelectSetting } from '@/v2/panelOnSelect'
 import { fetchEagleStatus } from '@/api/eagle'
 import { agentProviders, refreshAgentStatus } from '@/agent/status'
 
@@ -249,6 +250,7 @@ export function useSettingsPanel(
       applyLodSettings(rows.value)
       applyAutoPickerSetting(rows.value)
       applyCanvasDropSetting(rows.value)
+      applyPanelOnSelectSetting(rows.value)
       if (Object.keys(changed).some((k) => AGENT_TOGGLE_KEYS.has(k) || k.startsWith('bot-'))) {
         await refreshAgentStatus()
       }

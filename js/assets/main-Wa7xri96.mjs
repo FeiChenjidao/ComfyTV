@@ -59818,7 +59818,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-BWErdORW.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-1bY-m_L0.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -80294,6 +80294,147 @@ function bindLodPoster(card, preview, state2, source, nodeScope, opts) {
     );
   });
 }
+const PANEL_ON_SELECT_ATTR = "data-v2-panel-on-select";
+const PANEL_ON_SELECT_SETTING = "v2-panel-on-select";
+const PANEL_ON_SELECT_CHANGE = "comfytv:v2-panel-on-select-change";
+const PANEL_HIDE_SEL = ".v2-panel, .v2-fx-footer, .v2-ed__panel, .v2-ed__status";
+const MEASURE_CLASS = "v2-panel-measuring";
+const COMPACT_FLOOR = 200;
+const HOOKS = /* @__PURE__ */ new WeakMap();
+function applyPanelOnSelectSetting(rows) {
+  const row = rows.find((r2) => r2.key === PANEL_ON_SELECT_SETTING);
+  const on = (row == null ? void 0 : row.value) === true;
+  const was = document.body.hasAttribute(PANEL_ON_SELECT_ATTR);
+  document.body.toggleAttribute(PANEL_ON_SELECT_ATTR, on);
+  if (was !== on) {
+    document.dispatchEvent(new CustomEvent(PANEL_ON_SELECT_CHANGE, { detail: { on } }));
+  }
+}
+function isPanelOnSelectEnabled() {
+  return document.body.hasAttribute(PANEL_ON_SELECT_ATTR);
+}
+function panelOnSelectBeforeHide(node) {
+  var _a2;
+  (_a2 = HOOKS.get(node)) == null ? void 0 : _a2.beforeHide();
+}
+function panelOnSelectAfterShow(node) {
+  var _a2;
+  (_a2 = HOOKS.get(node)) == null ? void 0 : _a2.afterShow();
+}
+function outerBlockHeight(el2) {
+  const s = getComputedStyle(el2);
+  return el2.offsetHeight + (parseFloat(s.marginTop) || 0) + (parseFloat(s.marginBottom) || 0);
+}
+function measurePanelStackHeight(card) {
+  let total2 = 0;
+  for (const el2 of card.querySelectorAll(PANEL_HIDE_SEL)) {
+    const cs = getComputedStyle(el2);
+    if (cs.display !== "none") {
+      total2 += outerBlockHeight(el2);
+      continue;
+    }
+    el2.classList.add(MEASURE_CLASS);
+    el2.style.width = `${card.clientWidth || 320}px`;
+    total2 += outerBlockHeight(el2);
+    el2.classList.remove(MEASURE_CLASS);
+    el2.style.removeProperty("width");
+  }
+  return Math.round(total2);
+}
+function bindPanelOnSelectSize(node, card, scope2) {
+  var _a2;
+  const anyNode = node;
+  let panelH = 0;
+  let compact = false;
+  const widget = (node.widgets ?? []).find((w) => (w == null ? void 0 : w.name) === "v2_shell");
+  const origGetMinHeight = (_a2 = widget == null ? void 0 : widget.options) == null ? void 0 : _a2.getMinHeight;
+  if (widget == null ? void 0 : widget.options) {
+    widget.options.getMinHeight = () => {
+      const full = typeof origGetMinHeight === "function" ? Number(origGetMinHeight()) || 300 : 300;
+      if (!compact || panelH <= 0) return full;
+      return Math.max(COMPACT_FLOOR, full - panelH);
+    };
+  }
+  const refreshPanelH = () => {
+    const h2 = measurePanelStackHeight(card);
+    if (h2 > 0) panelH = h2;
+    return panelH;
+  };
+  const setHeight = (h2) => {
+    var _a3, _b2, _c;
+    const next = Math.max(COMPACT_FLOOR, Math.round(h2));
+    if (Math.abs(next - Number(node.size[1])) < 1) return;
+    node.setSize([node.size[0], next]);
+    (_b2 = (_a3 = app$1.graph) == null ? void 0 : _a3.setDirtyCanvas) == null ? void 0 : _b2.call(_a3, true, true);
+    (_c = anyNode.onResize) == null ? void 0 : _c.call(anyNode, node.size);
+  };
+  const compactNow = () => {
+    if (!isPanelOnSelectEnabled()) return;
+    if (compact) return;
+    if (refreshPanelH() <= 0) return;
+    compact = true;
+    setHeight(Number(node.size[1]) - panelH);
+  };
+  const expandNow = () => {
+    if (!compact) {
+      refreshPanelH();
+      return;
+    }
+    const delta = panelH;
+    compact = false;
+    if (delta > 0) setHeight(Number(node.size[1]) + delta);
+    requestAnimationFrame(() => {
+      refreshPanelH();
+    });
+  };
+  const apply2 = () => {
+    if (isPanelOnSelectEnabled() && !anyNode.selected) compactNow();
+    else expandNow();
+  };
+  HOOKS.set(anyNode, {
+    beforeHide: () => {
+      if (isPanelOnSelectEnabled()) compactNow();
+    },
+    afterShow: () => {
+      if (isPanelOnSelectEnabled()) expandNow();
+    },
+    apply: apply2
+  });
+  const onSetting = () => {
+    apply2();
+  };
+  document.addEventListener(PANEL_ON_SELECT_CHANGE, onSetting);
+  const prevSerialize = anyNode.onSerialize;
+  anyNode.onSerialize = function(obj, ...rest) {
+    prevSerialize == null ? void 0 : prevSerialize.call(this, obj, ...rest);
+    if (compact && panelH > 0 && obj && Array.isArray(obj.size) && obj.size.length >= 2) {
+      obj.size = [obj.size[0], obj.size[1] + panelH];
+    }
+  };
+  scope2.run(() => {
+    useResizeObserver(card, () => {
+      if (compact) return;
+      const before = panelH;
+      refreshPanelH();
+      if (isPanelOnSelectEnabled() && !anyNode.selected && !compact && panelH > 0 && panelH !== before) {
+        compactNow();
+      }
+    });
+    onScopeDispose(() => {
+      document.removeEventListener(PANEL_ON_SELECT_CHANGE, onSetting);
+      HOOKS.delete(anyNode);
+      if ((widget == null ? void 0 : widget.options) && origGetMinHeight) {
+        widget.options.getMinHeight = origGetMinHeight;
+      }
+    });
+  });
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      refreshPanelH();
+      apply2();
+    });
+  });
+}
 const hosts = /* @__PURE__ */ new Set();
 let placing = false;
 let installed$2 = false;
@@ -86704,7 +86845,7 @@ const _sfc_main$4y = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-78XlBsa_.mjs"),
+      loader: () => import("./AgentPanelRoot-CcQjSpnF.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -87632,6 +87773,7 @@ function useSettingsPanel(isActive2, textOf = () => "") {
       applyLodSettings(rows.value);
       applyAutoPickerSetting(rows.value);
       applyCanvasDropSetting(rows.value);
+      applyPanelOnSelectSetting(rows.value);
       if (Object.keys(changed).some((k2) => AGENT_TOGGLE_KEYS.has(k2) || k2.startsWith("bot-"))) {
         await refreshAgentStatus();
       }
@@ -150052,7 +150194,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-CfWqa2QS.mjs");
+    const { STLLoader } = await import("./STLLoader-DnKnlYPU.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -150060,7 +150202,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-YA9lucFu.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-CyWEr4Gk.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -239365,137 +239507,6 @@ function installClipboardImagePaste(host = app$1) {
   installed = true;
   document.addEventListener("paste", (event) => handleClipboardImagePaste(host, event), true);
 }
-const PANEL_ON_SELECT_ATTR = "data-v2-panel-on-select";
-const PANEL_ON_SELECT_CHANGE = "comfytv:v2-panel-on-select-change";
-const PANEL_HIDE_SEL = ".v2-panel, .v2-fx-footer, .v2-ed__panel, .v2-ed__status";
-const MEASURE_CLASS = "v2-panel-measuring";
-const COMPACT_FLOOR = 200;
-const HOOKS = /* @__PURE__ */ new WeakMap();
-function isPanelOnSelectEnabled() {
-  return document.body.hasAttribute(PANEL_ON_SELECT_ATTR);
-}
-function panelOnSelectBeforeHide(node) {
-  var _a2;
-  (_a2 = HOOKS.get(node)) == null ? void 0 : _a2.beforeHide();
-}
-function panelOnSelectAfterShow(node) {
-  var _a2;
-  (_a2 = HOOKS.get(node)) == null ? void 0 : _a2.afterShow();
-}
-function outerBlockHeight(el2) {
-  const s = getComputedStyle(el2);
-  return el2.offsetHeight + (parseFloat(s.marginTop) || 0) + (parseFloat(s.marginBottom) || 0);
-}
-function measurePanelStackHeight(card) {
-  let total2 = 0;
-  for (const el2 of card.querySelectorAll(PANEL_HIDE_SEL)) {
-    const cs = getComputedStyle(el2);
-    if (cs.display !== "none") {
-      total2 += outerBlockHeight(el2);
-      continue;
-    }
-    el2.classList.add(MEASURE_CLASS);
-    el2.style.width = `${card.clientWidth || 320}px`;
-    total2 += outerBlockHeight(el2);
-    el2.classList.remove(MEASURE_CLASS);
-    el2.style.removeProperty("width");
-  }
-  return Math.round(total2);
-}
-function bindPanelOnSelectSize(node, card, scope2) {
-  var _a2;
-  const anyNode = node;
-  let panelH = 0;
-  let compact = false;
-  const widget = (node.widgets ?? []).find((w) => (w == null ? void 0 : w.name) === "v2_shell");
-  const origGetMinHeight = (_a2 = widget == null ? void 0 : widget.options) == null ? void 0 : _a2.getMinHeight;
-  if (widget == null ? void 0 : widget.options) {
-    widget.options.getMinHeight = () => {
-      const full = typeof origGetMinHeight === "function" ? Number(origGetMinHeight()) || 300 : 300;
-      if (!compact || panelH <= 0) return full;
-      return Math.max(COMPACT_FLOOR, full - panelH);
-    };
-  }
-  const refreshPanelH = () => {
-    const h2 = measurePanelStackHeight(card);
-    if (h2 > 0) panelH = h2;
-    return panelH;
-  };
-  const setHeight = (h2) => {
-    var _a3, _b2, _c;
-    const next = Math.max(COMPACT_FLOOR, Math.round(h2));
-    if (Math.abs(next - Number(node.size[1])) < 1) return;
-    node.setSize([node.size[0], next]);
-    (_b2 = (_a3 = app$1.graph) == null ? void 0 : _a3.setDirtyCanvas) == null ? void 0 : _b2.call(_a3, true, true);
-    (_c = anyNode.onResize) == null ? void 0 : _c.call(anyNode, node.size);
-  };
-  const compactNow = () => {
-    if (!isPanelOnSelectEnabled()) return;
-    if (compact) return;
-    if (refreshPanelH() <= 0) return;
-    compact = true;
-    setHeight(Number(node.size[1]) - panelH);
-  };
-  const expandNow = () => {
-    if (!compact) {
-      refreshPanelH();
-      return;
-    }
-    const delta = panelH;
-    compact = false;
-    if (delta > 0) setHeight(Number(node.size[1]) + delta);
-    requestAnimationFrame(() => {
-      refreshPanelH();
-    });
-  };
-  const apply2 = () => {
-    if (isPanelOnSelectEnabled() && !anyNode.selected) compactNow();
-    else expandNow();
-  };
-  HOOKS.set(anyNode, {
-    beforeHide: () => {
-      if (isPanelOnSelectEnabled()) compactNow();
-    },
-    afterShow: () => {
-      if (isPanelOnSelectEnabled()) expandNow();
-    },
-    apply: apply2
-  });
-  const onSetting = () => {
-    apply2();
-  };
-  document.addEventListener(PANEL_ON_SELECT_CHANGE, onSetting);
-  const prevSerialize = anyNode.onSerialize;
-  anyNode.onSerialize = function(obj, ...rest) {
-    prevSerialize == null ? void 0 : prevSerialize.call(this, obj, ...rest);
-    if (compact && panelH > 0 && obj && Array.isArray(obj.size) && obj.size.length >= 2) {
-      obj.size = [obj.size[0], obj.size[1] + panelH];
-    }
-  };
-  scope2.run(() => {
-    useResizeObserver(card, () => {
-      if (compact) return;
-      const before = panelH;
-      refreshPanelH();
-      if (isPanelOnSelectEnabled() && !anyNode.selected && !compact && panelH > 0 && panelH !== before) {
-        compactNow();
-      }
-    });
-    onScopeDispose(() => {
-      document.removeEventListener(PANEL_ON_SELECT_CHANGE, onSetting);
-      HOOKS.delete(anyNode);
-      if ((widget == null ? void 0 : widget.options) && origGetMinHeight) {
-        widget.options.getMinHeight = origGetMinHeight;
-      }
-    });
-  });
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      refreshPanelH();
-      apply2();
-    });
-  });
-}
 const RING_FADE_MS = 400;
 const PREVIEW_HEIGHT_PROP = "v2_preview_height";
 const I = (d, sw = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}">${d}</svg>`;
@@ -256446,6 +256457,7 @@ async function hydrateV2Flag() {
     applyLodSettings(rows);
     applyAutoPickerSetting(rows);
     applyCanvasDropSetting(rows);
+    applyPanelOnSelectSetting(rows);
     try {
       localStorage.setItem(LS_KEY, enabled ? "1" : "0");
     } catch {
@@ -257193,4 +257205,4 @@ export {
   DropdownMenuRoot_default as y,
   DropdownMenuTrigger_default as z
 };
-//# sourceMappingURL=main-Ci9EKDfx.mjs.map
+//# sourceMappingURL=main-Wa7xri96.mjs.map
