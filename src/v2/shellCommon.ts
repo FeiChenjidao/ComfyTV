@@ -148,10 +148,28 @@ export function bindPromptResize(node: ComfyNode, promptAnchor: HTMLElement, sco
 }
 
 export function hideNativeWidgets(node: ComfyNode, keep: readonly string[] = []) {
+  const hidden = new Set<string>()
   for (const w of (node.widgets ?? []) as any[]) {
     if (w.type === 'v2' || keep.includes(w.name)) continue
     ;(w.options ??= {}).hidden = true
     w.hidden = true
+    hidden.add(String(w.name))
+  }
+  ;(node as any).__comfytvNativeHiddenWidgets = [...hidden]
+  const mode = (app as any)?.extensionManager?.workflow?.activeWorkflow?.activeMode
+  if (mode === 'app' || mode === 'builder:inputs' || mode === 'builder:outputs'
+      || mode === 'builder:arrange') {
+    setNativeWidgetsForAppMode(node, true)
+  }
+}
+
+export function setNativeWidgetsForAppMode(node: ComfyNode, enabled: boolean) {
+  const hidden = new Set<string>((node as any).__comfytvNativeHiddenWidgets ?? [])
+  if (!hidden.size) return
+  for (const w of (node.widgets ?? []) as any[]) {
+    if (!hidden.has(String(w.name))) continue
+    w.hidden = !enabled
+    if (w.options) w.options.hidden = !enabled
   }
 }
 

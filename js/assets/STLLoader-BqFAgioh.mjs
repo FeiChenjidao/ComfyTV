@@ -1,12 +1,4 @@
-<<<<<<<< HEAD:js/assets/STLLoader-7OUZ116F.mjs
-<<<<<<<< HEAD:js/assets/STLLoader-YPd1igOs.mjs
-import { a0 as Loader, I as FileLoader, f as BufferGeometry, i as Color, at as SRGBColorSpace, e as BufferAttribute, aV as Vector3, J as Float32BufferAttribute } from "./main-DNzh1NpN.mjs";
-========
-import { K as Loader, F as FileLoader, d as BufferGeometry, g as Color, a9 as SRGBColorSpace, c as BufferAttribute, ao as Vector3, p as Float32BufferAttribute } from "./main-D9K7EPwY.mjs";
->>>>>>>> 4d04d91 (feat: add stage tooling and Cursor CLI bot support):js/assets/STLLoader-DNQW_ecC.mjs
-========
-import { K as Loader, F as FileLoader, d as BufferGeometry, g as Color, a9 as SRGBColorSpace, c as BufferAttribute, ao as Vector3, p as Float32BufferAttribute } from "./main-B_7qrrdg.mjs";
->>>>>>>> 2477f29 (fix(v2): stop panel-on-select deltas fighting card height):js/assets/STLLoader-8DHButLc.mjs
+import { a0 as Loader, I as FileLoader, f as BufferGeometry, i as Color, at as SRGBColorSpace, e as BufferAttribute, aV as Vector3, J as Float32BufferAttribute } from "./main-3u_KoHpf.mjs";
 class STLLoader extends Loader {
   /**
    * Constructs a new STL loader.
@@ -216,12 +208,4 @@ class STLLoader extends Loader {
 export {
   STLLoader
 };
-<<<<<<<< HEAD:js/assets/STLLoader-7OUZ116F.mjs
-<<<<<<<< HEAD:js/assets/STLLoader-YPd1igOs.mjs
-//# sourceMappingURL=STLLoader-YPd1igOs.mjs.map
-========
-//# sourceMappingURL=STLLoader-DNQW_ecC.mjs.map
->>>>>>>> 4d04d91 (feat: add stage tooling and Cursor CLI bot support):js/assets/STLLoader-DNQW_ecC.mjs
-========
-//# sourceMappingURL=STLLoader-8DHButLc.mjs.map
->>>>>>>> 2477f29 (fix(v2): stop panel-on-select deltas fighting card height):js/assets/STLLoader-8DHButLc.mjs
+//# sourceMappingURL=STLLoader-BqFAgioh.mjs.map

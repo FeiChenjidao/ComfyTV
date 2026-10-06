@@ -2090,6 +2090,9 @@
     "fromUpstream": "来自上游接入的 batch —— 请在上游移除，这里删不掉"
   },
   "run": {
+    "runAllStages": "运行全部 Stage",
+    "stagesRunComplete": "ComfyTV 节点已按依赖顺序全部完成。",
+    "stagesRunFailed": "按顺序运行 ComfyTV 节点时有节点失败。",
     "stagesRunPerNode": "ComfyTV 节点各自独立运行 — 请用每个节点上的运行按钮。全局 Run 在这里没有可执行的节点。"
   },
   "nodeCategories": {
@@ -2823,7 +2826,7 @@
     "saveToLibraryHint": "把分层 PSD 存入资产库"
   },
   "appMode": {
-    "hint": "此工作流包含 ComfyTV stage，它们只在 Graph 视图下显示，App Mode 里什么都看不到。",
+    "hint": "ComfyTV stage 已在 App Mode 暴露工作流控件，请在应用构建器中添加需要的输入和输出。",
     "back": "返回工作流"
   },
   "bot": {

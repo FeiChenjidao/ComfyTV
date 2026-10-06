@@ -5,6 +5,7 @@ import {
   isOutBridgeClass,
   rewriteGlobalRunOutput,
   installGlobalRunBridge,
+  runComfyTVStagesSequentially,
 } from './globalRunBridge'
 
 describe('isComfyTVClass / isOutBridgeClass', () => {
@@ -203,7 +204,33 @@ describe('installGlobalRunBridge (end-to-end via api.queuePrompt)', () => {
     expect(origQueue).not.toHaveBeenCalled()
     expect(res.prompt_id).toBe('')
     expect(toast).toHaveBeenCalledTimes(1)
-    expect(toast.mock.calls[0][0].detail).toBe('run.stagesRunPerNode')
+    expect(toast.mock.calls[0][0].detail).toBe('run.stagesRunComplete')
+  })
+
+  it('runs ComfyTV stages in dependency order before returning', async () => {
+    const calls: number[] = []
+    const first: any = { id: 1, comfyClass: 'ComfyTV.ImageStage', inputs: [],
+      __comfytvStageApi: { variant: 'generator', state: { running: false, error: null }, onRunRequest: async () => {
+        calls.push(1)
+        first.__comfytvStageApi.state.running = true
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        first.__comfytvStageApi.state.running = false
+      } } }
+    const second: any = { id: 2, comfyClass: 'ComfyTV.ImageEditStage', inputs: [{ link: 10 }],
+      __comfytvStageApi: { variant: 'generator', state: { running: false, error: null }, onRunRequest: async () => {
+        calls.push(2)
+        second.__comfytvStageApi.state.running = true
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        second.__comfytvStageApi.state.running = false
+      } } }
+    const graph: any = {
+      _nodes: [second, first],
+      links: new Map([[10, { origin_id: 1 }]]),
+      getNodeById: (id: number) => [first, second].find((node) => node.id === id),
+    }
+    const app: any = { graph }
+    expect(await runComfyTVStagesSequentially(app)).toBe(true)
+    expect(calls).toEqual([1, 2])
   })
 
   it('attaches comfy.org auth before the real queuePrompt, then restores', async () => {

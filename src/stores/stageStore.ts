@@ -294,8 +294,19 @@ export const useStageStore = defineStore('comfytv-stage', () => {
         && !state.inputs.some((i) => i.content === s)) {
       void autoProxyOutput(s)
     }
-    if (picked !== undefined && picked !== null) {
-      const p = typeof picked === 'string' ? picked : String(picked)
+    // Some ComfyUI execution paths preserve output but drop custom UI fields.
+    // Recover the selected image from the batch so slot 1 remains usable.
+    const fallbackPickedIndex = pickedIdxRaw != null && pickedIdxRaw !== ''
+      && Number.isFinite(Number(pickedIdxRaw)) && Number(pickedIdxRaw) >= 1
+      ? Number(pickedIdxRaw)
+      : (state.pickedIndex ?? 1)
+    const pickedValue = picked !== undefined && picked !== null && picked !== ''
+      ? picked
+      : (state.kind === 'image-batch'
+          ? computePickedFromBatch(toImagePoolJson(s), fallbackPickedIndex)
+          : null)
+    if (pickedValue !== undefined && pickedValue !== null && pickedValue !== '') {
+      const p = typeof pickedValue === 'string' ? pickedValue : String(pickedValue)
       while (state.outputs.length < 2) state.outputs.push(null)
       state.outputs[1] = p
     }

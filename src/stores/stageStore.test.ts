@@ -302,6 +302,20 @@ describe('stageStore.applyExecutedPayload', () => {
     expect(state.pickedIndex).toBe(2)
   })
 
+  it('derives the selected image when a batch event omits picked', () => {
+    const store = useStageStore()
+    const state = freshState({ kind: 'image-batch', outputType: 'COMFYTV_IMAGES' })
+    const batch = JSON.stringify({
+      images: [
+        { index: 1, image_url: '/view?filename=one.png' },
+        { index: 2, image_url: '/view?filename=two.png' },
+      ],
+    })
+    store.applyExecutedPayload(state, { output: [batch], picked_index: [2] })
+    expect(state.outputs[0]).toBe(batch)
+    expect(state.outputs[1]).toBe('/view?filename=two.png')
+  })
+
   it('ignores picked_index below 1', () => {
     const store = useStageStore()
     const state = freshState({ pickedIndex: 5 })

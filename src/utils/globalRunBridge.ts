@@ -68,6 +68,75 @@ export interface InstallGlobalRunBridgeDeps {
   attachAuth?: (api: any) => Promise<void>
 }
 
+const NON_RUNNABLE_STAGE_SUFFIXES = [
+  'ProjectStage', 'ImagePickerStage', 'AudioPickerStage', 'VideoPickerStage',
+]
+
+function stageNodesInDependencyOrder(app: any): any[] {
+  const nodes = (app?.graph?._nodes ?? []).filter((node: any) => {
+    const cls = String(node?.comfyClass ?? node?.type ?? '')
+    return isComfyTVClass(cls)
+      && !isOutBridgeClass(cls)
+      && !NON_RUNNABLE_STAGE_SUFFIXES.some((suffix) => cls.endsWith(suffix))
+      && typeof node?.__comfytvStageApi?.onRunRequest === 'function'
+      && node?.__comfytvStageApi?.variant !== 'loader'
+  })
+  const ids = new Set(nodes.map((node: any) => String(node.id)))
+  const deps = new Map<any, Set<any>>()
+  const dependents = new Map<any, any[]>()
+  for (const node of nodes) {
+    const set = new Set<any>()
+    for (const input of node.inputs ?? []) {
+      const link = app.graph?.links?.get?.(input.link) ?? app.graph?.links?.[input.link]
+      const origin = link ? app.graph?.getNodeById?.(link.origin_id) : null
+      if (origin && ids.has(String(origin.id))) set.add(origin)
+    }
+    deps.set(node, set)
+    for (const origin of set) dependents.set(origin, [...(dependents.get(origin) ?? []), node])
+  }
+  const ready = nodes.filter((node: any) => !deps.get(node)?.size)
+  const ordered: any[] = []
+  while (ready.length) {
+    const node = ready.shift()
+    ordered.push(node)
+    for (const child of dependents.get(node) ?? []) {
+      deps.get(child)?.delete(node)
+      if (!deps.get(child)?.size) ready.push(child)
+    }
+  }
+  return ordered.length === nodes.length
+    ? ordered
+    : [...ordered, ...nodes.filter((node: any) => !ordered.includes(node))]
+}
+
+async function runStageAndWait(node: any): Promise<boolean> {
+  const state = node.__comfytvStageApi.state
+  state.error = null
+  try {
+    await node.__comfytvStageApi.onRunRequest()
+  } catch {
+    return false
+  }
+  const deadline = Date.now() + 15 * 60 * 1000
+  const startDeadline = Date.now() + 30 * 1000
+  let started = false
+  while (Date.now() < deadline) {
+    if (state.error) return false
+    if (state.running) started = true
+    if (started && !state.running) return true
+    if (!started && Date.now() >= startDeadline) return false
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  return false
+}
+
+export async function runComfyTVStagesSequentially(app: any): Promise<boolean> {
+  for (const node of stageNodesInDependencyOrder(app)) {
+    if (!(await runStageAndWait(node))) return false
+  }
+  return true
+}
+
 export function installGlobalRunBridge(app: any, deps: InstallGlobalRunBridgeDeps): boolean {
   if (app.__comfytvQueuePatched || typeof app.api?.queuePrompt !== 'function') return false
   app.__comfytvQueuePatched = true
@@ -92,7 +161,26 @@ export function installGlobalRunBridge(app: any, deps: InstallGlobalRunBridgeDep
       return withAuth(number, data, options)
     }
     const isGlobalRun = !options?.partialExecutionTargets?.length
-    if (isGlobalRun && data?.output) {
+    if (isGlobalRun) {
+      const hasStages = data?.output
+        ? Object.values(data.output).some((node: any) => {
+        const cls = String(node?.class_type ?? '')
+        return isComfyTVClass(cls) && !isOutBridgeClass(cls)
+          })
+        : (app.graph?._nodes ?? []).some((node: any) => {
+          const cls = String(node?.comfyClass ?? node?.type ?? '')
+          return isComfyTVClass(cls) && !isOutBridgeClass(cls)
+        })
+      if (hasStages && !(await runComfyTVStagesSequentially(app))) {
+        deps.toast({
+          severity: 'error',
+          summary: deps.t('run.stagesRunFailed'),
+          detail: deps.t('run.stagesRunFailed'),
+          life: 7000,
+        })
+        return { prompt_id: '', number, node_errors: {} }
+      }
+      if (!data?.output) return { prompt_id: '', number, node_errors: {} }
       const store = deps.resolveStore()
       const getSnapshot = (originId: string, slot: number) => {
         const gn = app.graph?.getNodeById?.(Number(originId))
@@ -121,7 +209,7 @@ export function installGlobalRunBridge(app: any, deps: InstallGlobalRunBridgeDep
         deps.toast({
           severity: 'info',
           summary: 'ComfyTV',
-          detail: deps.t('run.stagesRunPerNode'),
+          detail: deps.t('run.stagesRunComplete'),
           life: 4000,
         })
         return { prompt_id: '', number, node_errors: {} }
