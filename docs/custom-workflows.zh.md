@@ -23,6 +23,10 @@ ComfyTV 每个 stage 的 **workflow** 下拉框，背后都是一个普通的 Co
 
 Link 按钮旁边的 **⬆ Upload workflow** 从磁盘导入一个 `.json`。工作流被复制进 ComfyTV 的库并立刻出现在下拉框里——不用重启。适合别人发给你的文件；如果是你自己会持续迭代的工作流，优先用 Link。
 
+## 团队公开 Git 同步（局域网）
+
+若希望多人共用同一套库、上传后同事能看到更新：把独立公开 Git 仓 clone 为 `user/comfytv/workflows`，用仓内脚本 push / pull，再在侧栏 **重新扫描**。模板与步骤见 [team-workflow-git.zh.md](team-workflow-git.zh.md) 与 [`team-workflows/README.md`](../team-workflows/README.md)。
+
 ## 把文件放进库目录
 
 ComfyTV 的工作流库在 ComfyUI 的 user 目录下：

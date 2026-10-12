@@ -1,0 +1,18 @@
+# Runtime / generated — do not commit
+*.api.json
+.legacy-sync.json
+__pycache__/
+*.pyc
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+*.swp
+*.tmp
+.idea/
+.vscode/
+
+# Keep workflow GUI JSON + presets tracked
+# (Do not ignore *.json globally — that would hide team uploads.)
