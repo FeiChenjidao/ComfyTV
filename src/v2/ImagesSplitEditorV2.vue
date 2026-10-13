@@ -10,26 +10,9 @@
         @select="selectItem"
       />
     </div>
-    <div class="v2-ed__panel">
-      <div class="v2-ed__chips">
-        <button
-          type="button"
-          class="v2-ed__chip"
-          :disabled="!canMerge"
-          @click="mergeSelected"
-        >
-          {{ $t('imagesSplit.merge') }}
-        </button>
-        <button
-          type="button"
-          class="v2-ed__chip"
-          :disabled="!canVariations"
-          @click="spawnVariations"
-        >
-          {{ $t('imagesSplit.variations') }}
-        </button>
-      </div>
-      <div v-if="actionError" class="v2-split__err">{{ actionError }}</div>
+    <div v-if="actionError || squaring" class="v2-ed__status">
+      <span v-if="squaring" class="v2-ed__busy">{{ $t('imagesSplit.squaring') }}</span>
+      <span v-else-if="actionError" class="v2-split__err">{{ actionError }}</span>
     </div>
   </div>
 </template>
@@ -47,8 +30,8 @@ const props = defineProps<{
 
 const {
   items, truncated, connected, max,
-  selectedSet, canMerge, canVariations, actionError,
-  selectItem, mergeSelected, spawnVariations,
+  selectedSet, actionError, squaring,
+  selectItem,
 } = useImagesSplit(props.node, props.state)
 </script>
 
@@ -77,10 +60,6 @@ const {
 }
 .v2-split :deep(.split-preview__item[data-on='1'] .split-preview__thumb) {
   outline-color: var(--v2-accent);
-}
-.v2-ed__chip:disabled {
-  opacity: 0.4;
-  pointer-events: none;
 }
 .v2-split__err {
   font: 500 11px/1.3 system-ui, sans-serif;

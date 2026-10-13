@@ -1,8 +1,8 @@
 import { remapMentionTokens } from '@/composables/stages/imageSlotMentions'
 import {
   applyPositions,
-  AUTOGROW_KEY_RE,
   dropLegacyRefs,
+  isMediaSocketName,
   liveLinks,
   lookupLink,
   matchLiveLink,
@@ -75,7 +75,7 @@ function relinkPastedMedia(node: any): void {
       if (!src || String(src.target_id) === String(node.id)) continue
       const origin = graph.getNodeById?.(src.origin_id)
       const slot = (node.inputs ?? []).findIndex((i: any) => i?.link == null && typeof i?.name === 'string'
-        && (AUTOGROW_KEY_RE[type].test(i.name) || (type === 'audio' && i.name === 'audio')))
+        && isMediaSocketName(i.name, type))
       if (!origin || slot < 0) continue
       node.__comfytvRelinking = true
       const link = origin.connect(src.origin_slot, node, slot)

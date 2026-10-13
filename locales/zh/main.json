@@ -4,6 +4,37 @@
     "captureHint": "合成图层并输出到节点",
     "saveToLibraryHint": "导出 PSD 到资产库"
   },
+  "customSplit": {
+    "connectImage": "请连接输入图片",
+    "splitting": "正在切分为 {n} 个区域",
+    "annotateHint": "请选择区域并标注视角",
+    "done": "已完成 {n} 个区域",
+    "hint": "调整切分线或标注区域",
+    "addV": "添加竖向切分",
+    "addH": "添加横向切分",
+    "remove": "移除选中切分线",
+    "annotate": "标注视角",
+    "generateModel": "生成模型"
+  },
+  "g": { "agentModified": "Agent 已修改", "agentWorking": "Agent 工作中", "back": "返回", "delete": "删除", "download": "下载", "edit": "编辑", "error": "错误", "mute": "静音", "nodesCount": "{n} 个节点", "pause": "暂停", "play": "播放", "rename": "重命名", "saving": "保存中", "success": "成功", "unmute": "取消静音" },
+  "feedback": { "title": "反馈" },
+  "fxChain": { "unknown": "未知效果" },
+  "imageMerge": {
+    "needImages": "请连接图片",
+    "wired": "已连接 {n} 张",
+    "layers": "图层叠加",
+    "row": "横向排布",
+    "aspect11": "1:1",
+    "adjustToApply": "调整参数后应用",
+    "applying": "应用中…",
+    "applied": "已应用"
+  },
+  "imagesSplit": { "aspect11": "1:1", "connect": "请连接图片批次", "empty": "暂无图片", "merge": "合并图片", "mergeFailed": "合并失败", "selectHint": "选择要处理的图片", "squareFailed": "生成 1:1 失败", "squaring": "正在处理 1:1…", "truncated": "部分图片已截断", "variations": "生成变体" },
+  "mediaAsset": { "selection": { "downloadsStarted": "已开始下载" } },
+  "progressToast": { "downloadsFailed": "下载失败" },
+  "psdLayerTree": { "clickHint": "点击选择图层", "clipping": "剪贴", "compositing": "预览中…", "dims": "尺寸", "dirtyHint": "预览已更新 · 点输出并展开", "done": "已输出", "dropHint": "拖入图层（需带本地路径）", "expand": "展开", "export": "输出并展开", "exporting": "输出中…", "loading": "加载中…", "memory": "内存", "pathMissing": "路径 PSD 丢失", "pathUnavailable": "无法获取本地路径，请点击选择按钮", "pick": "选择 PSD", "pickHint": "选择本地 PSD（记住路径，不复制）", "previewReady": "预览就绪", "scaled": "已缩放", "warning": "警告" },
+  "run": { "run": "运行" },
+  "shareWorkflow": { "saveFailedTitle": "保存失败", "saveFailedDescription": "工作流保存失败：{detail}" },
   "dialog": {
     "confirm": "确定",
     "cancel": "取消",
@@ -35,11 +66,66 @@
       "grade": "调色 · 编辑",
       "compare": "对比 · 编辑",
       "gridSplit": "宫格切分 · 编辑",
+      "customSplit": "自定义切分 · 编辑",
+      "psdLayerTree": "PSD 图层树 · 编辑",
+      "layerSeparation": "图层分离 · 编辑",
+      "imagesSplit": "图像组分离 · 编辑",
+      "imageMerge": "图片合并 · 编辑",
       "compareHint": "接入 A、B 两张图开始对比",
       "wired": "已接入",
       "empty": "未接入"
     },
+    "bottomBar": {
+      "add": "添加节点",
+      "assets": "素材库",
+      "workflows": "工作流",
+      "search": "搜索",
+      "searchPlaceholder": "搜索 ComfyTV 节点…",
+      "categories": "节点分类",
+      "searchEmpty": "没有匹配的节点",
+      "cat": {
+        "all": "全部",
+        "generate": "生成",
+        "input": "输入",
+        "image": "图片",
+        "edit": "编辑",
+        "video": "视频",
+        "audio": "音频",
+        "text": "文本",
+        "model3d": "3D",
+        "bridge": "桥接",
+        "utils": "工具",
+        "other": "其他"
+      },
+      "createImage": "图片",
+      "createVideo": "视频",
+      "createAudio": "音频",
+      "createText": "文本",
+      "workflowEmpty": "暂无工作流。在 ComfyUI 里保存到 user/default/workflows，或把团队 Git 仓 clone 到该目录后再打开本面板。",
+      "workflowLoading": "加载中…",
+      "workflowOpenFailed": "打开工作流失败",
+      "gitNoRepo": "需要独立工作流 Git 仓（不要用整仓 ComfyUI）。在 user/default/workflows 下单独 git init，并 push 到专用 GitHub 仓。",
+      "gitNoGit": "本机未找到 git，请先安装并加入 PATH。",
+      "gitSynced": "已与远程同步",
+      "gitBehind": "远程有 {n} 个提交可更新",
+      "gitDirty": "本地有未提交改动",
+      "gitUpdate": "更新",
+      "gitCommit": "提交",
+      "gitCommitPick": "选择要提交的本地工作流",
+      "gitCommitConfirm": "确认提交",
+      "gitCommitCancel": "取消",
+      "gitMessagePlaceholder": "提交说明（可空）",
+      "gitUpdating": "正在从远程更新…",
+      "gitPushing": "正在提交并推送…",
+      "gitPullOk": "已从远程更新",
+      "gitPushOk": "已提交并推送",
+      "gitError": "同步失败",
+      "gitDuplicate": "无法提交：远程已有同名工作流",
+      "gitNothingSelected": "请先勾选要提交的工作流"
+    },
     "stageHint": "连入参考，点 ↑ 生成",
+    "apiCostHint": "估算工作流 API 费用",
+    "toolbar": { "generate": "生成" },
     "pickerHint": "连入上游批次，点选一张",
     "cropHint": "连入上游图片开始裁剪",
     "batchCount": "{n}张",
@@ -282,7 +368,8 @@
       "grid": "宫格切分",
       "panorama": "全景",
       "crop": "裁剪",
-      "download": "下载"
+      "download": "下载",
+      "generate": "生成"
     }
   },
   "workflow": {
@@ -488,7 +575,7 @@
       },
       "v2-panel-on-select": {
         "label": "仅选中时显示控制面板",
-        "desc": "启用后，V2 卡片控制区域只在选中卡片时显示。"
+        "desc": "默认开启。未选中时 V2 节点只保留预览区；选中后再展开下方参数、提示词与运行条（与 LibTV 画布一致）。"
       },
       "enable-db-backup": {
         "label": "启动时自动备份",
@@ -816,6 +903,15 @@
       "labelRequired": "名称不能为空"
     }
   },
+  "promptBeautify": {
+    "open": "AI 美化 —— 用 Local / ComfyUI LLM 扩写润色提示词",
+    "preview": "预览 —— 应用后替换当前提示词",
+    "apply": "应用",
+    "discard": "放弃",
+    "via": "经由 {provider} · {model}",
+    "applied": "提示词已美化",
+    "failed": "美化失败"
+  },
   "promptHelper": {
     "open": "提示词助手 —— 快速起步 & 增强标签",
     "templates": "模板",
@@ -979,6 +1075,10 @@
       "qwenTags": "<image n> 标签（Qwen Image 2.1）",
       "hint": "提示词里的图片提及在本工作流的模型下如何展开。"
     },
+    "promptRequired": {
+      "label": "需要阶段提示词",
+      "hint": "关闭后，工作流未绑定阶段提示词时也不会显示警告。"
+    },
     "section": {
       "widgets": "Widget 列表",
       "notes": "工作流笔记",
@@ -996,7 +1096,9 @@
     "searchNodes": "搜索节点…",
     "groupAll": "全部",
     "groupUngrouped": "未分组",
-    "noMatchingNodes": "没有匹配当前筛选的节点。"
+    "noMatchingNodes": "没有匹配当前筛选的节点。",
+    "bindingDefault": "绑定默认值",
+    "bindingDefaultHint": "修改绑定默认值，不会取消绑定。"
   },
   "project": {
     "label": "当前项目",
@@ -1708,7 +1810,9 @@
     "unlockRatio": "解锁纵横比",
     "applying": "应用裁剪中…",
     "applied": "裁剪已应用 — 下游可直接使用",
-    "adjustToApply": "拖动矩形或选择比例以应用"
+    "adjustToApply": "拖动矩形或选择比例以应用",
+    "addBox": "添加裁剪框",
+    "removeBox": "移除裁剪框"
   },
   "panorama": {
     "empty": "暂无全景图 — 上传 HDRI / 等距柱状投影图，或接入上游图后点 Run",
@@ -2159,6 +2263,7 @@
     "fromUpstream": "来自上游接入的 batch —— 请在上游移除，这里删不掉"
   },
   "run": {
+    "run": "运行",
     "runAllStages": "运行全部 Stage",
     "stagesRunComplete": "ComfyTV 节点已按依赖顺序全部完成。",
     "stagesRunFailed": "按顺序运行 ComfyTV 节点时有节点失败。",
@@ -2324,7 +2429,15 @@
   },
   "modelPreview": {
     "loading": "模型加载中…",
-    "loadFailed": "模型加载失败"
+    "loadFailed": "模型加载失败",
+    "replaceTexture": "替换纹理",
+    "clearTexture": "清除纹理",
+    "lighting": {
+      "default": "光照",
+      "studio": "棚拍",
+      "dramatic": "戏剧",
+      "flat": "平光"
+    }
   },
   "modelLoader": {
     "upload": "上传",
@@ -2340,6 +2453,7 @@
   },
   "meshPrimitive": {
     "kind": {
+      "": "基元",
       "cube": "立方体",
       "sphere": "球体",
       "cylinder": "圆柱",
@@ -2449,7 +2563,7 @@
     },
     "channel": {
       "material": "材质",
-      "clay": "素模",
+      "clay": "陶土",
       "normal": "法线",
       "wire": "线框",
       "uv": "UV"
@@ -2520,6 +2634,7 @@
     "uploadFailed": "上传失败: {detail}"
   },
   "fxChain": {
+    "unknown": "未知效果",
     "title": "特效链",
     "empty": "沿 video 线把 FX 节点串联接入本节点即可成链",
     "noPreview": "无实时预览",

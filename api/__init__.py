@@ -34,7 +34,11 @@ from . import agent_routes  # noqa: F401
 from . import eagle      # noqa: F401
 from . import blender    # noqa: F401
 from . import llm        # noqa: F401
+from . import prompt_beautify  # noqa: F401
+from . import native_workflow_git  # noqa: F401
 from . import view_patch  # noqa: F401
 from . import photoshop   # noqa: F401
+from . import upload_file  # noqa: F401
+from . import psd_local  # noqa: F401
 
 from .stages import _compute_input_usage  # noqa: F401

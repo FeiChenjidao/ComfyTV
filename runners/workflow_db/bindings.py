@@ -288,6 +288,7 @@ def list_workflow_bindings() -> list[dict]:
             out.append({
                 "kind":     row.kind,
                 "label":    row.label,
+                "meta":     json.loads(row.meta_json) if row.meta_json else {},
                 "bindings": [
                     {"from": b.from_, "required": b.required}
                     for b in bindings

@@ -8,15 +8,7 @@
     @dragleave="onDragLeave"
     @drop.prevent="onDrop"
   >
-    <input
-      ref="fileInput"
-      type="file"
-      accept=".psd,.psb,image/vnd.adobe.photoshop"
-      class="ctv:hidden"
-      @change="onFileChange"
-    />
-
-    <button type="button" :class="btnClass" @click="fileInput?.click()">
+    <button type="button" :class="btnClass" :disabled="loading" @click="pickLocalPsd()">
       <i class="pi pi-folder-open" />
       <span class="ctv:truncate">{{ fileName || $t('psdLayerTree.pick') }}</span>
     </button>
@@ -60,16 +52,24 @@
       </button>
     </div>
 
-    <button type="button" :class="btnClass" @click="expandImages">
+    <button
+      type="button"
+      :class="[btnClass, 'psd-export']"
+      :disabled="!displayedRows.length || exporting || loading"
+      @click="exportAndExpand"
+    >
       <i class="pi pi-sitemap" />
-      <span class="ctv:truncate">{{ $t('psdLayerTree.expand') }}</span>
+      <span class="ctv:truncate">{{ exporting ? $t('psdLayerTree.exporting') : $t('psdLayerTree.export') }}</span>
     </button>
 
     <div class="ctv:text-2xs ctv:text-center ctv:py-0.5">
       <span v-if="error" class="ctv:text-destructive-background">{{ error }}</span>
       <span v-else-if="loading" class="ctv:text-muted-foreground">{{ $t('psdLayerTree.loading') }}</span>
+      <span v-else-if="exporting" class="ctv:text-muted-foreground">{{ $t('psdLayerTree.exporting') }}</span>
       <span v-else-if="compositing" class="ctv:text-muted-foreground">{{ $t('psdLayerTree.compositing') }}</span>
-      <span v-else-if="previewUrl" class="ctv:text-success-background">{{ $t('psdLayerTree.done') }}</span>
+      <span v-else-if="dirty && previewUrl" class="ctv:text-muted-foreground">{{ $t('psdLayerTree.dirtyHint') }}</span>
+      <span v-else-if="!dirty && previewUrl" class="ctv:text-success-background">{{ $t('psdLayerTree.done') }}</span>
+      <span v-else-if="previewUrl" class="ctv:text-muted-foreground">{{ $t('psdLayerTree.previewReady') }}</span>
       <span v-else-if="displayedRows.length" class="ctv:text-muted-foreground">{{ $t('psdLayerTree.clickHint') }}</span>
       <span v-else class="ctv:text-muted-foreground">{{ $t('psdLayerTree.pickHint') }}</span>
       <span
@@ -119,11 +119,10 @@ const props = defineProps<{
 const {
   fileName, width, height, outWidth, outHeight,
   displayedRows, selectedSet,
-  loading, compositing, error, previewUrl,
-  collapsed, toggleCollapsed, selectRow, pickFiles,
+  loading, compositing, exporting, dirty, error, previewUrl,
+  collapsed, toggleCollapsed, selectRow, pickFiles, pickLocalPsd, expandWithSlices,
 } = usePsdLayerTree(props.node, props.state)
 
-const fileInput = ref<HTMLInputElement | null>(null)
 const dragOver = ref(false)
 let dragCount = 0
 
@@ -138,12 +137,6 @@ function rowTitle(row: { clip: boolean; warning: boolean }) {
   if (row.clip) parts.push(t('psdLayerTree.clipping'))
   if (row.warning) parts.push(t('psdLayerTree.warning'))
   return parts.join(' — ') || undefined
-}
-
-function onFileChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  pickFiles(Array.from(input.files ?? []))
-  input.value = ''
 }
 
 function onDragEnter() {
@@ -162,7 +155,8 @@ function onDrop(e: DragEvent) {
   pickFiles(Array.from(e.dataTransfer?.files ?? []))
 }
 
-function expandImages() {
+async function exportAndExpand() {
+  await expandWithSlices()
   spawnOrFocusImagesSplit(props.node)
 }
 
@@ -170,11 +164,22 @@ const btnClass = [
   'ctv:flex ctv:items-center ctv:gap-1.5 ctv:w-full ctv:py-1 ctv:px-1.5 ctv:rounded ctv:text-xs ctv:cursor-pointer ctv:border',
   'ctv:bg-secondary-background ctv:border-border-subtle ctv:text-base-foreground',
   'ctv:hover:bg-secondary-background-hover',
+  'ctv:disabled:opacity-45 ctv:disabled:cursor-default',
 ].join(' ')
 </script>
 
 <style scoped>
 .psd-tree { user-select: none; }
+.psd-export {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--p-primary-color, #8b5cf6) 22%, transparent);
+  border-color: color-mix(in srgb, var(--p-primary-color, #8b5cf6) 45%, transparent);
+}
+.psd-export:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--p-primary-color, #8b5cf6) 32%, transparent);
+}
 .psd-row {
   display: flex;
   align-items: center;

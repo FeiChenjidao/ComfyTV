@@ -23,9 +23,11 @@ The file must be a **GUI-format** workflow (a normal *Workflow → Save*; **not*
 
 Next to the link button, **⬆ Upload workflow** imports a `.json` file from disk. The workflow is copied into ComfyTV's library and appears in the dropdown right away — no restart. Use this for a file someone sent you; if it's a workflow you'll keep iterating on, prefer linking it instead.
 
-## Team sync via a public Git repo (LAN)
+## Team sync via a public Git repo (LAN · full canvases)
 
-To share one library across machines so uploads show up for colleagues: clone a dedicated public Git repo as `user/comfytv/workflows`, push/pull with the scripts in that repo, then **Rescan** in the sidebar. Starter kit: [`team-workflows/README.md`](../team-workflows/README.md) (Chinese guide: [team-workflow-git.zh.md](team-workflow-git.zh.md)).
+To share **your own full graphs** (bottom-bar **Workflows**, not stage dropdowns): clone a dedicated public Git repo as `user/default/workflows`, then push/pull with the scripts in that repo. Starter kit: [`team-workflows/README.md`](../team-workflows/README.md) (Chinese: [team-workflow-git.zh.md](team-workflow-git.zh.md)).
+
+Stage node dropdowns still use `user/comfytv/workflows/<kind>/` below — a separate library.
 
 ## Drop files into the library folder
 

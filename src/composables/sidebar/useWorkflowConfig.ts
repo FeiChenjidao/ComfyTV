@@ -13,7 +13,7 @@ import {
   downloadBlob,
   extractFilenameFromContentDisposition,
 } from '@/utils/download'
-import { emitWorkflowApiGenerated } from '@/utils/workflowEvents'
+import { emitWorkflowApiGenerated, emitWorkflowConfigChanged } from '@/utils/workflowEvents'
 
 import type { ConfigPayload } from './workflowConfigCatalog'
 
@@ -107,6 +107,7 @@ export function useWorkflowConfig(t: (key: string, args?: Record<string, unknown
       const sel = selection.selected
       if (sel?.workflowKind && sel?.workflowLabel) {
         await loadConfig(sel.workflowKind, sel.workflowLabel)
+        emitWorkflowConfigChanged(sel.workflowKind, sel.workflowLabel)
       }
       invalidateWorkflowInfo()
     } catch (e: any) {

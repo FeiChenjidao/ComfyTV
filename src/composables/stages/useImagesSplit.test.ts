@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick, reactive } from 'vue'
+import { effectScope, nextTick, reactive } from 'vue'
 
 import type { ResolvedInput, StageState } from '@/stores/stageStore'
 
@@ -9,9 +9,14 @@ const spawnMock = vi.hoisted(() => ({
   spawnImageMergeFromSlots: vi.fn(() => ({ id: 99 })),
 }))
 
-vi.mock('./spawnFollowUp', () => spawnMock)
+const uploadMock = vi.hoisted(() => ({
+  uploadBlob: vi.fn(async () => '/view?filename=squared.png'),
+}))
 
-import { useImagesSplit } from './useImagesSplit'
+vi.mock('./spawnFollowUp', () => spawnMock)
+vi.mock('@/utils/uploadCanvas', () => uploadMock)
+
+import { squareImageCanvas, useImagesSplit } from './useImagesSplit'
 
 function makeNode(): any {
   return {
@@ -41,11 +46,31 @@ function makeState(content: string | null = null, source: ResolvedInput['source'
   }) as StageState
 }
 
+function withScope<T>(fn: () => T): T {
+  // Keep the scope alive for the test body (watches / toolbar registration).
+  return effectScope(true).run(fn) as T
+}
+
+describe('squareImageCanvas', () => {
+  it('pads a landscape image to a square on the long side', () => {
+    const img = {
+      naturalWidth: 200,
+      naturalHeight: 100,
+      width: 200,
+      height: 100,
+    } as HTMLImageElement
+    const canvas = squareImageCanvas(img)
+    expect(canvas.width).toBe(200)
+    expect(canvas.height).toBe(200)
+  })
+})
+
 describe('useImagesSplit', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     spawnMock.spawnImageMergeFromSlots.mockClear()
     spawnMock.spawnImageVariationsFromSlots.mockClear()
+    uploadMock.uploadBlob.mockClear()
   })
 
   it('splits a labeled image group onto matching output slots', async () => {
@@ -56,7 +81,7 @@ describe('useImagesSplit', () => {
         { index: '2', label: 'Ground', image_url: '/g.png' },
       ],
     }), 'upstream')
-    const { items, connected, truncated } = useImagesSplit(node, state)
+    const { items, connected, truncated } = withScope(() => useImagesSplit(node, state))
     await nextTick()
     expect(connected.value).toBe(true)
     expect(truncated.value).toBe(false)
@@ -70,7 +95,7 @@ describe('useImagesSplit', () => {
   it('updates when the upstream batch changes', async () => {
     const node = makeNode()
     const state = makeState(null, 'upstream-pending')
-    const { items, connected } = useImagesSplit(node, state)
+    const { items, connected } = withScope(() => useImagesSplit(node, state))
     expect(connected.value).toBe(true)
     expect(items.value).toEqual([])
     state.inputs[0].source = 'upstream'
@@ -89,7 +114,7 @@ describe('useImagesSplit', () => {
         { index: '3', label: 'C', image_url: '/c' },
       ],
     }), 'upstream')
-    const { selected, selectItem } = useImagesSplit(node, state)
+    const { selected, selectItem } = withScope(() => useImagesSplit(node, state))
     selectItem(2, { shiftKey: false, ctrlKey: false, metaKey: false } as MouseEvent)
     expect(selected.value).toEqual([2])
     state.inputs[0].content = JSON.stringify({
@@ -108,10 +133,47 @@ describe('useImagesSplit', () => {
         { index: '3', label: 'C', image_url: '/c' },
       ],
     }), 'upstream')
-    const { selectItem, mergeSelected } = useImagesSplit(node, state)
+    const { selectItem, mergeSelected } = withScope(() => useImagesSplit(node, state))
     selectItem(0, { shiftKey: false, ctrlKey: true, metaKey: false } as MouseEvent)
     selectItem(2, { shiftKey: false, ctrlKey: true, metaKey: false } as MouseEvent)
     mergeSelected()
     expect(spawnMock.spawnImageMergeFromSlots).toHaveBeenCalledWith(node, [0, 2])
+  })
+
+  it('squares selected images in-node without spawning merge', async () => {
+    const node = makeNode()
+    const state = makeState(JSON.stringify({
+      images: [
+        { index: '1', label: 'A', image_url: '/a' },
+        { index: '2', label: 'B', image_url: '/b' },
+      ],
+    }), 'upstream')
+
+    vi.stubGlobal('Image', class {
+      naturalWidth = 40
+      naturalHeight = 20
+      width = 40
+      height = 20
+      crossOrigin = ''
+      onload: ((ev?: any) => void) | null = null
+      onerror: ((ev?: any) => void) | null = null
+      set src(_v: string) {
+        queueMicrotask(() => this.onload?.(null))
+      }
+    })
+    HTMLCanvasElement.prototype.toBlob = function (cb: BlobCallback) {
+      cb(new Blob(['x'], { type: 'image/png' }))
+    }
+
+    const api = withScope(() => useImagesSplit(node, state))
+    expect(api.canSquare.value).toBe(false)
+    api.selectItem(1, { shiftKey: false, ctrlKey: false, metaKey: false } as MouseEvent)
+    expect(api.canSquare.value).toBe(true)
+    await api.squareSelected()
+    expect(spawnMock.spawnImageMergeFromSlots).not.toHaveBeenCalled()
+    expect(uploadMock.uploadBlob).toHaveBeenCalled()
+    expect(api.items.value[1].image_url).toBe('/view?filename=squared.png')
+    expect(state.outputs[1]).toBe('/view?filename=squared.png')
+    expect(state.outputs[0]).toBe('/a')
   })
 })

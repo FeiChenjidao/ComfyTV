@@ -47,11 +47,15 @@ import {
   WorkflowConfigSchema,
   CustomIoSaveResultSchema,
   WorkflowApiCostSchema,
+  PromptBeautifyResultSchema,
+  NativeWorkflowGitStatusSchema,
 } from './schemas'
 import type {
   WorkflowConfig,
   CustomIoSaveResult,
   WorkflowApiCost,
+  PromptBeautifyResult,
+  NativeWorkflowGitStatus,
   AdoptAssetsResult,
   ApiSidecarResult,
   BackupResult,
@@ -479,6 +483,34 @@ export function saveCustomIo(
 
 export function duplicateWorkflow(workflowId: number, label: string): Promise<CustomIoSaveResult> {
   return apiSend(`/comfytv/workflows/${workflowId}/duplicate`, 'POST', CustomIoSaveResultSchema, { label })
+}
+
+export function beautifyPrompt(
+  prompt: string,
+  language: string,
+): Promise<PromptBeautifyResult> {
+  return apiSend('/comfytv/prompt/beautify', 'POST', PromptBeautifyResultSchema, {
+    prompt,
+    language,
+  })
+}
+
+export function fetchNativeWorkflowGitStatus(): Promise<NativeWorkflowGitStatus> {
+  return apiFetch('/comfytv/workflows/native/git', NativeWorkflowGitStatusSchema)
+}
+
+export function pullNativeWorkflowGit(): Promise<NativeWorkflowGitStatus> {
+  return apiSend('/comfytv/workflows/native/git/pull', 'POST', NativeWorkflowGitStatusSchema, {})
+}
+
+export function pushNativeWorkflowGit(
+  paths: string[],
+  message?: string,
+): Promise<NativeWorkflowGitStatus> {
+  return apiSend('/comfytv/workflows/native/git/push', 'POST', NativeWorkflowGitStatusSchema, {
+    paths,
+    message: message || '',
+  })
 }
 
 export * from './schemas'

@@ -8,14 +8,6 @@
     @dragleave="onDragLeave"
     @drop.prevent="onDrop"
   >
-    <input
-      ref="fileInput"
-      type="file"
-      accept=".psd,.psb,image/vnd.adobe.photoshop"
-      class="v2-psd__file"
-      @change="onFileChange"
-    />
-
     <div class="v2-ed__canvas v2-psd__body">
       <div class="v2-psd__side">
         <div class="v2-psd__tree">
@@ -45,8 +37,14 @@
             <i v-if="row.warning" class="pi pi-exclamation-triangle v2-psd__warn" />
           </button>
         </div>
-        <button type="button" class="v2-psd__expand" @click="expandImages">
-          {{ $t('psdLayerTree.expand') }}
+        <button
+          type="button"
+          class="v2-psd__expand"
+          :data-on="dirty ? '1' : ''"
+          :disabled="!displayedRows.length || exporting || loading"
+          @click="exportAndExpand"
+        >
+          {{ exporting ? $t('psdLayerTree.exporting') : $t('psdLayerTree.export') }}
         </button>
       </div>
       <div class="v2-ed__fit v2-psd__preview">
@@ -64,7 +62,7 @@
 
     <div class="v2-ed__panel">
       <div class="v2-ed__chips">
-        <button type="button" class="v2-ed__chip" @click="fileInput?.click()">
+        <button type="button" class="v2-ed__chip" :disabled="loading" @click="pickLocalPsd()">
           {{ fileName || $t('psdLayerTree.pick') }}
         </button>
       </div>
@@ -79,8 +77,11 @@
       <span class="v2-ed__spacer" />
       <span v-if="error">{{ error }}</span>
       <span v-else-if="loading" class="v2-ed__busy">{{ $t('psdLayerTree.loading') }}</span>
+      <span v-else-if="exporting" class="v2-ed__busy">{{ $t('psdLayerTree.exporting') }}</span>
       <span v-else-if="compositing" class="v2-ed__busy">{{ $t('psdLayerTree.compositing') }}</span>
-      <span v-else-if="previewUrl" class="v2-ed__ok">{{ $t('psdLayerTree.done') }}</span>
+      <span v-else-if="dirty && previewUrl">{{ $t('psdLayerTree.dirtyHint') }}</span>
+      <span v-else-if="!dirty && previewUrl" class="v2-ed__ok">{{ $t('psdLayerTree.done') }}</span>
+      <span v-else-if="previewUrl">{{ $t('psdLayerTree.previewReady') }}</span>
       <span v-else-if="displayedRows.length">{{ $t('psdLayerTree.clickHint') }}</span>
       <span v-else>{{ $t('psdLayerTree.pickHint') }}</span>
     </div>
@@ -108,8 +109,8 @@ const props = defineProps<{
 const {
   fileName, width, height, outWidth, outHeight,
   displayedRows, selectedSet,
-  loading, compositing, error, previewUrl,
-  collapsed, toggleCollapsed, selectRow, pickFiles,
+  loading, compositing, exporting, dirty, error, previewUrl,
+  collapsed, toggleCollapsed, selectRow, pickFiles, pickLocalPsd, expandWithSlices,
 } = usePsdLayerTree(props.node, props.state)
 
 function rowTitle(row: { clip: boolean; warning: boolean }) {
@@ -135,15 +136,8 @@ watch(displayedRows, (rows, prev) => {
 })
 shrinkV2Window()
 
-const fileInput = ref<HTMLInputElement | null>(null)
 const dragOver = ref(false)
 let dragCount = 0
-
-function onFileChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  pickFiles(Array.from(input.files ?? []))
-  input.value = ''
-}
 
 function onDragEnter() {
   dragCount++
@@ -161,7 +155,8 @@ function onDrop(e: DragEvent) {
   pickFiles(Array.from(e.dataTransfer?.files ?? []))
 }
 
-function expandImages() {
+async function exportAndExpand() {
+  await expandWithSlices()
   spawnOrFocusImagesSplit(props.node)
 }
 </script>
@@ -196,16 +191,26 @@ function expandImages() {
 }
 .v2-psd__expand {
   flex: none;
-  margin: 6px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--v2-slab-border);
-  background: var(--v2-chip-bg, transparent);
-  color: var(--v2-text-mid);
-  font: 500 11px/1.3 system-ui, sans-serif;
+  margin: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--v2-accent-border, var(--v2-slab-border));
+  background: color-mix(in srgb, var(--v2-accent, #8b5cf6) 18%, transparent);
+  color: var(--v2-accent-text, var(--v2-text-strong));
+  font: 600 12px/1.3 system-ui, sans-serif;
   cursor: pointer;
 }
-.v2-psd__expand:hover { background: var(--v2-hover-bg); color: var(--v2-text-strong); }
+.v2-psd__expand:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--v2-accent, #8b5cf6) 28%, transparent);
+}
+.v2-psd__expand[data-on='1'] {
+  background: color-mix(in srgb, var(--v2-accent, #8b5cf6) 36%, transparent);
+  box-shadow: inset 0 0 0 1px var(--v2-accent, #8b5cf6);
+}
+.v2-psd__expand:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .v2-psd__empty { position: relative; inset: auto; padding: 16px 10px; }
 .v2-psd__row {
   display: flex;

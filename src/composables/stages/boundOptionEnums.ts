@@ -417,13 +417,15 @@ export async function syncBoundOptionEnums(
     if (!w.options) w.options = {}
     const prev = Array.isArray(w.options.values) ? w.options.values.map(String) : []
     const listSame = prev.length === next.length && prev.every((v: string, i: number) => v === next[i])
-    if (listSame) continue
-    w.options.values = next
-    changed = true
+    if (!listSame) {
+      w.options.values = next
+      changed = true
+    }
     const picked = pickValue(next, w.value, fallback ?? next)
     if (String(w.value ?? '') !== picked) {
       w.value = picked
       w.callback?.(picked)
+      changed = true
     }
   }
   if (applyBoundOptionDefaults(node, payload.defaults, applyDefaults)) changed = true

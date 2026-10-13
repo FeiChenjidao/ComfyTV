@@ -122,7 +122,7 @@ def get_workflow_for_invoke(kind: str, label: str) -> Optional[dict]:
         }
 
 
-def _node_widget_meta(class_type: str) -> dict:
+def _node_widget_meta(class_type: str) -> list[dict]:
     import nodes
     cls = (
         getattr(nodes, "NODE_CLASS_MAPPINGS", {}).get(class_type)
@@ -130,18 +130,19 @@ def _node_widget_meta(class_type: str) -> dict:
     )
     if cls is None:
         return []
-    try:
-        input_types = cls.INPUT_TYPES() if hasattr(cls, "INPUT_TYPES") else {}
-    except Exception as e:
-        _log.warning("[ComfyTV/workflow_db] INPUT_TYPES() raised for %s: %s",
-                     class_type, e)
-        return []
-
     out: list[dict] = []
 
     _WIDGET_TYPES = {"INT", "FLOAT", "STRING", "BOOLEAN"}
+    input_types = None
+    if hasattr(cls, "INPUT_TYPES"):
+        try:
+            input_types = cls.INPUT_TYPES()
+        except Exception as e:
+            _log.warning("[ComfyTV/workflow_db] INPUT_TYPES() raised for %s: %s",
+                         class_type, e)
+
     for section in ("required", "optional"):
-        for name, spec in (input_types.get(section) or {}).items():
+        for name, spec in ((input_types or {}).get(section) or {}).items():
             if not spec:
                 continue
             if isinstance(spec, (list, tuple)):
@@ -164,6 +165,101 @@ def _node_widget_meta(class_type: str) -> dict:
                     out.append({"name": name, "type": t.upper(), "options": opts})
             elif isinstance(spec, str) and spec.upper() in _WIDGET_TYPES:
                 out.append({"name": name, "type": spec.upper(), "options": {}})
+
+    define_schema = getattr(cls, "define_schema", None)
+    if not callable(define_schema):
+        return out
+    try:
+        schema = define_schema()
+    except Exception as e:
+        _log.warning("[ComfyTV/workflow_db] define_schema() raised for %s: %s",
+                     class_type, e)
+        return out
+
+    def expand_input(inp, prefix: str = ""):
+        name = getattr(inp, "id", None)
+        if not name:
+            return
+        full_name = f"{prefix}.{name}" if prefix else str(name)
+        yield inp, full_name
+        io_type = getattr(inp, "get_io_type", lambda: None)()
+        if io_type != "COMFY_DYNAMICCOMBO_V3":
+            return
+        for option in getattr(inp, "options", ()) or ():
+            for child in getattr(option, "inputs", ()) or ():
+                yield from expand_input(child, full_name)
+
+    expanded_inputs = []
+    for inp in getattr(schema, "inputs", ()) or ():
+        expanded_inputs.extend(expand_input(inp) or ())
+
+    for inp, name in expanded_inputs:
+        if not name:
+            continue
+        io_type = getattr(inp, "get_io_type", lambda: None)()
+        io_type = io_type.upper() if isinstance(io_type, str) else io_type
+        options: dict = {}
+        if io_type == "COMBO":
+            values = getattr(inp, "options", None)
+            if isinstance(values, (list, tuple)):
+                options["values"] = list(values)
+            widget_type = "COMBO"
+        elif io_type == "COMFY_DYNAMICCOMBO_V3":
+            values = [getattr(option, "key", None) for option in getattr(inp, "options", ())]
+            options["values"] = [value for value in values if value is not None]
+            widget_type = "COMBO"
+        elif io_type in _WIDGET_TYPES:
+            widget_type = io_type
+            for key in ("min", "max", "step", "round", "multiline", "placeholder"):
+                value = getattr(inp, key, None)
+                if value is not None:
+                    options[key] = value
+        else:
+            continue
+        out.append({"name": str(name), "type": widget_type, "options": options})
+
+    # Dynamic schemas can expose the same child input in several branches.
+    # Keep one stable row while preserving every enum value declared by those
+    # branches.
+    merged: dict[str, dict] = {}
+    for item in out:
+        previous = merged.get(item["name"])
+        if previous is None:
+            merged[item["name"]] = item
+            continue
+        if previous["type"] != item["type"]:
+            # V3 schema metadata is appended after legacy metadata and is
+            # authoritative when the two describe the same input differently.
+            merged[item["name"]] = item
+            continue
+        old_values = previous["options"].get("values")
+        new_values = item["options"].get("values")
+        if isinstance(old_values, list) and isinstance(new_values, list):
+            previous["options"]["values"] = list(dict.fromkeys(old_values + new_values))
+        for key, value in item["options"].items():
+            previous["options"].setdefault(key, value)
+    return list(merged.values())
+
+
+def _fallback_widget_meta(api_inputs: dict) -> list[dict]:
+    """Infer editable widget metadata when a node has no legacy INPUT_TYPES()."""
+    out: list[dict] = []
+    hidden = {
+        "force_run_token", "project_id", "parent_output_id", "unique_id",
+        "custom_params", "captured_image",
+    }
+    for name, value in api_inputs.items():
+        if name in hidden or (isinstance(value, list) and len(value) == 2):
+            continue
+        if isinstance(value, bool):
+            type_ = "BOOLEAN"
+        elif isinstance(value, int) and not isinstance(value, bool):
+            type_ = "INT"
+        elif isinstance(value, float):
+            type_ = "FLOAT"
+        else:
+            type_ = "STRING"
+        out.append({"name": str(name), "type": type_, "options": {}})
     return out
 
 
@@ -275,14 +371,26 @@ def _exposed_widgets(workflow_id: int, file_path: str,
                 "required":       bool(binding.required) if binding else False,
             }
 
-        for wm in _node_widget_meta(class_type):
+        widget_meta = _node_widget_meta(class_type)
+        known_names: set[str] = set()
+        for wm in widget_meta:
             wname = wm["name"]
+            known_names.add(wname)
             if wname not in api_inputs:
                 continue
             current = api_inputs[wname]
             if isinstance(current, list) and len(current) == 2:
                 continue
             out.append(row(wname, wm["type"], wm.get("options") or {}, current))
+
+        # New-schema and third-party nodes may not implement INPUT_TYPES().
+        # Keep their scalar API inputs visible instead of exposing only fields
+        # that already have a saved binding.
+        for wm in _fallback_widget_meta({
+            name: value for name, value in api_inputs.items()
+            if name not in known_names
+        }):
+            out.append(row(wm["name"], wm["type"], wm.get("options") or {}, api_inputs[wm["name"]]))
 
         for slot, otype, oname in node_primitive_outputs(class_type):
             if (node_id, slot) in referenced_outputs:

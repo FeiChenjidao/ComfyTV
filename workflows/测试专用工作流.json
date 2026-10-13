@@ -1,0 +1,69 @@
+{
+  "last_node_id": 4,
+  "last_link_id": 0,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "ComfyTV.ImageStage",
+      "pos": [80, 80],
+      "size": [420, 620],
+      "flags": {},
+      "order": 0,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 2,
+      "type": "ComfyTV.Model3DStage",
+      "pos": [560, 80],
+      "size": [520, 900],
+      "flags": {},
+      "order": 1,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 3,
+      "type": "ComfyTV.VideoStage",
+      "pos": [1160, 80],
+      "size": [420, 700],
+      "flags": {},
+      "order": 2,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 4,
+      "type": "Note",
+      "pos": [80, 1040],
+      "size": [1500, 180],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "测试专用工作流：只用于检查 ComfyTV 卡片、参数暴露、绑定下拉框、默认值和面板折叠。不要点击节点运行按钮，不会调用远程生成服务。\n\n重点检查 Model3DStage 的 seed、negative、texture、pbr、texture_quality、geometry_quality、model_version、face_limit、quad、smart_low_poly、auto_size、orientation、texture_alignment、material、mode、polygon_count、geometry_file_format、texture_mode、tapose、hd_texture、texture_delight、addon_highpack。"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": { "scale": 0.75, "offset": [0, 0] },
+    "comfyTvTestOnly": true
+  },
+  "version": 0.4
+}

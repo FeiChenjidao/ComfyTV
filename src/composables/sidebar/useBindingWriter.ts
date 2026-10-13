@@ -12,6 +12,11 @@ export function useBindingWriter(
     return true
   }
 
+  function canEditBindingDefault(w: ExposedWidget): boolean {
+    const b = w.stage_binding
+    return typeof b === 'string' && (b.startsWith('option:') || b.startsWith('computed:'))
+  }
+
   function dropdownValueFor(w: ExposedWidget): string {
     if (!w.stage_binding) return '__VALUE__'
     if (w.stage_binding.startsWith('literal:')) return '__VALUE__'
@@ -42,6 +47,27 @@ export function useBindingWriter(
     return w.current_value
   }
 
+  function seedDefaultFromWidget(w: ExposedWidget): string | null {
+    if (w.current_value === null || w.current_value === undefined) return null
+    if (typeof w.current_value === 'string' && w.current_value === '') return null
+    return String(w.current_value)
+  }
+
+  async function onDefaultChange(w: ExposedWidget, newVal: any) {
+    if (!canEditBindingDefault(w) || !w.stage_binding) return
+    const isCleared = newVal === null || newVal === undefined ||
+      (typeof newVal === 'string' && newVal === '')
+    w.override_value = isCleared ? null : String(newVal)
+    await postBinding({
+      node_id: w.node_id,
+      input_name: w.widget_name,
+      from: w.stage_binding,
+      default: w.override_value,
+      cast: w.cast,
+      required: w.required ?? false,
+    })
+  }
+
   function comboOptions(w: ExposedWidget): string[] {
     if (w.widget_type !== 'COMBO') return []
     const vals = w.widget_props?.values
@@ -63,6 +89,10 @@ export function useBindingWriter(
   }
 
   async function onValueChange(w: ExposedWidget, newVal: any) {
+    if (canEditBindingDefault(w)) {
+      await onDefaultChange(w, newVal)
+      return
+    }
     if (isStageBound(w)) return
 
     const isCleared =
@@ -121,12 +151,24 @@ export function useBindingWriter(
       cast = 'int'
       defaultValue = 'random_int31'
     } else if (newBinding === 'option:batch_size' ||
+               newBinding === 'option:face_limit' ||
                newBinding === 'computed:width' ||
                newBinding === 'computed:height' ||
                newBinding === 'computed:length') {
       cast = 'int'
+      defaultValue = seedDefaultFromWidget(w)
+    } else if (
+      newBinding === 'option:texture' || newBinding === 'option:pbr' ||
+      newBinding === 'option:quad' || newBinding === 'option:smart_low_poly' ||
+      newBinding === 'option:auto_size' || newBinding === 'option:tapose' ||
+      newBinding === 'option:hd_texture' || newBinding === 'option:texture_delight' ||
+      newBinding === 'option:addon_highpack' || newBinding === 'option:generate_audio'
+    ) {
+      cast = 'bool'
+      defaultValue = seedDefaultFromWidget(w)
     } else if (newBinding.startsWith('option:')) {
       cast = inferCast(w.widget_type === 'OUTPUT' ? String(w.widget_props?.output_type) : w.widget_type)
+      defaultValue = seedDefaultFromWidget(w)
     }
     const isUpstream = newBinding.startsWith('upstream_')
     w.stage_binding  = newBinding
@@ -147,6 +189,7 @@ export function useBindingWriter(
   return {
     isStageBound,
     isUpstreamBound,
+    canEditBindingDefault,
     dropdownValueFor,
     coerceForWidget,
     effectiveValue,
@@ -154,6 +197,7 @@ export function useBindingWriter(
     numProp,
     inferCast,
     onValueChange,
+    onDefaultChange,
     onBindingChange,
     onRequiredToggle,
   }

@@ -58,6 +58,14 @@ const DATA_KIND: Record<string, OutputKind> = {
 
 const FRAME_ENCODERS = new Set(['SaveWEBM', 'VHS_VideoCombine'])
 
+const OUTPUT_NODE_KIND: Record<string, OutputKind> = {
+  SaveImage: 'image', PreviewImage: 'image', SaveAnimatedWEBP: 'image', SaveAnimatedPNG: 'image',
+  SaveVideo: 'video', SaveWEBM: 'video', VHS_VideoCombine: 'video',
+  SaveAudio: 'audio', SaveAudioMP3: 'audio', SaveAudioOpus: 'audio', SaveAudioAdvanced: 'audio',
+  SaveGLB: 'model', PreviewAny: 'text', ShowText: 'text', SaveText: 'text',
+  DisplayAny: 'text',
+}
+
 function dataKind(type: string | null | undefined): OutputKind | null {
   for (const t of String(type ?? '').split(',')) {
     const k = DATA_KIND[t] ?? (t.startsWith('FILE_3D') ? 'model' : null)
@@ -86,6 +94,8 @@ export function classifyWidget(w: ExposedWidget): InputKind | null {
 export function outputKindOf(n: GuiNode): OutputKind | null {
   if (n.out_type === 'STRING') return 'text'
   if (!n.is_output) return null
+  const legacy = OUTPUT_NODE_KIND[n.type]
+  if (legacy) return legacy
   if (FRAME_ENCODERS.has(n.type)) return 'video'
   return dataKind(n.in_type)
 }

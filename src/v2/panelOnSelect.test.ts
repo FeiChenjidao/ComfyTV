@@ -55,14 +55,17 @@ describe('panelOnSelect', () => {
     ])
     expect(isPanelOnSelectEnabled()).toBe(true)
 
-    applyPanelOnSelectSetting([{ key: 'v2-panel-on-select', value: false }])
+    applyPanelOnSelectSetting([
+      { key: 'enable-v2', value: true },
+      { key: 'v2-panel-on-select', value: false },
+    ])
     expect(isPanelOnSelectEnabled()).toBe(false)
   })
 
-  it('treats missing setting as off', () => {
-    document.body.setAttribute(PANEL_ON_SELECT_ATTR, '')
+  it('defaults on when v2 is enabled and the setting row is missing', () => {
+    document.body.removeAttribute(PANEL_ON_SELECT_ATTR)
     applyPanelOnSelectSetting([{ key: 'enable-v2', value: true }])
-    expect(isPanelOnSelectEnabled()).toBe(false)
+    expect(isPanelOnSelectEnabled()).toBe(true)
   })
 
   it('dispatches a change event when the setting flips', () => {
@@ -71,9 +74,18 @@ describe('panelOnSelect', () => {
       seen.push(!!(e as CustomEvent).detail?.on)
     }
     document.addEventListener(PANEL_ON_SELECT_CHANGE, onChange)
-    applyPanelOnSelectSetting([{ key: 'v2-panel-on-select', value: true }])
-    applyPanelOnSelectSetting([{ key: 'v2-panel-on-select', value: true }])
-    applyPanelOnSelectSetting([{ key: 'v2-panel-on-select', value: false }])
+    applyPanelOnSelectSetting([
+      { key: 'enable-v2', value: true },
+      { key: 'v2-panel-on-select', value: true },
+    ])
+    applyPanelOnSelectSetting([
+      { key: 'enable-v2', value: true },
+      { key: 'v2-panel-on-select', value: true },
+    ])
+    applyPanelOnSelectSetting([
+      { key: 'enable-v2', value: true },
+      { key: 'v2-panel-on-select', value: false },
+    ])
     document.removeEventListener(PANEL_ON_SELECT_CHANGE, onChange)
     expect(seen).toEqual([true, false])
   })

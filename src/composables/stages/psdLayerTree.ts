@@ -360,6 +360,60 @@ export interface PixelBounds {
   h: number
 }
 
+export interface CompositeOrigin {
+  x: number
+  y: number
+}
+
+/** Union of raster transforms in `nodes` (document coords). Empty → full document. */
+export function unionLayerBounds(
+  nodes: SceneNode[],
+  skipHidden = true,
+  docW = 1,
+  docH = 1,
+): PixelBounds {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  let any = false
+  function visit(n: SceneNode) {
+    if (skipHidden && !n.visible) return
+    if (n.kind === 'group') {
+      for (const c of (n as GroupData).children) visit(c)
+      return
+    }
+    if (n.kind !== 'raster') return
+    const t = n.transform
+    any = true
+    minX = Math.min(minX, t.x)
+    minY = Math.min(minY, t.y)
+    maxX = Math.max(maxX, t.x + t.w)
+    maxY = Math.max(maxY, t.y + t.h)
+  }
+  for (const n of nodes) visit(n)
+  if (!any) {
+    return { x: 0, y: 0, w: Math.max(1, Math.round(docW)), h: Math.max(1, Math.round(docH)) }
+  }
+  const x = Math.floor(minX)
+  const y = Math.floor(minY)
+  const w = Math.max(1, Math.ceil(maxX) - x)
+  const h = Math.max(1, Math.ceil(maxY) - y)
+  return { x, y, w, h }
+}
+
+/** Bounds for isolated selection including clip bases needed as masks. */
+export function selectionCompositeBounds(
+  docW: number,
+  docH: number,
+  isolated: SceneNode[],
+  forest: SceneNode[],
+  skipHidden = true,
+): PixelBounds {
+  const extra = collectClipMaskSources(forest, isolated)
+  return unionLayerBounds([...isolated, ...extra], skipHidden, docW, docH)
+}
+
 export function opaqueBounds(canvas: HTMLCanvasElement): PixelBounds | null {
   const w = canvas.width
   const h = canvas.height
@@ -580,11 +634,12 @@ function drawRaster(
   contents: ContentMap,
   scale: number,
   pool: ScratchPool,
+  origin: CompositeOrigin,
 ): void {
   const src = contents.get(node.contentId)
   if (!src) return
-  const dx = node.transform.x * scale
-  const dy = node.transform.y * scale
+  const dx = (node.transform.x - origin.x) * scale
+  const dy = (node.transform.y - origin.y) * scale
   const dw = Math.max(1, node.transform.w * scale)
   const dh = Math.max(1, node.transform.h * scale)
   const mask = node.mask?.enabled ? contents.get(node.mask.contentId) : undefined
@@ -617,18 +672,19 @@ function drawNode(
   scale: number,
   pool: ScratchPool,
   forest: SceneNode[],
+  origin: CompositeOrigin,
 ): void {
   if (skipHidden && !node.visible) return
   if (node.kind === 'group') {
     const g = node as GroupData
     if (g.passThrough) {
-      drawSiblings(ctx, g.children, contents, skipHidden, scale, pool, forest)
+      drawSiblings(ctx, g.children, contents, skipHidden, scale, pool, forest, origin)
       return
     }
     const tmp = pool.acquire(ctx.canvas.width, ctx.canvas.height)
     const t = tmp.getContext('2d')
     if (t) {
-      drawSiblings(t, g.children, contents, skipHidden, scale, pool, forest)
+      drawSiblings(t, g.children, contents, skipHidden, scale, pool, forest, origin)
       ctx.save()
       ctx.globalAlpha = Number.isFinite(g.opacity) ? g.opacity : 1
       ctx.globalCompositeOperation = blendOp(g)
@@ -638,7 +694,7 @@ function drawNode(
     pool.release(tmp)
     return
   }
-  if (node.kind === 'raster') drawRaster(ctx, node as RasterData, contents, scale, pool)
+  if (node.kind === 'raster') drawRaster(ctx, node as RasterData, contents, scale, pool, origin)
 }
 
 function asClipBaseSource(node: SceneNode): SceneNode {
@@ -654,6 +710,7 @@ function drawClipRun(
   scale: number,
   pool: ScratchPool,
   forest: SceneNode[],
+  origin: CompositeOrigin,
 ): void {
   const w = ctx.canvas.width
   const h = ctx.canvas.height
@@ -662,10 +719,10 @@ function drawClipRun(
   const source = asClipBaseSource(base)
   const bctx = baseC.getContext('2d')
   const octx = overC.getContext('2d')
-  if (bctx) drawNode(bctx, source, contents, skipHidden, scale, pool, forest)
+  if (bctx) drawNode(bctx, source, contents, skipHidden, scale, pool, forest, origin)
   if (octx) {
     octx.drawImage(baseC, 0, 0)
-    for (const c of clipped) drawNode(octx, c, contents, skipHidden, scale, pool, forest)
+    for (const c of clipped) drawNode(octx, c, contents, skipHidden, scale, pool, forest, origin)
     octx.globalCompositeOperation = 'destination-in'
     octx.drawImage(baseC, 0, 0)
     ctx.save()
@@ -686,10 +743,11 @@ function drawClippedOrphan(
   scale: number,
   pool: ScratchPool,
   forest: SceneNode[],
+  origin: CompositeOrigin,
 ): void {
   const base = clipBaseOf(forest, node.id)
   if (!base || (skipHidden && !base.visible)) {
-    if (!base) drawNode(ctx, node, contents, skipHidden, scale, pool, forest)
+    if (!base) drawNode(ctx, node, contents, skipHidden, scale, pool, forest, origin)
     return
   }
   const w = ctx.canvas.width
@@ -698,8 +756,8 @@ function drawClippedOrphan(
   const maskC = pool.acquire(w, h)
   const octx = overC.getContext('2d')
   const mctx = maskC.getContext('2d')
-  if (octx) drawNode(octx, node, contents, skipHidden, scale, pool, forest)
-  if (mctx) drawNode(mctx, base, contents, false, scale, pool, forest)
+  if (octx) drawNode(octx, node, contents, skipHidden, scale, pool, forest, origin)
+  if (mctx) drawNode(mctx, base, contents, false, scale, pool, forest, origin)
   if (octx) {
     octx.globalCompositeOperation = 'destination-in'
     octx.drawImage(maskC, 0, 0)
@@ -717,19 +775,20 @@ function drawSiblings(
   scale: number,
   pool: ScratchPool,
   forest: SceneNode[],
+  origin: CompositeOrigin,
 ): void {
   let i = 0
   while (i < children.length) {
     const node = children[i]
     if (isClipped(node)) {
-      drawClippedOrphan(ctx, node, contents, skipHidden, scale, pool, forest)
+      drawClippedOrphan(ctx, node, contents, skipHidden, scale, pool, forest, origin)
       i++
       continue
     }
     let j = i + 1
     while (j < children.length && isClipped(children[j])) j++
     if (j === i + 1) {
-      drawNode(ctx, node, contents, skipHidden, scale, pool, forest)
+      drawNode(ctx, node, contents, skipHidden, scale, pool, forest, origin)
       i++
       continue
     }
@@ -737,7 +796,7 @@ function drawSiblings(
       i = j
       continue
     }
-    drawClipRun(ctx, node, children.slice(i + 1, j), contents, skipHidden, scale, pool, forest)
+    drawClipRun(ctx, node, children.slice(i + 1, j), contents, skipHidden, scale, pool, forest, origin)
     i = j
   }
 }
@@ -750,9 +809,18 @@ export function compositeSubtree(
   skipHidden = true,
   forest?: SceneNode[],
   fitOverride?: FitSize,
+  originOverride?: CompositeOrigin,
+  boundsOverride?: PixelBounds,
 ): HTMLCanvasElement {
   const clipForest = forest ?? nodes
-  let fit = fitOverride ?? fitCompositeSize(width, height)
+  const bounds = boundsOverride
+    ?? selectionCompositeBounds(width, height, nodes, clipForest, skipHidden)
+  let fit = fitOverride ?? {
+    width: Math.max(1, Math.round(bounds.w)),
+    height: Math.max(1, Math.round(bounds.h)),
+    scale: 1,
+  }
+  const origin = originOverride ?? { x: bounds.x, y: bounds.y }
   const pool = new ScratchPool()
   try {
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -762,7 +830,7 @@ export function compositeSubtree(
         out.height = fit.height
         const ctx = out.getContext('2d')
         if (!ctx) return out
-        drawSiblings(ctx, nodes, contents, skipHidden, fit.scale, pool, clipForest)
+        drawSiblings(ctx, nodes, contents, skipHidden, fit.scale, pool, clipForest, origin)
         return out
       } catch (e) {
         out.width = 0
@@ -782,4 +850,38 @@ export function compositeSubtree(
   fallback.width = 1
   fallback.height = 1
   return fallback
+}
+
+/** Low-res preview composite into a local canvas (bbox, scaled). */
+export function compositePreview(
+  docW: number,
+  docH: number,
+  nodes: SceneNode[],
+  contents: ContentMap,
+  forest?: SceneNode[],
+  maxDim = PREVIEW_DISPLAY_MAX_DIM,
+): HTMLCanvasElement {
+  const clipForest = forest ?? nodes
+  const bounds = selectionCompositeBounds(docW, docH, nodes, clipForest, true)
+  const fit = fitDisplaySize(bounds.w, bounds.h, maxDim)
+  return compositeSubtree(
+    docW, docH, nodes, contents, true, clipForest, fit,
+    { x: bounds.x, y: bounds.y }, bounds,
+  )
+}
+
+/** Full-pixel export composite (bbox, scale=1). */
+export function compositeExport(
+  docW: number,
+  docH: number,
+  nodes: SceneNode[],
+  contents: ContentMap,
+  forest?: SceneNode[],
+): HTMLCanvasElement {
+  const clipForest = forest ?? nodes
+  const bounds = selectionCompositeBounds(docW, docH, nodes, clipForest, true)
+  return compositeSubtree(
+    docW, docH, nodes, contents, true, clipForest, undefined,
+    { x: bounds.x, y: bounds.y }, bounds,
+  )
 }

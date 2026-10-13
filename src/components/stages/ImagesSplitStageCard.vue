@@ -11,6 +11,9 @@
     <button type="button" :class="btnClass" :disabled="!canMerge" @click="mergeSelected">
       {{ $t('imagesSplit.merge') }}
     </button>
+    <button type="button" :class="btnClass" :disabled="!canSquare" @click="squareSelected">
+      {{ $t('imagesSplit.aspect11') }}
+    </button>
     <button type="button" :class="btnClass" :disabled="!canVariations" @click="spawnVariations">
       {{ $t('imagesSplit.variations') }}
     </button>
@@ -50,8 +53,8 @@ const props = defineProps<{
 
 const {
   items, truncated, connected, max,
-  selectedSet, canMerge, canVariations, actionError,
-  selectItem, mergeSelected, spawnVariations,
+  selectedSet, canMerge, canSquare, canVariations, actionError,
+  selectItem, mergeSelected, squareSelected, spawnVariations,
 } = useImagesSplit(props.node, props.state)
 
 const btnClass = [

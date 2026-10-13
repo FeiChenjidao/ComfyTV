@@ -7,8 +7,10 @@ import {
   MERGE_IMAGE_TYPE,
   ensureMergeImageSockets,
   findMergeImageSlot,
+  parseMergeAspect,
   parseMergeMode,
   uniqueSlotIndexes,
+  type MergeAspect,
   type MergeMode,
 } from '@/composables/stages/imageMerge'
 import {
@@ -156,12 +158,14 @@ export function spawnImageMergeFromSlots(
   srcNode: any,
   slotIndexes: number[],
   mode: MergeMode = 'layers',
+  aspect: MergeAspect = 'native',
 ) {
   const slots = uniqueSlotIndexes(slotIndexes)
   if (!srcNode || !slots.length) return null
   const node = createNodeAt(IMAGE_MERGE_CLASS, posRightOf(srcNode))
   if (!node) return null
   setWidget(node, 'merge_mode', parseMergeMode(mode))
+  setWidget(node, 'aspect_ratio', parseMergeAspect(aspect))
   stampLineage(srcNode, node)
   connectSrcSlotsToAutogrow(srcNode, slots, node, 'image')
   const canvas = (app as any)?.canvas

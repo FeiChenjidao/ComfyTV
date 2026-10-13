@@ -47,6 +47,12 @@ const info = {
       requires: { image: false, video: false, audio: false, text: false },
       max_inputs: { image: 0, video: 0, audio: 0, text: 0 },
     },
+    'Promptless workflow': {
+      uses: { image: false, video: false, audio: false, text: false },
+      requires: { image: false, video: false, audio: false, text: false },
+      max_inputs: { image: 0, video: 0, audio: 0, text: 0 },
+      prompt_required: false,
+    },
   },
 }
 
@@ -84,6 +90,14 @@ describe('validateNode', () => {
     const { validateNode } = await loadModuleWithInfo(info)
     const node = makeNode({
       widgets: [{ name: 'workflow', value: 'Z-Image Turbo' }, { name: 'main_prompt', value: 'a cat' }],
+    })
+    expect((await validateNode(node, 'image')).main_prompt).toBeUndefined()
+  })
+
+  it('does not warn when the workflow is explicitly promptless', async () => {
+    const { validateNode } = await loadModuleWithInfo(info)
+    const node = makeNode({
+      widgets: [{ name: 'workflow', value: 'Promptless workflow' }, { name: 'main_prompt', value: '' }],
     })
     expect((await validateNode(node, 'image')).main_prompt).toBeUndefined()
   })

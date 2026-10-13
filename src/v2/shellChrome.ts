@@ -17,6 +17,7 @@ import {
   panelOnSelectAfterShow,
   panelOnSelectBeforeHide,
 } from '@/v2/panelOnSelect'
+import { isTextEntry } from '@/v2/wheelCapture'
 import { bindCardHeight, el, stopNativeAutoGrow } from '@/v2/shellCommon'
 
 export function bindShellChrome(node: ComfyNode, opts: {
@@ -44,6 +45,24 @@ export function bindShellChrome(node: ComfyNode, opts: {
     })
     anyNode.__comfytvSyncHeight = syncHeight
   }
+
+  // Clicking preview / title chrome (not a text field) releases stuck prompt/button focus
+  // so Delete can remove the selected graph node.
+  card.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return
+    const hit = e.target instanceof Element ? e.target : null
+    if (isTextEntry(hit)) return
+    const active = document.activeElement
+    if (!(active instanceof HTMLElement) || !card.contains(active)) return
+    if (!isTextEntry(active) && active.tagName !== 'BUTTON' && active.getAttribute('role') !== 'button') {
+      // scroll hosts etc.
+      if (!active.closest('.v2-preview, .v2-handle, .v2-panel, .v2-ed')) return
+    }
+    if (isTextEntry(active) || active.tagName === 'BUTTON' || active.getAttribute('role') === 'button'
+      || active.tabIndex >= 0) {
+      active.blur()
+    }
+  }, true)
 
   const warnStrip = el('div', 'v2-warn')
   socketAnchor.after(warnStrip)
@@ -155,6 +174,28 @@ export function bindShellChrome(node: ComfyNode, opts: {
     onScopeDispose(() => settingsBus?.removeEventListener(`${ID_SETTING}.change`, syncId))
   })
 
+  let toolbarHideTimer: number | null = null
+  const TOOLBOX_LEAVE_MS = 120
+
+  const syncBodyToolbarFlag = (selected: boolean) => {
+    if (toolbarHideTimer != null) {
+      window.clearTimeout(toolbarHideTimer)
+      toolbarHideTimer = null
+    }
+    if (selected) {
+      // Sync: hide Comfy SelectionToolbox before the next paint.
+      document.body.setAttribute('data-v2-toolbar', '')
+      return
+    }
+    // Delay clear so SelectionToolbox's slide-up leave (p-panel) cannot flash.
+    toolbarHideTimer = window.setTimeout(() => {
+      toolbarHideTimer = null
+      if (!document.querySelector('.lg-node[data-v2-selected]')) {
+        document.body.removeAttribute('data-v2-toolbar')
+      }
+    }, TOOLBOX_LEAVE_MS)
+  }
+
   const syncSelected = () => {
     const root = card.closest('[data-node-id]') as HTMLElement | null
     if (!root) return
@@ -169,12 +210,7 @@ export function bindShellChrome(node: ComfyNode, opts: {
     if (syncHeight && isPanelOnSelectEnabled() && was !== next) {
       requestAnimationFrame(() => syncHeight?.())
     }
-    queueMicrotask(() => {
-      document.body.toggleAttribute(
-        'data-v2-toolbar',
-        !!document.querySelector('.lg-node[data-v2-selected]'),
-      )
-    })
+    if (was !== next) syncBodyToolbarFlag(next || !!document.querySelector('.lg-node[data-v2-selected]'))
   }
   const prevSel = anyNode.onSelected
   anyNode.onSelected = function (...args: unknown[]) {
@@ -250,6 +286,10 @@ export function bindShellChrome(node: ComfyNode, opts: {
   ]
   scope.run(() => {
     onScopeDispose(() => {
+      if (toolbarHideTimer != null) {
+        window.clearTimeout(toolbarHideTimer)
+        toolbarHideTimer = null
+      }
       cancelMeasure(card)
       unregisterCull?.()
       for (const d of disposers) d()

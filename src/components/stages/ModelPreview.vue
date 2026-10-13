@@ -16,15 +16,31 @@
         {{ loadError ? $t('modelPreview.loadFailed') : $t('modelPreview.loading') }}
       </div>
     </div>
+
+    <ModelPreviewControls
+      v-if="controls && !loading && !loadError && modelReady"
+      :channel="activeChannel"
+      :lighting="lightingMode"
+      :metalness="metalness"
+      :roughness="roughness"
+      :has-texture="!!overrideTexture"
+      @update:channel="onChannelChange"
+      @update:lighting="onLightingChange"
+      @update:metalness="onMetalnessChange"
+      @update:roughness="onRoughnessChange"
+      @texture-file="onTextureFile"
+      @clear-texture="onClearTexture"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
+import ModelPreviewControls from './ModelPreviewControls.vue'
 import {
   fetchModelBytes,
   urlFilename,
@@ -36,16 +52,26 @@ import { guardOrbitControlsDragEnd } from '@/widgets/three/orbitControlsGuard'
 import { RendererView } from '@/widgets/three/RendererView'
 import { buildPrimitiveMesh, parsePrimitiveRecipe } from '@/widgets/three/primitiveGeometry'
 import { loadCustomModelAssets } from '@/widgets/three/scene3d/scene3dAssets'
-import { applyViewChannel, type ViewChannel } from '@/widgets/three/channelShading'
+import { applyViewChannel, OVERLAY_FLAG, type ViewChannel } from '@/widgets/three/channelShading'
+import {
+  applyPreviewMaterialOverrides,
+  loadTextureFromFile,
+  replaceSceneLights,
+  type PreviewLighting,
+} from '@/widgets/three/previewShading'
 import type { MaterialParams } from '@/widgets/material/types'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   src: string
   pickable?: boolean
   partMaterials?: Record<string, MaterialParams | null>
   selectedPart?: string | null
   channel?: ViewChannel
-}>()
+  /** Show view-mode / lighting / texture / PBR overlay controls. */
+  controls?: boolean
+}>(), {
+  controls: false,
+})
 
 const emit = defineEmits<{
   (e: 'view-changed'): void
@@ -55,18 +81,47 @@ const emit = defineEmits<{
 }>()
 
 const hostEl = ref<HTMLDivElement | null>(null)
+const modelReady = ref(false)
+
+const internalChannel = ref<ViewChannel>('material')
+const lightingMode = ref<PreviewLighting>('default')
+const metalness = ref(0)
+const roughness = ref(0.45)
+const pbrTouched = ref(false)
+const overrideTexture = ref<THREE.Texture | null>(null)
+
+const activeChannel = computed<ViewChannel>(() =>
+  props.controls ? internalChannel.value : (props.channel ?? 'material'))
+
+const previewProps = reactive({
+  pickable: props.pickable,
+  partMaterials: props.partMaterials,
+  selectedPart: props.selectedPart,
+  channel: activeChannel.value as ViewChannel | undefined,
+})
+
+watch(
+  () => [props.pickable, props.partMaterials, props.selectedPart, activeChannel.value] as const,
+  () => {
+    previewProps.pickable = props.pickable
+    previewProps.partMaterials = props.partMaterials
+    previewProps.selectedPart = props.selectedPart
+    previewProps.channel = activeChannel.value
+  },
+  { deep: true },
+)
 
 let view: RendererView | null = null
 let scene: THREE.Scene | null = null
 let camera: THREE.PerspectiveCamera | null = null
-let controls: OrbitControls | null = null
+let controlsOrbit: OrbitControls | null = null
 let disposeDragGuard: (() => void) | null = null
 let modelRoot: THREE.Object3D | null = null
 let modelDispose: (() => void) | null = null
 let sparkRenderer: THREE.Object3D | null = null
 let animationId: number | null = null
 
-const mp = useModelPreview(props, emit, {
+const mp = useModelPreview(previewProps, emit, {
   getCamera: () => camera,
   getModelRoot: () => modelRoot,
   getCanvasRect: () => view?.canvas.getBoundingClientRect() ?? null,
@@ -81,6 +136,105 @@ const mp = useModelPreview(props, emit, {
 
 const { loading, loadError } = mp
 
+function syncLighting(): void {
+  if (!scene) return
+  replaceSceneLights(scene, lightingMode.value)
+}
+
+function samplePbr(root: THREE.Object3D): { metalness: number; roughness: number } {
+  let mSum = 0
+  let rSum = 0
+  let n = 0
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh) || child.userData[OVERLAY_FLAG]) return
+    const mats = Array.isArray(child.material) ? child.material : [child.material]
+    for (const mat of mats) {
+      if (!(mat instanceof THREE.MeshStandardMaterial)) continue
+      mSum += mat.metalness
+      rSum += mat.roughness
+      n++
+    }
+  })
+  return n > 0
+    ? { metalness: mSum / n, roughness: rSum / n }
+    : { metalness: 0, roughness: 0.45 }
+}
+
+function applyShading(): void {
+  if (!modelRoot) return
+  const ch = activeChannel.value
+  mp.clearHighlight()
+  applyViewChannel(modelRoot, ch)
+  if (ch === 'material') {
+    mp.applyPartMaterials(true)
+    const hasOverride = !!overrideTexture.value || pbrTouched.value
+    if (hasOverride) {
+      applyPreviewMaterialOverrides(modelRoot, {
+        map: overrideTexture.value,
+        metalness: pbrTouched.value ? metalness.value : null,
+        roughness: pbrTouched.value ? roughness.value : null,
+      })
+    }
+    if (props.selectedPart) mp.setHighlight(props.selectedPart)
+  }
+  emit('view-changed')
+}
+
+function onChannelChange(ch: ViewChannel): void {
+  internalChannel.value = ch
+  applyShading()
+}
+
+function onLightingChange(mode: PreviewLighting): void {
+  lightingMode.value = mode
+  syncLighting()
+  emit('view-changed')
+}
+
+function onMetalnessChange(v: number): void {
+  metalness.value = v
+  pbrTouched.value = true
+  if (modelRoot && activeChannel.value === 'material') {
+    applyPreviewMaterialOverrides(modelRoot, {
+      map: overrideTexture.value,
+      metalness: metalness.value,
+      roughness: roughness.value,
+    })
+    emit('view-changed')
+  }
+}
+
+function onRoughnessChange(v: number): void {
+  roughness.value = v
+  pbrTouched.value = true
+  if (modelRoot && activeChannel.value === 'material') {
+    applyPreviewMaterialOverrides(modelRoot, {
+      map: overrideTexture.value,
+      metalness: metalness.value,
+      roughness: roughness.value,
+    })
+    emit('view-changed')
+  }
+}
+
+async function onTextureFile(file: File): Promise<void> {
+  try {
+    const tex = await loadTextureFromFile(file)
+    overrideTexture.value?.dispose()
+    overrideTexture.value = tex
+    if (internalChannel.value !== 'material') internalChannel.value = 'material'
+    applyShading()
+  } catch (e) {
+    console.error('[ComfyTV/ModelPreview] texture load failed', e)
+  }
+}
+
+function onClearTexture(): void {
+  overrideTexture.value?.dispose()
+  overrideTexture.value = null
+  applyShading()
+}
+
 async function ensureSparkRenderer(): Promise<void> {
   if (sparkRenderer || !scene || !view) return
   const { SparkRenderer } = await loadSpark()
@@ -94,6 +248,7 @@ function disposeModelRoot(): void {
   modelRoot = null
   modelDispose?.()
   modelDispose = null
+  modelReady.value = false
   mp.disposeParts()
 }
 
@@ -113,7 +268,7 @@ function syncSize(): void {
 }
 
 function frameModel(root: THREE.Object3D): void {
-  if (!camera || !controls) return
+  if (!camera || !controlsOrbit) return
   const bounds = new THREE.Box3().setFromObject(root)
   const center = new THREE.Vector3()
   const size = new THREE.Vector3()
@@ -129,8 +284,8 @@ function frameModel(root: THREE.Object3D): void {
   camera.near = Math.max(maxDim / 1000, 0.001)
   camera.far = Math.max(maxDim * 100, 100)
   camera.updateProjectionMatrix()
-  controls.target.copy(center)
-  controls.update()
+  controlsOrbit.target.copy(center)
+  controlsOrbit.update()
 }
 
 interface LoadedModel {
@@ -203,27 +358,29 @@ async function loadModel(url: string): Promise<void> {
     modelDispose = loaded.dispose
     scene.add(loaded.root)
     mp.registerParts(loaded.root)
-    mp.applyPartMaterials(true)
-    if (props.selectedPart) mp.setHighlight(props.selectedPart)
-    if ((props.channel ?? 'material') !== 'material') {
-      applyViewChannel(loaded.root, props.channel as ViewChannel)
+    if (!pbrTouched.value) {
+      const sampled = samplePbr(loaded.root)
+      metalness.value = sampled.metalness
+      roughness.value = sampled.roughness
     }
+    applyShading()
     frameModel(loaded.root)
     loading.value = false
-    emit('view-changed')
+    modelReady.value = true
     mp.scheduleThumbnailPersist(url)
   } catch (e) {
     console.error('[ComfyTV/ModelPreview] failed to load model', url, e)
     if (mp.isStale(mySeq)) return
     loading.value = false
     loadError.value = true
+    modelReady.value = false
   }
 }
 
 function animate(): void {
   animationId = requestAnimationFrame(animate)
   if (!view || !scene || !camera) return
-  controls?.update()
+  controlsOrbit?.update()
   view.renderScene(scene, camera)
 }
 
@@ -231,13 +388,7 @@ onMounted(() => {
   if (!hostEl.value) return
 
   scene = new THREE.Scene()
-  scene.add(new THREE.AmbientLight(0xffffff, 0.7))
-  const key = new THREE.DirectionalLight(0xffffff, 1.4)
-  key.position.set(3, 5, 4)
-  scene.add(key)
-  const fill = new THREE.DirectionalLight(0xffffff, 0.5)
-  fill.position.set(-4, 2, -3)
-  scene.add(fill)
+  syncLighting()
 
   camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000)
   camera.position.set(2, 1.5, 2)
@@ -246,10 +397,10 @@ onMounted(() => {
   view.state.clearColor = new THREE.Color(0x141418)
   view.state.clearAlpha = 1
 
-  controls = new OrbitControls(camera, view.canvas)
-  controls.enableDamping = true
-  disposeDragGuard = guardOrbitControlsDragEnd(controls, view.canvas)
-  controls.addEventListener('end', () => emit('view-changed'))
+  controlsOrbit = new OrbitControls(camera, view.canvas)
+  controlsOrbit.enableDamping = true
+  disposeDragGuard = guardOrbitControlsDragEnd(controlsOrbit, view.canvas)
+  controlsOrbit.addEventListener('end', () => emit('view-changed'))
 
   view.canvas.addEventListener('pointerdown', mp.onPickDown)
   view.canvas.addEventListener('pointerup', mp.onPickUp)
@@ -261,18 +412,28 @@ onMounted(() => {
   void loadModel(props.src)
 })
 
-watch(() => props.src, (url) => { void loadModel(url || '') })
-
-watch(() => props.channel, (ch) => {
-  if (!modelRoot) return
-  mp.clearHighlight()
-  applyViewChannel(modelRoot, (ch ?? 'material') as ViewChannel)
-  if ((ch ?? 'material') === 'material') {
-    mp.applyPartMaterials(true)
-    if (props.selectedPart) mp.setHighlight(props.selectedPart)
-  }
-  emit('view-changed')
+watch(() => props.src, (url) => {
+  overrideTexture.value?.dispose()
+  overrideTexture.value = null
+  internalChannel.value = 'material'
+  pbrTouched.value = false
+  void loadModel(url || '')
 })
+
+watch(() => props.channel, () => {
+  if (props.controls) return
+  applyShading()
+})
+
+watch(() => props.partMaterials, () => {
+  if (!modelRoot || activeChannel.value !== 'material') return
+  if (!overrideTexture.value && !pbrTouched.value) return
+  applyPreviewMaterialOverrides(modelRoot, {
+    map: overrideTexture.value,
+    metalness: pbrTouched.value ? metalness.value : null,
+    roughness: pbrTouched.value ? roughness.value : null,
+  })
+}, { deep: true })
 
 onBeforeUnmount(() => {
   mp.teardown()
@@ -282,8 +443,10 @@ onBeforeUnmount(() => {
   view?.canvas.removeEventListener('pointerup', mp.onPickUp)
   disposeDragGuard?.()
   disposeDragGuard = null
-  controls?.dispose()
-  controls = null
+  controlsOrbit?.dispose()
+  controlsOrbit = null
+  overrideTexture.value?.dispose()
+  overrideTexture.value = null
   disposeModelRoot()
   if (sparkRenderer) {
     scene?.remove(sparkRenderer)
@@ -298,10 +461,10 @@ onBeforeUnmount(() => {
 
 defineExpose({
   cameraState(): { position: number[]; target: number[]; fov: number } | null {
-    if (!camera || !controls) return null
+    if (!camera || !controlsOrbit) return null
     return {
       position: camera.position.toArray(),
-      target: controls.target.toArray(),
+      target: controlsOrbit.target.toArray(),
       fov: camera.fov,
     }
   },

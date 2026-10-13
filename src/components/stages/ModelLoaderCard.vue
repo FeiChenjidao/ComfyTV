@@ -41,6 +41,7 @@
         ref="previewEl"
         :src="modelSrc"
         pickable
+        controls
         :part-materials="partMaterials"
         :selected-part="selectedPart"
         @parts-changed="onPartsChanged"

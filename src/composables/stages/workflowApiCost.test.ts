@@ -61,6 +61,21 @@ describe('workflowApiCost evaluate', () => {
     expect(line.label).toBe('105.5 credits/Run')
   })
 
+  it('resolves dotted schema dependencies from a leaf API input when needed', async () => {
+    const line = await evaluateNodeCost({
+      id: '3',
+      class_type: 'DynamicImageNode',
+      title: 'Dynamic image',
+      price_badge: {
+        engine: 'jsonata',
+        depends_on: { widgets: [{ name: 'model.size', type: 'COMBO' }] },
+        expr: '{"type":"usd","usd": widgets."model.size" = "2K" ? 0.1 : 0.05}',
+      },
+      widgets: { size: '2K' },
+    })
+    expect(line.label).toBe('21.1 credits/Run')
+  })
+
   it('sums multiple nodes', async () => {
     const summary = await summarizeWorkflowCosts([
       {

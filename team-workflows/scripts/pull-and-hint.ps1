@@ -1,16 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Pull the latest team workflows, then remind you to Rescan in ComfyTV.
+  Pull the latest shared native workflows, then remind you to refresh the bottom bar.
 
 .DESCRIPTION
-  Run from anywhere. If you pass -RepoRoot, that directory is used;
-  otherwise the parent of this scripts/ folder is treated as the repo root
-  (i.e. your clone of user/comfytv/workflows).
+  Repo root should be ComfyUI\user\default\workflows (not user\comfytv\workflows).
 
 .EXAMPLE
   .\scripts\pull-and-hint.ps1
-  .\scripts\pull-and-hint.ps1 -RepoRoot "D:\ComfyUI\ComfyUI\user\comfytv\workflows"
+  .\scripts\pull-and-hint.ps1 -RepoRoot "D:\ComfyUI\ComfyUI\user\default\workflows"
 #>
 param(
   [string]$RepoRoot = ""
@@ -23,7 +21,7 @@ if (-not $RepoRoot) {
 }
 
 if (-not (Test-Path (Join-Path $RepoRoot ".git"))) {
-  Write-Error "Not a git repo: $RepoRoot`nClone the team workflows repo into ComfyUI\user\comfytv\workflows first."
+  Write-Error "Not a git repo: $RepoRoot`nClone the team workflows repo into ComfyUI\user\default\workflows first."
 }
 
 Push-Location $RepoRoot
@@ -35,8 +33,8 @@ try {
   }
   Write-Host ""
   Write-Host "Pull OK."
-  Write-Host "Next: open ComfyTV sidebar -> Stages / Workflows -> Rescan"
-  Write-Host "      (重新扫描). Bottom bar and stage dropdowns will refresh."
+  Write-Host "Next: open ComfyTV bottom bar -> Workflows (close & reopen to refresh)."
+  Write-Host "      Files live under user/default/workflows (native canvas graphs)."
 }
 finally {
   Pop-Location

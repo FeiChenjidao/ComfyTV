@@ -4,6 +4,7 @@
 # this list in sync when you add new shipped workflows.
 
 *.json
+!测试专用工作流.json
 
 !audio/ace-step-v1-song.json
 !audio/ace-step-v1-song_preset.json

@@ -4,6 +4,37 @@
     "captureHint": "Composite the layers and send to the node output",
     "saveToLibraryHint": "Export as PSD to the asset library"
   },
+  "customSplit": {
+    "connectImage": "Connect an input image",
+    "splitting": "Splitting into {n} regions",
+    "annotateHint": "Select a region and assign a view label",
+    "done": "Completed {n} regions",
+    "hint": "Adjust split lines or annotate regions",
+    "addV": "Add vertical split",
+    "addH": "Add horizontal split",
+    "remove": "Remove selected split",
+    "annotate": "Annotate views",
+    "generateModel": "Generate model"
+  },
+  "g": { "agentModified": "Agent modified", "agentWorking": "Agent working", "back": "Back", "delete": "Delete", "download": "Download", "edit": "Edit", "error": "Error", "mute": "Mute", "nodesCount": "{n} nodes", "pause": "Pause", "play": "Play", "rename": "Rename", "saving": "Saving", "success": "Success", "unmute": "Unmute" },
+  "feedback": { "title": "Feedback" },
+  "fxChain": { "unknown": "Unknown effect" },
+  "imageMerge": {
+    "needImages": "Connect images",
+    "wired": "Connected · {n} images",
+    "layers": "Stack layers",
+    "row": "Row layout",
+    "aspect11": "1:1",
+    "adjustToApply": "Adjust settings to apply",
+    "applying": "Applying…",
+    "applied": "Applied"
+  },
+  "imagesSplit": { "aspect11": "1:1", "connect": "Connect an image batch", "empty": "No images", "merge": "Merge images", "mergeFailed": "Merge failed", "selectHint": "Select images to process", "squareFailed": "Failed to make 1:1", "squaring": "Making 1:1…", "truncated": "Some images were truncated", "variations": "Generate variations" },
+  "mediaAsset": { "selection": { "downloadsStarted": "Downloads started" } },
+  "progressToast": { "downloadsFailed": "Downloads failed" },
+  "psdLayerTree": { "clickHint": "Click to select a layer", "clipping": "Clipping", "compositing": "Previewing…", "dims": "Dimensions", "dirtyHint": "Preview updated · Export & expand", "done": "Exported", "dropHint": "Drop a PSD (needs a local path)", "expand": "Expand", "export": "Export & Expand", "exporting": "Exporting…", "loading": "Loading…", "memory": "Memory", "pathMissing": "PSD path missing", "pathUnavailable": "Cannot get a local path — use the pick button", "pick": "Choose PSD", "pickHint": "Pick a local PSD (path only, no copy)", "previewReady": "Preview ready", "scaled": "Scaled", "warning": "Warning" },
+  "run": { "run": "Run" },
+  "shareWorkflow": { "saveFailedTitle": "Save failed", "saveFailedDescription": "The workflow could not be saved: {detail}" },
   "dialog": {
     "confirm": "OK",
     "cancel": "Cancel",
@@ -35,11 +66,66 @@
       "grade": "Color Grade · Edit",
       "compare": "Compare · Edit",
       "gridSplit": "Grid Split · Edit",
+      "customSplit": "Custom Split · Edit",
+      "psdLayerTree": "PSD Layer Tree · Edit",
+      "layerSeparation": "Layer Separation · Edit",
+      "imagesSplit": "Split Images · Edit",
+      "imageMerge": "Merge Images · Edit",
       "compareHint": "Wire two images into A and B to compare",
       "wired": "wired",
       "empty": "empty"
     },
+    "bottomBar": {
+      "add": "Add node",
+      "assets": "Assets",
+      "workflows": "Workflows",
+      "search": "Search",
+      "searchPlaceholder": "Search ComfyTV nodes…",
+      "categories": "Categories",
+      "searchEmpty": "No matching nodes",
+      "cat": {
+        "all": "All",
+        "generate": "Generate",
+        "input": "Input",
+        "image": "Image",
+        "edit": "Edit",
+        "video": "Video",
+        "audio": "Audio",
+        "text": "Text",
+        "model3d": "3D",
+        "bridge": "Bridge",
+        "utils": "Utils",
+        "other": "Other"
+      },
+      "createImage": "Image",
+      "createVideo": "Video",
+      "createAudio": "Audio",
+      "createText": "Text",
+      "workflowEmpty": "No workflows yet. Save graphs into ComfyUI’s user/default/workflows, or clone your team Git repo there, then reopen this panel.",
+      "workflowLoading": "Loading…",
+      "workflowOpenFailed": "Failed to open workflow",
+      "gitNoRepo": "Needs a dedicated workflows Git repo (not the whole ComfyUI tree). git init inside user/default/workflows and push to its own GitHub repo.",
+      "gitNoGit": "git was not found on this machine — install it and add it to PATH.",
+      "gitSynced": "In sync with remote",
+      "gitBehind": "{n} remote commit(s) available",
+      "gitDirty": "Local uncommitted changes",
+      "gitUpdate": "Update",
+      "gitCommit": "Commit",
+      "gitCommitPick": "Select local workflows to commit",
+      "gitCommitConfirm": "Confirm commit",
+      "gitCommitCancel": "Cancel",
+      "gitMessagePlaceholder": "Commit message (optional)",
+      "gitUpdating": "Updating from remote…",
+      "gitPushing": "Committing & pushing…",
+      "gitPullOk": "Updated from remote",
+      "gitPushOk": "Committed & pushed",
+      "gitError": "Sync failed",
+      "gitDuplicate": "Cannot commit: remote already has a workflow with the same name",
+      "gitNothingSelected": "Select at least one workflow to commit"
+    },
     "stageHint": "Connect references, press ↑ to generate",
+    "apiCostHint": "Estimated workflow API cost",
+    "toolbar": { "generate": "Generate" },
     "pickerHint": "Connect an upstream batch, click to pick",
     "cropHint": "Connect an upstream image to start cropping",
     "batchCount": "{n}",
@@ -282,7 +368,8 @@
       "grid": "Grid split",
       "panorama": "Panorama",
       "crop": "Crop",
-      "download": "Download"
+      "download": "Download",
+      "generate": "Generate"
     }
   },
   "workflow": {
@@ -477,7 +564,7 @@
       },
       "v2-panel-on-select": {
         "label": "Show control panel only when selected",
-        "desc": "When enabled, V2 card controls stay hidden until the card is selected."
+        "desc": "On by default. Unselected V2 nodes show the preview only; select a node to reveal prompts, params, and the run bar (LibTV-style)."
       },
       "enable-db-backup": {
         "label": "Automatic backup on startup",
@@ -798,6 +885,15 @@
       "labelRequired": "Label is required"
     }
   },
+  "promptBeautify": {
+    "open": "AI beautify — expand & polish the prompt with Local / ComfyUI LLM",
+    "preview": "Preview — apply to replace the current prompt",
+    "apply": "Apply",
+    "discard": "Discard",
+    "via": "via {provider} · {model}",
+    "applied": "Prompt beautified",
+    "failed": "Beautify failed"
+  },
   "promptHelper": {
     "open": "Prompt helper — quick starters & enhancement tags",
     "templates": "Templates",
@@ -911,6 +1007,10 @@
       "qwenTags": "<image n> tags (Qwen Image 2.1)",
       "hint": "How image mentions in the stage prompt are rendered for this workflow's model."
     },
+    "promptRequired": {
+      "label": "Stage prompt required",
+      "hint": "Show a warning when this workflow has no stage prompt binding."
+    },
     "section": {
       "widgets": "Widgets",
       "notes": "Workflow notes",
@@ -928,7 +1028,9 @@
     "searchNodes": "Search nodes…",
     "groupAll": "All",
     "groupUngrouped": "Ungrouped",
-    "noMatchingNodes": "No nodes match the current filter."
+    "noMatchingNodes": "No nodes match the current filter.",
+    "bindingDefault": "Binding default",
+    "bindingDefaultHint": "Change the binding default without removing the binding."
   },
   "project": {
     "label": "Current Project",
@@ -1640,7 +1742,9 @@
     "unlockRatio": "Unlock aspect ratio",
     "applying": "Applying crop…",
     "applied": "Crop applied — ready for downstream",
-    "adjustToApply": "Drag the rectangle or pick a ratio to apply"
+    "adjustToApply": "Drag the rectangle or pick a ratio to apply",
+    "addBox": "Add crop box",
+    "removeBox": "Remove crop box"
   },
   "panorama": {
     "empty": "No panorama yet — upload an HDRI / equirect image or click Run with an upstream image",
@@ -2090,6 +2194,7 @@
     "fromUpstream": "From the connected upstream batch — remove it upstream, not here"
   },
   "run": {
+    "run": "Run",
     "runAllStages": "Run all stages",
     "stagesRunComplete": "ComfyTV stages finished in dependency order.",
     "stagesRunFailed": "A ComfyTV stage failed during the sequential run.",
@@ -2255,7 +2360,15 @@
   },
   "modelPreview": {
     "loading": "Loading model…",
-    "loadFailed": "Failed to load model"
+    "loadFailed": "Failed to load model",
+    "replaceTexture": "Texture",
+    "clearTexture": "Clear texture",
+    "lighting": {
+      "default": "Lit",
+      "studio": "Studio",
+      "dramatic": "Dramatic",
+      "flat": "Flat"
+    }
   },
   "modelLoader": {
     "upload": "Upload",
@@ -2271,6 +2384,7 @@
   },
   "meshPrimitive": {
     "kind": {
+      "": "Primitive",
       "cube": "Cube",
       "sphere": "Sphere",
       "cylinder": "Cylinder",
@@ -2451,6 +2565,7 @@
     "uploadFailed": "Upload failed: {detail}"
   },
   "fxChain": {
+    "unknown": "Unknown effect",
     "title": "FX Chain",
     "empty": "Chain FX nodes along the video wire into this node",
     "noPreview": "no live preview",

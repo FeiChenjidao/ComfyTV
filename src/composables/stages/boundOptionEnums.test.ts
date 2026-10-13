@@ -214,6 +214,23 @@ describe('syncBoundOptionEnums', () => {
     expect(node.widgets[1].options.values).toEqual([...RESOLUTIONS])
   })
 
+  it('repairs an invalid current value even when the fallback enum list is unchanged', async () => {
+    vi.mocked(fetchWorkflowConfig).mockResolvedValueOnce({
+      id: 1,
+      exposed_widgets: [],
+    } as any)
+
+    const node: any = {
+      widgets: [
+        { name: 'resolution', type: 'combo', value: '1024x1024', options: { values: [...RESOLUTIONS] }, callback: vi.fn() },
+      ],
+    }
+
+    await syncBoundOptionEnums(node, 'image', 'Local SD')
+    expect(node.widgets[0].value).toBe(RESOLUTIONS[0])
+    expect(node.widgets[0].callback).toHaveBeenCalledWith(RESOLUTIONS[0])
+  })
+
   it('restores defaults when switching from a bound workflow to an unbound one', async () => {
     vi.mocked(fetchWorkflowConfig).mockImplementation(async (_kind, label) => label === 'Nano'
       ? {

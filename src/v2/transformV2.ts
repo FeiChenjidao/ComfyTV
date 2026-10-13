@@ -11,6 +11,7 @@ import { bindWheelCapture } from '@/v2/wheelCapture'
 import { createIslandGroup } from '@/v2/islands'
 import { V2_SHELLS } from '@/v2/registry'
 import { attachOutputToolbar } from '@/v2/outputToolbar'
+import { IMAGES_SPLIT_TOOLBAR, type NodeToolbarConfig } from '@/v2/nodeToolbar'
 import CompareEditorV2 from '@/v2/CompareEditorV2.vue'
 import GradeEditorV2 from '@/v2/GradeEditorV2.vue'
 import GridSplitEditorV2 from '@/v2/GridSplitEditorV2.vue'
@@ -27,13 +28,14 @@ const ED_CSS = `
   cursor: grab;
   border-radius: 14px;
   height: 100%;
-  overflow: hidden;
+  /* Must stay visible: .v2-toolbar sits at top:-50px above the card (same as generators). */
+  overflow: visible;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 .v2-ed-card:active { cursor: grabbing; }
-.v2-ed-host { cursor: default; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.v2-ed-host { cursor: default; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .v2-ed-preview {
   flex: 1;
   overflow: hidden;
@@ -275,6 +277,14 @@ export interface EditorShellConfig {
   minH?: number
   lod?: boolean
   lodPreferImageInput?: boolean
+  /**
+   * Top floating toolbar 配表.
+   * - omit: default media toolbar by stage kind
+   * - `'none'` / `false`: no toolbar
+   * - `'image'|'video'|'audio'`: built-in preset
+   * - item list: custom actions (handlers via `registerToolbarHandlers`)
+   */
+  toolbar?: NodeToolbarConfig
 }
 
 export function makeEditorShell(config: EditorShellConfig) {
@@ -307,12 +317,17 @@ export function makeEditorShell(config: EditorShellConfig) {
     const { state: stageState, onAction } = stageApi
     const scope = createNodeScope(node)
     scope.run(() => bindProgressRing(card, stageState))
-    attachOutputToolbar(node, card, kind, stageState, onAction)
 
-    const islands = createIslandGroup()
+    const editorIslands = createIslandGroup()
+    const toolbarIslands = createIslandGroup()
+    attachOutputToolbar(node, card, kind, stageState, onAction, {
+      toolbar: config.toolbar,
+      islands: toolbarIslands,
+    })
+
     const mountApps = () => {
-      islands.unmountAll()
-      islands.mount(editorAnchor, config.component, { node, state: stageState })
+      editorIslands.unmountAll()
+      editorIslands.mount(editorAnchor, config.component, { node, state: stageState })
     }
     mountApps()
 
@@ -345,7 +360,8 @@ export function makeEditorShell(config: EditorShellConfig) {
 
     const prevRemoved = anyNode.onRemoved
     anyNode.onRemoved = function (...args: unknown[]) {
-      islands.unmountAll()
+      editorIslands.unmountAll()
+      toolbarIslands.unmountAll()
       prevRemoved?.apply(this, args)
     }
 
@@ -373,8 +389,19 @@ V2_SHELLS['ComfyTV.CustomSplitStage'] = makeEditorShell({
   minH: 460, lod: true, lodPreferImageInput: true,
 })
 V2_SHELLS['ComfyTV.ImagesSplitStage'] = makeEditorShell({
-  component: ImagesSplitEditorV2, titleKey: 'v2.ed.imagesSplit', icon: ICON_IMAGESSPLIT, minW: 360, minH: 680, lod: true,
+  component: ImagesSplitEditorV2,
+  titleKey: 'v2.ed.imagesSplit',
+  icon: ICON_IMAGESSPLIT,
+  minW: 360,
+  minH: 680,
+  lod: true,
+  toolbar: IMAGES_SPLIT_TOOLBAR,
 })
 V2_SHELLS['ComfyTV.ImageMergeStage'] = makeEditorShell({
-  component: ImageMergeEditorV2, titleKey: 'v2.ed.imageMerge', icon: ICON_IMAGEMERGE, minH: 460, lod: true,
+  component: ImageMergeEditorV2,
+  titleKey: 'v2.ed.imageMerge',
+  icon: ICON_IMAGEMERGE,
+  minH: 460,
+  lod: true,
+  toolbar: 'none',
 })

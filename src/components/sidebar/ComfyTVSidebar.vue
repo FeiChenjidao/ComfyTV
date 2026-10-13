@@ -70,9 +70,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, type Component } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
 import { useResizeObserver, useStorage } from '@vueuse/core'
 
+import {
+  SIDEBAR_TAB_EVENT,
+  type ComfyTVSidebarTabId,
+} from '@/bottomBar/sidebarTabBridge'
 import { usePresenceStore } from '@/collab/presenceStore'
 
 import IconBird from '~icons/lucide/bird'
@@ -146,11 +150,22 @@ function onTabWheel(event: WheelEvent) {
   el.scrollLeft += event.deltaX || event.deltaY
 }
 
+function onExternalTab(ev: Event) {
+  const tab = (ev as CustomEvent<ComfyTVSidebarTabId>).detail
+  if (!tab || tab === activeTab.value) return
+  activeTab.value = tab
+}
+
 onMounted(() => {
   measureCompact()
   tabBar.value
     ?.querySelector('[aria-selected="true"]')
     ?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  window.addEventListener(SIDEBAR_TAB_EVENT, onExternalTab)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener(SIDEBAR_TAB_EVENT, onExternalTab)
 })
 
 function tabClass(active: boolean) {

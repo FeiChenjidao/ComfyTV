@@ -55,7 +55,7 @@ try {
   }
 
   Write-Host ""
-  Write-Host "Pushed. Colleagues: run scripts\pull-and-hint.ps1 then Rescan in ComfyTV."
+  Write-Host "Pushed. Colleagues: run scripts\pull-and-hint.ps1 then reopen bottom-bar Workflows."
 }
 finally {
   Pop-Location

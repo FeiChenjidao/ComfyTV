@@ -44,6 +44,7 @@ const COLLAPSED_STORAGE_KEY = 'comfytv:sidebar:settings:collapsed'
 const PARENT: Record<string, string> = {
   'v2-lod-scale': 'enable-v2',
   'v2-lod-fill': 'enable-v2',
+  'v2-panel-on-select': 'enable-v2',
   'enable-bot': 'enable-mcp',
   'enable-skills': 'enable-mcp',
   'bot-comfy-mcp-command': 'bot-enable-comfy-mcp',

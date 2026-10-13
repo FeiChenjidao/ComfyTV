@@ -217,7 +217,11 @@ function getCompiled(classType: string, badge: PriceBadge) {
 function buildContext(node: PricingNodeInput, badge: PriceBadge) {
   const widgets: Record<string, NormalizedWidgetValue> = {}
   for (const dep of badge.depends_on?.widgets ?? []) {
-    const raw = node.widgets?.[dep.name]
+    let raw = node.widgets?.[dep.name]
+    if (raw === undefined && dep.name.includes('.')) {
+      const leaf = dep.name.slice(dep.name.lastIndexOf('.') + 1)
+      raw = node.widgets?.[leaf]
+    }
     widgets[dep.name] = normalizeWidgetValue(raw, dep.type || 'STRING')
   }
   const inputs: Record<string, { connected: boolean }> = {}

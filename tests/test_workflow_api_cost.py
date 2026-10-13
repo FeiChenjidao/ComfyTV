@@ -78,3 +78,15 @@ def test_schema_to_api_def_requires_api_node_flag():
     })
     assert entry["display_name"] == "Paid X"
     assert entry["price_badge"]["expr"]
+
+
+def test_schema_to_api_def_accepts_v3_api_flag():
+    entry = api_cost._schema_to_api_def("V3", {
+        "is_api_node": True,
+        "display_name": "V3 API node",
+    })
+    assert entry == {
+        "class_type": "V3",
+        "display_name": "V3 API node",
+        "price_badge": None,
+    }

@@ -1,17 +1,17 @@
-# Team workflows: public Git sync
+# Team workflows: public Git sync (native canvases)
 
 [简体中文](team-workflow-git.zh.md) | **English**
 
-To keep the ComfyTV bottom-bar / stage workflow dropdown in sync on a LAN—anyone uploads, others see updates—use a **dedicated public Git repo** as `user/comfytv/workflows`. Lowest cost; no in-app Git UI.
+Share **full ComfyUI graphs** on a LAN via a public Git repo cloned as:
 
-Full conventions, setup, scripts, and a verification checklist:
+```text
+ComfyUI/user/default/workflows/
+```
 
-[`team-workflows/README.md`](../team-workflows/README.md)
+The bottom-bar **Workflows** panel lists this native library — not ComfyTV stage dropdowns under `user/comfytv/workflows`.
 
-Quick path:
+Full guide: [`team-workflows/README.md`](../team-workflows/README.md)
 
-1. Push `team-workflows/` as your team’s public repo (or init per the README)
-2. Each machine: `git clone` → `ComfyUI/user/comfytv/workflows`
-3. Publish: `scripts/push-workflows.ps1` → colleagues: `scripts/pull-and-hint.ps1` → sidebar **Rescan**
-
-Other ways to add workflows: [custom-workflows.md](custom-workflows.md).
+1. Push `team-workflows/` as the team public repo  
+2. Each machine: `git clone` → `user/default/workflows`  
+3. Publish with `scripts/push-workflows.ps1`; colleagues `pull-and-hint.ps1`, then open **Workflows** on the bottom bar  

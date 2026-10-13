@@ -107,7 +107,10 @@ def workflow_info_payload() -> dict:
         kind = entry["kind"]
         if kind not in out:
             out[kind] = {}
-        out[kind][entry["label"]] = _compute_input_usage(entry["bindings"])
+        usage = _compute_input_usage(entry["bindings"])
+        meta = entry.get("meta") or {}
+        usage["prompt_required"] = meta.get("prompt_required", True) is not False
+        out[kind][entry["label"]] = usage
 
     for r in RUNNER_REGISTRY.all():
         for k in r.kinds:
@@ -122,6 +125,7 @@ def workflow_info_payload() -> dict:
                     },
                     "uses_options":   {},
                     "uses_mask":      False,
+                    "prompt_required": True,
                 }
 
     return out

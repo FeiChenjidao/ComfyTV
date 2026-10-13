@@ -64,6 +64,7 @@ function makeNode(over: Record<string, any> = {}): any {
       { name: 'parent_output_id', value: 0 },
       { name: 'view_count', value: 0 },
       { name: 'merge_mode', value: 'layers' },
+      { name: 'aspect_ratio', value: 'native' },
     ],
     connect: vi.fn(),
     ...over,
@@ -310,8 +311,17 @@ describe('spawnImageMergeFromSlots', () => {
     const node = spawnImageMergeFromSlots(src, [1, 0], 'row')
     expect(node.comfyClass).toBe('ComfyTV.ImageMergeStage')
     expect(widgetValue(node, 'merge_mode')).toBe('row')
+    expect(widgetValue(node, 'aspect_ratio')).toBe('native')
     expect(src.connect).toHaveBeenCalledWith(1, node, 0)
     expect(src.connect).toHaveBeenCalledWith(0, node, 1)
+  })
+
+  it('can spawn merge with aspect_ratio 1:1', () => {
+    inputsByClass['ComfyTV.ImageMergeStage'] = ['images.image0']
+    const src = makeNode({ outputs: [{ name: 'A', links: [] }] })
+    const node = spawnImageMergeFromSlots(src, [0], 'layers', '1:1')
+    expect(widgetValue(node, 'merge_mode')).toBe('layers')
+    expect(widgetValue(node, 'aspect_ratio')).toBe('1:1')
   })
 
   it('retries until later autogrow slots appear', () => {

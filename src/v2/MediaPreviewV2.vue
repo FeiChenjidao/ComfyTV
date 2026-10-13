@@ -25,7 +25,7 @@
     </template>
     <template v-else-if="kind === 'model'">
       <div v-if="url" class="v2-mp__model" @pointerdown.stop @wheel.stop>
-        <ModelPreview ref="modelPreviewEl" :src="url" @view-changed="onModelViewChanged" />
+        <ModelPreview ref="modelPreviewEl" :src="url" controls @view-changed="onModelViewChanged" />
       </div>
     </template>
     <template v-else>

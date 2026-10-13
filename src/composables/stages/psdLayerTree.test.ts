@@ -28,8 +28,10 @@ import {
   PSD_ROOT_ID,
   rangeSelectIds,
   sceneFromPsdLayers,
+  selectionCompositeBounds,
   serializeSelectedIds,
   shouldAutoComposite,
+  unionLayerBounds,
   visibleTreeRows,
 } from './psdLayerTree'
 
@@ -164,6 +166,18 @@ describe('rangeSelectIds / isolateSelected', () => {
   })
 })
 
+describe('unionLayerBounds', () => {
+  it('falls back to the document when there are no rasters', () => {
+    expect(unionLayerBounds([], true, 120, 80)).toEqual({ x: 0, y: 0, w: 120, h: 80 })
+  })
+
+  it('unions raster transforms', () => {
+    const a = raster({ id: 'a', name: 'A', transform: { x: 10, y: 20, w: 30, h: 40, rotation: 0 } })
+    const b = raster({ id: 'b', name: 'B', transform: { x: 5, y: 25, w: 10, h: 10, rotation: 0 } })
+    expect(unionLayerBounds([a, b])).toEqual({ x: 5, y: 20, w: 35, h: 40 })
+  })
+})
+
 describe('compositeSubtree', () => {
   it('canvas size matches the document even with no layers', () => {
     const c = compositeSubtree(120, 80, [], new Map())
@@ -171,12 +185,16 @@ describe('compositeSubtree', () => {
     expect(c.height).toBe(80)
   })
 
-  it('isolated subtree still composites at document size', () => {
-    const leaf = raster({ id: 'a', name: 'A' })
+  it('isolated subtree composites at the layer bbox, not the document', () => {
+    const leaf = raster({
+      id: 'a', name: 'A',
+      transform: { x: 4, y: 6, w: 8, h: 10, rotation: 0 },
+    })
     const isolated = isolateSubtree([leaf], 'a')
     const c = compositeSubtree(64, 48, isolated, new Map())
-    expect(c.width).toBe(64)
-    expect(c.height).toBe(48)
+    expect(c.width).toBe(8)
+    expect(c.height).toBe(10)
+    expect(selectionCompositeBounds(64, 48, isolated, isolated)).toEqual({ x: 4, y: 6, w: 8, h: 10 })
   })
 
   it('skips hidden rasters', () => {

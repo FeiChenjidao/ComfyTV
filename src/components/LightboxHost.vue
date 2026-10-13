@@ -55,7 +55,7 @@
           @pointerdown.stop
           @wheel.stop
         >
-          <ModelPreview :key="current.url" :src="current.url" />
+          <ModelPreview :key="current.url" :src="current.url" controls />
         </div>
         <img
           v-else

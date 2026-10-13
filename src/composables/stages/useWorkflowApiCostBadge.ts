@@ -8,11 +8,16 @@ import {
   type WorkflowCostSummary,
 } from '@/composables/stages/workflowApiCost'
 import type { LGraphNode } from '@/lib/comfyApp'
+import { parseParamItems } from '@/composables/stages/useCustomParams'
 
 function readWidgetMap(node: LGraphNode | undefined): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const w of node?.widgets ?? []) {
     if (w?.name) out[w.name] = w.value
+  }
+  const custom = parseParamItems(String(out.custom_params ?? '{}'))
+  for (const item of custom) {
+    if (!(item.key in out)) out[item.key] = item.value
   }
   return out
 }

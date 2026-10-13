@@ -32,7 +32,7 @@ def invalidate_api_node_defs() -> None:
 def _schema_to_api_def(name: str, schema: dict) -> Optional[dict]:
     if not isinstance(schema, dict):
         return None
-    is_api = bool(schema.get("api_node"))
+    is_api = bool(schema.get("api_node", schema.get("is_api_node", False)))
     if not is_api:
         return None
     return {
@@ -54,7 +54,10 @@ def get_api_node_defs() -> dict[str, dict]:
         info = build_object_info()
     except Exception as e:
         _log.warning("[ComfyTV/api_cost] build_object_info failed: %s", e)
-        _api_defs_cache = out
+        # Do not permanently cache a transient empty result while ComfyUI is
+        # still importing its built-in API node modules.
+        if out:
+            _api_defs_cache = out
         return out
 
     for name, schema in (info or {}).items():
@@ -72,14 +75,10 @@ def get_api_node_defs() -> dict[str, dict]:
         import nodes
         mappings = getattr(nodes, "NODE_CLASS_MAPPINGS", {}) or {}
         for name, cls in mappings.items():
-            if name in out:
-                continue
             try:
-                flag = getattr(cls, "API_NODE", False)
+                flag = getattr(cls, "API_NODE", getattr(cls, "_API_NODE", False))
             except Exception:
                 flag = False
-            if not flag:
-                continue
             price_badge = None
             display = name
             getter = getattr(cls, "GET_NODE_INFO_V1", None)
@@ -91,15 +90,32 @@ def get_api_node_defs() -> dict[str, dict]:
                         display = full.get("display_name") or display
                 except Exception:
                     pass
-            out[name] = {
-                "class_type": name,
-                "display_name": display,
-                "price_badge": price_badge,
-            }
+            # V3 nodes expose the authoritative API and pricing metadata from
+            # define_schema(). Use it when the V1 adapter omitted either field.
+            schema_getter = getattr(cls, "define_schema", None)
+            if callable(schema_getter):
+                try:
+                    schema = schema_getter()
+                    if getattr(schema, "is_api_node", False):
+                        flag = True
+                    if price_badge is None:
+                        badge = getattr(schema, "price_badge", None)
+                        if badge is not None:
+                            price_badge = badge.as_dict(getattr(schema, "inputs", []))
+                    display = getattr(schema, "display_name", None) or display
+                except Exception as e:
+                    _log.debug("[ComfyTV/api_cost] V3 schema scan skipped for %s: %s", name, e)
+            if flag:
+                out[name] = {
+                    "class_type": name,
+                    "display_name": display,
+                    "price_badge": price_badge,
+                }
     except Exception as e:
         _log.debug("[ComfyTV/api_cost] NODE_CLASS_MAPPINGS scan skipped: %s", e)
 
-    _api_defs_cache = out
+    if out:
+        _api_defs_cache = out
     return out
 
 

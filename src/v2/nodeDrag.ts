@@ -82,8 +82,23 @@ function selectForPointer(node: ComfyNode, canvas: any, e: PointerEvent) {
 
 /** Select the LiteGraph node without starting a canvas drag (for stopPropagation surfaces). */
 export function selectNodeFromPointer(node: ComfyNode, e: PointerEvent) {
-  if ((node as any).selected) return
-  selectForPointer(node, (app as any).canvas, e)
+  const canvas = (app as any).canvas
+  if ((node as any).selected) {
+    // Programmatic spawn can set node.selected without filling selectedItems.
+    // Re-click must still repair that, or Delete stays dead until canvas deselect.
+    const items = canvas?.selectedItems as Set<any> | undefined
+    if (items && typeof items.has === 'function' && !items.has(node)) {
+      selectForPointer(node, canvas, e)
+      return
+    }
+    const el = canvas?.canvas as HTMLElement | undefined
+    if (el && document.activeElement !== el) {
+      if (!el.hasAttribute('tabindex')) el.tabIndex = -1
+      el.focus?.({ preventScroll: true })
+    }
+    return
+  }
+  selectForPointer(node, canvas, e)
 }
 
 export function bindNodeDrag(node: ComfyNode, surface: HTMLElement) {

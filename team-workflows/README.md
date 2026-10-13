@@ -1,73 +1,71 @@
-# ComfyTV 团队工作流库（公开 Git）
+# ComfyTV 团队共享工作流（公开 Git）
 
-用 **公开 Git 仓库** 同步局域网内同事的 ComfyTV 工作流。上传走 `git push`，别人 `git pull` 后在 ComfyTV 里 **重新扫描**，底部工具栏与阶段节点的 workflow 下拉框即可看到更新。
+用 **公开 Git 仓库** 同步局域网内同事的 **完整画布工作流**（ComfyUI 原生库），不是 Stage 节点下拉里那套插件管线。
 
-本目录是可直接推到 GitHub / Gitee 的仓模板。正式使用时：把它 clone 成（或替换为）本机的：
+上传走 `git push`，别人 `git pull` 后，在 **底部工具栏 → 工作流**（或 ComfyUI Workflows 面板）即可打开。
+
+本目录是可直接推到 GitHub / Gitee 的仓模板。正式使用时：把它作为 **独立仓库** clone 到：
 
 ```text
-ComfyUI/user/comfytv/workflows/
+ComfyUI/user/default/workflows/
 ```
 
-**不要**把团队文件塞进 `custom_nodes/ComfyTV/workflows/`——那是插件内置镜像源，且默认 gitignore 会忽略未登记的 JSON。
+该目录里必须有自己的 `.git`（`git rev-parse --show-toplevel` 应等于该路径）。  
+若没有独立 `.git`，Git 会误用上层整仓 ComfyUI，出现「全局 pull / diverging branches」——底部栏会判定为「未配置 Git」。
+
+**不要** clone 到 `user/comfytv/workflows/`——那是各 Stage（Image / Video …）用的绑定库。  
+**不要**把 remote 指到整仓 ComfyUI / jihulab 的 ComfyUI 镜像。
+
+## 和 Stage 库的区别
+
+| | 本仓（原生 / 底部栏） | Stage 库 |
+|--|--|--|
+| 路径 | `user/default/workflows/` | `user/comfytv/workflows/<kind>/` |
+| 用途 | 完整画布图，打开后整图编辑 | 某个 Stage 节点选管线 |
+| 底部栏 | 工作流按钮列这里 | 不在此列 |
 
 ## 目录约定
 
 ```text
-comfytv-team-workflows/          ← 本仓根 = 各机的 user/comfytv/workflows
+comfytv-team-workflows/     ← 本仓根 = 各机的 user/default/workflows
   README.md
   .gitignore
   scripts/
     pull-and-hint.ps1
     push-workflows.ps1
-  image/                         ← Image Stage
-    my-style-t2i.json            ← GUI 格式工作流（Workflow → Save）
-    my-style-t2i_preset.json     ← 绑定预设（侧栏 Export）
-  video/
-  image-edit/  inpaint/  erase/  outpaint/  upscale/  …
+  team/                     ← 建议：团队共享子目录（底部栏显示文件夹徽章）
+    brand-look.json
+  my-draft.json             ← 也可放在根目录
 ```
-
-常见 `kind` 子目录（与 ComfyTV 阶段对应，按需新建）：
-
-| 目录 | 用途 |
-|------|------|
-| `image/` | 文生图 / 图生图 |
-| `image-edit/` | 图像编辑 |
-| `inpaint/` `erase/` `outpaint/` `upscale/` | 修图类 |
-| `video/` | 视频生成 |
-| `text/` `audio/` `model/` | 文本 / 音频 / 3D |
-| `multiview/` `multiangle/` `cutout/` `panorama/` | 多视角 / 抠图 / 全景 |
-| `custom/` | 自定义阶段 |
 
 规则：
 
-- 只同步 **workflow JSON + `*_preset.json`**，不同步模型权重
-- 侧栏配好绑定后点 **Export preset.json**，与工作流同名同目录提交
+- 只同步 **GUI 格式**工作流 JSON（ComfyUI *Workflow → Save*，不要 API Format）
+- 不同步模型权重；勿提交 API Key
 - 文件名保持稳定；冲突先 `pull` 再改，或走 PR
-- 勿提交 API Key；各机需已安装同名模型（或路径一致）
+- 可用子文件夹分类（如 `team/`、`ads/`），底部栏会显示文件夹名
 
 ## 各机一次性接入
 
 1. 备份已有库（若有）：  
-   `ComfyUI/user/comfytv/workflows` → 例如 `workflows.bak`
+   `ComfyUI/user/default/workflows` → 例如 `workflows.bak`
 2. Clone 团队公开仓到该路径：
 
    ```powershell
-   cd ComfyUI\user\comfytv
+   cd ComfyUI\user\default
    # 若 workflows 已存在且非空，先改名备份
    git clone https://github.com/<org>/comfytv-team-workflows.git workflows
    ```
 
-   Windows 也可把 clone 放在共享盘，再用 junction 指到 `user\comfytv\workflows`。
-3. 打开 ComfyUI → ComfyTV 侧栏 → **阶段管理 / 工作流** → **重新扫描**
-4. 底部工具栏与对应阶段的 workflow 下拉应出现仓内条目
+3. 打开 ComfyUI → 点底部栏 **工作流**，应看到仓内 JSON（点名称即可打开画布）
 
 首次把本模板推成公开仓：
 
 ```powershell
-cd path\to\team-workflows   # 或已指向该模板的 clone
+cd path\to\team-workflows
 git init
 git add .
-git commit -m "chore: init team workflows library"
+git commit -m "chore: init shared native workflows"
 git branch -M main
 git remote add origin https://github.com/<org>/comfytv-team-workflows.git
 git push -u origin main
@@ -75,47 +73,44 @@ git push -u origin main
 
 ## 日常协作
 
-### 发布（上传给同事）
+### 发布
 
-1. 在本机导入 / 配好工作流，侧栏导出 `*_preset.json`
-2. 确认文件在 `user/comfytv/workflows/<kind>/`
-3. 运行：
+1. 在 ComfyUI 里做好图 → *Workflow → Save* 到 `user/default/workflows/`（建议 `team/` 下）
+2. 运行：
 
    ```powershell
-   cd ComfyUI\user\comfytv\workflows
-   .\scripts\push-workflows.ps1 -Message "feat(image): add brand t2i"
+   cd ComfyUI\user\default\workflows
+   .\scripts\push-workflows.ps1 -Message "feat: add brand look"
    ```
 
-   或手动：`git add` → `commit` → `push`（可选 PR 合并后再让大家 pull）
-
-### 拉取（看到更新）
+### 拉取
 
 ```powershell
-cd ComfyUI\user\comfytv\workflows
+cd ComfyUI\user\default\workflows
 .\scripts\pull-and-hint.ps1
 ```
 
-然后到 ComfyTV 侧栏点 **重新扫描**。底部工具栏刷新后可见新条目。
+然后打开底部栏 **工作流**（关闭再开即可刷新列表）。无需 ComfyTV「重新扫描」——那是 Stage 库用的。
 
 ## 验证清单
 
-1. **甲** 在 `image/` 放入 `demo.json` + `demo_preset.json`，执行 `push-workflows.ps1`
-2. **乙** 执行 `pull-and-hint.ps1` → ComfyTV **重新扫描**
-3. 乙的底部工具栏与 Image Stage 下拉均出现 `demo`
-4. 甲改 JSON 再 push → 乙再 pull + Rescan → 内容更新
-5. 无 preset 时条目仍会出现，但绑定可能需乙本机再配一次
+1. **甲** 在 `team/` 放入 `demo.json`，执行 `push-workflows.ps1`
+2. **乙** 执行 `pull-and-hint.ps1` → 打开底部栏「工作流」
+3. 乙看到 `demo`，徽章为 `team`，点击后画布打开该图
+4. 甲改 JSON 再 push → 乙再 pull → 重新打开可见更新
 
 ## 脚本说明
 
 | 脚本 | 作用 |
 |------|------|
-| `scripts/pull-and-hint.ps1` | `git pull`，并提示去 ComfyTV Rescan |
+| `scripts/pull-and-hint.ps1` | `git pull`，并提示刷新底部栏工作流面板 |
 | `scripts/push-workflows.ps1` | `git add` → commit（可传 `-Message`）→ push |
 
 可选参数 `-RepoRoot` 指向非默认的仓根路径。
 
 ## 不在本方案内
 
-- ComfyTV 应用内自动 pull / 冲突 UI
+- Stage 节点下拉（`user/comfytv/workflows`）同步
+- 应用内自动 pull / 冲突 UI
 - 模型权重分发
-- 与设置里「协作 / enable-collab」画布共同编辑打通（那是另一套能力）
+- 画布共同编辑（`enable-collab`）

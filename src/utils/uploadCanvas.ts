@@ -49,6 +49,36 @@ export async function uploadBlobNamed(blob: Blob, opts: UploadOptions): Promise<
   return { name: data.name, subfolder, type, url }
 }
 
+/** Persist non-image stage files (PSD/PSB) via ComfyTV — survives refresh. */
+export async function uploadStageFile(
+  file: Blob,
+  opts: { subfolder: string; filename?: string },
+): Promise<UploadResult> {
+  const filename = opts.filename
+    ?? (file instanceof File && file.name ? file.name : `upload-${Date.now()}`)
+  const body = new FormData()
+  body.append('file', file, filename)
+  body.append('subfolder', opts.subfolder)
+
+  const resp = await (app as any).api.fetchApi('/comfytv/upload', { method: 'POST', body })
+  const data = await resp.json().catch(() => ({})) as {
+    name?: string
+    subfolder?: string
+    type?: string
+    url?: string
+    error?: string
+  }
+  if (resp.status !== 200 || !data?.name || !data?.url) {
+    throw new Error(data.error || `upload ${resp.status} ${resp.statusText}`)
+  }
+  return {
+    name: data.name,
+    subfolder: data.subfolder || opts.subfolder,
+    type: (data.type as UploadResult['type']) || 'input',
+    url: data.url,
+  }
+}
+
 export async function uploadBlob(blob: Blob, opts: UploadOptions): Promise<string> {
   return (await uploadBlobNamed(blob, opts)).url
 }

@@ -1,6 +1,7 @@
 import { apiFetch, WorkflowInfoSchema } from '@/api'
 import { missingRequiredPositions } from '@/composables/stages/assetSlots'
 import { currentMediaTable, type MediaEntry, nodeAcceptsMedia } from '@/composables/stages/mediaOrder'
+import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
 import { t } from '@/i18n'
 
 export type SlotWarningStatus = 'wired_but_unused' | 'required_but_missing'
@@ -24,6 +25,7 @@ interface UsageEntry {
   requires:   Record<Kind, boolean>
   required_slots?: Record<Kind, number[]>
   max_inputs: Record<Kind, number | null>
+  prompt_required?: boolean
 }
 
 type WorkflowInfo = Record<string, Record<string, UsageEntry>>
@@ -50,6 +52,7 @@ export function loadWorkflowInfo(): Promise<WorkflowInfo> {
 
 export function invalidateWorkflowInfo() {
   _infoPromise = null
+  comboOptionsVersion.value++
 }
 
 const kindName = (kind: Kind) => t(`validator.kind.${kind}`)
@@ -99,7 +102,7 @@ export async function validateNode(
   }
   if (!entry) return out
 
-  if (entry.max_inputs.text === 0 && node?.widgets?.some((w: any) => w.name === 'main_prompt')) {
+  if (entry.prompt_required !== false && entry.max_inputs.text === 0 && node?.widgets?.some((w: any) => w.name === 'main_prompt')) {
     out.main_prompt = {
       status: 'wired_but_unused',
       message: t('stage.promptNotBound', { label }),

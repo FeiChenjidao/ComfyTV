@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '@/lib/comfyApp'
 
-import { assetLoaderClass, canvasCenter, clientToCanvasPos, createAssetLoaderNode } from './assetLoaderNode'
+import {
+  assetLoaderClass,
+  canvasCenter,
+  clientToCanvasPos,
+  createAssetLoaderNode,
+  selectOnCanvas,
+} from './assetLoaderNode'
 
 function makeNode() {
   return {
@@ -75,6 +81,50 @@ describe('createAssetLoaderNode', () => {
   it('returns null when LiteGraph is unavailable', () => {
     delete (window as any).LiteGraph
     expect(createAssetLoaderNode(asset(), [0, 0])).toBeNull()
+  })
+
+  it('selects via selectNodes / select (not only legacy selectNode)', async () => {
+    const original = (app as any).canvas
+    const selectNodes = vi.fn()
+    const deselectAll = vi.fn()
+    const canvasEl = document.createElement('canvas')
+    canvasEl.focus = vi.fn()
+    ;(app as any).canvas = {
+      canvas: canvasEl,
+      deselectAll,
+      selectNodes,
+      selectNode: vi.fn(),
+    }
+    try {
+      createAssetLoaderNode(asset(), [0, 0], { select: true })
+      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
+      expect(deselectAll).toHaveBeenCalled()
+      expect(selectNodes).toHaveBeenCalled()
+      expect(canvasEl.focus).toHaveBeenCalled()
+    } finally {
+      ;(app as any).canvas = original
+    }
+  })
+})
+
+describe('selectOnCanvas', () => {
+  const original = (app as any).canvas
+
+  afterEach(() => {
+    ;(app as any).canvas = original
+  })
+
+  it('prefers canvas.select when selectNodes is missing', async () => {
+    const select = vi.fn()
+    const node = { id: 1 }
+    ;(app as any).canvas = {
+      canvas: document.createElement('canvas'),
+      deselectAll: vi.fn(),
+      select,
+    }
+    selectOnCanvas(node)
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
+    expect(select).toHaveBeenCalledWith(node)
   })
 })
 

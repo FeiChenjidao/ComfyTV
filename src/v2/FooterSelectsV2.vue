@@ -38,7 +38,7 @@
       @click.stop="a.onClick()"
       v-html="a.icon"
     />
-    <div v-if="has('aspect_ratio') || has('resolution') || has('batch_size')" class="v2-fsel__item">
+    <div v-if="(!gptImageOptions || imagePanelMode !== 'gpt') && (has('aspect_ratio') || has('resolution') || has('batch_size'))" class="v2-fsel__item">
       <GenOptionsV2
         :ratio="has('aspect_ratio') ? sv('aspect_ratio') : null"
         :ratio-options="optionsOf('aspect_ratio')"
@@ -48,6 +48,7 @@
         @update="(name, v) => writeVal(name, v)"
       />
     </div>
+    <GptImageOptionsV2 v-if="gptImageOptions && imagePanelMode === 'gpt'" :get-node="props.getNode" />
     <template v-for="x in extra ?? []" :key="x.name">
       <div v-if="has(x.name) && (x.type ?? 'combo') === 'combo'" class="v2-fsel__item">
         <ComfyTVSelect :model-value="sv(x.name)" :options="optionsOf(x.name)" :filterable="false" @update:model-value="v => writeVal(x.name, v)" />
@@ -84,16 +85,18 @@ export interface FooterAction {
 </script>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import GenOptionsV2 from '@/v2/GenOptionsV2.vue'
+import GptImageOptionsV2 from '@/v2/GptImageOptionsV2.vue'
 import { openLinkWorkflow } from '@/composables/stages/openLinkWorkflow'
 import { useWorkflowApiCostBadge } from '@/composables/stages/useWorkflowApiCostBadge'
 import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
 import type { LGraphNode } from '@/lib/comfyApp'
 import { useWidgetValues } from '@/v2/useWidgetValues'
+import { fetchWorkflowConfig } from '@/api'
 
 const AUTO_NAMES = ['workflow', 'aspect_ratio', 'resolution', 'batch_size']
 
@@ -102,12 +105,34 @@ const props = defineProps<{
   linkKind?: string | null
   extra?: FooterExtra[]
   actions?: FooterAction[]
+  gptImageOptions?: boolean
 }>()
 
+const nodeWidgetNames = (props.getNode()?.widgets ?? [])
+  .map((w: any) => String(w?.name ?? ''))
+  .filter(Boolean)
 const { values, widgetOf, write } = useWidgetValues(
   props.getNode,
-  [...AUTO_NAMES, ...(props.extra ?? []).map(x => x.name)],
+  [...new Set([...AUTO_NAMES, 'custom_params', ...nodeWidgetNames, ...(props.extra ?? []).map(x => x.name)])],
 )
+
+const imagePanelMode = ref<'nanobanana' | 'gpt'>('nanobanana')
+let panelRequest = 0
+watch(() => String(values.workflow ?? ''), async (label) => {
+  if (!props.gptImageOptions || !label) {
+    imagePanelMode.value = 'nanobanana'
+    return
+  }
+  const request = ++panelRequest
+  try {
+    const config = await fetchWorkflowConfig('image', label)
+    if (request === panelRequest) {
+      imagePanelMode.value = config.meta?.image_panel === 'gpt' ? 'gpt' : 'nanobanana'
+    }
+  } catch {
+    if (request === panelRequest) imagePanelMode.value = 'nanobanana'
+  }
+}, { immediate: true })
 
 function sv(name: string): string {
   const v = values[name]
@@ -132,12 +157,7 @@ function has(name: string): boolean {
 const { t } = useI18n()
 
 const costTick = computed(() => [
-  values.workflow,
-  values.aspect_ratio,
-  values.resolution,
-  values.batch_size,
-  values.duration,
-  values.main_prompt,
+  ...Object.keys(values).sort().map(key => `${key}=${String(values[key])}`),
 ].join('|'))
 
 const {

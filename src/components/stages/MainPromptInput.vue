@@ -1,5 +1,5 @@
 <template>
-  <div v-if="widget" ref="rootEl" class="ctv:relative ctv:pt-1 ctv:px-2 ctv:pb-1">
+  <div v-if="widget && promptVisible" ref="rootEl" class="ctv:relative ctv:pt-1 ctv:px-2 ctv:pb-1">
     <div
       v-if="upstreamTexts.length"
       class="ctv:mb-1 ctv:px-2 ctv:py-1 ctv:box-border ctv:rounded
@@ -26,6 +26,37 @@
           ><i class="pi pi-sparkles" /></button>
         </template>
         <PromptHelperPanel :groups="helper.groups" :is-active="helper.isActive" @apply="helper.apply" />
+      </ComfyTVPopover>
+      <ComfyTVPopover v-model:open="beautifyOpen" width="320px" @update:open="onBeautifyToggle">
+        <template #anchor>
+          <button
+            type="button"
+            :class="[iconBtnClass,
+              'ctv:disabled:pointer-events-none ctv:disabled:opacity-50',
+              beautifyOpen || beautifyBusy
+              ? 'ctv:bg-primary-background/20 ctv:border-primary-background/50 ctv:text-primary-background'
+              : 'ctv:bg-secondary-background ctv:border-border-default ctv:text-muted-foreground ctv:hover:bg-secondary-background-hover ctv:hover:text-base-foreground']"
+            :title="$t('promptBeautify.open')"
+            :disabled="beautifyBusy || !promptText.trim()"
+            @click="onBeautifyClick"
+          ><i :class="beautifyBusy ? 'pi pi-spin pi-spinner' : 'pi pi-bolt'" /></button>
+        </template>
+        <div class="ctv:p-2 ctv:flex ctv:flex-col ctv:gap-1.5
+                    ctv:bg-interface-menu-surface ctv:border ctv:border-border-default ctv:rounded">
+          <span class="ctv:text-2xs ctv:text-muted-foreground">{{ $t('promptBeautify.preview') }}</span>
+          <div
+            class="ctv:max-h-40 ctv:overflow-y-auto ctv:px-2 ctv:py-1.5 ctv:rounded-sm ctv:text-xs
+                   ctv:leading-snug ctv:whitespace-pre-wrap ctv:break-words
+                   ctv:bg-interface-panel-surface ctv:border ctv:border-border-subtle ctv:text-base-foreground"
+          >{{ beautifyPreview }}</div>
+          <span v-if="beautifyMeta" class="ctv:text-2xs ctv:text-muted-foreground">{{ beautifyMeta }}</span>
+          <div class="ctv:flex ctv:justify-end ctv:gap-1.5">
+            <button :class="ghostBtnClass" @click="beautifyOpen = false">{{ $t('promptBeautify.discard') }}</button>
+            <button :class="saveBtnClass" :disabled="!beautifyPreview.trim()" @click="onBeautifyApply">
+              {{ $t('promptBeautify.apply') }}
+            </button>
+          </div>
+        </div>
       </ComfyTVPopover>
       <ComfyTVPopover v-model:open="cameraOpen" width="320px">
         <template #trigger>
@@ -94,21 +125,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onScopeDispose, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { EditorContent } from '@tiptap/vue-3'
 import 'tippy.js/dist/tippy.css'
 
+import { ApiError, beautifyPrompt, fetchWorkflowConfig } from '@/api'
 import type { Entry } from '@/api/schemas'
 import type { CameraSelection } from '@/composables/stages/cameraControlCatalog'
 import { CAMERA_BUILDER } from '@/composables/stages/promptModules/builders'
 import { nonSlotMentionLabels, normalizeMentionText } from '@/composables/stages/imageSlotMentions'
+import { getStageMeta, loadStageMeta } from '@/composables/stages/stageMeta'
 import { inlineContentFromText, upstreamTextInputs, useMainPromptInput } from '@/composables/stages/useMainPromptInput'
 import { usePromptModules } from '@/composables/stages/usePromptModules'
+import { app } from '@/lib/comfyApp'
 import { useEntryStore } from '@/stores/entryStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { isValidLabel } from '@/utils/labelRegex'
+import { bindWidgetCallback, getWidget, onNodeConfigure } from '@/utils/widget'
+import { WORKFLOW_CONFIG_CHANGED } from '@/utils/workflowEvents'
 import type { LGraphNode } from '@/lib/comfyApp'
 
 import ComfyTVPopover from '@/components/widgets/ComfyTVPopover.vue'
@@ -120,7 +156,7 @@ import PromptHelperPanel from './PromptHelperPanel.vue'
 
 const props = defineProps<{ node?: LGraphNode }>()
 
-const { t } = useI18n()
+const { t, locale: i18nLocale } = useI18n()
 
 const rootEl = ref<HTMLElement | null>(null)
 
@@ -128,6 +164,36 @@ const { widget, editor, promptText, applyPromptText, stageState } = useMainPromp
   () => props.node,
   MentionList,
 )
+
+const promptVisible = ref(true)
+let promptVisibilityRequest = 0
+
+async function refreshPromptVisibility() {
+  promptVisible.value = true
+  const request = ++promptVisibilityRequest
+  const node = props.node
+  const workflow = String(getWidget(node, 'workflow')?.value ?? '').trim()
+  const nodeId = String(node?.comfyClass ?? '').trim()
+  if (!workflow || !nodeId) return
+
+  try {
+    await loadStageMeta()
+    const kind = getStageMeta(nodeId)?.workflow_kind
+    if (!kind) return
+    const config = await fetchWorkflowConfig(kind, workflow)
+    if (request === promptVisibilityRequest) {
+      promptVisible.value = config.meta?.prompt_required !== false
+    }
+  } catch {
+    if (request === promptVisibilityRequest) promptVisible.value = true
+  }
+}
+
+void refreshPromptVisibility()
+bindWidgetCallback(props.node, 'workflow', () => { void refreshPromptVisibility() })
+onNodeConfigure(props.node, () => { void refreshPromptVisibility() })
+window.addEventListener(WORKFLOW_CONFIG_CHANGED, refreshPromptVisibility)
+onScopeDispose(() => window.removeEventListener(WORKFLOW_CONFIG_CHANGED, refreshPromptVisibility))
 
 const upstreamTexts = computed(() => upstreamTextInputs(stageState.value?.inputs))
 const upstreamTextPreview = computed(() =>
@@ -137,6 +203,69 @@ const upstreamTextPreview = computed(() =>
 
 const helperOpen = ref(false)
 const helper = usePromptModules(() => promptText.value, applyPromptText)
+
+const beautifyOpen = ref(false)
+const beautifyBusy = ref(false)
+const beautifyPreview = ref('')
+const beautifyMeta = ref('')
+let beautifyRequest = 0
+
+function toast(severity: 'success' | 'warn' | 'error', summary: string, detail = '') {
+  ;(app as any)?.extensionManager?.toast?.add?.({ severity, summary, detail, life: 5000 })
+}
+
+function onBeautifyToggle(open: boolean) {
+  if (!open) {
+    beautifyPreview.value = ''
+    beautifyMeta.value = ''
+  }
+}
+
+function beautifyErrorDetail(e: unknown): string {
+  if (e instanceof ApiError) {
+    const raw = e.message.replace(/^[\s\S]*failed \[\d+\]:\s*/, '') || e.message
+    try {
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed.error === 'string' && parsed.error.trim()) {
+        return parsed.error.trim()
+      }
+    } catch { /* plain text body */ }
+    return raw
+  }
+  return String((e as any)?.message || e)
+}
+
+async function onBeautifyClick() {
+  if (beautifyBusy.value || !promptText.value.trim()) return
+
+  const request = ++beautifyRequest
+  beautifyBusy.value = true
+  beautifyOpen.value = false
+  beautifyPreview.value = ''
+  beautifyMeta.value = ''
+  try {
+    const locale = String(i18nLocale.value || 'en')
+    const language = locale.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+    const res = await beautifyPrompt(promptText.value, language)
+    if (request !== beautifyRequest) return
+    beautifyPreview.value = res.prompt
+    beautifyMeta.value = t('promptBeautify.via', { provider: res.provider, model: res.model })
+    beautifyOpen.value = true
+  } catch (e: unknown) {
+    if (request !== beautifyRequest) return
+    toast('error', t('promptBeautify.failed'), beautifyErrorDetail(e))
+  } finally {
+    if (request === beautifyRequest) beautifyBusy.value = false
+  }
+}
+
+function onBeautifyApply() {
+  const next = beautifyPreview.value.trim()
+  if (!next) return
+  applyPromptText(normalizeMentionText(next))
+  beautifyOpen.value = false
+  toast('success', t('promptBeautify.applied'))
+}
 
 const cameraOpen = ref(false)
 function onCameraInsert(selection: CameraSelection) {
@@ -208,6 +337,11 @@ const saveBtnClass = 'ctv:inline-flex ctv:items-center ctv:justify-center ctv:ga
   + ' ctv:h-6 ctv:rounded-sm ctv:px-2 ctv:text-xs ctv:font-medium ctv:border-none ctv:transition-colors'
   + ' ctv:bg-primary-background ctv:text-base-foreground ctv:hover:bg-primary-background-hover'
   + ' ctv:disabled:pointer-events-none ctv:disabled:opacity-50'
+
+const ghostBtnClass = 'ctv:inline-flex ctv:items-center ctv:justify-center ctv:gap-1 ctv:cursor-pointer'
+  + ' ctv:h-6 ctv:rounded-sm ctv:px-2 ctv:text-xs ctv:font-medium ctv:border ctv:transition-colors'
+  + ' ctv:bg-transparent ctv:border-border-default ctv:text-muted-foreground'
+  + ' ctv:hover:bg-secondary-background ctv:hover:text-base-foreground'
 </script>
 
 <style>

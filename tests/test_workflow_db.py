@@ -218,6 +218,102 @@ class TestNodeWidgetMeta:
         comfy_nodes.NODE_CLASS_MAPPINGS["Foo"] = Foo
         assert wdb._node_widget_meta("Foo") == []
 
+    def test_fallback_meta_infers_scalar_api_inputs(self):
+        from ComfyTV.runners.workflow_db.config import _fallback_widget_meta
+        meta = _fallback_widget_meta({
+            "text": "example", "mode": "quality",
+            "format": "auto", "width": 1024, "height": 1024,
+            "background_mode": "auto", "detail": "low", "count": 1, "seed": 0,
+            "image_input": ["7", 0],
+        })
+        types = {row["name"]: row["type"] for row in meta}
+        assert types == {
+            "text": "STRING", "mode": "STRING", "format": "STRING",
+            "width": "INT", "height": "INT",
+            "background_mode": "STRING", "detail": "STRING", "count": "INT", "seed": "INT",
+        }
+        assert "image_input" not in types
+
+    def test_define_schema_preserves_combo_options(self, comfy_nodes):
+        class Input:
+            def __init__(self, name, io_type, options=None, **attrs):
+                self.id = name
+                self._io_type = io_type
+                self.options = options
+                for key, value in attrs.items():
+                    setattr(self, key, value)
+
+            def get_io_type(self):
+                return self._io_type
+
+        class Foo:
+            @classmethod
+            def define_schema(cls):
+                return type("Schema", (), {"inputs": [
+                    Input("model", "COMBO", ["a", "b"]),
+                    Input("width", "INT", min=1, max=2048, step=1),
+                    Input("prompt", "STRING", multiline=True),
+                ]})()
+
+        comfy_nodes.NODE_CLASS_MAPPINGS["Foo"] = Foo
+        meta = wdb._node_widget_meta("Foo")
+        assert meta == [
+            {"name": "model", "type": "COMBO", "options": {"values": ["a", "b"]}},
+            {"name": "width", "type": "INT", "options": {"min": 1, "max": 2048, "step": 1}},
+            {"name": "prompt", "type": "STRING", "options": {"multiline": True}},
+        ]
+
+    def test_define_schema_expands_dynamic_combo_inputs(self, comfy_nodes):
+        class Input:
+            def __init__(self, name, io_type, options=None):
+                self.id = name
+                self._io_type = io_type
+                self.options = options
+
+            def get_io_type(self):
+                return self._io_type
+
+        nested = Input("variant", "COMBO", ["default", "custom"])
+        dynamic = Input("preset", "COMFY_DYNAMICCOMBO_V3", [
+            type("Option", (), {"key": "preset-a", "inputs": [nested]})(),
+        ])
+
+        class Foo:
+            @classmethod
+            def define_schema(cls):
+                return type("Schema", (), {"inputs": [dynamic]})()
+
+        comfy_nodes.NODE_CLASS_MAPPINGS["Foo"] = Foo
+        meta = wdb._node_widget_meta("Foo")
+        assert meta[0] == {
+            "name": "preset", "type": "COMBO", "options": {"values": ["preset-a"]},
+        }
+        assert meta[1] == {
+            "name": "preset.variant", "type": "COMBO", "options": {"values": ["default", "custom"]},
+        }
+
+    def test_define_schema_overrides_legacy_string_metadata(self, comfy_nodes):
+        class Input:
+            id = "preset.variant"
+            options = ["one", "two"]
+
+            def get_io_type(self):
+                return "COMBO"
+
+        class Foo:
+            @classmethod
+            def INPUT_TYPES(cls):
+                return {"required": {"preset.variant": ("STRING", {})}}
+
+            @classmethod
+            def define_schema(cls):
+                return type("Schema", (), {"inputs": [Input()]})()
+
+        comfy_nodes.NODE_CLASS_MAPPINGS["Foo"] = Foo
+        assert wdb._node_widget_meta("Foo") == [{
+            "name": "preset.variant", "type": "COMBO", "options": {"values": ["one", "two"]},
+        }]
+
 
 # ─── _extract_gui_view ───────────────────────────────────────────────────────
 

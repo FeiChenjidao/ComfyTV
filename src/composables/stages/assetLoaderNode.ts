@@ -67,6 +67,47 @@ export interface SpawnAssetLoaderOpts {
   select?: boolean
 }
 
+/**
+ * Select a graph node with Comfy's current canvas APIs and focus the canvas so
+ * Delete/Backspace work immediately after programmatic spawn (asset drag/click).
+ *
+ * Legacy `selectNode` alone can leave `node.selected` true while `selectedItems`
+ * stays empty — Delete then no-ops until the user re-clicks via processSelect.
+ */
+export function selectOnCanvas(node: any): void {
+  if (!node) return
+  const apply = () => {
+    const canvas = (app as any)?.canvas
+    if (!canvas) return
+    try {
+      const ae = document.activeElement
+      const canvasEl = canvas.canvas as HTMLElement | undefined
+      if (ae instanceof HTMLElement && ae !== canvasEl && ae !== document.body) {
+        ae.blur()
+      }
+      if (typeof canvas.deselectAll === 'function') canvas.deselectAll()
+      else canvas.deselectAllNodes?.()
+
+      if (typeof canvas.selectNodes === 'function') canvas.selectNodes([node])
+      else if (typeof canvas.select === 'function') canvas.select(node)
+      else canvas.selectNode?.(node)
+
+      if (canvasEl) {
+        if (!canvasEl.hasAttribute('tabindex')) canvasEl.tabIndex = -1
+        canvasEl.focus?.({ preventScroll: true })
+      }
+      ;(app as any)?.graph?.setDirtyCanvas?.(true, true)
+    } catch (e) {
+      console.warn('[ComfyTV/asset-loader] selectOnCanvas failed', e)
+    }
+  }
+  // Defer past HTML5 dragend + Vue shell mount so selection/focus stick.
+  requestAnimationFrame(() => {
+    apply()
+    requestAnimationFrame(apply)
+  })
+}
+
 export function createAssetLoaderNode(
   asset: Asset,
   pos: [number, number],
@@ -100,8 +141,8 @@ export function createAssetLoaderNode(
   setWidget(node, 'asset_url', asset.payload_url)
   setWidget(node, 'asset_id', asset.id)
 
-  if (opts.select) (app as any)?.canvas?.selectNode?.(node)
-  ;(app as any)?.graph?.setDirtyCanvas?.(true, true)
+  if (opts.select) selectOnCanvas(node)
+  else ;(app as any)?.graph?.setDirtyCanvas?.(true, true)
 
   return node
 }

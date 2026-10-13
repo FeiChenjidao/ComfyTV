@@ -12,6 +12,7 @@ import { ASSET_DRAG_MIME, parseAssetDragIds } from '@/composables/sidebar/assetC
 import { importAssetFiles } from '@/composables/sidebar/assetImport'
 import { useAssetSelection } from '@/composables/sidebar/useAssetSelection'
 import { TAG_EDITOR_WIDTH, useAssetTagEditor } from '@/composables/sidebar/useAssetTagEditor'
+import { hideAssetsPopup } from '@/bottomBar/assetsPopupBridge'
 import { canvasCenter, createAssetLoaderNode } from '@/composables/stages/assetLoaderNode'
 import { askConfirm } from '@/composables/dialog/useConfirmDialog'
 import { askText } from '@/composables/dialog/useTextInputDialog'
@@ -296,12 +297,31 @@ export function useAssetsPanel(isActive: () => boolean | undefined) {
 
   function onLoadAssetNode(asset: Asset) {
     createAssetLoaderNode(asset, canvasCenter(), { anchor: 'center', select: true })
+    hideAssetsPopup()
+  }
+
+  /** Click: spawn at canvas center. Select-mode / modifiers keep selection behavior. */
+  function onAssetActivate(asset: Asset, e: MouseEvent) {
+    if (selection.onCardClick(asset, e)) return
+    onLoadAssetNode(asset)
   }
 
   function onAssetDragStart(asset: Asset, e: DragEvent) {
     if (!e.dataTransfer) return
     e.dataTransfer.setData(ASSET_DRAG_MIME, selection.dragIds(asset).join(','))
     e.dataTransfer.effectAllowed = 'copy'
+    // Hide floating popup once the drag leaves it (keeps in-panel chip drops usable).
+    const pop = document.querySelector('[data-comfytv-assets-popup]')
+    if (!pop) return
+    const onOver = (ev: DragEvent) => {
+      const el = document.elementFromPoint(ev.clientX, ev.clientY)
+      if (el && pop.contains(el)) return
+      hideAssetsPopup()
+      window.removeEventListener('dragover', onOver)
+    }
+    const onEnd = () => window.removeEventListener('dragover', onOver)
+    window.addEventListener('dragover', onOver, { passive: true })
+    window.addEventListener('dragend', onEnd, { once: true })
   }
 
   function onChipDrop(categoryId: number, e: DragEvent) {
@@ -414,6 +434,7 @@ export function useAssetsPanel(isActive: () => boolean | undefined) {
     onRenameAsset,
     onDeleteAsset,
     onLoadAssetNode,
+    onAssetActivate,
     onAssetDragStart,
     onChipDrop,
     onDragEnter,

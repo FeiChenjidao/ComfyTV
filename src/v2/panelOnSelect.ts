@@ -1,4 +1,7 @@
-/** Hide V2 control panels unless the card is selected (plugin setting). */
+/**
+ * LibTV-style compact V2 chrome: hide control stacks unless the card is selected.
+ * Wired through setting `v2-panel-on-select` (default on when V2 is enabled).
+ */
 
 import { useResizeObserver } from '@vueuse/core'
 import { onScopeDispose, type EffectScope } from 'vue'
@@ -29,8 +32,10 @@ const HOOKS = new WeakMap<object, SizeHooks>()
 export function applyPanelOnSelectSetting(
   rows: Array<{ key: string; value: unknown }>,
 ): void {
+  const v2On = rows.find((r) => r.key === 'enable-v2')?.value === true
   const row = rows.find((r) => r.key === PANEL_ON_SELECT_SETTING)
-  const on = row?.value === true
+  // Default on (LibTV-style compact cards) whenever V2 is enabled.
+  const on = v2On && (row == null ? true : row.value === true)
   const was = document.body.hasAttribute(PANEL_ON_SELECT_ATTR)
   document.body.toggleAttribute(PANEL_ON_SELECT_ATTR, on)
   if (was !== on) {

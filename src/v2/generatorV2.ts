@@ -7,6 +7,7 @@ import { t } from '@/i18n'
 import { type ComfyNode } from '@/lib/comfyApp'
 import CustomParamsV2 from '@/v2/CustomParamsV2.vue'
 import FooterSelectsV2, { type FooterExtra } from '@/v2/FooterSelectsV2.vue'
+import TripoOptionsV2 from '@/v2/TripoOptionsV2.vue'
 import { attachOutputToolbar } from '@/v2/outputToolbar'
 import { createIslandGroup } from '@/v2/islands'
 import { bindNodeDrag } from '@/v2/nodeDrag'
@@ -47,6 +48,7 @@ interface GeneratorConfig {
   corner?: boolean
   footerExtra?: FooterExtra[]
   controls?: ControlSpec[]
+  modelOptions?: boolean
   /** When true, StageControls only lists widgets bound as option:* on the workflow. */
   boundOnlyControls?: boolean
 }
@@ -131,12 +133,6 @@ function makeGeneratorShell(config: GeneratorConfig) {
         [MainPromptInput, { node }, promptAnchor],
         [StagePresetBar, { node }, presetAnchor],
         [CustomParamsV2, { node, state: stageState }, customAnchor],
-        [ParamsPanelV2, {
-          getNode: () => node,
-          exclude: promoted,
-          boundOnly: !!config.boundOnlyControls,
-          workflowKind: config.linkKind ?? null,
-        }, paramsAnchor],
         [FooterSelectsV2, {
           getNode: () => node,
           linkKind: config.linkKind ?? null,
@@ -144,6 +140,17 @@ function makeGeneratorShell(config: GeneratorConfig) {
         }, wfAnchor],
         [ServerSelectV2, { getNode: () => node, state: stageState }, serverAnchor],
       ]
+      if (!config.modelOptions) {
+        specs.splice(3, 0, [ParamsPanelV2, {
+          getNode: () => node,
+          exclude: promoted,
+          boundOnly: !!config.boundOnlyControls,
+          workflowKind: config.linkKind ?? null,
+        }, paramsAnchor])
+      }
+      if (config.modelOptions) {
+        specs.push([TripoOptionsV2, { getNode: () => node }, controlsAnchor])
+      }
       if (config.controls?.length) {
         specs.push([StageControlsV2, {
           getNode: () => node,
@@ -266,30 +273,7 @@ const GENERATORS: Record<string, GeneratorConfig> = {
     refTypes: ['image', 'text', 'model'],
     /** Only show a control when the linked workflow binds option:<name>. */
     boundOnlyControls: true,
-    controls: [
-      { name: 'seed', control: 'number', labelKey: 'v2.ctl.seed' },
-      { name: 'negative', control: 'textarea', labelKey: 'v2.ctl.negative', wide: true },
-      { name: 'texture', control: 'toggle', labelKey: 'v2.ctl.texture' },
-      { name: 'pbr', control: 'toggle', labelKey: 'v2.ctl.pbr' },
-      { name: 'texture_quality', control: 'select', labelKey: 'v2.ctl.textureQuality' },
-      { name: 'geometry_quality', control: 'select', labelKey: 'v2.ctl.geometryQuality' },
-      { name: 'model_version', control: 'select', labelKey: 'v2.ctl.modelVersion' },
-      { name: 'face_limit', control: 'number', labelKey: 'v2.ctl.faceLimit' },
-      { name: 'quad', control: 'toggle', labelKey: 'v2.ctl.quad' },
-      { name: 'smart_low_poly', control: 'toggle', labelKey: 'v2.ctl.smartLowPoly' },
-      { name: 'auto_size', control: 'toggle', labelKey: 'v2.ctl.autoSize' },
-      { name: 'orientation', control: 'select', labelKey: 'v2.ctl.orientation' },
-      { name: 'texture_alignment', control: 'select', labelKey: 'v2.ctl.textureAlignment' },
-      { name: 'material', control: 'select', labelKey: 'v2.ctl.material' },
-      { name: 'mode', control: 'select', labelKey: 'v2.ctl.mode3d' },
-      { name: 'polygon_count', control: 'select', labelKey: 'v2.ctl.polygonCount' },
-      { name: 'geometry_file_format', control: 'select', labelKey: 'v2.ctl.geometryFormat' },
-      { name: 'texture_mode', control: 'select', labelKey: 'v2.ctl.textureMode' },
-      { name: 'tapose', control: 'toggle', labelKey: 'v2.ctl.tapose' },
-      { name: 'hd_texture', control: 'toggle', labelKey: 'v2.ctl.hdTexture' },
-      { name: 'texture_delight', control: 'toggle', labelKey: 'v2.ctl.textureDelight' },
-      { name: 'addon_highpack', control: 'toggle', labelKey: 'v2.ctl.addonHighpack' },
-    ],
+    modelOptions: true,
   },
   'ComfyTV.TimelineVideoStage':    { preview: 'video', linkKind: 'timeline' },
 }

@@ -3,6 +3,7 @@ import { createPinia, getActivePinia, setActivePinia } from 'pinia'
 
 import ComfyTVSidebar from '@/components/sidebar/ComfyTVSidebar.vue'
 import { installAgentPanel } from '@/agent/mount'
+import { installBottomBar } from '@/bottomBar/mount'
 import { refreshAgentStatus } from '@/agent/status'
 import StageCard from '@/components/stages/StageCard.vue'
 import {
@@ -67,6 +68,7 @@ import '@/v2/loadersV2'
 import '@/v2/generatorV2'
 import '@/v2/customStageV2'
 import { V2_SHELLS } from '@/v2/registry'
+import { installDeleteKeyFix } from '@/v2/deleteKeyFix'
 import { hydrateV2Flag, isV2Enabled } from '@/v2/flagV2'
 import { installPlaybackArbiter } from '@/composables/widgets/playbackArbiter'
 import { installCameraMotionLod } from '@/composables/widgets/cameraMotionLod'
@@ -362,6 +364,8 @@ const extension: ComfyExtension = {
     })
 
     installAgentPanel(pinia)
+    installBottomBar(pinia)
+    installDeleteKeyFix()
     void refreshAgentStatus()
   },
 

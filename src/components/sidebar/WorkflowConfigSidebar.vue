@@ -84,6 +84,19 @@
         </div>
       </section>
 
+      <section v-if="isImageWorkflowConfig" class="ctv:flex ctv:flex-col ctv:gap-1.5">
+        <h3 :class="sectionHeading">图像阶段面板</h3>
+        <ComfyTVSelect
+          :model-value="imagePanelMode"
+          :options="imagePanelOptions"
+          :filterable="false"
+          @update:model-value="onImagePanelChange"
+        />
+        <p class="ctv:m-0 ctv:text-3xs ctv:text-muted-foreground/70">
+          选择后，ImageStage 左下角使用对应的参数面板。
+        </p>
+      </section>
+
       <section v-if="config.exposed_widgets?.length">
         <h3 :class="sectionHeading">{{ $t('configSidebar.section.widgets') }}</h3>
 
@@ -168,6 +181,10 @@
               >
                 <div class="ctv:text-2xs">
                   <span class="ctv:font-mono ctv:text-muted-foreground">.{{ w.widget_name }}</span>
+                  <span v-if="canEditBindingDefault(w)"
+                        class="ctv:ml-1.5 ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground/70">
+                    {{ $t('configSidebar.bindingDefault') }}
+                  </span>
                 </div>
                 <ComfyTVWidget
                   :kind="w.widget_type"
@@ -178,9 +195,13 @@
                   :step="numProp(w, 'step')"
                   :precision="numProp(w, 'precision')"
                   :multiline="!!w.widget_props?.multiline"
-                  :disabled="isStageBound(w) || !!exposedOf(w) || outputsTakenOver(node)"
+                  :disabled="!!exposedOf(w) || (isStageBound(w) && !canEditBindingDefault(w)) || outputsTakenOver(node)"
                   @update:model-value="onValueChange(w, $event)"
                 />
+                <p v-if="canEditBindingDefault(w)"
+                   class="ctv:m-0 ctv:text-3xs ctv:leading-snug ctv:text-muted-foreground/70">
+                  {{ $t('configSidebar.bindingDefaultHint') }}
+                </p>
                 <div v-if="exposedOf(w)" class="ctv:flex ctv:items-center ctv:gap-1.5 ctv:mt-0.5 ctv:text-3xs ctv:text-muted-foreground">
                   <span class="ctv:uppercase ctv:tracking-wide">{{ $t('configSidebar.customExposed') }}</span>
                   <span class="ctv:py-px ctv:px-1.5 ctv:rounded-lg ctv:bg-base-foreground/5 ctv:text-base-foreground">
@@ -191,7 +212,7 @@
                   <span class="ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground">{{ $t('configSidebar.bindTo') }}</span>
                   <ComfyTVSelect
                     :model-value="dropdownValueFor(w)"
-                    :options="bindingOptions"
+                    :options="bindingOptionsFor(w)"
                     @update:model-value="onBindingChange(w, $event as string)"
                   />
                 </div>
@@ -275,6 +296,17 @@
       <section v-if="config.has_api">
         <h3 :class="sectionHeading">{{ $t('configSidebar.section.properties') }}</h3>
         <div class="ctv:flex ctv:flex-col ctv:gap-1.5 ctv:px-1">
+          <div class="ctv:flex ctv:items-center ctv:justify-between ctv:gap-2">
+            <div class="ctv:min-w-0">
+              <div class="ctv:text-2xs">{{ $t('configSidebar.promptRequired.label') }}</div>
+              <div class="ctv:text-3xs ctv:text-muted-foreground">{{ $t('configSidebar.promptRequired.hint') }}</div>
+            </div>
+            <ComfyTVToggle
+              :model-value="promptRequired"
+              :aria-label="$t('configSidebar.promptRequired.label')"
+              @update:model-value="onPromptRequiredChange"
+            />
+          </div>
           <div class="ctv:grid ctv:grid-cols-[42px_1fr] ctv:items-center ctv:gap-1.5">
             <span class="ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground">{{ $t('configSidebar.mentionStyle.label') }}</span>
             <ComfyTVSelect
@@ -330,6 +362,7 @@ import IconSearch from '~icons/lucide/search'
 
 import ComfyTVWidget from '@/components/widgets/ComfyTVWidget.vue'
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
+import ComfyTVToggle from '@/components/widgets/ComfyTVToggle.vue'
 import NodeOutputBindings from '@/components/sidebar/NodeOutputBindings.vue'
 import { useBindingWriter } from '@/composables/sidebar/useBindingWriter'
 import { useCollapsedFlag, useCollapsedNodeIds } from '@/composables/sidebar/useCollapsedState'
@@ -389,6 +422,13 @@ const {
 } = useResultMeta(config, postMeta, t)
 
 const isCustom = computed(() => config.value?.kind === 'custom')
+const promptRequired = computed(() => config.value?.meta?.prompt_required !== false)
+async function onPromptRequiredChange(value: boolean) {
+  const meta = { ...(config.value?.meta ?? {}) }
+  if (value) delete meta.prompt_required
+  else meta.prompt_required = false
+  await postMeta({ meta })
+}
 const exposureIndex = computed(() => customExposureIndex(config.value))
 const customOutputs = computed(() => customExposedOutputs(config.value))
 function exposedOf(w: ExposedWidget) {
@@ -400,11 +440,16 @@ const { isCollapsed, toggle: toggleCollapsed } = useCollapsedNodeIds(workflowId)
 const { collapsed: notesCollapsed, toggle: toggleNotesCollapsed } =
   useCollapsedFlag(workflowId, 'comfytv:sidebar:notes-collapsed:')
 
-const bindingOptions = computed(() =>
-  buildBindingOptions(
+function bindingOptionsFor(w: ExposedWidget) {
+  return buildBindingOptions(
     config.value?.exposed_widgets ?? [],
     selected.value?.workflowKind,
-  ),
+    w,
+  )
+}
+
+const bindingOptions = computed(() =>
+  buildBindingOptions(config.value?.exposed_widgets ?? [], selected.value?.workflowKind),
 )
 
 const {
@@ -424,6 +469,7 @@ function isNodeCollapsed(nodeId: string): boolean {
 const {
   isStageBound,
   isUpstreamBound,
+  canEditBindingDefault,
   dropdownValueFor,
   effectiveValue,
   comboOptions,
@@ -441,6 +487,19 @@ const mentionStyleOptions = computed(() => [
   { value: 'minimax_tags', label: t('configSidebar.mentionStyle.minimaxTags') },
   { value: 'qwen_tags', label: t('configSidebar.mentionStyle.qwenTags') },
 ])
+
+const imagePanelMode = computed(() => config.value?.meta?.image_panel === 'gpt' ? 'gpt' : 'nanobanana')
+const isImageWorkflowConfig = computed(() =>
+  String(config.value?.kind ?? selected.value?.workflowKind ?? '').toLowerCase() === 'image',
+)
+const imagePanelOptions = [
+  { value: 'nanobanana', label: 'NanoBanana：比例 + 分辨率' },
+  { value: 'gpt', label: 'GPT Image：尺寸 + 宽高 + 背景 + 质量' },
+]
+async function onImagePanelChange(value: string) {
+  const meta = { ...(config.value?.meta ?? {}), image_panel: value === 'gpt' ? 'gpt' : 'nanobanana' }
+  await postMeta({ meta })
+}
 async function onMentionStyleChange(style: string) {
   const meta = { ...(config.value?.meta ?? {}) }
   if (normalizeMentionStyle(style) === 'natural') delete meta.mention_style

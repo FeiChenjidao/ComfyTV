@@ -431,6 +431,12 @@ class PsdLayerTreeStage(io.ComfyNode):
                 io.String.Input("captured_images", default="",
                                 socketless=True, extra_dict={"hidden": True},
                                 tooltip="JSON images batch of selected subtrees. Hidden — driven by the Vue panel."),
+                io.String.Input("out_width", default="",
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="Last export width in pixels. Hidden — driven by the Vue panel."),
+                io.String.Input("out_height", default="",
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="Last export height in pixels. Hidden — driven by the Vue panel."),
             ],
             outputs=[
                 COMFYTV_IMAGE.Output("image"),
@@ -442,6 +448,7 @@ class PsdLayerTreeStage(io.ComfyNode):
 
     @classmethod
     def execute(cls, project_id="", parent_output_id=0,
-                psd_file="", selected_id="", captured_image="", captured_images=""):
+                psd_file="", selected_id="", captured_image="", captured_images="",
+                out_width="", out_height=""):
         return io.NodeOutput(captured_image or "", captured_images or "")
 

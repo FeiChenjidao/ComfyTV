@@ -48,6 +48,7 @@ interface ImageBatchShellConfig {
   title?: string | null
   linkKind?: string
   footerExtra?: FooterExtra[]
+  gptImageOptions?: boolean
 }
 
 function makeImageBatchShell(shellCfg: ImageBatchShellConfig = {}) {
@@ -111,6 +112,7 @@ function makeImageBatchShell(shellCfg: ImageBatchShellConfig = {}) {
         getNode: () => node,
         linkKind: shellCfg.linkKind ?? 'image',
         extra: shellCfg.footerExtra ?? [],
+        gptImageOptions: shellCfg.gptImageOptions,
       }, selectsAnchor],
       [CustomParamsV2, { node, state: stageState }, customAnchor],
       [ParamsPanelV2, {
@@ -308,7 +310,7 @@ function makeImageBatchShell(shellCfg: ImageBatchShellConfig = {}) {
   }
 }
 
-V2_SHELLS['ComfyTV.ImageStage'] = makeImageBatchShell()
+V2_SHELLS['ComfyTV.ImageStage'] = makeImageBatchShell({ gptImageOptions: true })
 V2_SHELLS['ComfyTV.ShotImagesStage'] = makeImageBatchShell({ title: null, linkKind: 'shot-images' })
 V2_SHELLS['ComfyTV.ImageVariationsStage'] = makeImageBatchShell({
   title: null,

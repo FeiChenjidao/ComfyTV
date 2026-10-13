@@ -101,9 +101,15 @@ function widgetsOf(): any[] {
   return (props.getNode()?.widgets ?? []) as any[]
 }
 
-const TRACKED = [...Object.keys(OPTION_LABEL_KEYS), 'workflow']
+const trackedNames = [
+  ...Object.keys(OPTION_LABEL_KEYS),
+  'workflow',
+  ...(props.getNode()?.widgets ?? [])
+    .map((w: any) => String(w?.name ?? ''))
+    .filter(Boolean),
+]
 
-const { widgetOf, write: writeRaw } = useWidgetValues(props.getNode, TRACKED)
+const { widgetOf, write: writeRaw } = useWidgetValues(props.getNode, trackedNames)
 
 const { keys: boundKeys } = useBoundOptionKeys(
   props.getNode,

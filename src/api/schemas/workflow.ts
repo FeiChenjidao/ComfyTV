@@ -173,6 +173,7 @@ const WorkflowUsageEntrySchema = z.object({
   uses_computed: z.record(z.string(), z.boolean()).optional(),
   uses_options: z.record(z.string(), z.boolean()).optional(),
   uses_mask: z.boolean().optional(),
+  prompt_required: z.boolean().optional(),
 })
 export const WorkflowInfoSchema = z.record(
   z.string(),

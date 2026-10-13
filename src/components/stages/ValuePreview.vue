@@ -133,6 +133,7 @@
         <ModelPreview
           ref="modelPreviewEl"
           :src="String(content)"
+          controls
           @view-changed="scheduleModelCapture"
         />
         <div :class="imgActionsClass">

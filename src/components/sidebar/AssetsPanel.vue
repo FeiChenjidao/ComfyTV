@@ -170,7 +170,7 @@
           :tooltip="assetTooltip(item.asset)"
           :selectable="selection.selectMode.value"
           :selected="selection.isSelected(item.asset.id)"
-          @click="selection.onCardClick(item.asset, $event)"
+          @click="onAssetActivate(item.asset, $event)"
           @dragstart="onAssetDragStart(item.asset, $event)"
           @contextmenu.prevent.stop="openAssetMenu(item.asset, $event, 'pointer')"
           @open-menu="openAssetMenu(item.asset, $event, 'element')"
@@ -349,6 +349,7 @@ const {
   onCreateCategory,
   onRenameCategory,
   onDeleteCategory,
+  onAssetActivate,
   onAssetDragStart,
   onChipDrop,
   onDragEnter,

@@ -113,7 +113,16 @@ html:not(.dark-theme) .lg-node[data-v2-shell] .ctv\\:text-success-background { c
 .lg-node[data-v2-shell] [class~="ctv:bg-black"] [class~="ctv:text-white/50"] {
   color: var(--v2-text-faint);
 }
-body[data-v2-toolbar] [data-testid="selection-toolbox"] { display: none; }
+/* Replace Comfy SelectionToolbox with .v2-toolbar. Keep it suppressed through
+ * deselect so the PrimeVue panel leave anim (p-panel-content-container) cannot flash. */
+body[data-v2-toolbar] [data-testid="selection-toolbox"],
+body[data-v2-toolbar] .selection-toolbox {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  animation: none !important;
+}
 .lg-node[data-v2-shell] [data-testid="node-inner-wrapper"] {
   background: transparent;
   border-radius: 0;
@@ -348,7 +357,7 @@ body[data-v2-slot-hover] .p-tooltip { display: none !important; }
 }
 .lg-node[data-v2-shell][data-v2-selected] .v2-toolbar { display: flex; }
 
-/* Plugin setting: hide control panels unless the card is selected */
+/* Plugin setting: hide control panels unless the card is selected (LibTV-style compact chrome) */
 body[data-v2-panel-on-select] .lg-node[data-v2-shell]:not([data-v2-selected]) .v2-panel,
 body[data-v2-panel-on-select] .lg-node[data-v2-shell]:not([data-v2-selected]) .v2-fx-footer,
 body[data-v2-panel-on-select] .lg-node[data-v2-shell]:not([data-v2-selected]) .v2-ed__panel,
