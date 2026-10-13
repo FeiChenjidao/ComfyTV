@@ -1490,6 +1490,12 @@
       "angle": {
         "name": "Angle"
       },
+      "flip_horizontal": {
+        "name": "Flip horizontal"
+      },
+      "flip_vertical": {
+        "name": "Flip vertical"
+      },
       "image": {
         "name": "Image"
       }

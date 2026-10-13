@@ -82,6 +82,12 @@ class RotateStage(io.ComfyNode):
                 io.Int.Input("angle", default=0, min=-180, max=180, step=1,
                              socketless=True, extra_dict={"hidden": True},
                              tooltip="Rotation angle in degrees (-180 to 180, positive = clockwise)."),
+                io.Boolean.Input("flip_horizontal", default=False,
+                                 socketless=True, extra_dict={"hidden": True},
+                                 tooltip="Flip left↔right."),
+                io.Boolean.Input("flip_vertical", default=False,
+                                 socketless=True, extra_dict={"hidden": True},
+                                 tooltip="Flip top↔bottom."),
                 COMFYTV_IMAGE.Input("image", optional=True),
             ],
             outputs=[COMFYTV_IMAGE.Output("image")],
@@ -91,7 +97,7 @@ class RotateStage(io.ComfyNode):
 
     @classmethod
     def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
-                angle=0, image=""):
+                angle=0, flip_horizontal=False, flip_vertical=False, image=""):
         return io.NodeOutput(image)
 
 

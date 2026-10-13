@@ -46,6 +46,32 @@
           @click="snap(q.d)"
         >{{ q.l }}</button>
       </div>
+      <div class="ctv:flex ctv:gap-1.5">
+        <button
+          type="button"
+          class="ctv:flex-1 ctv:flex ctv:items-center ctv:justify-center ctv:gap-1.5 ctv:py-1.5 ctv:px-2.5 ctv:rounded
+                 ctv:text-xs ctv:border ctv:cursor-pointer"
+          :class="flipH
+            ? 'ctv:bg-secondary-background-selected ctv:border-primary-background ctv:text-primary-background ctv:font-semibold'
+            : 'ctv:bg-secondary-background ctv:border-border-subtle ctv:text-base-foreground ctv:hover:bg-secondary-background-hover'"
+          :title="$t('mirror.horizontal')"
+          @click="flipH = !flipH"
+        >
+          <i class="pi pi-arrow-right-arrow-left ctv:text-sm ctv:leading-none" /> {{ $t('mirror.horizontal') }}
+        </button>
+        <button
+          type="button"
+          class="ctv:flex-1 ctv:flex ctv:items-center ctv:justify-center ctv:gap-1.5 ctv:py-1.5 ctv:px-2.5 ctv:rounded
+                 ctv:text-xs ctv:border ctv:cursor-pointer"
+          :class="flipV
+            ? 'ctv:bg-secondary-background-selected ctv:border-primary-background ctv:text-primary-background ctv:font-semibold'
+            : 'ctv:bg-secondary-background ctv:border-border-subtle ctv:text-base-foreground ctv:hover:bg-secondary-background-hover'"
+          :title="$t('mirror.vertical')"
+          @click="flipV = !flipV"
+        >
+          <i class="pi pi-arrows-v ctv:text-sm ctv:leading-none" /> {{ $t('mirror.vertical') }}
+        </button>
+      </div>
     </div>
 
     <StageCard
@@ -68,7 +94,7 @@ import FxSlider from '@/components/widgets/fx/FxSlider.vue'
 import { rotatePreviewStyle, rotateToCanvas } from '@/composables/stages/imageOrientPreview'
 import { pickSourceImageUrl } from '@/composables/stages/stageInputs'
 import { useTransformPipeline } from '@/composables/widgets/useTransformPipeline'
-import { useNumWidget } from '@/composables/widgets/useWidgetModel'
+import { useBoolWidget, useNumWidget } from '@/composables/widgets/useWidgetModel'
 
 const props = defineProps<{
   state: StageState
@@ -82,10 +108,12 @@ const props = defineProps<{
 const sourceImageUrl = computed(() => pickSourceImageUrl(props.state.inputs))
 
 const angle = useNumWidget(props.node, 'angle', 0)
+const flipH = useBoolWidget(props.node, 'flip_horizontal', false)
+const flipV = useBoolWidget(props.node, 'flip_vertical', false)
 
 function snap(deg: number) { angle.value = deg }
 
-const previewStyle = computed(() => rotatePreviewStyle(angle.value))
+const previewStyle = computed(() => rotatePreviewStyle(angle.value, flipH.value, flipV.value))
 
 const { computing, requestRecompute } = useTransformPipeline({
   sourceImageUrl,
@@ -93,10 +121,10 @@ const { computing, requestRecompute } = useTransformPipeline({
   nodeId: props.node?.id ?? 'unknown',
   filenamePrefix: 'comfytv-rotate',
   subfolder: 'comfytv/transformer',
-  compute: (img) => rotateToCanvas(img, angle.value),
+  compute: (img) => rotateToCanvas(img, angle.value, flipH.value, flipV.value),
 })
 
-watch(angle, () => requestRecompute())
+watch([angle, flipH, flipV], () => requestRecompute())
 
 watch(sourceImageUrl, (url) => {
   if (url) requestRecompute()

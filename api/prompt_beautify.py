@@ -1,4 +1,4 @@
-"""Lightweight prompt beautify — reuses Bot Local / ComfyUI LLM backends, no MCP."""
+"""Lightweight prompt beautify — Local / ComfyUI LLM, then Bot CLI (Codex etc.), no MCP."""
 from __future__ import annotations
 
 import asyncio
@@ -8,8 +8,10 @@ import re
 import aiohttp
 from aiohttp import web
 
+from .. import bot as _bot  # noqa: F401 — register CLI providers
 from ..bot import comfyui_llm_engine as engine
 from ..bot.local_llm import LocalLlmProvider
+from ..bot.providers import BotEvent, TurnHandle, TurnRequest, get_provider
 from ._common import routes
 
 _log = logging.getLogger(__name__)
@@ -18,6 +20,14 @@ _MAX_INPUT_CHARS = 8_000
 _MAX_TOKENS = 1_024
 _TEMPERATURE = 0.4
 _LOCAL_TIMEOUT_S = 120
+
+# CLI agents that can do a one-shot rewrite without MCP tools.
+_CLI_BEAUTIFY_IDS = ("codex", "claude-code", "qwen-code", "cursor-cli")
+_CLI_MODEL_SETTING = {
+    "codex": "bot-model-codex",
+    "claude-code": "bot-model-claude-code",
+    "qwen-code": "bot-model-qwen-code",
+}
 
 _SYSTEM_PROMPT = (
     "You are a prompt engineer for image / video generation.\n"
@@ -36,6 +46,12 @@ _LANG_LABEL = {
     "zh": "Chinese (简体中文)",
     "en": "English",
 }
+
+_NO_LLM_ERROR = (
+    "no LLM available — use a Bot provider (e.g. Codex), "
+    "put a Qwen3/Gemma checkpoint in models/text_encoders, "
+    "or set a Local LLM endpoint under Settings → Agent & MCP"
+)
 
 
 def _clean_prompt(text: str) -> str:
@@ -67,6 +83,22 @@ def _messages(prompt: str, language: str) -> list[dict]:
         {"role": "system", "content": _SYSTEM_PROMPT.format(language=lang)},
         {"role": "user", "content": prompt},
     ]
+
+
+def _setting(key: str, default: str = "") -> str:
+    try:
+        from .. import storage
+        return str(storage.get_setting(key) or default).strip()
+    except Exception:
+        return default
+
+
+def _cli_user_text(prompt: str, language: str) -> str:
+    lang = _LANG_LABEL.get(language, _LANG_LABEL["en"])
+    return (
+        f"{_SYSTEM_PROMPT.format(language=lang)}\n\n"
+        f"Draft prompt to rewrite:\n---\n{prompt}\n---"
+    )
 
 
 async def _via_comfyui(prompt: str, language: str) -> dict | None:
@@ -123,6 +155,72 @@ async def _via_local(prompt: str, language: str) -> dict | None:
     return {"prompt": content, "provider": "local-llm", "model": model}
 
 
+async def _via_cli_agent(prompt: str, language: str, provider_id: str) -> dict | None:
+    """One-shot rewrite through a Bot CLI provider with MCP disabled."""
+    provider = get_provider(provider_id)
+    if provider is None:
+        return None
+    status = await provider.probe()
+    if not status.available:
+        return None
+    if status.logged_in is False:
+        raise RuntimeError(status.detail or f"{provider_id} is not signed in")
+
+    model_key = _CLI_MODEL_SETTING.get(provider_id, "")
+    model = _setting(model_key) if model_key else ""
+
+    chunks: list[str] = []
+
+    async def emit(ev: BotEvent) -> None:
+        if ev.t == "delta" and ev.text:
+            chunks.append(ev.text)
+
+    handle = TurnHandle()
+    turn = TurnRequest(
+        chat_id="prompt-beautify",
+        user_text=_cli_user_text(prompt, language),
+        mcp_endpoint="",  # no canvas tools — pure text rewrite
+        model=model,
+    )
+    result = await provider.send(turn, emit, handle)
+    if result.aborted and not chunks:
+        raise RuntimeError(result.error or f"{provider_id} turn aborted")
+    if result.error and not chunks:
+        raise RuntimeError(result.error)
+    content = _clean_prompt("".join(chunks))
+    if not content:
+        raise RuntimeError(f"{provider_id} returned an empty prompt")
+    return {
+        "prompt": content,
+        "provider": provider_id,
+        "model": model or status.version or provider_id,
+    }
+
+
+def _runner_order() -> list[tuple[str, object]]:
+    """Prefer the user's selected Bot CLI, then local engines, then other CLIs."""
+    preferred = _setting("bot-provider")
+    runners: list[tuple[str, object]] = []
+    seen: set[str] = set()
+
+    def add(label: str, runner) -> None:
+        if label in seen:
+            return
+        seen.add(label)
+        runners.append((label, runner))
+
+    if preferred in _CLI_BEAUTIFY_IDS:
+        add(preferred, lambda p, l, pid=preferred: _via_cli_agent(p, l, pid))
+
+    add("comfyui-llm", _via_comfyui)
+    add("local-llm", _via_local)
+
+    for pid in _CLI_BEAUTIFY_IDS:
+        add(pid, lambda p, l, pid=pid: _via_cli_agent(p, l, pid))
+
+    return runners
+
+
 @routes.post("/comfytv/prompt/beautify")
 async def prompt_beautify(request: web.Request) -> web.Response:
     try:
@@ -144,12 +242,9 @@ async def prompt_beautify(request: web.Request) -> web.Response:
         language = "en"
 
     errors: list[str] = []
-    for label, runner in (
-        ("comfyui-llm", _via_comfyui),
-        ("local-llm", _via_local),
-    ):
+    for label, runner in _runner_order():
         try:
-            result = await runner(prompt, language)
+            result = await runner(prompt, language)  # type: ignore[operator]
         except Exception as e:
             _log.warning("[ComfyTV/beautify] %s failed: %s", label, e)
             errors.append(f"{label}: {e}")
@@ -157,9 +252,5 @@ async def prompt_beautify(request: web.Request) -> web.Response:
         if result is not None:
             return web.json_response(result)
 
-    detail = "; ".join(errors) if errors else (
-        "no LLM available — put a Qwen3/Gemma checkpoint in "
-        "models/text_encoders, or set a Local LLM endpoint under "
-        "Settings → Agent & MCP"
-    )
-    return web.json_response({"error": detail}, status=503)
+    detail = "; ".join(errors) if errors else _NO_LLM_ERROR
+    return web.json_response({"error": detail, "code": "no_llm"}, status=503)

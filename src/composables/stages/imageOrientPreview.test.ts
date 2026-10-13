@@ -21,6 +21,12 @@ describe('preview styles', () => {
     expect(s.transform).toBe('rotate(45deg)')
     expect(s.transition).toBe(mirrorPreviewStyle(false, false).transition)
   })
+
+  it('composes flip after rotate in CSS order (scale then rotate written)', () => {
+    expect(rotatePreviewStyle(90, true, false).transform).toBe('scale(-1, 1) rotate(90deg)')
+    expect(rotatePreviewStyle(0, false, true).transform).toBe('scale(1, -1) rotate(0deg)')
+    expect(rotatePreviewStyle(45, true, true).transform).toBe('scale(-1, -1) rotate(45deg)')
+  })
 })
 
 describe('rotatedSize', () => {
@@ -88,7 +94,18 @@ describe('canvas transforms', () => {
     expect(canvas.height).toBe(640)
     expect(ctx.translate).toHaveBeenCalledWith(240.5, 320)
     expect(ctx.rotate).toHaveBeenCalledWith(Math.PI / 2)
+    expect(ctx.scale).not.toHaveBeenCalled()
     expect(ctx.drawImage).toHaveBeenCalledWith(img, -320, -240)
+  })
+
+  it('rotateToCanvas flips after rotating when requested', () => {
+    const ctx = mockCtx()
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never)
+    const img = { naturalWidth: 100, naturalHeight: 50 } as HTMLImageElement
+    rotateToCanvas(img, 0, true, false)
+    expect(ctx.rotate).toHaveBeenCalledWith(0)
+    expect(ctx.scale).toHaveBeenCalledWith(-1, 1)
+    expect(ctx.drawImage).toHaveBeenCalledWith(img, -50, -25)
   })
 
   it('both throw without a 2d context', () => {

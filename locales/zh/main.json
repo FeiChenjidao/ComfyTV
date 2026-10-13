@@ -29,7 +29,7 @@
     "applying": "应用中…",
     "applied": "已应用"
   },
-  "imagesSplit": { "aspect11": "1:1", "connect": "请连接图片批次", "empty": "暂无图片", "merge": "合并图片", "mergeFailed": "合并失败", "selectHint": "选择要处理的图片", "squareFailed": "生成 1:1 失败", "squaring": "正在处理 1:1…", "truncated": "部分图片已截断", "variations": "生成变体" },
+  "imagesSplit": { "aspect11": "1:1", "connect": "请连接图片批次", "empty": "暂无图片", "flipFailed": "翻转失败", "flipH": "水平翻转", "flipV": "垂直翻转", "merge": "合并图片", "mergeFailed": "合并失败", "processing": "处理中…", "selectHint": "选择要处理的图片", "squareFailed": "生成 1:1 失败", "squaring": "正在处理 1:1…", "truncated": "部分图片已截断", "variations": "生成" },
   "mediaAsset": { "selection": { "downloadsStarted": "已开始下载" } },
   "progressToast": { "downloadsFailed": "下载失败" },
   "psdLayerTree": { "clickHint": "点击选择图层", "clipping": "剪贴", "compositing": "预览中…", "dims": "尺寸", "dirtyHint": "预览已更新 · 点输出并展开", "done": "已输出", "dropHint": "拖入图层（需带本地路径）", "expand": "展开", "export": "输出并展开", "exporting": "输出中…", "loading": "加载中…", "memory": "内存", "pathMissing": "路径 PSD 丢失", "pathUnavailable": "无法获取本地路径，请点击选择按钮", "pick": "选择 PSD", "pickHint": "选择本地 PSD（记住路径，不复制）", "previewReady": "预览就绪", "scaled": "已缩放", "warning": "警告" },
@@ -904,13 +904,14 @@
     }
   },
   "promptBeautify": {
-    "open": "AI 美化 —— 用 Local / ComfyUI LLM 扩写润色提示词",
+    "open": "AI 美化 —— 用当前 Bot（如 Codex）或 Local / ComfyUI LLM 扩写润色",
     "preview": "预览 —— 应用后替换当前提示词",
     "apply": "应用",
     "discard": "放弃",
     "via": "经由 {provider} · {model}",
     "applied": "提示词已美化",
-    "failed": "美化失败"
+    "failed": "美化失败",
+    "noLlm": "没有可用的 LLM。请在顶部选择 Codex（或其它已登录的 Bot），或在设置里配置 Local LLM / 放入 Qwen3 text encoder。"
   },
   "promptHelper": {
     "open": "提示词助手 —— 快速起步 & 增强标签",
@@ -1313,7 +1314,7 @@
       },
       "rotate": {
         "label": "旋转",
-        "tooltip": "按角度旋转（浏览器端，不占 GPU）"
+        "tooltip": "按角度旋转，并可水平 / 垂直翻转（浏览器端，不占 GPU）"
       },
       "mirror": {
         "label": "镜像",
@@ -1996,7 +1997,7 @@
     "angle": "角度",
     "applying": "旋转应用中…",
     "applied": "旋转已应用 — 下游可直接使用",
-    "adjustToApply": "拖动滑块或点击快速角度以应用"
+    "adjustToApply": "拖动滑块、点击快速角度或切换翻转以应用"
   },
   "colorGrade": {
     "effect": "效果",

@@ -17,8 +17,14 @@ def _load_mod():
         m = types.ModuleType(pkg)
         m.__path__ = [str(root)]
         sys.modules[pkg] = m
-    for name in ("ComfyTV.api", "ComfyTV.bot", "ComfyTV.bot.local_llm",
-                 "ComfyTV.bot.comfyui_llm_engine"):
+    for name in (
+        "ComfyTV.api",
+        "ComfyTV.bot",
+        "ComfyTV.bot.local_llm",
+        "ComfyTV.bot.comfyui_llm_engine",
+        "ComfyTV.bot.providers",
+        "ComfyTV.storage",
+    ):
         if name not in sys.modules:
             sys.modules[name] = types.ModuleType(name)
 
@@ -50,6 +56,36 @@ def _load_mod():
 
     local.LocalLlmProvider = _Local
 
+    providers = sys.modules["ComfyTV.bot.providers"]
+
+    class BotEvent:
+        def __init__(self, t, text=""):
+            self.t = t
+            self.text = text
+
+    class TurnHandle:
+        def __init__(self):
+            self.process = None
+            self.stop_requested = False
+
+    class TurnRequest:
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+    class TurnResult:
+        def __init__(self, error="", aborted=False):
+            self.error = error
+            self.aborted = aborted
+
+    providers.BotEvent = BotEvent
+    providers.TurnHandle = TurnHandle
+    providers.TurnRequest = TurnRequest
+    providers.TurnResult = TurnResult
+    providers.get_provider = lambda _id: None
+
+    storage = sys.modules["ComfyTV.storage"]
+    storage.get_setting = lambda _key, default=None: default
+
     common = types.ModuleType("ComfyTV.api._common")
 
     class _Routes:
@@ -62,6 +98,8 @@ def _load_mod():
     sys.modules["ComfyTV.api._common"] = common
 
     path = root / "api" / "prompt_beautify.py"
+    # Force reload so patched stubs apply.
+    sys.modules.pop("ComfyTV.api.prompt_beautify", None)
     spec = importlib.util.spec_from_file_location(
         "ComfyTV.api.prompt_beautify", path)
     mod = importlib.util.module_from_spec(spec)
@@ -112,48 +150,86 @@ class TestPromptBeautifyRoute:
 
         monkeypatch.setattr(mod.engine, "generate_chat", fake_generate)
 
-        async def boom(*_a, **_k):
-            raise AssertionError("local path should not run")
+        async def boom_local(*_a, **_k):
+            raise AssertionError("local should not run")
 
-        monkeypatch.setattr(mod, "_via_local", boom)
+        async def boom_cli(*_a, **_k):
+            raise AssertionError("cli should not run")
+
+        monkeypatch.setattr(mod, "_via_local", boom_local)
+        monkeypatch.setattr(mod, "_via_cli_agent", boom_cli)
 
         resp = _run(mod.prompt_beautify(_req({"prompt": "a cat", "language": "zh"})))
         assert resp.status == 200
         payload = json.loads(resp.text)
         assert payload["provider"] == "comfyui-llm"
-        assert payload["model"] == "qwen3.safetensors"
         assert payload["prompt"] == "fluffy orange cat, soft light"
 
-    def test_falls_back_to_local(self, monkeypatch):
+    def test_prefers_codex_when_selected(self, monkeypatch):
         mod = _load_mod()
+        monkeypatch.setattr(mod, "_setting",
+                            lambda key, default="": "codex" if key == "bot-provider" else default)
         monkeypatch.setattr(mod.engine, "list_model_files", lambda: [])
 
-        async def fake_local(prompt, language):
+        async def fake_cli(prompt, language, provider_id):
+            assert provider_id == "codex"
             assert prompt == "dog"
-            assert language == "en"
+            assert language == "zh"
             return {
-                "prompt": "a loyal dog in golden hour light",
-                "provider": "local-llm",
-                "model": "llama",
+                "prompt": "一只忠诚的狗，金色阳光",
+                "provider": "codex",
+                "model": "gpt-5.3-codex",
             }
 
-        monkeypatch.setattr(mod, "_via_local", fake_local)
-
-        resp = _run(mod.prompt_beautify(_req({"prompt": "dog", "language": "en"})))
-        assert resp.status == 200
-        payload = json.loads(resp.text)
-        assert payload["provider"] == "local-llm"
-        assert payload["prompt"].startswith("a loyal dog")
-
-    def test_503_when_no_llm(self, monkeypatch):
-        mod = _load_mod()
-        monkeypatch.setattr(mod.engine, "list_model_files", lambda: [])
+        monkeypatch.setattr(mod, "_via_cli_agent", fake_cli)
 
         async def no_local(*_a, **_k):
             return None
 
         monkeypatch.setattr(mod, "_via_local", no_local)
 
+        resp = _run(mod.prompt_beautify(_req({"prompt": "dog", "language": "zh"})))
+        assert resp.status == 200
+        payload = json.loads(resp.text)
+        assert payload["provider"] == "codex"
+        assert "狗" in payload["prompt"]
+
+    def test_falls_back_to_codex(self, monkeypatch):
+        mod = _load_mod()
+        monkeypatch.setattr(mod.engine, "list_model_files", lambda: [])
+
+        async def no_local(*_a, **_k):
+            return None
+
+        async def fake_cli(prompt, language, provider_id):
+            if provider_id != "codex":
+                return None
+            return {
+                "prompt": "a loyal dog in golden hour light",
+                "provider": "codex",
+                "model": "codex",
+            }
+
+        monkeypatch.setattr(mod, "_via_local", no_local)
+        monkeypatch.setattr(mod, "_via_cli_agent", fake_cli)
+
+        resp = _run(mod.prompt_beautify(_req({"prompt": "dog", "language": "en"})))
+        assert resp.status == 200
+        payload = json.loads(resp.text)
+        assert payload["provider"] == "codex"
+
+    def test_503_when_no_llm(self, monkeypatch):
+        mod = _load_mod()
+        monkeypatch.setattr(mod.engine, "list_model_files", lambda: [])
+
+        async def none_out(*_a, **_k):
+            return None
+
+        monkeypatch.setattr(mod, "_via_local", none_out)
+        monkeypatch.setattr(mod, "_via_cli_agent", none_out)
+
         resp = _run(mod.prompt_beautify(_req({"prompt": "hello"})))
         assert resp.status == 503
-        assert "no LLM" in json.loads(resp.text)["error"]
+        body = json.loads(resp.text)
+        assert body["code"] == "no_llm"
+        assert "Codex" in body["error"] or "no LLM" in body["error"]

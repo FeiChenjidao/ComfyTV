@@ -10,8 +10,8 @@
         @select="selectItem"
       />
     </div>
-    <div v-if="actionError || squaring" class="v2-ed__status">
-      <span v-if="squaring" class="v2-ed__busy">{{ $t('imagesSplit.squaring') }}</span>
+    <div v-if="actionError || busy" class="v2-ed__status">
+      <span v-if="busy" class="v2-ed__busy">{{ $t('imagesSplit.processing') }}</span>
       <span v-else-if="actionError" class="v2-split__err">{{ actionError }}</span>
     </div>
   </div>
@@ -30,7 +30,7 @@ const props = defineProps<{
 
 const {
   items, truncated, connected, max,
-  selectedSet, actionError, squaring,
+  selectedSet, actionError, busy,
   selectItem,
 } = useImagesSplit(props.node, props.state)
 </script>

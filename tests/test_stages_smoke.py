@@ -503,7 +503,8 @@ class TestTransformStageExecute:
     def test_rotate(self, reset_db):
         from ComfyTV.nodes.stages.edits import RotateStage
         out = RotateStage.execute(project_id="default",
-                                  image="/view?filename=a.png", angle=90)
+                                  image="/view?filename=a.png", angle=90,
+                                  flip_horizontal=True, flip_vertical=False)
         assert out.values[0]
 
     def test_mirror(self, reset_db):

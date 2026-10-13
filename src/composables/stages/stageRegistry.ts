@@ -366,7 +366,7 @@ export const RICH_STAGE_MIN_HEIGHTS: Record<string, number> = {
   'ComfyTV.VideoMuxAudioStage': 620,
   'ComfyTV.VideoFramesStage': 700,
   'ComfyTV.VideoResizeStage': 620,
-  'ComfyTV.RotateStage':     560,
+  'ComfyTV.RotateStage':     600,
   'ComfyTV.MirrorStage':     520,
   'ComfyTV.ColorGradeStage': 720,
   'ComfyTV.PanoramaStage':            620,

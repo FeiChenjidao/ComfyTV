@@ -47,12 +47,14 @@ describe('buildToolbarFromItems', () => {
       'split:merge': true,
     })
     expect(bar.className).toBe('v2-toolbar')
-    expect(bar.children.length).toBe(3)
+    expect(bar.children.length).toBe(5)
     const mergeBtn = bar.querySelector('[data-action="split:merge"]') as HTMLButtonElement
     expect(mergeBtn).toBeTruthy()
     expect(mergeBtn.disabled).toBe(true)
     const squareBtn = bar.querySelector('[data-action="split:square"]') as HTMLButtonElement
     expect(squareBtn.disabled).toBe(false)
+    expect(bar.querySelector('[data-action="split:flip-h"]')).toBeTruthy()
+    expect(bar.querySelector('[data-action="split:flip-v"]')).toBeTruthy()
     squareBtn.click()
     expect(dispatch).toHaveBeenCalledWith('split:square')
   })

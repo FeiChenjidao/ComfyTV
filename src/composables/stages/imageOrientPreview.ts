@@ -7,9 +7,17 @@ export function mirrorPreviewStyle(flipH: boolean, flipV: boolean): Record<strin
   }
 }
 
-export function rotatePreviewStyle(deg: number): Record<string, string> {
+/** CSS applies right-to-left: rotate first, then flip — matches rotateToCanvas. */
+export function rotatePreviewStyle(
+  deg: number,
+  flipH = false,
+  flipV = false,
+): Record<string, string> {
+  const parts: string[] = []
+  if (flipH || flipV) parts.push(`scale(${flipH ? -1 : 1}, ${flipV ? -1 : 1})`)
+  parts.push(`rotate(${deg}deg)`)
   return {
-    transform: `rotate(${deg}deg)`,
+    transform: parts.join(' '),
     transition: PREVIEW_TRANSITION,
   }
 }
@@ -42,7 +50,12 @@ export function mirrorToCanvas(
   return canvas
 }
 
-export function rotateToCanvas(img: HTMLImageElement, deg: number): HTMLCanvasElement {
+export function rotateToCanvas(
+  img: HTMLImageElement,
+  deg: number,
+  flipH = false,
+  flipV = false,
+): HTMLCanvasElement {
   const w = img.naturalWidth
   const h = img.naturalHeight
   const rad = (deg * Math.PI) / 180
@@ -56,6 +69,7 @@ export function rotateToCanvas(img: HTMLImageElement, deg: number): HTMLCanvasEl
 
   ctx.translate(width / 2, height / 2)
   ctx.rotate(rad)
+  if (flipH || flipV) ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1)
   ctx.drawImage(img, -w / 2, -h / 2)
   return canvas
 }

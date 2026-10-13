@@ -226,10 +226,12 @@ function beautifyErrorDetail(e: unknown): string {
     const raw = e.message.replace(/^[\s\S]*failed \[\d+\]:\s*/, '') || e.message
     try {
       const parsed = JSON.parse(raw)
+      if (parsed?.code === 'no_llm') return t('promptBeautify.noLlm')
       if (parsed && typeof parsed.error === 'string' && parsed.error.trim()) {
         return parsed.error.trim()
       }
     } catch { /* plain text body */ }
+    if (/no LLM available/i.test(raw)) return t('promptBeautify.noLlm')
     return raw
   }
   return String((e as any)?.message || e)

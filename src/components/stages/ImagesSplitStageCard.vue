@@ -14,6 +14,14 @@
     <button type="button" :class="btnClass" :disabled="!canSquare" @click="squareSelected">
       {{ $t('imagesSplit.aspect11') }}
     </button>
+    <div class="ctv:flex ctv:gap-1.5">
+      <button type="button" :class="btnClass" :disabled="!canFlip" @click="flipHorizontalSelected">
+        {{ $t('imagesSplit.flipH') }}
+      </button>
+      <button type="button" :class="btnClass" :disabled="!canFlip" @click="flipVerticalSelected">
+        {{ $t('imagesSplit.flipV') }}
+      </button>
+    </div>
     <button type="button" :class="btnClass" :disabled="!canVariations" @click="spawnVariations">
       {{ $t('imagesSplit.variations') }}
     </button>
@@ -53,8 +61,9 @@ const props = defineProps<{
 
 const {
   items, truncated, connected, max,
-  selectedSet, canMerge, canSquare, canVariations, actionError,
-  selectItem, mergeSelected, squareSelected, spawnVariations,
+  selectedSet, canMerge, canSquare, canFlip, canVariations, actionError,
+  selectItem, mergeSelected, squareSelected,
+  flipHorizontalSelected, flipVerticalSelected, spawnVariations,
 } = useImagesSplit(props.node, props.state)
 
 const btnClass = [

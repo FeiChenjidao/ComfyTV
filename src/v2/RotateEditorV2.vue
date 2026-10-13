@@ -41,6 +41,26 @@
           @click="angle = q.d"
         >{{ q.l }}</button>
       </div>
+      <div class="v2-ed__chips">
+        <button
+          type="button"
+          class="v2-ed__chip"
+          :data-on="flipH ? '1' : ''"
+          @click="flipH = !flipH"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16" stroke-dasharray="2.2 2.2"/><path d="M8 8l-4 4 4 4M16 8l4 4-4 4"/></svg>
+          {{ $t('mirror.horizontal') }}
+        </button>
+        <button
+          type="button"
+          class="v2-ed__chip"
+          :data-on="flipV ? '1' : ''"
+          @click="flipV = !flipV"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h16" stroke-dasharray="2.2 2.2"/><path d="M8 8l4-4 4 4M8 16l4 4 4-4"/></svg>
+          {{ $t('mirror.vertical') }}
+        </button>
+      </div>
     </div>
 
     <div class="v2-ed__status">
@@ -59,7 +79,7 @@ import { computed, watch } from 'vue'
 import { rotatePreviewStyle, rotateToCanvas } from '@/composables/stages/imageOrientPreview'
 import { pickSourceImageUrl } from '@/composables/stages/stageInputs'
 import { useTransformPipeline } from '@/composables/widgets/useTransformPipeline'
-import { useNumWidget } from '@/composables/widgets/useWidgetModel'
+import { useBoolWidget, useNumWidget } from '@/composables/widgets/useWidgetModel'
 import type { LGraphNode } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
 
@@ -77,7 +97,9 @@ const props = defineProps<{
 
 const sourceImageUrl = computed(() => pickSourceImageUrl(props.state.inputs))
 const angle = useNumWidget(props.node, 'angle', 0)
-const previewStyle = computed(() => rotatePreviewStyle(angle.value))
+const flipH = useBoolWidget(props.node, 'flip_horizontal', false)
+const flipV = useBoolWidget(props.node, 'flip_vertical', false)
+const previewStyle = computed(() => rotatePreviewStyle(angle.value, flipH.value, flipV.value))
 
 const { computing, requestRecompute } = useTransformPipeline({
   sourceImageUrl,
@@ -85,7 +107,7 @@ const { computing, requestRecompute } = useTransformPipeline({
   nodeId: props.node?.id ?? 'unknown',
   filenamePrefix: 'comfytv-rotate',
   subfolder: 'comfytv/transformer',
-  compute: (img) => rotateToCanvas(img, angle.value),
+  compute: (img) => rotateToCanvas(img, angle.value, flipH.value, flipV.value),
 })
 
 function onAngleNum(e: Event) {
@@ -97,7 +119,7 @@ function onAngleNum(e: Event) {
   el.value = String(angle.value)
 }
 
-watch(angle, () => requestRecompute())
+watch([angle, flipH, flipV], () => requestRecompute())
 watch(sourceImageUrl, (url) => {
   if (url) requestRecompute()
 }, { immediate: true })

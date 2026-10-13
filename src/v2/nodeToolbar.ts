@@ -255,6 +255,8 @@ function attachDefaultMediaToolbar(opts: {
 export const IMAGES_SPLIT_TOOLBAR: NodeToolbarItem[] = [
   { id: 'split:merge', labelKey: 'imagesSplit.merge', icon: I(`<rect x="4" y="6" width="11" height="11" rx="1.5"/><rect x="9" y="9" width="11" height="11" rx="1.5"/>`) },
   { id: 'split:square', labelKey: 'imagesSplit.aspect11', icon: I(`<rect x="4" y="4" width="16" height="16" rx="2"/>`) },
+  { id: 'split:flip-h', labelKey: 'imagesSplit.flipH', titleKey: 'imagesSplit.flipH', icon: I(`<path d="M12 4v16" stroke-dasharray="2.2 2.2"/><path d="M8 8l-4 4 4 4M16 8l4 4-4 4"/>`) },
+  { id: 'split:flip-v', labelKey: 'imagesSplit.flipV', titleKey: 'imagesSplit.flipV', icon: I(`<path d="M4 12h16" stroke-dasharray="2.2 2.2"/><path d="M8 8l4-4 4 4M8 16l4 4 4-4"/>`) },
   { id: 'split:variations', labelKey: 'imagesSplit.variations', icon: I(`<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M8 14l2.2-3 1.8 2.2L15 10l3 4"/>`) },
 ]
 
@@ -262,5 +264,7 @@ export const IMAGES_SPLIT_TOOLBAR: NodeToolbarItem[] = [
 export const TOOLBAR_ICONS = {
   square: I(`<rect x="4" y="4" width="16" height="16" rx="2"/>`),
   merge: I(`<rect x="4" y="6" width="11" height="11" rx="1.5"/><rect x="9" y="9" width="11" height="11" rx="1.5"/>`),
+  flipH: I(`<path d="M12 4v16" stroke-dasharray="2.2 2.2"/><path d="M8 8l-4 4 4 4M16 8l4 4-4 4"/>`),
+  flipV: I(`<path d="M4 12h16" stroke-dasharray="2.2 2.2"/><path d="M8 8l4-4 4 4M8 16l4 4 4-4"/>`),
   variations: I(`<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M8 14l2.2-3 1.8 2.2L15 10l3 4"/>`),
 }

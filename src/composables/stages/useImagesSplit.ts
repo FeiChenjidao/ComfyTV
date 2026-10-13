@@ -9,6 +9,7 @@ import {
   spawnImageVariationsFromSlots,
 } from '@/composables/stages/spawnFollowUp'
 import { containFitSquare, slotIndexesInDocumentOrder } from '@/composables/stages/imageMerge'
+import { mirrorToCanvas } from '@/composables/stages/imageOrientPreview'
 import { uploadBlob } from '@/utils/uploadCanvas'
 import {
   registerToolbarHandlers,
@@ -44,19 +45,21 @@ export function squareImageCanvas(img: HTMLImageElement): HTMLCanvasElement {
   return containFitSquare(img, Math.max(w, h))
 }
 
+type SlotTransform = (img: HTMLImageElement) => HTMLCanvasElement
+
 export function useImagesSplit(node: LGraphNode, state: StageState) {
   const store = useStageStore()
   const items = ref<ImageGroupItem[]>([])
-  /** Upstream URLs before local 1:1 overrides (keyed for override map). */
+  /** Upstream URLs before local transforms (keyed for override map). */
   const sourceUrls = ref<string[]>([])
-  /** original upstream url → squared view url */
-  const squareBySource = ref<Record<string, string>>({})
+  /** original upstream url → locally transformed view url (1:1 / flip). */
+  const overrideBySource = ref<Record<string, string>>({})
   const truncated = ref(false)
   const selected = ref<number[]>([])
   const actionError = ref('')
-  const squaring = ref(false)
+  const busy = ref(false)
   let lastAnchor = 0
-  let squareSeq = 0
+  let transformSeq = 0
 
   const connected = computed(() => {
     const inp = state.inputs.find(i => i.slot === 'images')
@@ -64,21 +67,23 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
   })
 
   const selectedSet = computed(() => new Set(selected.value))
-  const canMerge = computed(() => selected.value.length >= 2 && !squaring.value)
-  const canSquare = computed(() => selected.value.length >= 1 && !squaring.value)
-  const canVariations = computed(() => selected.value.length >= 1 && !squaring.value)
+  const canMerge = computed(() => selected.value.length >= 2 && !busy.value)
+  const canTransform = computed(() => selected.value.length >= 1 && !busy.value)
+  const canSquare = canTransform
+  const canFlip = canTransform
+  const canVariations = computed(() => selected.value.length >= 1 && !busy.value)
 
   function displayItems(rawItems: ImageGroupItem[]): ImageGroupItem[] {
     return rawItems.map((it) => {
-      const sq = squareBySource.value[it.image_url]
-      return sq ? { ...it, image_url: sq } : it
+      const ov = overrideBySource.value[it.image_url]
+      return ov ? { ...it, image_url: ov } : it
     })
   }
 
   function writeSlots(urls: Array<string | null>) {
     store.setOutputSlots(
       state,
-      urls.map((u) => (u && squareBySource.value[u]) || u),
+      urls.map((u) => (u && overrideBySource.value[u]) || u),
     )
   }
 
@@ -89,8 +94,8 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
     truncated.value = trunc
     sourceUrls.value = next.map(it => it.image_url)
     const live = new Set(sourceUrls.value)
-    for (const k of Object.keys(squareBySource.value)) {
-      if (!live.has(k)) delete squareBySource.value[k]
+    for (const k of Object.keys(overrideBySource.value)) {
+      if (!live.has(k)) delete overrideBySource.value[k]
     }
     items.value = displayItems(next)
     selected.value = selected.value.filter(i => i >= 0 && i < next.length)
@@ -126,41 +131,73 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
     if (!created) actionError.value = t('imagesSplit.mergeFailed')
   }
 
-  /** Make selected images 1:1 inside this node (pad to long side, upload, override slots). */
-  async function squareSelected() {
+  /** Apply a canvas transform to selected slots and override outputs in-node. */
+  async function transformSelected(
+    transform: SlotTransform,
+    opts: { filenameTag: string; failKey: string; logTag: string },
+  ) {
     const idxs = slotIndexesInDocumentOrder(items.value, selected.value)
-    if (!idxs.length || squaring.value) return
+    if (!idxs.length || busy.value) return
     actionError.value = ''
-    const mySeq = ++squareSeq
-    squaring.value = true
+    const mySeq = ++transformSeq
+    busy.value = true
     try {
-      const nextOverrides = { ...squareBySource.value }
+      const nextOverrides = { ...overrideBySource.value }
       for (const i of idxs) {
         const src = sourceUrls.value[i]
         if (!src) continue
         const img = await loadLayerImage(nextOverrides[src] || src)
-        if (mySeq !== squareSeq) return
-        const canvas = squareImageCanvas(img)
+        if (mySeq !== transformSeq) return
+        const canvas = transform(img)
         const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
         canvas.width = 0
         canvas.height = 0
         if (!blob) throw new Error('toBlob returned null')
-        if (mySeq !== squareSeq) return
+        if (mySeq !== transformSeq) return
         const viewUrl = await uploadBlob(blob, {
           subfolder: 'comfytv/transformer',
-          filename: `comfytv-split-1x1-${node?.id ?? 'x'}-${i}-${Date.now()}.png`,
+          filename: `comfytv-split-${opts.filenameTag}-${node?.id ?? 'x'}-${i}-${Date.now()}.png`,
         })
-        if (mySeq !== squareSeq) return
+        if (mySeq !== transformSeq) return
         nextOverrides[src] = viewUrl
       }
-      squareBySource.value = nextOverrides
+      overrideBySource.value = nextOverrides
       apply(state.inputs.find(i => i.slot === 'images')?.content ?? '')
     } catch (e) {
-      console.error('[ComfyTV/images-split] 1:1 failed', e)
-      actionError.value = t('imagesSplit.squareFailed')
+      console.error(`[ComfyTV/images-split] ${opts.logTag} failed`, e)
+      actionError.value = t(opts.failKey)
     } finally {
-      if (mySeq === squareSeq) squaring.value = false
+      if (mySeq === transformSeq) busy.value = false
     }
+  }
+
+  /** Make selected images 1:1 inside this node (pad to long side, upload, override slots). */
+  async function squareSelected() {
+    await transformSelected(squareImageCanvas, {
+      filenameTag: '1x1',
+      failKey: 'imagesSplit.squareFailed',
+      logTag: '1:1',
+    })
+  }
+
+  async function flipSelected(horizontal: boolean, vertical: boolean) {
+    const tag = horizontal && vertical ? 'flip-hv' : horizontal ? 'flip-h' : 'flip-v'
+    await transformSelected(
+      (img) => mirrorToCanvas(img, horizontal, vertical),
+      {
+        filenameTag: tag,
+        failKey: 'imagesSplit.flipFailed',
+        logTag: tag,
+      },
+    )
+  }
+
+  function flipHorizontalSelected() {
+    return flipSelected(true, false)
+  }
+
+  function flipVerticalSelected() {
+    return flipSelected(false, true)
   }
 
   function spawnVariations() {
@@ -176,11 +213,13 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
   )
 
   watch(
-    [canMerge, canSquare, canVariations],
+    [canMerge, canSquare, canFlip, canVariations],
     () => {
       setToolbarDisabled(node, {
         'split:merge': !canMerge.value,
         'split:square': !canSquare.value,
+        'split:flip-h': !canFlip.value,
+        'split:flip-v': !canFlip.value,
         'split:variations': !canVariations.value,
       })
     },
@@ -190,6 +229,8 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
   const disposeHandlers = registerToolbarHandlers(node, {
     'split:merge': () => mergeSelected(),
     'split:square': () => { void squareSelected() },
+    'split:flip-h': () => { void flipHorizontalSelected() },
+    'split:flip-v': () => { void flipVerticalSelected() },
     'split:variations': () => spawnVariations(),
   })
   if (getCurrentScope()) onScopeDispose(disposeHandlers)
@@ -206,7 +247,13 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
 
   return {
     items, truncated, connected, max: IMAGES_SPLIT_MAX,
-    selected, selectedSet, canMerge, canSquare, canVariations, actionError, squaring,
-    selectItem, mergeSelected, squareSelected, spawnVariations,
+    selected, selectedSet,
+    canMerge, canSquare, canFlip, canVariations,
+    actionError,
+    /** @deprecated alias — prefer `busy` */
+    squaring: busy,
+    busy,
+    selectItem, mergeSelected, squareSelected,
+    flipHorizontalSelected, flipVerticalSelected, spawnVariations,
   }
 }

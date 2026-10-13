@@ -1490,6 +1490,12 @@
       "angle": {
         "name": "角度"
       },
+      "flip_horizontal": {
+        "name": "水平翻转"
+      },
+      "flip_vertical": {
+        "name": "垂直翻转"
+      },
       "image": {
         "name": "图像"
       }

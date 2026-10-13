@@ -140,15 +140,7 @@ describe('useImagesSplit', () => {
     expect(spawnMock.spawnImageMergeFromSlots).toHaveBeenCalledWith(node, [0, 2])
   })
 
-  it('squares selected images in-node without spawning merge', async () => {
-    const node = makeNode()
-    const state = makeState(JSON.stringify({
-      images: [
-        { index: '1', label: 'A', image_url: '/a' },
-        { index: '2', label: 'B', image_url: '/b' },
-      ],
-    }), 'upstream')
-
+  function stubImageLoad() {
     vi.stubGlobal('Image', class {
       naturalWidth = 40
       naturalHeight = 20
@@ -164,6 +156,18 @@ describe('useImagesSplit', () => {
     HTMLCanvasElement.prototype.toBlob = function (cb: BlobCallback) {
       cb(new Blob(['x'], { type: 'image/png' }))
     }
+  }
+
+  it('squares selected images in-node without spawning merge', async () => {
+    const node = makeNode()
+    const state = makeState(JSON.stringify({
+      images: [
+        { index: '1', label: 'A', image_url: '/a' },
+        { index: '2', label: 'B', image_url: '/b' },
+      ],
+    }), 'upstream')
+
+    stubImageLoad()
 
     const api = withScope(() => useImagesSplit(node, state))
     expect(api.canSquare.value).toBe(false)
@@ -175,5 +179,35 @@ describe('useImagesSplit', () => {
     expect(api.items.value[1].image_url).toBe('/view?filename=squared.png')
     expect(state.outputs[1]).toBe('/view?filename=squared.png')
     expect(state.outputs[0]).toBe('/a')
+  })
+
+  it('flips selected images horizontally in-node', async () => {
+    uploadMock.uploadBlob.mockResolvedValueOnce('/view?filename=flipped.png')
+    const node = makeNode()
+    const state = makeState(JSON.stringify({
+      images: [
+        { index: '1', label: 'A', image_url: '/a' },
+        { index: '2', label: 'B', image_url: '/b' },
+      ],
+    }), 'upstream')
+
+    stubImageLoad()
+    const ctx = {
+      translate: vi.fn(),
+      scale: vi.fn(),
+      drawImage: vi.fn(),
+    }
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never)
+
+    const api = withScope(() => useImagesSplit(node, state))
+    expect(api.canFlip.value).toBe(false)
+    api.selectItem(0, { shiftKey: false, ctrlKey: false, metaKey: false } as MouseEvent)
+    expect(api.canFlip.value).toBe(true)
+    await api.flipHorizontalSelected()
+    expect(ctx.scale).toHaveBeenCalledWith(-1, 1)
+    expect(uploadMock.uploadBlob).toHaveBeenCalled()
+    expect(api.items.value[0].image_url).toBe('/view?filename=flipped.png')
+    expect(state.outputs[0]).toBe('/view?filename=flipped.png')
+    expect(state.outputs[1]).toBe('/b')
   })
 })
