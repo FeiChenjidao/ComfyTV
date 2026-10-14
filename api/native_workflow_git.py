@@ -85,6 +85,89 @@ def _read_token(root: Path) -> str:
     return _read_text_file(root / _TOKEN_NAME)
 
 
+def _token_hint(token: str) -> str:
+    """Short masked hint for UI — never return the full secret."""
+    text = (token or "").strip()
+    if not text:
+        return ""
+    if len(text) <= 8:
+        return "••••"
+    return f"{text[:4]}…{text[-4:]}"
+
+
+def _write_token(root: Path, token: str) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    text = (token or "").strip()
+    (root / _TOKEN_NAME).write_text(text + ("\n" if text else ""), encoding="utf-8")
+
+
+def token_status(
+    root: Optional[Path] = None,
+    user_id: Optional[str] = None,
+) -> dict[str, Any]:
+    root = _workflows_root(root, user_id)
+    payload: dict[str, Any] = {
+        "ok": True,
+        "configured": False,
+        "hint": "",
+        "remote": "",
+        "root": str(root) if root else "",
+        "user_id": user_id or "default",
+        "error": "",
+    }
+    if root is None:
+        payload["ok"] = False
+        payload["error"] = "native workflows directory unavailable"
+        return payload
+    _ensure_workflow_credentials(root)
+    tok = _read_token(root)
+    payload["configured"] = bool(tok)
+    payload["hint"] = _token_hint(tok)
+    payload["remote"] = (
+        _strip_auth(_origin_url(root))
+        if _is_git_repo(root)
+        else ""
+    ) or _read_configured_remote(root) or _DEFAULT_REMOTE
+    return payload
+
+
+def set_workflow_token(
+    token: str,
+    root: Optional[Path] = None,
+    user_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Save PAT into the current user's workflows/.comfytv-git-token (local only)."""
+    root = _workflows_root(root, user_id)
+    if root is None:
+        return {
+            "ok": False,
+            "configured": False,
+            "hint": "",
+            "remote": "",
+            "root": "",
+            "user_id": user_id or "default",
+            "error": "native workflows directory unavailable",
+        }
+    text = (token or "").strip()
+    if not text:
+        return {
+            **token_status(root, user_id),
+            "ok": False,
+            "error": "token is empty",
+        }
+    try:
+        _write_token(root, text)
+    except OSError as e:
+        return {
+            **token_status(root, user_id),
+            "ok": False,
+            "error": str(e) or type(e).__name__,
+        }
+    status = token_status(root, user_id)
+    status["saved"] = True
+    return status
+
+
 def _read_configured_remote(root: Path) -> str:
     raw = _read_text_file(root / _REMOTE_NAME)
     if raw:
@@ -457,6 +540,7 @@ def collect_status(
         "files": [],
         "remote_workflows": [],
         "has_git": bool(_git_bin()),
+        "token_configured": False,
         "error": "",
         "user_id": user_id or "default",
     }
@@ -469,6 +553,7 @@ def collect_status(
         payload["error"] = "git not found on PATH"
         return payload
     _ensure_workflow_credentials(root)
+    payload["token_configured"] = bool(_read_token(root))
 
     if not _is_git_repo(root):
         payload["default_remote"] = _read_configured_remote(root) or _DEFAULT_REMOTE
@@ -1289,6 +1374,25 @@ async def native_git_status(request: web.Request) -> web.Response:
     fetch = raw not in ("0", "false", "no")
     uid = resolve_request_user_id(request)
     data = await asyncio.to_thread(collect_status, None, fetch_remote=fetch, user_id=uid)
+    return web.json_response(data)
+
+
+@routes.get("/comfytv/workflows/native/git/token")
+async def native_git_token_status(request: web.Request) -> web.Response:
+    uid = resolve_request_user_id(request)
+    data = await asyncio.to_thread(token_status, None, uid)
+    return web.json_response(data)
+
+
+@routes.put("/comfytv/workflows/native/git/token")
+async def native_git_token_set(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    token = str((body or {}).get("token") or "")
+    uid = resolve_request_user_id(request)
+    data = await asyncio.to_thread(set_workflow_token, token, None, uid)
     return web.json_response(data)
 
 

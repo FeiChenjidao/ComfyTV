@@ -5,8 +5,10 @@ import { onClickOutside } from '@vueuse/core'
 
 import {
   fetchNativeWorkflowGitStatus,
+  fetchNativeWorkflowGitToken,
   pullNativeWorkflowGit,
   pushNativeWorkflowGit,
+  saveNativeWorkflowGitToken,
   setupNativeWorkflowGit,
   type NativeWorkflow,
   type NativeWorkflowGitStatus,
@@ -57,9 +59,60 @@ const gitMessage = ref('')
 const gitFlash = ref('')
 const commitPickOpen = ref(false)
 const commitSelected = ref<Record<string, boolean>>({})
+const tokenDialogOpen = ref(false)
+const tokenInput = ref('')
+const tokenSaving = ref(false)
+const tokenError = ref('')
+let tokenDialogResolve: ((ok: boolean) => void) | null = null
 
 function toast(severity: 'success' | 'warn' | 'error', summary: string, detail = '') {
   ;(app as any)?.extensionManager?.toast?.add?.({ severity, summary, detail, life: 5000 })
+}
+
+async function ensureGitTokenConfigured(): Promise<boolean> {
+  try {
+    const st = await fetchNativeWorkflowGitToken()
+    if (st.configured) return true
+  } catch {
+    /* fall through to dialog */
+  }
+  tokenInput.value = ''
+  tokenError.value = ''
+  tokenDialogOpen.value = true
+  return await new Promise<boolean>((resolve) => {
+    tokenDialogResolve = resolve
+  })
+}
+
+function closeTokenDialog(ok: boolean) {
+  tokenDialogOpen.value = false
+  tokenSaving.value = false
+  const resolve = tokenDialogResolve
+  tokenDialogResolve = null
+  resolve?.(ok)
+}
+
+async function onTokenDialogSave() {
+  const token = tokenInput.value.trim()
+  if (!token) {
+    tokenError.value = t('v2.bottomBar.gitTokenRequired')
+    return
+  }
+  tokenSaving.value = true
+  tokenError.value = ''
+  try {
+    const res = await saveNativeWorkflowGitToken(token)
+    if (!res.ok || !res.configured) {
+      tokenError.value = res.error || t('v2.bottomBar.gitTokenSaveFailed')
+      return
+    }
+    if (gitStatus.value) gitStatus.value = { ...gitStatus.value, token_configured: true }
+    closeTokenDialog(true)
+  } catch (e: any) {
+    tokenError.value = String(e?.message || e)
+  } finally {
+    tokenSaving.value = false
+  }
 }
 
 const gitHint = computed(() => {
@@ -267,6 +320,8 @@ async function refreshWorkflowsPanel() {
 
 async function onGitSetup() {
   if (!canGitSetup.value) return
+  const tokOk = await ensureGitTokenConfigured()
+  if (!tokOk) return
   gitBusy.value = 'setup'
   gitFlash.value = ''
   commitPickOpen.value = false
@@ -300,6 +355,8 @@ function gitErrorDetail(res: NativeWorkflowGitStatus): string {
 
 async function onGitUpdate() {
   if (!canGitActions.value) return
+  const tokOk = await ensureGitTokenConfigured()
+  if (!tokOk) return
   gitBusy.value = 'pull'
   gitFlash.value = ''
   commitPickOpen.value = false
@@ -336,8 +393,10 @@ async function onGitUpdate() {
   }
 }
 
-function openCommitPicker() {
+async function openCommitPicker() {
   if (!canGitActions.value) return
+  const ok = await ensureGitTokenConfigured()
+  if (!ok) return
   commitPickOpen.value = true
   const next: Record<string, boolean> = {}
   // Commit is for local workflows (right column), not cloud templates
@@ -482,7 +541,37 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
         <div v-if="gitStatus?.is_repo" class="ctv-bbar__git-legend">{{ t('v2.bottomBar.gitLegend') }}</div>
       </div>
 
-      <div v-if="commitPickOpen" class="ctv-bbar__commit">
+      <div v-if="tokenDialogOpen" class="ctv-bbar__commit">
+        <div class="ctv-bbar__commit-head">{{ t('v2.bottomBar.gitTokenTitle') }}</div>
+        <div class="ctv-bbar__git-legend">{{ t('v2.bottomBar.gitTokenHint') }}</div>
+        <input
+          v-model="tokenInput"
+          type="password"
+          class="ctv-bbar__git-input"
+          autocomplete="off"
+          :placeholder="t('v2.bottomBar.gitTokenPlaceholder')"
+          :disabled="tokenSaving"
+          @keydown.stop
+          @keydown.enter.prevent="onTokenDialogSave"
+        >
+        <div v-if="tokenError" class="ctv-bbar__muted">{{ tokenError }}</div>
+        <div class="ctv-bbar__git-actions">
+          <button
+            type="button"
+            class="ctv-bbar__git-btn"
+            :disabled="tokenSaving"
+            @click="closeTokenDialog(false)"
+          >{{ t('v2.bottomBar.gitCommitCancel') }}</button>
+          <button
+            type="button"
+            class="ctv-bbar__git-btn ctv-bbar__git-btn--primary"
+            :disabled="tokenSaving || !tokenInput.trim()"
+            @click="onTokenDialogSave"
+          >{{ tokenSaving ? t('v2.bottomBar.gitTokenSaving') : t('v2.bottomBar.gitTokenSave') }}</button>
+        </div>
+      </div>
+
+      <div v-else-if="commitPickOpen" class="ctv-bbar__commit">
         <div class="ctv-bbar__commit-head">{{ t('v2.bottomBar.gitCommitPick') }}</div>
         <input
           v-model="gitMessage"

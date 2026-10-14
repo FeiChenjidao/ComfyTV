@@ -86,8 +86,47 @@
           </div>
         </SettingsSection>
 
+        <SettingsSection
+          v-if="teamGitVisible"
+          :section="{ id: 'teamGit', master: null, rows: [], experimental: false, dirty: false, probe: null }"
+          :title="$t('settings.teamGit.section')"
+          :collapsed="isCollapsed('teamGit')"
+          :master-on="false"
+          @toggle="toggleCollapsed('teamGit')"
+        >
+          <div class="ctv:flex ctv:flex-col ctv:gap-1.5 ctv:px-2 ctv:py-1.5">
+            <div class="ctv:text-2xs ctv:text-muted-foreground ctv:leading-relaxed">
+              {{ $t('settings.teamGit.desc') }}
+            </div>
+            <div class="ctv:text-2xs" :class="teamGitConfigured ? 'ctv:text-emerald-400' : 'ctv:text-amber-400'">
+              {{ teamGitConfigured
+                ? $t('settings.teamGit.configured', { hint: teamGitHint || '••••' })
+                : $t('settings.teamGit.missing') }}
+            </div>
+            <input
+              class="ctv-text-input ctv:w-full ctv:box-border"
+              type="password"
+              autocomplete="off"
+              :value="teamGitInput"
+              :placeholder="$t('settings.teamGit.placeholder')"
+              @input="teamGitInput = ($event.target as HTMLInputElement).value"
+            >
+            <div class="ctv:flex ctv:items-center ctv:gap-1.5">
+              <button
+                :class="chipBtnClass"
+                :disabled="teamGitSaving || !teamGitInput.trim()"
+                @click="saveTeamGitToken"
+              >
+                {{ teamGitSaving ? $t('settings.saving') : $t('settings.teamGit.save') }}
+              </button>
+              <span v-if="teamGitError" class="ctv:text-2xs ctv:text-destructive-background">{{ teamGitError }}</span>
+              <span v-else-if="teamGitFlash" class="ctv:text-2xs ctv:text-emerald-400">{{ teamGitFlash }}</span>
+            </div>
+          </div>
+        </SettingsSection>
+
         <div
-          v-if="!sections.length"
+          v-if="!sections.length && !teamGitVisible"
           class="ctv:py-5 ctv:px-1.5 ctv:text-center ctv:italic ctv:text-muted-foreground/60"
         >
           {{ $t('settings.noMatch') }}
@@ -103,9 +142,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import { TooltipProvider } from 'reka-ui'
 import { useI18n } from 'vue-i18n'
 
+import { fetchNativeWorkflowGitToken, saveNativeWorkflowGitToken } from '@/api'
 import SettingItem from '@/components/sidebar/SettingItem.vue'
 import SettingsSection from '@/components/sidebar/SettingsSection.vue'
 import SkillsSection from '@/components/sidebar/SkillsSection.vue'
@@ -140,6 +181,68 @@ const {
 } = useSettingsPanel(
   () => props.active,
   (key) => `${t(`settings.fields.${key}.label`)} ${t(`settings.fields.${key}.desc`)}`,
+)
+
+const teamGitConfigured = ref(false)
+const teamGitHint = ref('')
+const teamGitInput = ref('')
+const teamGitSaving = ref(false)
+const teamGitError = ref('')
+const teamGitFlash = ref('')
+
+const teamGitVisible = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return true
+  const blob = [
+    t('settings.teamGit.section'),
+    t('settings.teamGit.desc'),
+    t('settings.teamGit.save'),
+    'token',
+    'git',
+    'pat',
+  ].join(' ').toLowerCase()
+  return blob.includes(q)
+})
+
+async function refreshTeamGitToken() {
+  try {
+    const res = await fetchNativeWorkflowGitToken()
+    teamGitConfigured.value = !!res.configured
+    teamGitHint.value = res.hint || ''
+  } catch {
+    /* keep last known */
+  }
+}
+
+async function saveTeamGitToken() {
+  const token = teamGitInput.value.trim()
+  if (!token) return
+  teamGitSaving.value = true
+  teamGitError.value = ''
+  teamGitFlash.value = ''
+  try {
+    const res = await saveNativeWorkflowGitToken(token)
+    if (!res.ok) {
+      teamGitError.value = res.error || t('settings.teamGit.saveFailed')
+      return
+    }
+    teamGitConfigured.value = !!res.configured
+    teamGitHint.value = res.hint || ''
+    teamGitInput.value = ''
+    teamGitFlash.value = t('settings.teamGit.saveOk')
+  } catch (e: any) {
+    teamGitError.value = String(e?.message || e)
+  } finally {
+    teamGitSaving.value = false
+  }
+}
+
+watch(
+  () => props.active,
+  (on) => {
+    if (on) void refreshTeamGitToken()
+  },
+  { immediate: true },
 )
 
 const primaryBtnClass = 'ctv:shrink-0 ctv:inline-flex ctv:items-center ctv:gap-1 ctv:cursor-pointer ctv:[font-family:inherit] '

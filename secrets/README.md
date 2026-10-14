@@ -1,18 +1,19 @@
-# Team workflow Git credentials (plugin-bundled)
+# Team workflow Git credentials (local only)
 
-On ComfyTV load / git status / 「连接团队仓」, the plugin copies these into:
+**Do not commit `comfytv-git-token`.** GitHub secret scanning will revoke the PAT.
 
-`ComfyUI/user/default/workflows/`
+## How colleagues get a token
 
-| Plugin file | Installed as |
+1. Admin sends the PAT out-of-band (chat / 内网).
+2. In ComfyTV → **Settings → 团队工作流 Git**，paste and save  
+   **or** when clicking **提交工作流**, fill the popup if none is configured.
+3. Token is stored only as:
+
+`ComfyUI/user/<id>/workflows/.comfytv-git-token`
+
+| Optional local plugin file | Installed as (if missing) |
 |--|--|
-| `comfytv-git-token` | `.comfytv-git-token` |
-| `comfytv-git-remote` | `.comfytv-git-remote` |
+| `comfytv-git-token` (gitignored) | `.comfytv-git-token` |
+| `comfytv-git-remote` (safe to commit) | `.comfytv-git-remote` |
 
-Existing files on disk are **not** overwritten.
-
-`comfytv-git-token` is **bundled in this private plugin repo** so colleagues who only update ComfyTV get push/pull/commit without Git login.
-
-Existing `.comfytv-git-*` files under each user's workflows folder are **not** overwritten on update.
-
-Rotate the GitHub PAT if it leaks; replace `comfytv-git-token` and push a new plugin commit.
+Existing `.comfytv-git-*` files are **not** overwritten on seed.

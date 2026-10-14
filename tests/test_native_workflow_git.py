@@ -36,6 +36,9 @@ def _load_mod():
         def post(self, _path):
             return lambda fn: fn
 
+        def put(self, _path):
+            return lambda fn: fn
+
     common.routes = _Routes()
     sys.modules["ComfyTV.api._common"] = common
 
@@ -197,6 +200,25 @@ class TestNativeWorkflowGit:
         )
         assert authed.startswith("https://x-access-token:")
         assert "http://github.com" not in authed
+
+    def test_set_workflow_token_local_only(self, tmp_path, monkeypatch):
+        mod = _load_mod()
+        # Avoid seeding from the real plugin secrets/comfytv-git-token on disk.
+        empty = tmp_path / "empty-plugin"
+        (empty / "secrets").mkdir(parents=True)
+        monkeypatch.setattr(mod, "_plugin_root", lambda: empty)
+        root = tmp_path / "workflows"
+        root.mkdir()
+        st0 = mod.token_status(root=root)
+        assert st0["configured"] is False
+        out = mod.set_workflow_token("github_pat_example_secret", root=root)
+        assert out["ok"] is True
+        assert out["configured"] is True
+        assert out["hint"].startswith("gith")
+        assert "example_secret" not in out["hint"]
+        assert (root / ".comfytv-git-token").read_text(encoding="utf-8").strip() == (
+            "github_pat_example_secret"
+        )
 
     def test_push_blocked_when_behind(self, tmp_path):
         mod = _load_mod()

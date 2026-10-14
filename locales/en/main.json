@@ -143,7 +143,14 @@
       "gitStateModified": "Modified",
       "gitStateOutdated": "Update available",
       "gitStateDiverged": "Diverged",
-      "gitLegend": "Left: cloud templates (update overwrites) · Right: local workflows (commit to push)"
+      "gitLegend": "Left: cloud templates (update overwrites) · Right: local workflows (commit to push)",
+      "gitTokenTitle": "Configure team Git token",
+      "gitTokenHint": "Paste the GitHub PAT from your admin. Stored only on this machine under workflows — never committed to the plugin repo.",
+      "gitTokenPlaceholder": "github_pat_… or ghp_…",
+      "gitTokenSave": "Save & continue",
+      "gitTokenSaving": "Saving…",
+      "gitTokenRequired": "Token is required",
+      "gitTokenSaveFailed": "Failed to save token"
     },
     "stageHint": "Connect references, press ↑ to generate",
     "apiCostHint": "Estimated workflow API cost",
@@ -564,6 +571,16 @@
       "running": "Backing up…",
       "ok": "Backup written to {path}",
       "failed": "Backup failed: {error}"
+    },
+    "teamGit": {
+      "section": "Team workflows Git",
+      "desc": "Used to sync cloud templates and push local workflows. Paste the PAT from your admin; it stays on this machine only — do not commit it to GitHub.",
+      "configured": "Configured ({hint})",
+      "missing": "No token configured",
+      "placeholder": "Paste GitHub PAT (github_pat_… / ghp_…)",
+      "save": "Save token",
+      "saveOk": "Saved locally",
+      "saveFailed": "Save failed"
     },
     "fields": {
       "enable-v2": {

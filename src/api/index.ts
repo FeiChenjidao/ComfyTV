@@ -49,6 +49,7 @@ import {
   WorkflowApiCostSchema,
   PromptBeautifyResultSchema,
   NativeWorkflowGitStatusSchema,
+  NativeWorkflowGitTokenSchema,
 } from './schemas'
 import type {
   WorkflowConfig,
@@ -56,6 +57,7 @@ import type {
   WorkflowApiCost,
   PromptBeautifyResult,
   NativeWorkflowGitStatus,
+  NativeWorkflowGitToken,
   AdoptAssetsResult,
   ApiSidecarResult,
   BackupResult,
@@ -517,6 +519,16 @@ export function pushNativeWorkflowGit(
   return apiSend('/comfytv/workflows/native/git/push', 'POST', NativeWorkflowGitStatusSchema, {
     paths,
     message: message || '',
+  })
+}
+
+export function fetchNativeWorkflowGitToken(): Promise<NativeWorkflowGitToken> {
+  return apiFetch('/comfytv/workflows/native/git/token', NativeWorkflowGitTokenSchema)
+}
+
+export function saveNativeWorkflowGitToken(token: string): Promise<NativeWorkflowGitToken> {
+  return apiSend('/comfytv/workflows/native/git/token', 'PUT', NativeWorkflowGitTokenSchema, {
+    token,
   })
 }
 

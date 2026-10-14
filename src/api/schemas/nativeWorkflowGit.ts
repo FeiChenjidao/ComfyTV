@@ -27,6 +27,7 @@ export const NativeWorkflowGitStatusSchema = z.object({
   /** Workflow JSON paths present on remote tip (templates) */
   remote_workflows: z.array(z.string()).optional(),
   has_git: z.boolean(),
+  token_configured: z.boolean().optional(),
   error: z.string(),
   error_code: z.string().optional(),
   fetch_error: z.string().optional(),
@@ -48,3 +49,15 @@ export const NativeWorkflowGitStatusSchema = z.object({
 })
 export type NativeWorkflowGitStatus = z.infer<typeof NativeWorkflowGitStatusSchema>
 export type NativeWorkflowGitFile = z.infer<typeof NativeWorkflowGitFileSchema>
+
+export const NativeWorkflowGitTokenSchema = z.object({
+  ok: z.boolean(),
+  configured: z.boolean(),
+  hint: z.string().optional().default(''),
+  remote: z.string().optional().default(''),
+  root: z.string().optional().default(''),
+  user_id: z.string().optional(),
+  error: z.string().optional().default(''),
+  saved: z.boolean().optional(),
+})
+export type NativeWorkflowGitToken = z.infer<typeof NativeWorkflowGitTokenSchema>

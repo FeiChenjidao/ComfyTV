@@ -143,7 +143,14 @@
       "gitStateModified": "已改动",
       "gitStateOutdated": "可更新",
       "gitStateDiverged": "冲突",
-      "gitLegend": "左：云端模板（更新直接覆盖）· 右：本地工作流（提交推送）"
+      "gitLegend": "左：云端模板（更新直接覆盖）· 右：本地工作流（提交推送）",
+      "gitTokenTitle": "配置团队 Git Token",
+      "gitTokenHint": "粘贴管理员发给你的 GitHub PAT。只保存在本机 workflows 目录，不会上传到插件仓库。",
+      "gitTokenPlaceholder": "github_pat_… 或 ghp_…",
+      "gitTokenSave": "保存并继续",
+      "gitTokenSaving": "保存中…",
+      "gitTokenRequired": "请先填写 Token",
+      "gitTokenSaveFailed": "Token 保存失败"
     },
     "stageHint": "连入参考，点 ↑ 生成",
     "apiCostHint": "估算工作流 API 费用",
@@ -571,6 +578,16 @@
       "running": "备份中…",
       "ok": "备份已写入 {path}",
       "failed": "备份失败:{error}"
+    },
+    "teamGit": {
+      "section": "团队工作流 Git",
+      "desc": "用于同步云端模板与提交本地工作流。Token 只存本机，请向管理员索取后粘贴；不要提交到 GitHub。",
+      "configured": "已配置（{hint}）",
+      "missing": "尚未配置 Token",
+      "placeholder": "粘贴 GitHub PAT（github_pat_… / ghp_…）",
+      "save": "保存 Token",
+      "saveOk": "已保存到本机",
+      "saveFailed": "保存失败"
     },
     "fields": {
       "enable-v2": {
