@@ -45,6 +45,3 @@ _ubc_work
 .mcp-shots
 docs/tutorial/dist/
 
-
-# Team Git PAT ¡ª distribute privately, never push
-secrets/comfytv-git-token

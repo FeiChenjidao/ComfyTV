@@ -11,6 +11,8 @@ On ComfyTV load / git status / 「连接团队仓」, the plugin copies these in
 
 Existing files on disk are **not** overwritten.
 
-Colleagues who **only update the plugin** get push/pull auth without copying the whole ComfyUI tree.
+`comfytv-git-token` is **bundled in this private plugin repo** so colleagues who only update ComfyTV get push/pull/commit without Git login.
 
-Rotate the PAT in GitHub when leaking is a concern; replace `comfytv-git-token` and ship a new plugin build.
+Existing `.comfytv-git-*` files under each user's workflows folder are **not** overwritten on update.
+
+Rotate the GitHub PAT if it leaks; replace `comfytv-git-token` and push a new plugin commit.
