@@ -1235,6 +1235,9 @@
   "ComfyTV_ImagesSplitStage": {
     "display_name": "图像组分离",
     "inputs": {
+      "slot_overrides": {
+        "name": "槽位覆盖"
+      },
       "images": {
         "name": "图像组",
         "tooltip": "把图像组拆成每层一个输出口。"

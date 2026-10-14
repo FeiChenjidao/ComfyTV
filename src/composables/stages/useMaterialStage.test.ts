@@ -164,7 +164,37 @@ describe('useMaterialStage', () => {
 
   it('exposes slider metadata covering all editable scalar params', () => {
     expect(MATERIAL_SLIDERS.map((s) => s.key)).toEqual([
-      'metalness', 'roughness', 'transmission', 'opacity', 'clearcoat', 'ior',
+      'metalness', 'roughness', 'transmission', 'opacity', 'clearcoat',
+      'clearcoatRoughness', 'ior', 'normalScale', 'aoMapIntensity',
     ])
+  })
+
+  it('adopts wired map / normalMap inputs into params', async () => {
+    const state = makeState()
+    const { stage } = makeStage({ state })
+    state.inputs = [
+      {
+        slot: 'map',
+        type: 'COMFYTV_IMAGE',
+        source: 'upstream',
+        content: '/view?filename=albedo.png',
+      },
+      {
+        slot: 'normalMap',
+        type: 'COMFYTV_IMAGE',
+        source: 'upstream',
+        content: '/view?filename=normal.png',
+      },
+      {
+        slot: 'metalnessMap',
+        type: 'COMFYTV_IMAGE',
+        source: 'upstream',
+        content: '/view?filename=metal.png',
+      },
+    ]
+    await nextTick()
+    expect(stage.params.map).toBe('/view?filename=albedo.png')
+    expect(stage.params.normalMap).toBe('/view?filename=normal.png')
+    expect(stage.params.metalnessMap).toBe('/view?filename=metal.png')
   })
 })

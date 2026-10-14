@@ -50,6 +50,25 @@ describe('previewShading', () => {
     expect(mat.roughness).toBe(0.2)
   })
 
+  it('multiplies metalness/roughness onto the cloned base values', () => {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(),
+      new THREE.MeshStandardMaterial({ metalness: 0.5, roughness: 0.8 }),
+    )
+    const root = new THREE.Group()
+    root.add(mesh)
+
+    applyPreviewMaterialOverrides(root, { metalness: 0.5, roughness: 0.5, multiply: true })
+    const mat = mesh.material as THREE.MeshStandardMaterial
+    expect(mat.metalness).toBeCloseTo(0.25)
+    expect(mat.roughness).toBeCloseTo(0.4)
+
+    // Re-applying uses the stored base, so it does not compound.
+    applyPreviewMaterialOverrides(root, { metalness: 1, roughness: 1, multiply: true })
+    expect(mat.metalness).toBeCloseTo(0.5)
+    expect(mat.roughness).toBeCloseTo(0.8)
+  })
+
   it('applies a texture map override', () => {
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(),

@@ -14,6 +14,11 @@ ComfyUI/user/default/workflows/
 
 快速流程：
 
+同事**只更新 ComfyTV 插件**时：
+
+1. 插件内 `secrets/comfytv-git-token` + `secrets/comfytv-git-remote` 会在打开工作流面板时自动写到 `user/default/workflows/.comfytv-git-*`（已有文件不覆盖）。
+2. 本机还没有独立 `.git` 时，底部栏点 **「连接团队仓」** 一键 clone；之后用「更新 / 提交」。
+
 1. 把 `team-workflows/` 推成团队公开仓
 2. 各机 `git clone` → `ComfyUI/user/default/workflows`
 3. 上传：`scripts/push-workflows.ps1` → 同事：`scripts/pull-and-hint.ps1` → 底部栏「工作流」刷新打开

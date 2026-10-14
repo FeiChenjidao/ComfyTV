@@ -24,6 +24,7 @@
 import { computed } from 'vue'
 import type { LGraphNode } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
+import { resolveCompareSlot } from '@/composables/stages/stageInputs'
 import StageCard from '@/components/stages/StageCard.vue'
 import ImageCompare from '@/components/widgets/ImageCompare.vue'
 
@@ -36,12 +37,6 @@ const props = defineProps<{
   node: LGraphNode
 }>()
 
-function resolvedInput(slot: string): string | null {
-  const inp = props.state.inputs.find(i => i.slot === slot)
-  if (!inp || inp.source !== 'upstream' || !inp.content) return null
-  return inp.content
-}
-
-const imageA = computed(() => resolvedInput('image_a'))
-const imageB = computed(() => resolvedInput('image_b'))
+const imageA = computed(() => resolveCompareSlot(props.state.inputs, 'image_a').url)
+const imageB = computed(() => resolveCompareSlot(props.state.inputs, 'image_b').url)
 </script>

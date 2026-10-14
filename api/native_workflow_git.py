@@ -3,18 +3,49 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import re
 import shutil
 import subprocess
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 from aiohttp import web
 
-from ..runners.workflow_db.link import _native_workflows_dir
+from ..runners.workflow_db.link import _native_workflows_dir, resolve_request_user_id
+from . import native_workflow_assets
 from ._common import routes
+
+
+def _workflows_root(root: Optional[Path] = None, user_id: Optional[str] = None) -> Optional[Path]:
+    return root or _native_workflows_dir(user_id)
 
 _log = logging.getLogger(__name__)
 _GIT_TIMEOUT_S = 120
+_TOKEN_NAME = ".comfytv-git-token"
+_REMOTE_NAME = ".comfytv-git-remote"
+# Bundled with the plugin so "update ComfyTV only" still seeds credentials.
+_SECRETS_DIRNAME = "secrets"
+_SEED_TOKEN_NAME = "comfytv-git-token"
+_SEED_REMOTE_NAME = "comfytv-git-remote"
+# Public team library used when colleagues update the plugin but have no local .git yet.
+_DEFAULT_REMOTE = "https://github.com/FeiChenjidao/comfytv-team-workflows.git"
+_AUTH_IN_URL_RE = re.compile(
+    r"^(?P<scheme>https?://)(?:(?P<user>[^:@/]+)(?::(?P<pw>[^@/]*))?@)?(?P<rest>.+)$",
+    re.IGNORECASE,
+)
+
+
+def _plugin_root() -> Path:
+    # api/native_workflow_git.py → ComfyTV/
+    return Path(__file__).resolve().parents[1]
+
+
+def _secrets_dir() -> Path:
+    return _plugin_root() / _SECRETS_DIRNAME
 
 
 def _git_bin() -> Optional[str]:
@@ -25,6 +56,10 @@ def _run_git(root: Path, *args: str, check: bool = False) -> subprocess.Complete
     git = _git_bin()
     if not git:
         raise RuntimeError("git executable not found on PATH")
+    # Never pop interactive Git Credential Manager / login dialogs from UI threads.
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GCM_INTERACTIVE"] = "never"
     return subprocess.run(
         [git, *args],
         cwd=str(root),
@@ -34,7 +69,177 @@ def _run_git(root: Path, *args: str, check: bool = False) -> subprocess.Complete
         errors="replace",
         timeout=_GIT_TIMEOUT_S,
         check=check,
+        env=env,
     )
+
+
+def _read_text_file(path: Path) -> str:
+    try:
+        # utf-8-sig strips BOM from PowerShell Set-Content files
+        return path.read_text(encoding="utf-8-sig").strip()
+    except OSError:
+        return ""
+
+
+def _read_token(root: Path) -> str:
+    return _read_text_file(root / _TOKEN_NAME)
+
+
+def _read_configured_remote(root: Path) -> str:
+    raw = _read_text_file(root / _REMOTE_NAME)
+    if raw:
+        return _strip_auth(raw.splitlines()[0].strip())
+    return ""
+
+
+def _ensure_workflow_credentials(root: Path) -> None:
+    """After plugin update: seed token/remote into the current user's workflows dir.
+
+    Colleagues who only update ComfyTV get working team-git auth. Existing local
+    files are never overwritten.
+    """
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        _log.warning("[ComfyTV/native-git] cannot create workflows dir: %s", e)
+        return
+
+    secrets = _secrets_dir()
+    seed_tok = secrets / _SEED_TOKEN_NAME
+    seed_rem = secrets / _SEED_REMOTE_NAME
+    dest_tok = root / _TOKEN_NAME
+    dest_rem = root / _REMOTE_NAME
+
+    if not dest_tok.exists() and seed_tok.is_file():
+        try:
+            text = _read_text_file(seed_tok)
+            if text:
+                dest_tok.write_text(text + "\n", encoding="utf-8")
+                _log.info("[ComfyTV/native-git] seeded %s from plugin secrets", _TOKEN_NAME)
+        except OSError as e:
+            _log.warning("[ComfyTV/native-git] could not seed token: %s", e)
+
+    if not dest_rem.exists():
+        remote = _read_text_file(seed_rem) if seed_rem.is_file() else ""
+        remote = _strip_auth((remote.splitlines()[0] if remote else "").strip()) or _DEFAULT_REMOTE
+        try:
+            dest_rem.write_text(remote + "\n", encoding="utf-8")
+        except OSError as e:
+            _log.warning("[ComfyTV/native-git] could not seed remote: %s", e)
+
+
+def _split_auth(url: str) -> tuple[str, str]:
+    """Return (clean_https_url, token_or_password)."""
+    text = (url or "").strip()
+    if not text:
+        return "", ""
+    m = _AUTH_IN_URL_RE.match(text)
+    if not m or not m.group("user"):
+        return text, ""
+    user = unquote(m.group("user") or "")
+    pw = unquote(m.group("pw") or "")
+    # GitHub PAT style: x-access-token:PAT or oauth2:TOKEN or PAT as user
+    token = pw or user
+    if user.lower() in ("x-access-token", "oauth2", "git") and pw:
+        token = pw
+    clean = f"{m.group('scheme')}{m.group('rest')}"
+    return clean, token
+
+
+def _strip_auth(url: str) -> str:
+    return _split_auth(url)[0]
+
+
+def _with_token(url: str, token: str) -> str:
+    clean = _strip_auth(url)
+    tok = (token or "").strip()
+    if not clean or not tok:
+        return clean
+    parts = urlsplit(clean)
+    if parts.scheme not in ("http", "https") or not parts.netloc:
+        return clean
+    # Never log this URL — used only for ephemeral git remotes.
+    netloc = f"x-access-token:{quote(tok, safe='')}@{parts.netloc}"
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+
+
+def _ensure_local_identity(root: Path) -> None:
+    name = _run_git(root, "config", "--local", "--get", "user.name")
+    email = _run_git(root, "config", "--local", "--get", "user.email")
+    if name.returncode != 0 or not (name.stdout or "").strip():
+        _run_git(root, "config", "--local", "user.name", "ComfyTV Workflows")
+    if email.returncode != 0 or not (email.stdout or "").strip():
+        _run_git(root, "config", "--local", "user.email", "comfytv-workflows@local")
+
+
+def _origin_url(root: Path) -> str:
+    r = _run_git(root, "remote", "get-url", "origin")
+    if r.returncode != 0:
+        return ""
+    return (r.stdout or "").strip()
+
+
+def _sanitize_origin_remote(root: Path) -> None:
+    """Move embedded PATs out of origin URL into .comfytv-git-token."""
+    raw = _origin_url(root)
+    if not raw:
+        return
+    clean, token = _split_auth(raw)
+    if token:
+        tok_path = root / _TOKEN_NAME
+        if not tok_path.exists():
+            try:
+                tok_path.write_text(token + "\n", encoding="utf-8")
+            except OSError as e:
+                _log.warning("[ComfyTV/native-git] could not write token file: %s", e)
+        if clean and clean != raw:
+            _run_git(root, "remote", "set-url", "origin", clean)
+    if clean and not _read_configured_remote(root):
+        try:
+            (root / _REMOTE_NAME).write_text(clean + "\n", encoding="utf-8")
+        except OSError:
+            pass
+
+
+@contextmanager
+def _authed_origin(root: Path) -> Iterator[None]:
+    """Temporarily inject token into origin for network ops; restore clean URL after."""
+    clean = _strip_auth(_origin_url(root)) or _read_configured_remote(root) or _DEFAULT_REMOTE
+    token = _read_token(root)
+    if not token or not clean.startswith("http"):
+        yield
+        return
+    authed = _with_token(clean, token)
+    rem = _run_git(root, "remote")
+    remotes = [ln.strip() for ln in (rem.stdout or "").splitlines() if ln.strip()]
+    if "origin" not in remotes:
+        _run_git(root, "remote", "add", "origin", authed)
+    else:
+        _run_git(root, "remote", "set-url", "origin", authed)
+    try:
+        yield
+    finally:
+        try:
+            _run_git(root, "remote", "set-url", "origin", clean)
+        except Exception:
+            pass
+
+
+def _copy_missing(src: Path, dst: Path) -> None:
+    """Copy files from src → dst without overwriting existing paths."""
+    if not src.is_dir():
+        return
+    for path in src.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(src)
+        if rel.parts and rel.parts[0] == ".git":
+            continue
+        target = dst / rel
+        if target.exists():
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)
 
 
 def _is_git_repo(root: Path) -> bool:
@@ -83,34 +288,101 @@ def _upstream_ref(root: Path) -> str:
     return f"{remote}/{branch}" if remote else ""
 
 
-def _porcelain_paths(root: Path) -> set[str]:
-    st = _run_git(root, "status", "--porcelain")
-    out: set[str] = set()
+def _porcelain_entries(root: Path) -> dict[str, str]:
+    """Map rel path → 2-char porcelain code (e.g. '??', ' M', 'M ', 'A ')."""
+    # quotepath=false so CJK names like 刺绣.json match UI paths (not \345\210\272…)
+    st = _run_git(root, "-c", "core.quotepath=false", "status", "--porcelain", "-u")
+    out: dict[str, str] = {}
     for ln in (st.stdout or "").splitlines():
         if not ln.strip():
             continue
+        code = ln[:2] if len(ln) >= 2 else ""
         path = ln[3:].strip() if len(ln) >= 4 else ln.strip()
         if " -> " in path:
             path = path.split(" -> ", 1)[-1].strip()
+        if len(path) >= 2 and path[0] == '"' and path[-1] == '"':
+            path = path[1:-1]
         if path:
-            out.add(path.replace("\\", "/"))
+            out[path.replace("\\", "/")] = code
     return out
 
 
-def _remote_diff(root: Path, rel: str, upstream: str) -> bool:
+def _porcelain_paths(root: Path) -> set[str]:
+    return set(_porcelain_entries(root))
+
+
+def _is_workflow_rel(rel: str) -> bool:
+    """True for team-library GUI workflows (ignore token/remote/docs dirtiness)."""
+    text = (rel or "").replace("\\", "/").strip().lstrip("/")
+    if not text.endswith(".json"):
+        return False
+    parts = text.split("/")
+    if any(p.startswith(".") for p in parts):
+        return False
+    name = parts[-1]
+    if name.endswith(".api.json") or Path(name).stem.endswith("_preset"):
+        return False
+    return True
+
+
+def _committed_diff_vs_upstream(root: Path, rel: str, upstream: str) -> bool:
+    """True when HEAD's blob for rel differs from upstream (ignores working-tree edits)."""
     if not upstream:
         return False
-    # Does upstream have this path?
     ls = _run_git(root, "ls-tree", "--name-only", upstream, "--", rel)
     if ls.returncode != 0 or not (ls.stdout or "").strip():
-        return False
-    # Working tree (or index) vs upstream blob for this path only
-    d = _run_git(root, "diff", "--quiet", upstream, "--", rel)
+        # Also "diff" if we have it locally committed but remote deleted it
+        local = _run_git(root, "ls-tree", "--name-only", "HEAD", "--", rel)
+        return local.returncode == 0 and bool((local.stdout or "").strip())
+    # Compare trees only — local unsaved/uncommitted edits must not look like "Update available"
+    d = _run_git(root, "diff", "--quiet", "HEAD", upstream, "--", rel)
     return d.returncode != 0
 
 
-def collect_status(root: Optional[Path] = None, *, fetch_remote: bool = True) -> dict[str, Any]:
-    root = root or _native_workflows_dir()
+def _ahead_behind(root: Path, upstream: str) -> tuple[int, int]:
+    if not upstream:
+        return 0, 0
+    r = _run_git(root, "rev-list", "--left-right", "--count", f"HEAD...{upstream}")
+    if r.returncode != 0:
+        return 0, 0
+    parts = (r.stdout or "").strip().split()
+    if len(parts) != 2:
+        return 0, 0
+    try:
+        return int(parts[0]), int(parts[1])
+    except ValueError:
+        return 0, 0
+
+
+def _is_non_ff_push_error(detail: str) -> bool:
+    text = (detail or "").lower()
+    return any(
+        s in text
+        for s in (
+            "non-fast-forward",
+            "fetch first",
+            "tip of your current branch is behind",
+            "updates were rejected",
+            "[rejected]",
+        )
+    )
+
+
+def _push_current_branch(root: Path, remote: str, branch: str) -> subprocess.CompletedProcess[str]:
+    with _authed_origin(root):
+        p = _run_git(root, "push", remote, branch)
+        if p.returncode != 0:
+            p = _run_git(root, "push")
+    return p
+
+
+def collect_status(
+    root: Optional[Path] = None,
+    *,
+    fetch_remote: bool = False,
+    user_id: Optional[str] = None,
+) -> dict[str, Any]:
+    root = _workflows_root(root, user_id)
     payload: dict[str, Any] = {
         "ok": True,
         "is_repo": False,
@@ -124,6 +396,7 @@ def collect_status(root: Optional[Path] = None, *, fetch_remote: bool = True) ->
         "files": [],
         "has_git": bool(_git_bin()),
         "error": "",
+        "user_id": user_id or "default",
     }
     if root is None:
         payload["ok"] = False
@@ -133,51 +406,90 @@ def collect_status(root: Optional[Path] = None, *, fetch_remote: bool = True) ->
         payload["ok"] = False
         payload["error"] = "git not found on PATH"
         return payload
+    _ensure_workflow_credentials(root)
+
     if not _is_git_repo(root):
+        payload["default_remote"] = _read_configured_remote(root) or _DEFAULT_REMOTE
         return payload
 
     payload["is_repo"] = True
     try:
+        _sanitize_origin_remote(root)
+        _ensure_local_identity(root)
         br = _run_git(root, "rev-parse", "--abbrev-ref", "HEAD")
         payload["branch"] = (br.stdout or "").strip() if br.returncode == 0 else ""
 
         rem = _run_git(root, "remote")
         remotes = [ln.strip() for ln in (rem.stdout or "").splitlines() if ln.strip()]
         payload["remote"] = "origin" if "origin" in remotes else (remotes[0] if remotes else "")
+        payload["default_remote"] = _strip_auth(_origin_url(root)) or _read_configured_remote(root) or _DEFAULT_REMOTE
 
         if fetch_remote and payload["remote"]:
-            _run_git(root, "fetch", "--quiet", payload["remote"])
+            # Silent remote check: use .comfytv-git-token when present; never open a login UI.
+            try:
+                with _authed_origin(root):
+                    fr = _run_git(root, "fetch", "--quiet", payload["remote"])
+                if fr.returncode != 0:
+                    detail = (fr.stderr or fr.stdout or "").strip()[:240]
+                    tok = _read_token(root)
+                    if tok:
+                        detail = detail.replace(tok, "***")
+                    # Soft-fail — still return local status so the panel stays usable.
+                    payload["fetch_error"] = detail or "git fetch failed"
+            except Exception as e:
+                payload["fetch_error"] = str(e) or type(e).__name__
 
         upstream = _upstream_ref(root)
-        dirty_paths = _porcelain_paths(root)
-        payload["dirty"] = bool(dirty_paths)
-        payload["changes"] = sorted(dirty_paths)[:80]
+        ahead, behind = _ahead_behind(root, upstream)
+        payload["ahead"] = ahead
+        payload["behind"] = behind
+        porcelain = _porcelain_entries(root)
+        dirty_paths = set(porcelain)
+        dirty_workflows = {p for p in dirty_paths if _is_workflow_rel(p)}
+        # Hint "本地有未提交改动" only when a workflow JSON changed — not .comfytv-git-* etc.
+        payload["dirty"] = bool(dirty_workflows)
+        payload["changes"] = sorted(dirty_workflows)[:80]
 
-        # All tracked *.json + dirty paths under root
-        paths: set[str] = set(dirty_paths)
+        # Workflow JSON on disk + dirty workflow paths
+        paths: set[str] = set(dirty_workflows)
         for p in root.rglob("*.json"):
             if not p.is_file():
                 continue
-            rel_parts = p.relative_to(root).parts
-            if any(part.startswith(".") for part in rel_parts):
+            rel = p.relative_to(root).as_posix()
+            if not _is_workflow_rel(rel):
                 continue
-            if p.stem.endswith("_preset") or p.name.endswith(".api.json"):
-                continue
-            paths.add(p.relative_to(root).as_posix())
+            paths.add(rel)
 
         files: list[dict[str, Any]] = []
         for rel in sorted(paths):
-            dirty = rel in dirty_paths
-            remote_diff = _remote_diff(root, rel, upstream)
+            code = porcelain.get(rel, "")
+            untracked = code.strip() == "??" or code == "??"
+            dirty = rel in dirty_workflows
+            # "可更新" = remote tip changed this file vs our HEAD, and we are behind.
+            # Do NOT use working-tree diff — local edits must show as 已改动 only.
+            committed_diff = (
+                False if untracked
+                else _committed_diff_vs_upstream(root, rel, upstream)
+            )
+            remote_diff = bool(committed_diff and behind > 0)
             if not dirty and not remote_diff:
-                # still list synced files lightly? skip — UI only needs actionable
                 continue
+            if untracked:
+                state = "new"
+            elif dirty and remote_diff:
+                state = "diverged"
+            elif dirty:
+                state = "modified"
+            else:
+                state = "outdated"
             files.append({
                 "path": rel,
                 "dirty": dirty,
+                "untracked": untracked,
                 "remote_diff": remote_diff,
                 "can_update": remote_diff,
                 "can_commit": dirty,
+                "state": state,
             })
         payload["files"] = files
     except subprocess.TimeoutExpired:
@@ -190,10 +502,14 @@ def collect_status(root: Optional[Path] = None, *, fetch_remote: bool = True) ->
     return payload
 
 
-def pull_file(rel_path: str, root: Optional[Path] = None) -> dict[str, Any]:
+def pull_file(
+    rel_path: str,
+    root: Optional[Path] = None,
+    user_id: Optional[str] = None,
+) -> dict[str, Any]:
     """Overwrite one workflow file from upstream (does not merge the whole branch)."""
-    root = root or _native_workflows_dir()
-    status = collect_status(root, fetch_remote=True)
+    root = _workflows_root(root, user_id)
+    status = collect_status(root, fetch_remote=True, user_id=user_id)
     if not status.get("is_repo"):
         status["ok"] = False
         status["error"] = status.get("error") or (
@@ -238,10 +554,15 @@ def pull_file(rel_path: str, root: Optional[Path] = None) -> dict[str, Any]:
         return status
 
 
-def push_file(rel_path: str, message: str = "", root: Optional[Path] = None) -> dict[str, Any]:
+def push_file(
+    rel_path: str,
+    message: str = "",
+    root: Optional[Path] = None,
+    user_id: Optional[str] = None,
+) -> dict[str, Any]:
     """Stage + commit + push only one workflow file."""
-    root = root or _native_workflows_dir()
-    status = collect_status(root, fetch_remote=False)
+    root = _workflows_root(root, user_id)
+    status = collect_status(root, fetch_remote=False, user_id=user_id)
     if not status.get("is_repo"):
         status["ok"] = False
         status["error"] = status.get("error") or (
@@ -325,31 +646,45 @@ def _remote_json_index(root: Path, upstream: str) -> tuple[set[str], set[str]]:
     return paths, names
 
 
-def pull_repo(root: Optional[Path] = None) -> dict[str, Any]:
-    """Fast-forward pull the dedicated workflows library (not parent ComfyUI)."""
-    root = root or _native_workflows_dir()
-    status = collect_status(root, fetch_remote=True)
+def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dict[str, Any]:
+    """Pull team workflows: prefer ff-only, then rebase so a failed push can recover."""
+    root = _workflows_root(root, user_id)
+    status = collect_status(root, fetch_remote=True, user_id=user_id)
     if not status.get("is_repo"):
         status["ok"] = False
         status["error"] = status.get("error") or (
-            "not a git repository — init a dedicated repo in user/default/workflows"
+            "not a git repository — connect the team workflows repo first"
         )
         return status
     assert root is not None
     try:
         remote = status.get("remote") or "origin"
         branch = status.get("branch") or "main"
-        r = _run_git(root, "pull", "--ff-only", remote, branch)
-        if r.returncode != 0:
-            r = _run_git(root, "pull", "--ff-only")
+        with _authed_origin(root):
+            r = _run_git(root, "pull", "--ff-only", remote, branch)
+            if r.returncode != 0:
+                r = _run_git(root, "pull", "--ff-only")
+            # After a rejected push, local has commits remote doesn't — rebase onto remote.
+            if r.returncode != 0:
+                r = _run_git(root, "pull", "--rebase", remote, branch)
+            if r.returncode != 0:
+                r = _run_git(root, "pull", "--rebase")
         if r.returncode != 0:
             detail = (r.stderr or r.stdout or "").strip()[:500]
+            # Leave a half-finished rebase in a recoverable state
+            if (root / ".git" / "rebase-merge").exists() or (root / ".git" / "rebase-apply").exists():
+                _run_git(root, "rebase", "--abort")
             status = collect_status(root, fetch_remote=False)
             status["ok"] = False
-            status["error"] = detail or "git pull failed (diverging history — use a dedicated workflows repo)"
+            status["error_code"] = "pull_conflict"
+            status["error"] = detail or "git pull failed"
             return status
+        restored = native_workflow_assets.restore_assets(root)
         status = collect_status(root, fetch_remote=False)
         status["pulled"] = True
+        status["assets_restored"] = restored.restored
+        status["assets_skipped"] = restored.skipped
+        status["assets_warnings"] = restored.warnings[:40]
         return status
     except Exception as e:
         status = collect_status(root, fetch_remote=False)
@@ -358,14 +693,125 @@ def pull_repo(root: Optional[Path] = None) -> dict[str, Any]:
         return status
 
 
+def setup_repo(
+    remote_url: str = "",
+    root: Optional[Path] = None,
+    user_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """One-click connect: clone team repo into the current user's workflows dir.
+
+    Multi-user: each account gets ``user/<id>/workflows`` with its own .git.
+    Preserves existing local JSON; fills missing files from the team remote.
+    """
+    root = _workflows_root(root, user_id)
+    if root is None:
+        return {
+            "ok": False,
+            "is_repo": False,
+            "root": "",
+            "branch": "",
+            "remote": "",
+            "ahead": 0,
+            "behind": 0,
+            "dirty": False,
+            "changes": [],
+            "files": [],
+            "has_git": bool(_git_bin()),
+            "error": "native workflows directory unavailable",
+            "default_remote": _DEFAULT_REMOTE,
+            "user_id": user_id or "default",
+        }
+    if not _git_bin():
+        status = collect_status(root, fetch_remote=False)
+        status["ok"] = False
+        status["error"] = "git not found on PATH"
+        return status
+    _ensure_workflow_credentials(root)
+
+    if _is_git_repo(root):
+        status = collect_status(root, fetch_remote=True)
+        status["setup"] = True
+        return status
+
+    clean = _strip_auth((remote_url or "").strip()) or _read_configured_remote(root) or _DEFAULT_REMOTE
+    token = _read_token(root)
+    clone_url = _with_token(clean, token) if token else clean
+
+    root.mkdir(parents=True, exist_ok=True)
+    parent = root.parent
+    tmp: Optional[Path] = None
+    try:
+        tmp = Path(tempfile.mkdtemp(prefix=".comfytv_wf_clone_", dir=str(parent)))
+        # Clone into empty temp dir (git requires target empty / non-existent)
+        clone_target = tmp / "repo"
+        r = _run_git(
+            parent,
+            "clone",
+            "--depth",
+            "1",
+            clone_url,
+            str(clone_target),
+        )
+        if r.returncode != 0:
+            detail = (r.stderr or r.stdout or "").strip()[:500]
+            # Redact token if somehow present in stderr
+            if token:
+                detail = detail.replace(token, "***")
+            status = collect_status(root, fetch_remote=False)
+            status["ok"] = False
+            status["error"] = detail or "git clone failed"
+            status["default_remote"] = clean
+            return status
+
+        git_src = clone_target / ".git"
+        git_dst = root / ".git"
+        if git_dst.exists():
+            status = collect_status(root, fetch_remote=False)
+            status["ok"] = False
+            status["error"] = "workflows/.git already exists but is not a valid dedicated repo"
+            return status
+        shutil.move(str(git_src), str(git_dst))
+        _copy_missing(clone_target, root)
+        _run_git(root, "remote", "set-url", "origin", clean)
+        try:
+            (root / _REMOTE_NAME).write_text(clean + "\n", encoding="utf-8")
+        except OSError:
+            pass
+        _ensure_local_identity(root)
+
+        # Align index with remote tip without wiping local-only files
+        _run_git(root, "reset", "--mixed", "HEAD")
+
+        restored = native_workflow_assets.restore_assets(root)
+        status = collect_status(root, fetch_remote=True)
+        status["setup"] = True
+        status["ok"] = bool(status.get("is_repo"))
+        status["assets_restored"] = restored.restored
+        status["assets_skipped"] = restored.skipped
+        status["assets_warnings"] = restored.warnings[:40]
+        if not status["ok"]:
+            status["error"] = status.get("error") or "setup finished but repo check failed"
+        return status
+    except Exception as e:
+        status = collect_status(root, fetch_remote=False)
+        status["ok"] = False
+        status["error"] = str(e) or type(e).__name__
+        status["default_remote"] = clean
+        return status
+    finally:
+        if tmp is not None:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 def push_paths(
     rel_paths: list[str],
     message: str = "",
     root: Optional[Path] = None,
+    user_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """Commit+push selected local workflows. Refuse if remote already has same path/name."""
-    root = root or _native_workflows_dir()
-    status = collect_status(root, fetch_remote=True)
+    root = _workflows_root(root, user_id)
+    status = collect_status(root, fetch_remote=True, user_id=user_id)
     if not status.get("is_repo"):
         status["ok"] = False
         status["error"] = status.get("error") or (
@@ -411,13 +857,24 @@ def push_paths(
     duplicates: list[str] = []
     for rel in cleaned:
         base = Path(rel).name.lower()
-        # Same path or same filename already on remote → refuse (no overwrite).
-        if rel in remote_paths or base in remote_names or remote_by_base.get(base):
+        # Same path already on remote → allowed (local edit / update).
+        if rel in remote_paths:
+            continue
+        # New path whose basename collides with any remote workflow → refuse.
+        if base in remote_names or remote_by_base.get(base):
             duplicates.append(rel)
     if duplicates:
         status["ok"] = False
         status["error"] = "remote already has workflow(s) with the same name"
         status["duplicates"] = duplicates
+        return status
+
+    # Block commit while behind so we don't create a diverging tip.
+    if int(status.get("behind") or 0) > 0:
+        status["ok"] = False
+        status["error_code"] = "need_update"
+        status["error"] = "remote has new commits — click Update first, then Commit again"
+        status["duplicates"] = []
         return status
 
     msg = (message or "").strip() or (
@@ -426,13 +883,51 @@ def push_paths(
         else f"chore: add {len(cleaned)} workflows"
     )
     try:
-        _run_git(root, "add", "--", *cleaned)
+        remote = status.get("remote") or "origin"
+        branch = status.get("branch") or "main"
+        packed = native_workflow_assets.pack_for_workflows(root, cleaned)
+        add_paths = list(cleaned) + list(packed.added)
+        _run_git(root, "add", "--", *add_paths)
         diff = _run_git(root, "diff", "--cached", "--quiet")
         if diff.returncode == 0:
-            # Selected files identical to index — still allow if untracked were added;
-            # if truly nothing staged, fail.
+            # Nothing new to commit — if we are ahead (e.g. previous push was rejected,
+            # then user Updated/rebased), just push the existing local commit(s).
+            upstream_now = _upstream_ref(root)
+            ahead_now, behind_now = _ahead_behind(root, upstream_now)
+            if behind_now > 0:
+                status = collect_status(root, fetch_remote=False)
+                status["ok"] = False
+                status["error_code"] = "need_update"
+                status["error"] = "remote has new commits — click Update first, then Commit again"
+                status["duplicates"] = []
+                return status
+            if ahead_now > 0:
+                p = _push_current_branch(root, remote, branch)
+                if p.returncode != 0:
+                    detail = (p.stderr or p.stdout or "").strip()[:500]
+                    tok = _read_token(root)
+                    if tok:
+                        detail = detail.replace(tok, "***")
+                    status = collect_status(root, fetch_remote=False)
+                    status["ok"] = False
+                    status["duplicates"] = []
+                    if _is_non_ff_push_error(detail):
+                        status["error_code"] = "need_update"
+                        status["error"] = (
+                            "remote has new commits — click Update first, then Commit again"
+                        )
+                    else:
+                        status["error"] = detail or "git push failed"
+                    return status
+                status = collect_status(root, fetch_remote=False)
+                status["pushed"] = True
+                status["paths"] = cleaned
+                status["duplicates"] = []
+                return status
+
             status = collect_status(root, fetch_remote=False)
             status["ok"] = False
+            status["error_code"] = "nothing_to_commit"
             status["error"] = "nothing to commit for the selected workflows"
             status["duplicates"] = []
             return status
@@ -446,23 +941,31 @@ def push_paths(
             status["duplicates"] = []
             return status
 
-        remote = status.get("remote") or "origin"
-        branch = status.get("branch") or "main"
-        p = _run_git(root, "push", remote, branch)
-        if p.returncode != 0:
-            p = _run_git(root, "push")
+        p = _push_current_branch(root, remote, branch)
         if p.returncode != 0:
             detail = (p.stderr or p.stdout or "").strip()[:500]
+            tok = _read_token(root)
+            if tok:
+                detail = detail.replace(tok, "***")
             status = collect_status(root, fetch_remote=False)
             status["ok"] = False
-            status["error"] = detail or "git push failed"
             status["duplicates"] = []
+            if _is_non_ff_push_error(detail):
+                status["error_code"] = "need_update_after_commit"
+                status["error"] = (
+                    "commit saved locally, but remote has newer commits — "
+                    "click Update, then Commit again to finish push"
+                )
+            else:
+                status["error"] = detail or "git push failed"
             return status
 
         status = collect_status(root, fetch_remote=False)
         status["pushed"] = True
         status["paths"] = cleaned
         status["duplicates"] = []
+        status["assets_packed"] = packed.packed_files
+        status["assets_warnings"] = packed.warnings[:40]
         return status
     except Exception as e:
         status = collect_status(root, fetch_remote=False)
@@ -473,14 +976,32 @@ def push_paths(
 
 
 @routes.get("/comfytv/workflows/native/git")
-async def native_git_status(_request: web.Request) -> web.Response:
-    data = await asyncio.to_thread(collect_status)
+async def native_git_status(request: web.Request) -> web.Response:
+    # Default fetch=1 so the panel can show "remote has updates".
+    # Auth comes from .comfytv-git-token (no interactive login). Pass ?fetch=0 for local-only.
+    raw = str(request.rel_url.query.get("fetch") or "1").lower()
+    fetch = raw not in ("0", "false", "no")
+    uid = resolve_request_user_id(request)
+    data = await asyncio.to_thread(collect_status, None, fetch_remote=fetch, user_id=uid)
+    return web.json_response(data)
+
+
+@routes.post("/comfytv/workflows/native/git/setup")
+async def native_git_setup(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    remote = str((body or {}).get("remote") or "").strip()
+    uid = resolve_request_user_id(request)
+    data = await asyncio.to_thread(setup_repo, remote, None, uid)
     return web.json_response(data)
 
 
 @routes.post("/comfytv/workflows/native/git/pull")
-async def native_git_pull(_request: web.Request) -> web.Response:
-    data = await asyncio.to_thread(pull_repo)
+async def native_git_pull(request: web.Request) -> web.Response:
+    uid = resolve_request_user_id(request)
+    data = await asyncio.to_thread(pull_repo, None, uid)
     return web.json_response(data)
 
 
@@ -493,13 +1014,14 @@ async def native_git_push(request: web.Request) -> web.Response:
     message = str((body or {}).get("message") or "")
     paths_raw = (body or {}).get("paths")
     path = str((body or {}).get("path") or "").strip()
+    uid = resolve_request_user_id(request)
     if isinstance(paths_raw, list) and paths_raw:
         paths = [str(p) for p in paths_raw]
-        data = await asyncio.to_thread(push_paths, paths, message)
+        data = await asyncio.to_thread(push_paths, paths, message, None, uid)
         return web.json_response(data)
     if path:
         # legacy single-path: still refuse if remote duplicate
-        data = await asyncio.to_thread(push_paths, [path], message)
+        data = await asyncio.to_thread(push_paths, [path], message, None, uid)
         return web.json_response(data)
     data = {
         "ok": False,

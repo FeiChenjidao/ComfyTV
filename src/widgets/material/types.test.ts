@@ -33,8 +33,26 @@ describe('normalizeMaterial', () => {
 
 describe('parseMaterialState / serializeMaterialState', () => {
   it('round-trips a material', () => {
-    const m = normalizeMaterial({ color: '#123abc', metalness: 0.5, transmission: 1 })
+    const m = normalizeMaterial({
+      color: '#123abc',
+      metalness: 0.5,
+      transmission: 1,
+      map: '/view?filename=albedo.png',
+    })
     expect(parseMaterialState(serializeMaterialState(m))).toEqual(m)
+  })
+
+  it('keeps map URLs and clears blank ones', () => {
+    expect(normalizeMaterial({ map: ' /tex.png ' }).map).toBe('/tex.png')
+    expect(normalizeMaterial({ map: '' }).map).toBeNull()
+    expect(normalizeMaterial({ map: 1 }).map).toBeNull()
+    expect(normalizeMaterial({ normalMap: '/n.png', metalnessMap: '/m.png' }).normalMap).toBe('/n.png')
+    expect(normalizeMaterial({ normalMap: '/n.png', metalnessMap: '/m.png' }).metalnessMap).toBe('/m.png')
+  })
+
+  it('clamps normalScale and aoMapIntensity', () => {
+    expect(normalizeMaterial({ normalScale: 9 }).normalScale).toBe(2)
+    expect(normalizeMaterial({ aoMapIntensity: -1 }).aoMapIntensity).toBe(0)
   })
 
   it('falls back to defaults on invalid JSON', () => {

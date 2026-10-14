@@ -8,8 +8,11 @@ _NAMESPACE = uuid.UUID("2d1f7c1e-5b8a-4c4e-9a6d-4f0c2b7e8a11")
 _LIST_MAX = 500
 
 
-def root() -> str:
-    return os.path.join(folder_paths.get_user_directory(), "default", "workflows")
+def root(user_id: str = "default") -> str:
+    base = folder_paths.get_public_user_directory(user_id or "default")
+    if not base:
+        base = os.path.join(folder_paths.get_user_directory(), "default")
+    return os.path.join(base, "workflows")
 
 
 def workflow_id(rel: str) -> str:

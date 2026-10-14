@@ -1235,6 +1235,9 @@
   "ComfyTV_ImagesSplitStage": {
     "display_name": "Split Images",
     "inputs": {
+      "slot_overrides": {
+        "name": "Slot overrides"
+      },
       "images": {
         "name": "Images",
         "tooltip": "Image group to split into one output per layer."

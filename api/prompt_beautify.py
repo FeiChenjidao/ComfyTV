@@ -17,8 +17,8 @@ from ._common import routes
 _log = logging.getLogger(__name__)
 
 _MAX_INPUT_CHARS = 8_000
-_MAX_TOKENS = 1_024
-_TEMPERATURE = 0.4
+_MAX_TOKENS = 512
+_TEMPERATURE = 0.3
 _LOCAL_TIMEOUT_S = 120
 
 # CLI agents that can do a one-shot rewrite without MCP tools.
@@ -29,17 +29,24 @@ _CLI_MODEL_SETTING = {
     "qwen-code": "bot-model-qwen-code",
 }
 
+# Tuned for modern multimodal generators (Gemini / Imagen / Flux-class):
+# clear natural language beats SD1.5-style keyword stuffing.
 _SYSTEM_PROMPT = (
-    "You are a prompt engineer for image / video generation.\n"
-    "Rewrite the user's draft into a single vivid, production-ready prompt.\n"
+    "Polish the user's draft into a short image/video prompt for a modern "
+    "multimodal model (e.g. Gemini).\n"
     "Rules:\n"
-    "- Output ONLY the improved prompt — no quotes, labels, explanations, "
-    "or markdown fences.\n"
-    "- Preserve the user's intent, subject, and any @mentions or technical "
-    "tokens exactly as written.\n"
-    "- Expand sparse drafts with lighting, composition, style, and quality "
-    "cues when helpful; do not invent a different subject.\n"
-    "- Keep the output language as requested: {language}."
+    "- Output ONLY the polished prompt — no quotes, labels, explanations, "
+    "or markdown.\n"
+    "- Keep it concise: usually 1–3 natural sentences (or one short "
+    "paragraph). Do not pad.\n"
+    "- Prefer plain descriptive language: subject, action, setting, mood. "
+    "Add at most one lighting or camera cue if it clarifies the scene.\n"
+    "- Do NOT add quality spam or tag lists "
+    "(no masterpiece, best quality, ultra-detailed, 8K, HDR, trending on "
+    "artstation, cinematic lighting stacks, etc.).\n"
+    "- Do NOT invent new subjects, characters, brands, or plot. Preserve "
+    "@mentions and technical tokens exactly.\n"
+    "- Output language: {language}."
 )
 
 _LANG_LABEL = {
@@ -97,7 +104,7 @@ def _cli_user_text(prompt: str, language: str) -> str:
     lang = _LANG_LABEL.get(language, _LANG_LABEL["en"])
     return (
         f"{_SYSTEM_PROMPT.format(language=lang)}\n\n"
-        f"Draft prompt to rewrite:\n---\n{prompt}\n---"
+        f"Draft:\n---\n{prompt}\n---"
     )
 
 

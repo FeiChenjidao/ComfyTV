@@ -495,8 +495,15 @@ export function beautifyPrompt(
   })
 }
 
-export function fetchNativeWorkflowGitStatus(): Promise<NativeWorkflowGitStatus> {
-  return apiFetch('/comfytv/workflows/native/git', NativeWorkflowGitStatusSchema)
+export function fetchNativeWorkflowGitStatus(fetchRemote = true): Promise<NativeWorkflowGitStatus> {
+  const q = fetchRemote ? '?fetch=1' : '?fetch=0'
+  return apiFetch(`/comfytv/workflows/native/git${q}`, NativeWorkflowGitStatusSchema)
+}
+
+export function setupNativeWorkflowGit(remote?: string): Promise<NativeWorkflowGitStatus> {
+  return apiSend('/comfytv/workflows/native/git/setup', 'POST', NativeWorkflowGitStatusSchema, {
+    remote: remote || '',
+  })
 }
 
 export function pullNativeWorkflowGit(): Promise<NativeWorkflowGitStatus> {

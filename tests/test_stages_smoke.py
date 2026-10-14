@@ -144,6 +144,21 @@ class TestLoaderExecute:
         assert out.values[0] == "/view?filename=solo.png"
         assert out.values[1] == ""
 
+    def test_images_split_applies_slot_overrides(self, reset_db):
+        from ComfyTV.nodes.stages.transforms import ImagesSplitStage
+        out = ImagesSplitStage.execute(
+            project_id="default",
+            images=json.dumps({"images": [
+                {"image_url": "/view?filename=a.png"},
+                {"image_url": "/view?filename=b.png"},
+            ]}),
+            slot_overrides=json.dumps({
+                "/view?filename=a.png": "/view?filename=a-1x1.png",
+            }),
+        )
+        assert out.values[0] == "/view?filename=a-1x1.png"
+        assert out.values[1] == "/view?filename=b.png"
+
     def test_images_split_empty(self, reset_db):
         from ComfyTV.nodes.stages.transforms import ImagesSplitStage
         out = ImagesSplitStage.execute(project_id="default")

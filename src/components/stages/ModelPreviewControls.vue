@@ -55,7 +55,7 @@
     >
       <div class="ctv:flex ctv:items-center ctv:gap-1.5 ctv:text-[11px]">
         <span class="ctv:min-w-14 ctv:shrink-0 ctv:text-2xs ctv:uppercase ctv:tracking-wide ctv:text-white/70">
-          {{ $t('materialStage.param.metalness') }}
+          {{ $t('modelPreview.metalnessMul') }}
         </span>
         <input
           type="range" min="0" max="1" step="0.01"
@@ -69,7 +69,7 @@
       </div>
       <div class="ctv:flex ctv:items-center ctv:gap-1.5 ctv:text-[11px]">
         <span class="ctv:min-w-14 ctv:shrink-0 ctv:text-2xs ctv:uppercase ctv:tracking-wide ctv:text-white/70">
-          {{ $t('materialStage.param.roughness') }}
+          {{ $t('modelPreview.roughnessMul') }}
         </span>
         <input
           type="range" min="0" max="1" step="0.01"

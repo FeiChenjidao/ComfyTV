@@ -52,7 +52,7 @@ import { guardOrbitControlsDragEnd } from '@/widgets/three/orbitControlsGuard'
 import { RendererView } from '@/widgets/three/RendererView'
 import { buildPrimitiveMesh, parsePrimitiveRecipe } from '@/widgets/three/primitiveGeometry'
 import { loadCustomModelAssets } from '@/widgets/three/scene3d/scene3dAssets'
-import { applyViewChannel, OVERLAY_FLAG, type ViewChannel } from '@/widgets/three/channelShading'
+import { applyViewChannel, type ViewChannel } from '@/widgets/three/channelShading'
 import {
   applyPreviewMaterialOverrides,
   loadTextureFromFile,
@@ -85,9 +85,9 @@ const modelReady = ref(false)
 
 const internalChannel = ref<ViewChannel>('material')
 const lightingMode = ref<PreviewLighting>('default')
-const metalness = ref(0)
-const roughness = ref(0.45)
-const pbrTouched = ref(false)
+/** Multiplicative factors over the active material (1 = leave unchanged). */
+const metalness = ref(1)
+const roughness = ref(1)
 const overrideTexture = ref<THREE.Texture | null>(null)
 
 const activeChannel = computed<ViewChannel>(() =>
@@ -141,23 +141,16 @@ function syncLighting(): void {
   replaceSceneLights(scene, lightingMode.value)
 }
 
-function samplePbr(root: THREE.Object3D): { metalness: number; roughness: number } {
-  let mSum = 0
-  let rSum = 0
-  let n = 0
-  root.traverse((child) => {
-    if (!(child instanceof THREE.Mesh) || child.userData[OVERLAY_FLAG]) return
-    const mats = Array.isArray(child.material) ? child.material : [child.material]
-    for (const mat of mats) {
-      if (!(mat instanceof THREE.MeshStandardMaterial)) continue
-      mSum += mat.metalness
-      rSum += mat.roughness
-      n++
-    }
-  })
-  return n > 0
-    ? { metalness: mSum / n, roughness: rSum / n }
-    : { metalness: 0, roughness: 0.45 }
+function applyPbrFactors(map?: THREE.Texture | null): void {
+  if (!modelRoot) return
+  const overrides: Parameters<typeof applyPreviewMaterialOverrides>[1] = {
+    metalness: metalness.value,
+    roughness: roughness.value,
+    multiply: true,
+  }
+  if (map !== undefined) overrides.map = map
+  else if (overrideTexture.value) overrides.map = overrideTexture.value
+  applyPreviewMaterialOverrides(modelRoot, overrides)
 }
 
 function applyShading(): void {
@@ -167,14 +160,7 @@ function applyShading(): void {
   applyViewChannel(modelRoot, ch)
   if (ch === 'material') {
     mp.applyPartMaterials(true)
-    const hasOverride = !!overrideTexture.value || pbrTouched.value
-    if (hasOverride) {
-      applyPreviewMaterialOverrides(modelRoot, {
-        map: overrideTexture.value,
-        metalness: pbrTouched.value ? metalness.value : null,
-        roughness: pbrTouched.value ? roughness.value : null,
-      })
-    }
+    applyPbrFactors()
     if (props.selectedPart) mp.setHighlight(props.selectedPart)
   }
   emit('view-changed')
@@ -193,26 +179,16 @@ function onLightingChange(mode: PreviewLighting): void {
 
 function onMetalnessChange(v: number): void {
   metalness.value = v
-  pbrTouched.value = true
   if (modelRoot && activeChannel.value === 'material') {
-    applyPreviewMaterialOverrides(modelRoot, {
-      map: overrideTexture.value,
-      metalness: metalness.value,
-      roughness: roughness.value,
-    })
+    applyPbrFactors()
     emit('view-changed')
   }
 }
 
 function onRoughnessChange(v: number): void {
   roughness.value = v
-  pbrTouched.value = true
   if (modelRoot && activeChannel.value === 'material') {
-    applyPreviewMaterialOverrides(modelRoot, {
-      map: overrideTexture.value,
-      metalness: metalness.value,
-      roughness: roughness.value,
-    })
+    applyPbrFactors()
     emit('view-changed')
   }
 }
@@ -358,11 +334,8 @@ async function loadModel(url: string): Promise<void> {
     modelDispose = loaded.dispose
     scene.add(loaded.root)
     mp.registerParts(loaded.root)
-    if (!pbrTouched.value) {
-      const sampled = samplePbr(loaded.root)
-      metalness.value = sampled.metalness
-      roughness.value = sampled.roughness
-    }
+    metalness.value = 1
+    roughness.value = 1
     applyShading()
     frameModel(loaded.root)
     loading.value = false
@@ -416,7 +389,8 @@ watch(() => props.src, (url) => {
   overrideTexture.value?.dispose()
   overrideTexture.value = null
   internalChannel.value = 'material'
-  pbrTouched.value = false
+  metalness.value = 1
+  roughness.value = 1
   void loadModel(url || '')
 })
 
@@ -427,12 +401,7 @@ watch(() => props.channel, () => {
 
 watch(() => props.partMaterials, () => {
   if (!modelRoot || activeChannel.value !== 'material') return
-  if (!overrideTexture.value && !pbrTouched.value) return
-  applyPreviewMaterialOverrides(modelRoot, {
-    map: overrideTexture.value,
-    metalness: pbrTouched.value ? metalness.value : null,
-    roughness: pbrTouched.value ? roughness.value : null,
-  })
+  applyPbrFactors()
 }, { deep: true })
 
 onBeforeUnmount(() => {

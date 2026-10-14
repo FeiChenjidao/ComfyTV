@@ -11,7 +11,10 @@ import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 import { RendererView } from '@/widgets/three/RendererView'
-import { applyMaterialParams } from '@/widgets/material/three'
+import {
+  applyMaterialWithMaps,
+  loadMissingMaterialMaps,
+} from '@/widgets/material/applyMaps'
 import type { MaterialParams } from '@/widgets/material/types'
 
 const props = defineProps<{
@@ -30,6 +33,7 @@ let camera: THREE.PerspectiveCamera | null = null
 let material: THREE.MeshPhysicalMaterial | null = null
 let sphere: THREE.Mesh | null = null
 let renderQueued = false
+let mapSeq = 0
 
 let envTexture: THREE.Texture | null = null
 function ensureEnvTexture(renderer: THREE.WebGLRenderer): THREE.Texture {
@@ -43,7 +47,31 @@ function ensureEnvTexture(renderer: THREE.WebGLRenderer): THREE.Texture {
 
 function applyParams(): void {
   if (!material) return
-  applyMaterialParams(material, props.params)
+  const snap = { ...props.params }
+  // SphereGeometry uses Three.js UV convention → flipY true.
+  const mapOpts = { flipY: true }
+  const { missing } = applyMaterialWithMaps(material, snap, mapOpts)
+  if (!missing.length) return
+  const mySeq = ++mapSeq
+  void loadMissingMaterialMaps(
+    snap,
+    missing,
+    () => mySeq === mapSeq && !!material
+      && MATERIAL_MAP_SIG(props.params) === MATERIAL_MAP_SIG(snap),
+    () => {
+      if (!material) return
+      applyMaterialWithMaps(material, props.params, mapOpts)
+      scheduleRender()
+    },
+    mapOpts,
+  )
+}
+
+function MATERIAL_MAP_SIG(p: MaterialParams): string {
+  return [
+    p.map, p.metalnessMap, p.roughnessMap, p.normalMap, p.emissiveMap,
+    p.alphaMap, p.aoMap, p.transmissionMap, p.clearcoatMap, p.clearcoatRoughnessMap,
+  ].join('|')
 }
 
 function renderNow(): void {
@@ -88,7 +116,10 @@ onMounted(() => {
   camera.lookAt(0, 0, 0)
 
   material = new THREE.MeshPhysicalMaterial({ thickness: 1 })
-  sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 32), material)
+  const geo = new THREE.SphereGeometry(1, 64, 32)
+  // aoMap samples uv2 — mirror uv so AO works on the preview sphere.
+  if (geo.attributes.uv) geo.setAttribute('uv2', geo.attributes.uv)
+  sphere = new THREE.Mesh(geo, material)
   scene.add(sphere)
 
   applyParams()
@@ -102,6 +133,7 @@ watch(() => ({ ...props.params }), () => {
 }, { deep: true })
 
 onBeforeUnmount(() => {
+  mapSeq++
   sphere?.geometry.dispose()
   material?.dispose()
   sphere = null

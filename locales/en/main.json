@@ -101,27 +101,44 @@
       "createVideo": "Video",
       "createAudio": "Audio",
       "createText": "Text",
+      "createModel": "3D Model",
       "workflowEmpty": "No workflows yet. Save graphs into ComfyUI’s user/default/workflows, or clone your team Git repo there, then reopen this panel.",
       "workflowLoading": "Loading…",
       "workflowOpenFailed": "Failed to open workflow",
-      "gitNoRepo": "Needs a dedicated workflows Git repo (not the whole ComfyUI tree). git init inside user/default/workflows and push to its own GitHub repo.",
+      "gitNoRepo": "This account has no team workflows Git yet. Click Connect to clone into this user’s workflows folder (each multi-user account is separate).",
       "gitNoGit": "git was not found on this machine — install it and add it to PATH.",
       "gitSynced": "In sync with remote",
       "gitBehind": "{n} remote commit(s) available",
       "gitDirty": "Local uncommitted changes",
       "gitUpdate": "Update",
       "gitCommit": "Commit",
+      "gitConnect": "Connect team repo",
+      "gitConnecting": "Connecting team repo…",
+      "gitConnectOk": "Connected to team workflows repo",
       "gitCommitPick": "Select local workflows to commit",
       "gitCommitConfirm": "Confirm commit",
       "gitCommitCancel": "Cancel",
       "gitMessagePlaceholder": "Commit message (optional)",
+      "gitChecking": "Checking remote status…",
       "gitUpdating": "Updating from remote…",
       "gitPushing": "Committing & pushing…",
       "gitPullOk": "Updated from remote",
       "gitPushOk": "Committed & pushed",
       "gitError": "Sync failed",
       "gitDuplicate": "Cannot commit: remote already has a workflow with the same name",
-      "gitNothingSelected": "Select at least one workflow to commit"
+      "gitNothingSelected": "Select at least one workflow to commit",
+      "gitNeedUpdate": "Remote has new commits. Click Update first, then Commit again.",
+      "gitNeedUpdateAfterCommit": "Saved locally, but remote moved ahead. Click Update, then Commit once more to finish the push.",
+      "gitPullConflict": "Update failed (possible conflict). Close the panel and retry, or check uncommitted local edits.",
+      "gitNothingToCommit": "No changes to commit for the selected workflows",
+      "gitAssetsPacked": "Packed {n} media asset(s)",
+      "gitAssetsRestored": "Restored {n} media asset(s) locally",
+      "gitAssetsWarn": "Some assets were skipped",
+      "gitStateNew": "Uncommitted",
+      "gitStateModified": "Modified",
+      "gitStateOutdated": "Update available",
+      "gitStateDiverged": "Diverged",
+      "gitLegend": "Uncommitted=new local · Modified=local edits · Update=remote newer"
     },
     "stageHint": "Connect references, press ↑ to generate",
     "apiCostHint": "Estimated workflow API cost",
@@ -886,7 +903,7 @@
     }
   },
   "promptBeautify": {
-    "open": "AI beautify — expand & polish via Bot (Codex etc.) or Local / ComfyUI LLM",
+    "open": "AI beautify — concise polish for Gemini-class models (no quality-tag spam)",
     "preview": "Preview — apply to replace the current prompt",
     "apply": "Apply",
     "discard": "Discard",
@@ -2364,6 +2381,8 @@
     "loadFailed": "Failed to load model",
     "replaceTexture": "Texture",
     "clearTexture": "Clear texture",
+    "metalnessMul": "× Metalness",
+    "roughnessMul": "× Roughness",
     "lighting": {
       "default": "Lit",
       "studio": "Studio",
@@ -2375,10 +2394,13 @@
     "upload": "Upload",
     "uploading": "Uploading…",
     "empty": "No 3D models in input/3d yet — upload one to get started.",
-    "pickHint": "Select a 3D model…"
+    "pickHint": "Select a 3D model…",
+    "linkedHint": "Wired model",
+    "builtins": "Basics",
+    "uploaded": "Uploaded"
   },
   "modelBinder": {
-    "noModel": "Pick or upload a model above first",
+    "noModel": "Wire a model in, or pick/upload one above",
     "pickHint": "Click the model to select a part, then click a material to bind it",
     "selected": "Part: {part}",
     "unbind": "Unbind"
@@ -2549,13 +2571,31 @@
       "ceramic": "Ceramic"
     },
     "color": "Color",
+    "map": "Map",
+    "maps": "Maps",
+    "mapHint": "Wire images into the map sockets; scalars multiply texture grayscale",
+    "mapSlot": {
+      "map": "Albedo",
+      "metalnessMap": "Metalness",
+      "roughnessMap": "Roughness",
+      "normalMap": "Normal",
+      "emissiveMap": "Emissive",
+      "alphaMap": "Alpha",
+      "aoMap": "AO",
+      "transmissionMap": "Transmission",
+      "clearcoatMap": "Clearcoat",
+      "clearcoatRoughnessMap": "Coat rough"
+    },
     "param": {
       "metalness": "Metalness",
       "roughness": "Roughness",
       "transmission": "Transmission",
       "opacity": "Opacity",
       "clearcoat": "Clearcoat",
-      "ior": "IOR"
+      "clearcoatRoughness": "Coat roughness",
+      "ior": "IOR",
+      "normalScale": "Normal scale",
+      "aoMapIntensity": "AO intensity"
     }
   },
   "loaderDrop": {

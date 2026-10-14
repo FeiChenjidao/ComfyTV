@@ -5,9 +5,11 @@ import { useStageStore, type StageState } from '@/stores/stageStore'
 import { uploadCanvas } from '@/utils/uploadCanvas'
 import { onNodeConfigure, readWidgetStr, writeWidget } from '@/utils/widget'
 import {
+  MATERIAL_MAP_KEYS,
   normalizeMaterial,
   parseMaterialState,
   serializeMaterialState,
+  type MaterialMapKey,
   type MaterialParams,
   type MaterialPreset,
 } from '@/widgets/material/types'
@@ -21,15 +23,28 @@ export type MaterialSliderKey =
   | 'transmission'
   | 'opacity'
   | 'clearcoat'
+  | 'clearcoatRoughness'
   | 'ior'
+  | 'normalScale'
+  | 'aoMapIntensity'
 
-export const MATERIAL_SLIDERS: { key: MaterialSliderKey; min: number; max: number; step: number }[] = [
-  { key: 'metalness',    min: 0, max: 1,     step: 0.01 },
-  { key: 'roughness',    min: 0, max: 1,     step: 0.01 },
-  { key: 'transmission', min: 0, max: 1,     step: 0.01 },
-  { key: 'opacity',      min: 0, max: 1,     step: 0.01 },
-  { key: 'clearcoat',    min: 0, max: 1,     step: 0.01 },
-  { key: 'ior',          min: 1, max: 2.333, step: 0.001 },
+export const MATERIAL_SLIDERS: {
+  key: MaterialSliderKey
+  min: number
+  max: number
+  step: number
+  /** Show this slider only when the related map socket is live (optional). */
+  whenMap?: MaterialMapKey
+}[] = [
+  { key: 'metalness',          min: 0, max: 1,     step: 0.01 },
+  { key: 'roughness',          min: 0, max: 1,     step: 0.01 },
+  { key: 'transmission',       min: 0, max: 1,     step: 0.01 },
+  { key: 'opacity',            min: 0, max: 1,     step: 0.01 },
+  { key: 'clearcoat',          min: 0, max: 1,     step: 0.01 },
+  { key: 'clearcoatRoughness', min: 0, max: 1,     step: 0.01 },
+  { key: 'ior',                min: 1, max: 2.333, step: 0.001 },
+  { key: 'normalScale',        min: 0, max: 2,     step: 0.01, whenMap: 'normalMap' },
+  { key: 'aoMapIntensity',     min: 0, max: 1,     step: 0.01, whenMap: 'aoMap' },
 ]
 
 export interface UseMaterialStageOptions {
@@ -98,15 +113,33 @@ export function useMaterialStage(node: LGraphNode, opts: UseMaterialStageOptions
     }
   }
 
+  function syncMapsFromInputs(): void {
+    const inputs = opts.getState().inputs
+    for (const key of MATERIAL_MAP_KEYS) {
+      const inp = inputs.find((i) => i.slot === key)
+      // Only override from a live wire; when disconnected keep the saved material_state map.
+      if (inp?.source !== 'upstream') continue
+      const url = inp.content || null
+      if (params[key] !== url) params[key] = url
+    }
+  }
+
   watch(() => ({ ...params }), syncOutputSlots, { deep: true })
+
+  watch(
+    () => opts.getState().inputs.map((i) => `${i.slot}:${i.source}:${i.content ?? ''}`).join('|'),
+    () => { syncMapsFromInputs() },
+  )
 
   onNodeConfigure(node, () => {
     Object.assign(params, parseMaterialState(readWidgetStr(node, 'material_state', '')))
+    syncMapsFromInputs()
     syncOutputSlots()
     const captured = readWidgetStr(node, 'captured_image', '')
     stageStore.setOutputSlot(opts.getState(), 1, captured || null)
   })
 
+  syncMapsFromInputs()
   syncOutputSlots()
 
   function teardown(): void {

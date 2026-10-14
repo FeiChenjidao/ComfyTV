@@ -161,11 +161,32 @@ async def workflow_import(request: web.Request) -> web.Response:
 @routes.get("/comfytv/workflows/native")
 async def workflow_list_native(request: web.Request) -> web.Response:
     kind = request.query.get("kind") or None
+    user_id = workflow_db.link.resolve_request_user_id(request)
     try:
-        items = workflow_db.list_native_workflows(kind)
+        items = workflow_db.list_native_workflows(kind, user_id=user_id)
     except Exception as e:  # pragma: no cover
         return web.json_response({"error": str(e)}, status=500)
-    return web.json_response({"workflows": items})
+    return web.json_response({"workflows": items, "user_id": user_id})
+
+
+@routes.get("/comfytv/workflows/native/file")
+async def workflow_native_file(request: web.Request) -> web.Response:
+    """Serve a native library JSON by relative path for the current Comfy user."""
+    rel = str(request.query.get("path") or "").strip().replace("\\", "/")
+    if not rel or rel.startswith("/") or ".." in rel.split("/"):
+        return web.json_response({"error": "invalid path"}, status=400)
+    user_id = workflow_db.link.resolve_request_user_id(request)
+    path = workflow_db.link._resolve_native_path(rel, user_id=user_id)
+    if path is None or not path.is_file():
+        return web.json_response({"error": "workflow file not found"}, status=404)
+    try:
+        text = path.read_text(encoding="utf-8")
+        data = json.loads(text)
+    except OSError as e:
+        return web.json_response({"error": str(e)}, status=500)
+    except json.JSONDecodeError as e:
+        return web.json_response({"error": f"invalid workflow json: {e}"}, status=400)
+    return web.json_response(data)
 
 
 @routes.post("/comfytv/workflows/link")
@@ -183,8 +204,9 @@ async def workflow_link(request: web.Request) -> web.Response:
     if not path:
         return web.json_response({"error": "path required"}, status=400)
 
+    user_id = workflow_db.link.resolve_request_user_id(request)
     try:
-        result = workflow_db.link_workflow(kind, path, label)
+        result = workflow_db.link_workflow(kind, path, label, user_id=user_id)
     except ValueError as e:
         return web.json_response({"error": str(e)}, status=400)
 

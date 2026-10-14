@@ -101,27 +101,44 @@
       "createVideo": "视频",
       "createAudio": "音频",
       "createText": "文本",
+      "createModel": "模型",
       "workflowEmpty": "暂无工作流。在 ComfyUI 里保存到 user/default/workflows，或把团队 Git 仓 clone 到该目录后再打开本面板。",
       "workflowLoading": "加载中…",
       "workflowOpenFailed": "打开工作流失败",
-      "gitNoRepo": "需要独立工作流 Git 仓（不要用整仓 ComfyUI）。在 user/default/workflows 下单独 git init，并 push 到专用 GitHub 仓。",
+      "gitNoRepo": "当前账号尚未连接团队工作流仓。点「连接团队仓」会克隆到本账号的 workflows 目录（多用户互不影响）。",
       "gitNoGit": "本机未找到 git，请先安装并加入 PATH。",
       "gitSynced": "已与远程同步",
       "gitBehind": "远程有 {n} 个提交可更新",
       "gitDirty": "本地有未提交改动",
       "gitUpdate": "更新",
       "gitCommit": "提交",
+      "gitConnect": "连接团队仓",
+      "gitConnecting": "正在连接团队仓…",
+      "gitConnectOk": "已连接团队工作流仓",
       "gitCommitPick": "选择要提交的本地工作流",
       "gitCommitConfirm": "确认提交",
       "gitCommitCancel": "取消",
       "gitMessagePlaceholder": "提交说明（可空）",
+      "gitChecking": "正在校验远程状态…",
       "gitUpdating": "正在从远程更新…",
       "gitPushing": "正在提交并推送…",
       "gitPullOk": "已从远程更新",
       "gitPushOk": "已提交并推送",
       "gitError": "同步失败",
       "gitDuplicate": "无法提交：远程已有同名工作流",
-      "gitNothingSelected": "请先勾选要提交的工作流"
+      "gitNothingSelected": "请先勾选要提交的工作流",
+      "gitNeedUpdate": "远程有新版本。请先点「更新」，再重新点「提交」。",
+      "gitNeedUpdateAfterCommit": "本地已保存提交，但远程有更新。请先点「更新」，再点一次「提交」完成推送。",
+      "gitPullConflict": "更新失败（可能有冲突）。请关掉面板后再试，或检查本机未保存的改动。",
+      "gitNothingToCommit": "所选工作流没有可提交的改动",
+      "gitAssetsPacked": "已打包 {n} 个媒体资产",
+      "gitAssetsRestored": "已同步 {n} 个媒体资产到本机",
+      "gitAssetsWarn": "部分资产未打包/未覆盖",
+      "gitStateNew": "未提交",
+      "gitStateModified": "已改动",
+      "gitStateOutdated": "可更新",
+      "gitStateDiverged": "冲突",
+      "gitLegend": "未提交=本地新建 · 已改动=本地修改 · 可更新=远程有新版本"
     },
     "stageHint": "连入参考，点 ↑ 生成",
     "apiCostHint": "估算工作流 API 费用",
@@ -904,7 +921,7 @@
     }
   },
   "promptBeautify": {
-    "open": "AI 美化 —— 用当前 Bot（如 Codex）或 Local / ComfyUI LLM 扩写润色",
+    "open": "AI 美化 —— 精简润色（适合 Gemini 等大模型，不堆质量标签）",
     "preview": "预览 —— 应用后替换当前提示词",
     "apply": "应用",
     "discard": "放弃",
@@ -2433,6 +2450,8 @@
     "loadFailed": "模型加载失败",
     "replaceTexture": "替换纹理",
     "clearTexture": "清除纹理",
+    "metalnessMul": "×金属度",
+    "roughnessMul": "×粗糙度",
     "lighting": {
       "default": "光照",
       "studio": "棚拍",
@@ -2444,10 +2463,13 @@
     "upload": "上传",
     "uploading": "上传中…",
     "empty": "input/3d 还没有 3D 模型——先上传一个吧。",
-    "pickHint": "选择 3D 模型…"
+    "pickHint": "选择 3D 模型…",
+    "linkedHint": "连线模型",
+    "builtins": "基础模型",
+    "uploaded": "已上传"
   },
   "modelBinder": {
-    "noModel": "先在上方选择或上传一个模型",
+    "noModel": "先连线模型，或在上方选择/上传",
     "pickHint": "点击模型选中部件，再点材质完成绑定",
     "selected": "部件：{part}",
     "unbind": "解绑"
@@ -2618,13 +2640,31 @@
       "ceramic": "陶瓷"
     },
     "color": "颜色",
+    "map": "贴图",
+    "maps": "贴图通道",
+    "mapHint": "将图像连到各贴图口；标量参数会与贴图灰度相乘",
+    "mapSlot": {
+      "map": "漫反射",
+      "metalnessMap": "金属度",
+      "roughnessMap": "粗糙度",
+      "normalMap": "法线",
+      "emissiveMap": "自发光",
+      "alphaMap": "透明",
+      "aoMap": "AO",
+      "transmissionMap": "透射",
+      "clearcoatMap": "清漆",
+      "clearcoatRoughnessMap": "清漆粗糙"
+    },
     "param": {
       "metalness": "金属度",
       "roughness": "粗糙度",
       "transmission": "透射",
       "opacity": "不透明度",
       "clearcoat": "清漆",
-      "ior": "折射率"
+      "clearcoatRoughness": "清漆粗糙度",
+      "ior": "折射率",
+      "normalScale": "法线强度",
+      "aoMapIntensity": "AO 强度"
     }
   },
   "loaderDrop": {

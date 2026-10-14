@@ -2,7 +2,8 @@ import { LINK_TYPE_NATIVE } from '@/api'
 import { t } from '@/i18n'
 import { app } from '@/lib/comfyApp'
 
-const NATIVE_ROOT_MARKER = '/default/workflows/'
+/** Match …/user/<id>/workflows/ so multi-user absolute paths still resolve. */
+const NATIVE_ROOT_RE = /\/user\/[^/]+\/workflows\//i
 const MANAGED_TAB_PREFIX = 'comfytv/'
 const WORKFLOWS_BASE = 'workflows/'
 
@@ -43,9 +44,9 @@ const comfy = () => app as unknown as ComfyAppWithTabs
 
 export function nativeWorkflowRelPath(filePath: string): string | null {
   const normalized = filePath.replace(/\\/g, '/')
-  const idx = normalized.indexOf(NATIVE_ROOT_MARKER)
-  if (idx === -1) return null
-  return normalized.slice(idx + NATIVE_ROOT_MARKER.length) || null
+  const m = NATIVE_ROOT_RE.exec(normalized)
+  if (!m || m.index < 0) return null
+  return normalized.slice(m.index + m[0].length) || null
 }
 
 function stripJsonExt(path: string): string {
@@ -62,19 +63,28 @@ async function activateExistingTab(fullPath: string): Promise<boolean> {
   return true
 }
 
-async function fetchNativeWorkflowJson(fullPath: string): Promise<unknown> {
+async function fetchNativeWorkflowJson(relPath: string): Promise<unknown> {
   const { api } = comfy()
-  const resp = api.getUserData
-    ? await api.getUserData(fullPath)
-    : await api.fetchApi(`/userdata/${encodeURIComponent(fullPath)}`)
-  if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`)
+  // Always read via ComfyTV: team library is user/default/workflows, while
+  // ComfyUI /userdata is scoped to the logged-in multi-user account.
+  const resp = await api.fetchApi(
+    `/comfytv/workflows/native/file?path=${encodeURIComponent(relPath)}`,
+  )
+  if (!resp.ok) {
+    let detail = `${resp.status} ${resp.statusText}`
+    try {
+      const j = await resp.json()
+      if (j?.error) detail += ` — ${j.error}`
+    } catch { /* ignore */ }
+    throw new Error(detail)
+  }
   return resp.json()
 }
 
 export async function openNativeWorkflowInComfy(relPath: string): Promise<void> {
   const fullPath = WORKFLOWS_BASE + relPath
   if (await activateExistingTab(fullPath)) return
-  const json = await fetchNativeWorkflowJson(fullPath)
+  const json = await fetchNativeWorkflowJson(relPath)
   await comfy().loadGraphData(json, true, true, stripJsonExt(relPath))
 }
 

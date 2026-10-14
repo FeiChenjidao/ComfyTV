@@ -12,6 +12,7 @@ export const QUICK_CREATE: Array<{ id: string; classType: string; labelKey: stri
   { id: 'video', classType: 'ComfyTV.VideoStage', labelKey: 'v2.bottomBar.createVideo' },
   { id: 'audio', classType: 'ComfyTV.AudioStage', labelKey: 'v2.bottomBar.createAudio' },
   { id: 'text', classType: 'ComfyTV.TextStage', labelKey: 'v2.bottomBar.createText' },
+  { id: 'model', classType: 'ComfyTV.Model3DStage', labelKey: 'v2.bottomBar.createModel' },
 ]
 
 export function openAssetsLibrary(): void {
@@ -204,7 +205,7 @@ export function groupNodesByCategory(nodes: NodeCatalogEntry[]): NodeCatalogGrou
   return groups
 }
 
-/** Folder badge for a path under user/default/workflows ('' if at root). */
+/** Folder badge for a path under the current user's workflows ('' if at root). */
 export function nativeWorkflowFolder(path: string): string {
   const parts = path.replace(/\\/g, '/').split('/').filter(Boolean)
   if (parts.length <= 1) return ''
@@ -212,7 +213,7 @@ export function nativeWorkflowFolder(path: string): string {
 }
 
 /**
- * Bottom-bar “Workflows” = ComfyUI native library (user/default/workflows),
+ * Bottom-bar “Workflows” = current ComfyUI user library (user/<id>/workflows),
  * not ComfyTV stage dropdown entries under user/comfytv/workflows.
  */
 export async function listBottomBarWorkflows(): Promise<NativeWorkflow[]> {

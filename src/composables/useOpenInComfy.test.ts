@@ -56,6 +56,8 @@ describe('nativeWorkflowRelPath', () => {
       .toBe('sub/wf.json')
     expect(nativeWorkflowRelPath('/srv/comfy/user/default/workflows/wf.json'))
       .toBe('wf.json')
+    expect(nativeWorkflowRelPath('/srv/comfy/user/alice/workflows/team/wf.json'))
+      .toBe('team/wf.json')
   })
 
   it('returns null for paths outside the native root', () => {
@@ -92,10 +94,13 @@ describe('openWorkflowInComfy (native link)', () => {
     expect(loadGraphData).not.toHaveBeenCalled()
   })
 
-  it('falls back to fetching the userdata file when the store misses', async () => {
-    getUserData.mockResolvedValue(jsonResponse({ nodes: [] }))
+  it('fetches via ComfyTV native file API when the store misses', async () => {
+    fetchApi.mockResolvedValue(jsonResponse({ nodes: [] }))
     await openWorkflowInComfy(target)
-    expect(getUserData).toHaveBeenCalledWith('workflows/sub/wf.json')
+    expect(fetchApi).toHaveBeenCalledWith(
+      '/comfytv/workflows/native/file?path=sub%2Fwf.json',
+    )
+    expect(getUserData).not.toHaveBeenCalled()
     expect(loadGraphData).toHaveBeenCalledWith({ nodes: [] }, true, true, 'sub/wf')
   })
 
@@ -150,11 +155,11 @@ describe('try* wrappers', () => {
   })
 
   it('opens a native file by relative path and reports failures', async () => {
-    getUserData.mockResolvedValue(jsonResponse({ nodes: [] }))
+    fetchApi.mockResolvedValue(jsonResponse({ nodes: [] }))
     await expect(tryOpenNativeWorkflowInComfy('sub/wf.json')).resolves.toBe(true)
     expect(loadGraphData).toHaveBeenCalledWith({ nodes: [] }, true, true, 'sub/wf')
 
-    getUserData.mockResolvedValue(new Response('', { status: 404, statusText: 'Not Found' }))
+    fetchApi.mockResolvedValue(jsonResponse({ error: 'workflow file not found' }, 404))
     await expect(tryOpenNativeWorkflowInComfy('missing.json')).resolves.toBe(false)
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }))
   })

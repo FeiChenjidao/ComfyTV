@@ -10,13 +10,14 @@ import {
 } from './actions'
 
 describe('bottomBar actions', () => {
-  it('exposes the four quick-create stages', () => {
-    expect(QUICK_CREATE.map((x) => x.id)).toEqual(['image', 'video', 'audio', 'text'])
+  it('exposes the five quick-create stages', () => {
+    expect(QUICK_CREATE.map((x) => x.id)).toEqual(['image', 'video', 'audio', 'text', 'model'])
     expect(QUICK_CREATE.map((x) => x.classType)).toEqual([
       'ComfyTV.ImageStage',
       'ComfyTV.VideoStage',
       'ComfyTV.AudioStage',
       'ComfyTV.TextStage',
+      'ComfyTV.Model3DStage',
     ])
   })
 

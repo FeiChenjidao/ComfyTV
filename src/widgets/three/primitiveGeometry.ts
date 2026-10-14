@@ -71,5 +71,20 @@ export function buildPrimitiveMesh(kind: PrimKind, params: Record<string, number
     roughness: 0.75,
     side: THREE.DoubleSide,
   })
-  return new THREE.Mesh(buildPrimitiveGeometry(kind, params), mat)
+  const mesh = new THREE.Mesh(buildPrimitiveGeometry(kind, params), mat)
+  mesh.name = kind
+  return mesh
+}
+
+/** Default `__prim__` wire payload for a built-in loader preset. */
+export function builtinPrimitivePayload(
+  kind: PrimKind,
+  params: Record<string, number | boolean> = {},
+): string {
+  return JSON.stringify({ __prim__: { kind, ...params } })
+}
+
+export function isPrimitivePayload(value: string | null | undefined): boolean {
+  const s = (value ?? '').trim()
+  return s.startsWith('{') && s.includes('__prim__')
 }

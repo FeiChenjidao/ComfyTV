@@ -19,6 +19,8 @@ describe('applyMaterialParams', () => {
       clearcoatRoughness: 0.25,
       ior: 1.8,
       emissiveIntensity: 2,
+      normalScale: 1.5,
+      aoMapIntensity: 0.6,
     }))
     expect(mat.metalness).toBe(0.7)
     expect(mat.roughness).toBe(0.2)
@@ -27,6 +29,8 @@ describe('applyMaterialParams', () => {
     expect(mat.clearcoatRoughness).toBe(0.25)
     expect(mat.ior).toBe(1.8)
     expect(mat.emissiveIntensity).toBe(2)
+    expect(mat.normalScale.x).toBe(1.5)
+    expect(mat.aoMapIntensity).toBe(0.6)
   })
 
   it('sets color and emissive from hex strings', () => {
@@ -49,5 +53,24 @@ describe('applyMaterialParams', () => {
     applyMaterialParams(mat, makeParams({ opacity: 1 }))
     expect(mat.opacity).toBe(1)
     expect(mat.transparent).toBe(false)
+  })
+
+  it('assigns or clears channel maps when provided', () => {
+    const mat = new THREE.MeshPhysicalMaterial()
+    const albedo = new THREE.Texture()
+    const metal = new THREE.Texture()
+    const normal = new THREE.Texture()
+    applyMaterialParams(mat, makeParams(), {
+      map: albedo,
+      metalnessMap: metal,
+      normalMap: normal,
+    })
+    expect(mat.map).toBe(albedo)
+    expect(mat.metalnessMap).toBe(metal)
+    expect(mat.normalMap).toBe(normal)
+    applyMaterialParams(mat, makeParams(), { map: null, metalnessMap: null, normalMap: null })
+    expect(mat.map).toBeNull()
+    expect(mat.metalnessMap).toBeNull()
+    expect(mat.normalMap).toBeNull()
   })
 })

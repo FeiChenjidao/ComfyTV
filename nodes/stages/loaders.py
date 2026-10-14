@@ -302,6 +302,12 @@ class ModelLoaderStage(io.ComfyNode):
             inputs=[
                 _project_id_input(),
                 _parent_output_id_input(),
+                COMFYTV_MODEL.Input(
+                    "model_in",
+                    optional=True,
+                    tooltip="Optional upstream model. When wired, overrides the uploaded/picked "
+                            "file and becomes this stage's model output.",
+                ),
                 io.Combo.Input(
                     "model",
                     options=_list_3d_input_files(),
@@ -310,7 +316,8 @@ class ModelLoaderStage(io.ComfyNode):
                     socketless=True,
                     extra_dict={"hidden": True},
                     tooltip="Internal — input/3d-relative path of the picked model. Driven by the "
-                            "card's thumbnail dropdown; options carry the server-side file list.",
+                            "card's thumbnail dropdown; options carry the server-side file list. "
+                            "Ignored when `model_in` is wired.",
                 ),
                 io.Autogrow.Input("materials", template=_material_template(4)),
                 io.String.Input(
@@ -329,9 +336,16 @@ class ModelLoaderStage(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, project_id="", parent_output_id=0, model="", materials=None,
-                material_bindings="", captured_image=""):
-        payload = _input_file_url(model)
+    def execute(cls, project_id="", parent_output_id=0, model="", model_in="",
+                materials=None, material_bindings="", captured_image=""):
+        linked = (model_in or "").strip()
+        picked = (model or "").strip()
+        if linked:
+            payload = linked
+        elif picked.startswith("{") and '"__prim__"' in picked:
+            payload = picked
+        else:
+            payload = _input_file_url(picked)
         params = None
         if material_bindings and material_bindings not in ("{}", ""):
             params = {'material_bindings': material_bindings,

@@ -232,6 +232,41 @@ describe('useModelLoader', () => {
     expect(loader.modelSrc.value).toBe('/view?filename=out.glb')
   })
 
+  it('modelSrc prefers a wired model_in over output and the picked file', () => {
+    const state = makeState({
+      inputs: [{
+        slot: 'model_in',
+        type: 'COMFYTV_MODEL',
+        source: 'upstream',
+        content: '/view?filename=wired.glb',
+      }],
+    })
+    const { loader } = makeLoader({ state })
+    loader.selected.value = '3d/mesh.glb'
+    state.output = '/view?filename=out.glb'
+    expect(loader.hasLinkedModel.value).toBe(true)
+    expect(loader.linkedModel.value).toBe('/view?filename=wired.glb')
+    expect(loader.modelSrc.value).toBe('/view?filename=wired.glb')
+  })
+
+  it('onPickBuiltin writes a __prim__ payload and exposes it as modelSrc', () => {
+    const { loader, node } = makeLoader()
+    loader.onPickBuiltin('sphere')
+    expect(loader.selectedKind.value).toBe('sphere')
+    expect(loader.selected.value).toContain('"__prim__"')
+    expect(loader.selected.value).toContain('"sphere"')
+    expect(loader.modelSrc.value).toBe(loader.selected.value)
+    const w = node.widgets.find((x: FakeWidget) => x.name === 'model')
+    expect(w.value).toBe(loader.selected.value)
+  })
+
+  it('filteredBuiltins matches the query against kind names', () => {
+    const { loader } = makeLoader()
+    expect(loader.filteredBuiltins.value.map((b) => b.kind)).toContain('plane')
+    loader.query.value = 'sph'
+    expect(loader.filteredBuiltins.value.map((b) => b.kind)).toEqual(['sphere'])
+  })
+
   it('uploads files into input/3d, registers and selects the last one', async () => {
     mocks.uploadBlobNamed.mockResolvedValue({ name: 'new.glb', subfolder: 'comfytv/3d', type: 'input', url: '/u' })
     const { loader, node } = makeLoader()

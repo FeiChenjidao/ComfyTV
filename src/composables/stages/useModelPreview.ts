@@ -3,9 +3,13 @@ import * as THREE from 'three'
 
 import { app } from '@/lib/comfyApp'
 import { persistModelThumbnail } from '@/api/nativeAssets'
-import { applyMaterialParams } from '@/widgets/material/three'
+import {
+  applyMaterialWithMaps,
+  loadMissingMaterialMaps,
+} from '@/widgets/material/applyMaps'
 import type { MaterialParams } from '@/widgets/material/types'
 import { OVERLAY_FLAG, type ViewChannel } from '@/widgets/three/channelShading'
+import { invalidatePreviewMaterialClone } from '@/widgets/three/previewShading'
 
 export const THUMBNAIL_SIZE = 256
 export const THUMBNAIL_DELAY_MS = 600
@@ -148,6 +152,14 @@ export function useModelPreview(
     return originalMaterials.get(key)
   }
 
+  function ensureUv2(mesh: THREE.Mesh): void {
+    const geo = mesh.geometry
+    if (!(geo instanceof THREE.BufferGeometry)) return
+    if (geo.attributes.uv && !geo.attributes.uv2) {
+      geo.setAttribute('uv2', geo.attributes.uv)
+    }
+  }
+
   function applyPartMaterials(force = false): void {
     if (!partMeshes.size) return
     if ((props.channel ?? 'material') !== 'material') return
@@ -162,9 +174,32 @@ export function useModelPreview(
           mat = new THREE.MeshPhysicalMaterial()
           boundMaterials.set(key, mat)
         }
-        applyMaterialParams(mat, params)
+        ensureUv2(mesh)
+        const snap = { ...params }
+        // Match the material-ball orientation so wired textures look the same
+        // when bound onto parts (incl. built-in Three.js primitives).
+        const mapOpts = { flipY: true }
+        const { missing } = applyMaterialWithMaps(mat, snap, mapOpts)
+        if (missing.length) {
+          void loadMissingMaterialMaps(
+            snap,
+            missing,
+            () => props.partMaterials?.[key] === params
+              || JSON.stringify(props.partMaterials?.[key]) === JSON.stringify(snap),
+            () => {
+              const bound = boundMaterials.get(key)
+              if (!bound || !props.partMaterials?.[key]) return
+              applyMaterialWithMaps(bound, props.partMaterials[key]!, mapOpts)
+              invalidatePreviewMaterialClone(mesh)
+              emit('view-changed')
+            },
+            mapOpts,
+          )
+        }
+        invalidatePreviewMaterialClone(mesh)
         if (highlightKey !== key) mesh.material = mat
       } else if (highlightKey !== key) {
+        invalidatePreviewMaterialClone(mesh)
         const original = originalMaterials.get(key)
         if (original) mesh.material = original
       }

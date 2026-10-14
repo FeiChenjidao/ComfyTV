@@ -11,6 +11,7 @@ import {
 import { containFitSquare, slotIndexesInDocumentOrder } from '@/composables/stages/imageMerge'
 import { mirrorToCanvas } from '@/composables/stages/imageOrientPreview'
 import { uploadBlob } from '@/utils/uploadCanvas'
+import { onNodeConfigure, readWidgetStr, writeWidget } from '@/utils/widget'
 import {
   registerToolbarHandlers,
   setToolbarDisabled,
@@ -21,6 +22,10 @@ import {
   syncImagesSplitStage,
   type ImageGroupItem,
 } from './imagesSplit'
+
+export const SLOT_OVERRIDES_WIDGET = 'slot_overrides'
+/** Fallback when the hidden widget is missing (legacy nodes / tests). */
+export const SLOT_OVERRIDES_PROP = 'comfytv_split_overrides'
 
 export function viewToAbsolute(url: string): string {
   const raw = url.replace(/^\/api/, '')
@@ -45,6 +50,52 @@ export function squareImageCanvas(img: HTMLImageElement): HTMLCanvasElement {
   return containFitSquare(img, Math.max(w, h))
 }
 
+export function parseSlotOverrides(raw: unknown): Record<string, string> {
+  let parsed: unknown = raw
+  if (typeof raw === 'string') {
+    const s = raw.trim()
+    if (!s) return {}
+    try {
+      parsed = JSON.parse(s)
+    } catch {
+      return {}
+    }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof k === 'string' && k && typeof v === 'string' && v) out[k] = v
+  }
+  return out
+}
+
+export function serializeSlotOverrides(map: Record<string, string>): string {
+  return JSON.stringify(map ?? {})
+}
+
+function readPersistedOverrides(node: LGraphNode | null | undefined): Record<string, string> {
+  if (!node) return {}
+  const fromWidget = readWidgetStr(node, SLOT_OVERRIDES_WIDGET, '')
+  if (fromWidget) {
+    const parsed = parseSlotOverrides(fromWidget)
+    if (Object.keys(parsed).length) return parsed
+  }
+  return parseSlotOverrides((node as any).properties?.[SLOT_OVERRIDES_PROP])
+}
+
+function writePersistedOverrides(node: LGraphNode | null | undefined, map: Record<string, string>) {
+  if (!node) return
+  const json = serializeSlotOverrides(map)
+  writeWidget(node, SLOT_OVERRIDES_WIDGET, json, { fireCallback: false })
+  ;(node as any).properties ??= {}
+  ;(node as any).properties[SLOT_OVERRIDES_PROP] = { ...map }
+  try {
+    ;(node as any).setDirtyCanvas?.(true, true)
+  } catch {
+    /* node may be a test stub */
+  }
+}
+
 type SlotTransform = (img: HTMLImageElement) => HTMLCanvasElement
 
 export function useImagesSplit(node: LGraphNode, state: StageState) {
@@ -53,7 +104,7 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
   /** Upstream URLs before local transforms (keyed for override map). */
   const sourceUrls = ref<string[]>([])
   /** original upstream url → locally transformed view url (1:1 / flip). */
-  const overrideBySource = ref<Record<string, string>>({})
+  const overrideBySource = ref<Record<string, string>>(readPersistedOverrides(node))
   const truncated = ref(false)
   const selected = ref<number[]>([])
   const actionError = ref('')
@@ -87,16 +138,31 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
     )
   }
 
+  function persistOverrides() {
+    writePersistedOverrides(node, overrideBySource.value)
+  }
+
   function apply(raw: string | null | undefined) {
     const { items: next, truncated: trunc } = syncImagesSplitStage(
       node, raw, writeSlots,
     )
     truncated.value = trunc
     sourceUrls.value = next.map(it => it.image_url)
-    const live = new Set(sourceUrls.value)
-    for (const k of Object.keys(overrideBySource.value)) {
-      if (!live.has(k)) delete overrideBySource.value[k]
+
+    // Only prune when we have real upstream items — an empty/pending batch
+    // must not wipe persisted overrides before sources reappear.
+    if (next.length > 0) {
+      const live = new Set(sourceUrls.value)
+      let pruned = false
+      for (const k of Object.keys(overrideBySource.value)) {
+        if (!live.has(k)) {
+          delete overrideBySource.value[k]
+          pruned = true
+        }
+      }
+      if (pruned) persistOverrides()
     }
+
     items.value = displayItems(next)
     selected.value = selected.value.filter(i => i >= 0 && i < next.length)
   }
@@ -162,6 +228,7 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
         nextOverrides[src] = viewUrl
       }
       overrideBySource.value = nextOverrides
+      persistOverrides()
       apply(state.inputs.find(i => i.slot === 'images')?.content ?? '')
     } catch (e) {
       console.error(`[ComfyTV/images-split] ${opts.logTag} failed`, e)
@@ -206,6 +273,11 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
     spawnImageVariationsFromSlots(node, selected.value)
   }
 
+  function reloadPersisted() {
+    overrideBySource.value = readPersistedOverrides(node)
+    apply(state.inputs.find(i => i.slot === 'images')?.content ?? '')
+  }
+
   watch(
     () => state.inputs.find(i => i.slot === 'images')?.content ?? '',
     (raw) => apply(raw),
@@ -235,15 +307,7 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
   })
   if (getCurrentScope()) onScopeDispose(disposeHandlers)
 
-  if (node) {
-    const orig = node.onConfigure
-    node.onConfigure = function (
-      info: Parameters<NonNullable<LGraphNode['onConfigure']>>[0],
-    ) {
-      orig?.call(this, info)
-      apply(state.inputs.find(i => i.slot === 'images')?.content ?? '')
-    }
-  }
+  onNodeConfigure(node, reloadPersisted)
 
   return {
     items, truncated, connected, max: IMAGES_SPLIT_MAX,

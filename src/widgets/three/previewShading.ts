@@ -16,6 +16,12 @@ export interface PreviewMaterialOverrides {
   map?: THREE.Texture | null
   metalness?: number | null
   roughness?: number | null
+  /** When true, metalness/roughness are multiplied onto the cloned base values. */
+  multiply?: boolean
+}
+
+export function invalidatePreviewMaterialClone(mesh: THREE.Mesh): void {
+  delete mesh.userData[CLONE_KEY]
 }
 
 function eachStandardMat(
@@ -53,23 +59,30 @@ export function ensurePreviewMaterialClones(root: THREE.Object3D): void {
   })
 }
 
+function clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v))
+}
+
 export function applyPreviewMaterialOverrides(
   root: THREE.Object3D,
   overrides: PreviewMaterialOverrides,
 ): void {
   ensurePreviewMaterialClones(root)
+  const multiply = !!overrides.multiply
   eachStandardMat(root, (_mesh, mat) => {
     if (overrides.map !== undefined) {
       mat.map = overrides.map ?? (mat.userData[ORIG_MAP_KEY] as THREE.Texture | null) ?? null
       mat.needsUpdate = true
     }
     if (overrides.metalness != null) {
-      mat.metalness = overrides.metalness
+      const base = (mat.userData[ORIG_METAL_KEY] as number | undefined) ?? mat.metalness
+      mat.metalness = multiply ? clamp01(base * overrides.metalness) : overrides.metalness
     } else if (ORIG_METAL_KEY in mat.userData) {
       mat.metalness = mat.userData[ORIG_METAL_KEY] as number
     }
     if (overrides.roughness != null) {
-      mat.roughness = overrides.roughness
+      const base = (mat.userData[ORIG_ROUGH_KEY] as number | undefined) ?? mat.roughness
+      mat.roughness = multiply ? clamp01(base * overrides.roughness) : overrides.roughness
     } else if (ORIG_ROUGH_KEY in mat.userData) {
       mat.roughness = mat.userData[ORIG_ROUGH_KEY] as number
     }

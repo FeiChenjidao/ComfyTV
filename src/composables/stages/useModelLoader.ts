@@ -7,6 +7,13 @@ import { uploadBlobNamed, uploadCanvas } from '@/utils/uploadCanvas'
 import { getWidget, onNodeConfigure, readWidgetStr, writeWidget } from '@/utils/widget'
 import { parseMaterialState, type MaterialParams } from '@/widgets/material/types'
 import { convertModelFileToGlb, isConvertibleModelFile } from '@/widgets/three/convertToGlb'
+import {
+  builtinPrimitivePayload,
+  isPrimitivePayload,
+  PRIM_KINDS,
+  parsePrimitiveRecipe,
+  type PrimKind,
+} from '@/widgets/three/primitiveGeometry'
 
 export const CAPTURE_SIZE = 1024
 export const CAPTURE_DELAY_MS = 700
@@ -46,6 +53,26 @@ export function inputFileUrl(path: string): string {
 export function baseName(path: string): string {
   const slash = path.lastIndexOf('/')
   return slash >= 0 ? path.slice(slash + 1) : path
+}
+
+export function builtinModelPayload(kind: PrimKind): string {
+  return builtinPrimitivePayload(kind)
+}
+
+export const BUILTIN_MODELS: { kind: PrimKind; payload: string }[] = PRIM_KINDS.map((kind) => ({
+  kind,
+  payload: builtinModelPayload(kind),
+}))
+
+export function selectedPrimitiveKind(value: string): PrimKind | null {
+  return parsePrimitiveRecipe(value)?.kind ?? null
+}
+
+export function modelDisplaySrc(selected: string, output: string | null): string {
+  if (output) return output
+  if (!selected) return ''
+  if (isPrimitivePayload(selected)) return selected
+  return inputFileUrl(selected)
 }
 
 export function menuPanelStyle(
@@ -104,11 +131,29 @@ export function useModelLoader(node: LGraphNode, opts: UseModelLoaderOptions) {
 
   const filteredFiles = computed(() => {
     const q = query.value.trim().toLowerCase()
-    if (!q) return files.value
-    return files.value.filter((f) => f.toLowerCase().includes(q))
+    const list = files.value.filter((f) => !isPrimitivePayload(f))
+    if (!q) return list
+    return list.filter((f) => f.toLowerCase().includes(q))
   })
 
-  const modelSrc = computed(() => opts.getState().output || inputFileUrl(selected.value))
+  const filteredBuiltins = computed(() => {
+    const q = query.value.trim().toLowerCase()
+    if (!q) return BUILTIN_MODELS
+    return BUILTIN_MODELS.filter((b) => b.kind.includes(q))
+  })
+
+  const linkedModel = computed(() => {
+    const inp = opts.getState().inputs.find((i) => i.slot === 'model_in')
+    return inp?.source === 'upstream' && inp.content ? inp.content : null
+  })
+
+  const hasLinkedModel = computed(() => !!linkedModel.value)
+
+  const selectedKind = computed(() => selectedPrimitiveKind(selected.value))
+
+  const modelSrc = computed(() =>
+    linkedModel.value || modelDisplaySrc(selected.value, opts.getState().output),
+  )
 
   const partKeys = ref<string[]>([])
   const selectedPart = ref<string | null>(null)
@@ -177,6 +222,10 @@ export function useModelLoader(node: LGraphNode, opts: UseModelLoaderOptions) {
     selected.value = file
     writeWidget(node, 'model', file)
     opts.onSelected?.()
+  }
+
+  function onPickBuiltin(kind: PrimKind): void {
+    onPick(builtinModelPayload(kind))
   }
 
   function registerFile(path: string): void {
@@ -248,11 +297,13 @@ export function useModelLoader(node: LGraphNode, opts: UseModelLoaderOptions) {
     for (const w of (node as any).widgets ?? []) {
       if (w.name === 'model' || w.type === 'button') w.hidden = true
     }
-    files.value = [...widgetOptionValues()].sort()
+    files.value = widgetOptionValues().filter((f) => !isPrimitivePayload(f)).sort()
     const saved = readWidgetStr(node, 'model', '')
     if (saved) {
       selected.value = saved
-      if (!files.value.includes(saved)) files.value = [...files.value, saved].sort()
+      if (!isPrimitivePayload(saved) && !files.value.includes(saved)) {
+        files.value = [...files.value, saved].sort()
+      }
     }
   }
 
@@ -269,6 +320,10 @@ export function useModelLoader(node: LGraphNode, opts: UseModelLoaderOptions) {
     uploading,
     uploadError,
     filteredFiles,
+    filteredBuiltins,
+    linkedModel,
+    hasLinkedModel,
+    selectedKind,
     modelSrc,
     partKeys,
     selectedPart,
@@ -283,6 +338,7 @@ export function useModelLoader(node: LGraphNode, opts: UseModelLoaderOptions) {
     togglePart,
     unbind,
     onPick,
+    onPickBuiltin,
     registerFile,
     uploadModelFiles,
     onPickFiles,

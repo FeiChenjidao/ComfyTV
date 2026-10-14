@@ -7,6 +7,7 @@ import {
   fetchNativeWorkflowGitStatus,
   pullNativeWorkflowGit,
   pushNativeWorkflowGit,
+  setupNativeWorkflowGit,
   type NativeWorkflow,
   type NativeWorkflowGitStatus,
 } from '@/api'
@@ -50,7 +51,8 @@ const workflowError = ref('')
 const openingPath = ref<string | null>(null)
 
 const gitStatus = ref<NativeWorkflowGitStatus | null>(null)
-const gitBusy = ref<'pull' | 'push' | null>(null)
+const gitBusy = ref<'pull' | 'push' | 'setup' | null>(null)
+const gitChecking = ref(false)
 const gitMessage = ref('')
 const gitFlash = ref('')
 const commitPickOpen = ref(false)
@@ -62,7 +64,7 @@ function toast(severity: 'success' | 'warn' | 'error', summary: string, detail =
 
 const gitHint = computed(() => {
   const g = gitStatus.value
-  if (!g) return ''
+  if (!g) return gitChecking.value ? t('v2.bottomBar.gitChecking') : ''
   if (!g.has_git) return t('v2.bottomBar.gitNoGit')
   if (!g.is_repo) return t('v2.bottomBar.gitNoRepo')
   if (g.error && !g.ok) return g.error
@@ -79,12 +81,40 @@ const gitHintTone = computed(() => {
 })
 
 const canGitActions = computed(() => !!gitStatus.value?.is_repo && !gitBusy.value)
+const canGitSetup = computed(
+  () => !!gitStatus.value?.has_git && !gitStatus.value?.is_repo && !gitBusy.value,
+)
 
 const selectedCommitPaths = computed(() =>
   Object.entries(commitSelected.value)
     .filter(([, on]) => on)
     .map(([path]) => path),
 )
+
+type GitBadge = { key: string; label: string }
+
+function gitBadgesForFile(f: NativeWorkflowGitStatus['files'][number]): GitBadge[] {
+  const badges: GitBadge[] = []
+  if (f.untracked || f.state === 'new') {
+    badges.push({ key: 'new', label: t('v2.bottomBar.gitStateNew') })
+  } else if (f.dirty || f.state === 'modified' || f.state === 'diverged') {
+    badges.push({ key: 'modified', label: t('v2.bottomBar.gitStateModified') })
+  }
+  if (f.remote_diff || f.state === 'outdated' || f.state === 'diverged') {
+    badges.push({ key: 'outdated', label: t('v2.bottomBar.gitStateOutdated') })
+  }
+  return badges
+}
+
+const gitBadgesByPath = computed(() => {
+  const map = new Map<string, GitBadge[]>()
+  for (const f of gitStatus.value?.files || []) map.set(f.path, gitBadgesForFile(f))
+  return map
+})
+
+function gitBadgesFor(path: string): GitBadge[] {
+  return gitBadgesByPath.value.get(path) || []
+}
 
 const filtered = computed(() => filterNodes(catalog.value, searchQ.value, searchCat.value))
 
@@ -128,22 +158,89 @@ watch(panel, async (next) => {
   }
 })
 
+async function refreshGitStatusInBackground() {
+  gitChecking.value = true
+  try {
+    // 1) Local porcelain only — badges for 未提交/已改动, no network
+    const local = await fetchNativeWorkflowGitStatus(false).catch(() => null)
+    if (local) gitStatus.value = local
+
+    // New multi-user account: empty library + no .git → auto-clone team repo once.
+    if (
+      local?.has_git
+      && !local.is_repo
+      && workflows.value.length === 0
+      && !gitBusy.value
+    ) {
+      gitBusy.value = 'setup'
+      try {
+        const setup = await setupNativeWorkflowGit()
+        gitStatus.value = setup
+        if (setup.ok && setup.is_repo) {
+          gitFlash.value = t('v2.bottomBar.gitConnectOk')
+          workflows.value = await listBottomBarWorkflows()
+        }
+      } catch {
+        /* keep Connect button available */
+      } finally {
+        gitBusy.value = null
+      }
+    }
+
+    // 2) Then silent fetch for 可更新 / behind
+    const remote = await fetchNativeWorkflowGitStatus(true).catch(() => null)
+    if (remote) gitStatus.value = remote
+  } finally {
+    gitChecking.value = false
+  }
+}
+
 async function refreshWorkflowsPanel() {
   workflowsLoading.value = true
   workflowError.value = ''
   try {
-    const [list, git] = await Promise.all([
-      listBottomBarWorkflows(),
-      fetchNativeWorkflowGitStatus().catch(() => null),
-    ])
-    workflows.value = list
-    gitStatus.value = git
+    // Show the local library immediately; do not wait on git fetch.
+    workflows.value = await listBottomBarWorkflows()
   } catch (e: any) {
     workflowError.value = String(e?.message || e)
     workflows.value = []
   } finally {
     workflowsLoading.value = false
   }
+  void refreshGitStatusInBackground()
+}
+
+async function onGitSetup() {
+  if (!canGitSetup.value) return
+  gitBusy.value = 'setup'
+  gitFlash.value = ''
+  commitPickOpen.value = false
+  try {
+    const res = await setupNativeWorkflowGit()
+    gitStatus.value = res
+    if (!res.ok || !res.is_repo) {
+      toast('error', t('v2.bottomBar.gitError'), res.error || '')
+      return
+    }
+    gitFlash.value = t('v2.bottomBar.gitConnectOk')
+    toast('success', t('v2.bottomBar.gitConnectOk'))
+    workflows.value = await listBottomBarWorkflows()
+  } catch (e: any) {
+    toast('error', t('v2.bottomBar.gitError'), String(e?.message || e))
+  } finally {
+    gitBusy.value = null
+  }
+}
+
+function gitErrorDetail(res: NativeWorkflowGitStatus): string {
+  const code = res.error_code || ''
+  if (code === 'need_update') return t('v2.bottomBar.gitNeedUpdate')
+  if (code === 'need_update_after_commit') return t('v2.bottomBar.gitNeedUpdateAfterCommit')
+  if (code === 'pull_conflict') return t('v2.bottomBar.gitPullConflict')
+  if (code === 'nothing_to_commit') return t('v2.bottomBar.gitNothingToCommit')
+  const dups = (res.duplicates || []).join(', ')
+  if (dups) return `${t('v2.bottomBar.gitDuplicate')}: ${dups}`
+  return res.error || ''
 }
 
 async function onGitUpdate() {
@@ -155,11 +252,19 @@ async function onGitUpdate() {
     const res = await pullNativeWorkflowGit()
     gitStatus.value = res
     if (!res.ok) {
-      toast('error', t('v2.bottomBar.gitError'), res.error || '')
+      toast('error', t('v2.bottomBar.gitError'), gitErrorDetail(res))
       return
     }
     gitFlash.value = t('v2.bottomBar.gitPullOk')
-    toast('success', t('v2.bottomBar.gitPullOk'))
+    const restored = res.assets_restored || 0
+    toast(
+      'success',
+      t('v2.bottomBar.gitPullOk'),
+      restored > 0 ? t('v2.bottomBar.gitAssetsRestored', { n: restored }) : '',
+    )
+    if (res.assets_warnings?.length) {
+      toast('warn', t('v2.bottomBar.gitAssetsWarn'), res.assets_warnings.slice(0, 3).join(' · '))
+    }
     workflows.value = await listBottomBarWorkflows()
   } catch (e: any) {
     toast('error', t('v2.bottomBar.gitError'), String(e?.message || e))
@@ -193,17 +298,21 @@ async function onGitCommitConfirm() {
     const res = await pushNativeWorkflowGit(paths, gitMessage.value.trim())
     gitStatus.value = res
     if (!res.ok) {
-      const dups = (res.duplicates || []).join(', ')
-      const detail = dups
-        ? `${t('v2.bottomBar.gitDuplicate')}: ${dups}`
-        : (res.error || '')
-      toast('error', t('v2.bottomBar.gitError'), detail)
+      toast('error', t('v2.bottomBar.gitError'), gitErrorDetail(res))
       return
     }
     gitFlash.value = t('v2.bottomBar.gitPushOk')
     gitMessage.value = ''
     commitPickOpen.value = false
-    toast('success', t('v2.bottomBar.gitPushOk'))
+    const packed = res.assets_packed || 0
+    toast(
+      'success',
+      t('v2.bottomBar.gitPushOk'),
+      packed > 0 ? t('v2.bottomBar.gitAssetsPacked', { n: packed }) : '',
+    )
+    if (res.assets_warnings?.length) {
+      toast('warn', t('v2.bottomBar.gitAssetsWarn'), res.assets_warnings.slice(0, 3).join(' · '))
+    }
     workflows.value = await listBottomBarWorkflows()
   } catch (e: any) {
     toast('error', t('v2.bottomBar.gitError'), String(e?.message || e))
@@ -277,9 +386,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
         >
           {{ gitBusy === 'pull' ? t('v2.bottomBar.gitUpdating')
             : gitBusy === 'push' ? t('v2.bottomBar.gitPushing')
-              : (gitFlash || gitHint) }}
+              : gitBusy === 'setup' ? t('v2.bottomBar.gitConnecting')
+                : gitChecking && !gitFlash ? (gitHint || t('v2.bottomBar.gitChecking'))
+                  : (gitFlash || gitHint) }}
         </div>
         <div class="ctv-bbar__git-actions">
+          <button
+            v-if="canGitSetup || (gitStatus && !gitStatus.is_repo)"
+            type="button"
+            class="ctv-bbar__git-btn ctv-bbar__git-btn--primary"
+            :disabled="!canGitSetup"
+            @click="onGitSetup"
+          >{{ t('v2.bottomBar.gitConnect') }}</button>
           <button
             type="button"
             class="ctv-bbar__git-btn"
@@ -293,6 +411,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
             @click="openCommitPicker"
           >{{ t('v2.bottomBar.gitCommit') }}</button>
         </div>
+        <div v-if="gitStatus?.is_repo" class="ctv-bbar__git-legend">{{ t('v2.bottomBar.gitLegend') }}</div>
       </div>
 
       <div v-if="commitPickOpen" class="ctv-bbar__commit">
@@ -318,6 +437,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
               :disabled="!!gitBusy"
             >
             <span class="ctv-bbar__row-main">{{ row.name }}</span>
+            <span
+              v-for="b in gitBadgesFor(row.path)"
+              :key="b.key"
+              class="ctv-bbar__git-badge"
+              :class="`ctv-bbar__git-badge--${b.key}`"
+            >{{ b.label }}</span>
             <span v-if="nativeWorkflowFolder(row.path)" class="ctv-bbar__badge">
               {{ nativeWorkflowFolder(row.path) }}
             </span>
@@ -348,11 +473,22 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
           :key="row.path"
           type="button"
           class="ctv-bbar__row"
+          :class="{
+            'ctv-bbar__row--git-new': gitBadgesFor(row.path).some((b) => b.key === 'new'),
+            'ctv-bbar__row--git-modified': gitBadgesFor(row.path).some((b) => b.key === 'modified'),
+            'ctv-bbar__row--git-outdated': gitBadgesFor(row.path).some((b) => b.key === 'outdated'),
+          }"
           :disabled="openingPath === row.path"
           :title="row.path"
           @click="onOpenWorkflow(row)"
         >
           <span class="ctv-bbar__row-main">{{ row.name }}</span>
+          <span
+            v-for="b in gitBadgesFor(row.path)"
+            :key="b.key"
+            class="ctv-bbar__git-badge"
+            :class="`ctv-bbar__git-badge--${b.key}`"
+          >{{ b.label }}</span>
           <span v-if="nativeWorkflowFolder(row.path)" class="ctv-bbar__badge">
             {{ nativeWorkflowFolder(row.path) }}
           </span>
@@ -661,6 +797,37 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
 .ctv-bbar__git-actions {
   display: flex;
   gap: 6px;
+}
+
+.ctv-bbar__git-legend {
+  font-size: 10px;
+  line-height: 1.35;
+  opacity: 0.5;
+}
+
+.ctv-bbar__git-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+.ctv-bbar__git-badge--new {
+  color: #1a1a1a;
+  background: #e6c07b;
+}
+
+.ctv-bbar__git-badge--modified {
+  color: #0b1b2b;
+  background: #9ecbff;
+}
+
+.ctv-bbar__git-badge--outdated {
+  color: #0b1f14;
+  background: #7dcea0;
 }
 
 .ctv-bbar__git-btn {

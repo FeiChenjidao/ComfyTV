@@ -27,6 +27,7 @@ export const NativeWorkflowSchema = z.object({
 export type NativeWorkflow = z.infer<typeof NativeWorkflowSchema>
 export const ListNativeWorkflowsSchema = z.object({
   workflows: z.array(NativeWorkflowSchema),
+  user_id: z.string().optional(),
 })
 export const RemoteNativeWorkflowSchema = NativeWorkflowSchema.extend({
   pulled: z.boolean().optional(),

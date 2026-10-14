@@ -16,10 +16,21 @@ const uploadMock = vi.hoisted(() => ({
 vi.mock('./spawnFollowUp', () => spawnMock)
 vi.mock('@/utils/uploadCanvas', () => uploadMock)
 
-import { squareImageCanvas, useImagesSplit } from './useImagesSplit'
+import {
+  parseSlotOverrides,
+  serializeSlotOverrides,
+  SLOT_OVERRIDES_PROP,
+  SLOT_OVERRIDES_WIDGET,
+  squareImageCanvas,
+  useImagesSplit,
+} from './useImagesSplit'
 
-function makeNode(): any {
+function makeNode(overrides: Record<string, string> = {}): any {
   return {
+    properties: { [SLOT_OVERRIDES_PROP]: { ...overrides } },
+    widgets: [
+      { name: SLOT_OVERRIDES_WIDGET, value: serializeSlotOverrides(overrides) },
+    ],
     outputs: Array.from({ length: 4 }, (_, i) => ({
       name: `image${i + 1}`,
       type: 'COMFYTV_IMAGE',
@@ -31,6 +42,7 @@ function makeNode(): any {
     removeOutput(i: number) {
       this.outputs.splice(i, 1)
     },
+    setDirtyCanvas: vi.fn(),
   }
 }
 
@@ -62,6 +74,19 @@ describe('squareImageCanvas', () => {
     const canvas = squareImageCanvas(img)
     expect(canvas.width).toBe(200)
     expect(canvas.height).toBe(200)
+  })
+})
+
+describe('parseSlotOverrides / serializeSlotOverrides', () => {
+  it('round-trips a url map', () => {
+    const map = { '/a': '/a-sq', '/b': '/b-flip' }
+    expect(parseSlotOverrides(serializeSlotOverrides(map))).toEqual(map)
+  })
+
+  it('rejects non-object payloads', () => {
+    expect(parseSlotOverrides('[]')).toEqual({})
+    expect(parseSlotOverrides('nope')).toEqual({})
+    expect(parseSlotOverrides(null)).toEqual({})
   })
 })
 
@@ -209,5 +234,42 @@ describe('useImagesSplit', () => {
     expect(api.items.value[0].image_url).toBe('/view?filename=flipped.png')
     expect(state.outputs[0]).toBe('/view?filename=flipped.png')
     expect(state.outputs[1]).toBe('/b')
+    expect(JSON.parse(node.widgets[0].value)).toEqual({
+      '/a': '/view?filename=flipped.png',
+    })
+    expect(node.properties[SLOT_OVERRIDES_PROP]).toEqual({
+      '/a': '/view?filename=flipped.png',
+    })
+  })
+
+  it('restores persisted overrides on mount', async () => {
+    const node = makeNode({ '/a': '/view?filename=saved-1x1.png' })
+    const state = makeState(JSON.stringify({
+      images: [
+        { index: '1', label: 'A', image_url: '/a' },
+        { index: '2', label: 'B', image_url: '/b' },
+      ],
+    }), 'upstream')
+    const api = withScope(() => useImagesSplit(node, state))
+    await nextTick()
+    expect(api.items.value[0].image_url).toBe('/view?filename=saved-1x1.png')
+    expect(state.outputs[0]).toBe('/view?filename=saved-1x1.png')
+    expect(state.outputs[1]).toBe('/b')
+  })
+
+  it('does not wipe persisted overrides while upstream is empty', async () => {
+    const node = makeNode({ '/a': '/view?filename=saved.png' })
+    const state = makeState(null, 'upstream-pending')
+    withScope(() => useImagesSplit(node, state))
+    await nextTick()
+    expect(node.properties[SLOT_OVERRIDES_PROP]).toEqual({
+      '/a': '/view?filename=saved.png',
+    })
+    state.inputs[0].source = 'upstream'
+    state.inputs[0].content = JSON.stringify({
+      images: [{ index: '1', label: 'A', image_url: '/a' }],
+    })
+    await nextTick()
+    expect(state.outputs[0]).toBe('/view?filename=saved.png')
   })
 })

@@ -245,8 +245,18 @@ class CompareStage(io.ComfyNode):
             category="ComfyTV/Compose",
             inputs=[
                 _project_id_input(),
-                COMFYTV_IMAGE.Input("image_a", optional=True),
-                COMFYTV_IMAGE.Input("image_b", optional=True),
+                # Prefer IMAGES first so ImageStage's primary batch output can
+                # wire directly; the UI unwraps a batch to the first/picked URL.
+                io.MultiType.Input(
+                    "image_a", [COMFYTV_IMAGES, COMFYTV_IMAGE], optional=True,
+                    tooltip="Side A. Accepts a single image or an image batch "
+                            "(batch uses the first/selected item).",
+                ),
+                io.MultiType.Input(
+                    "image_b", [COMFYTV_IMAGES, COMFYTV_IMAGE], optional=True,
+                    tooltip="Side B. Accepts a single image or an image batch "
+                            "(batch uses the first/selected item).",
+                ),
             ],
             outputs=[],
             is_output_node=True,
@@ -268,6 +278,12 @@ class ImagesSplitStage(io.ComfyNode):
             category="ComfyTV/Image",
             inputs=[
                 *_standard_stage_inputs(),
+                io.String.Input(
+                    "slot_overrides", default="{}", multiline=False,
+                    socketless=True, extra_dict={"hidden": True},
+                    tooltip="JSON map of source url → locally transformed url "
+                            "(1:1 / flip). Hidden — driven by the Vue panel.",
+                ),
                 io.MultiType.Input(
                     "images", [COMFYTV_IMAGES, COMFYTV_IMAGE], optional=True,
                     tooltip="Image group to split into one COMFYTV_IMAGE socket per item.",
@@ -282,8 +298,18 @@ class ImagesSplitStage(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, force_run_token=0, project_id="", parent_output_id=0, images=""):
+    def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
+                slot_overrides="{}", images=""):
         urls = _image_group_urls(images)
+        try:
+            ov = json.loads(slot_overrides or "{}")
+        except Exception:
+            ov = {}
+        if isinstance(ov, dict) and ov:
+            urls = [
+                ov[u] if isinstance(ov.get(u), str) and ov[u] else u
+                for u in urls
+            ]
         padded = urls + [""] * (IMAGES_SPLIT_MAX - len(urls))
         return io.NodeOutput(*padded[:IMAGES_SPLIT_MAX])
 

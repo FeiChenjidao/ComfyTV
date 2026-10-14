@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import select
 
@@ -11,19 +11,49 @@ from .labels import _label_from_stem, _is_gui_format
 _log = logging.getLogger(__name__)
 
 
-def _native_workflows_dir() -> Optional[Path]:
+def resolve_request_user_id(request: Any = None) -> str:
+    """Current ComfyUI user id (`default` when multi-user is off)."""
+    if request is None:
+        return "default"
+    try:
+        from server import PromptServer
+        return str(PromptServer.instance.user_manager.get_request_user_id(request))
+    except Exception:
+        pass
+    try:
+        raw = request.headers.get("Comfy-User") or request.headers.get("comfy-user") or ""
+        raw = str(raw).strip()
+        if raw:
+            import folder_paths
+            if folder_paths.get_public_user_directory(raw):
+                return raw
+    except Exception:
+        pass
+    return "default"
+
+
+def _native_workflows_dir(user_id: Optional[str] = None) -> Optional[Path]:
+    """Per-user ComfyUI workflow library: user/<id>/workflows.
+
+    Multi-user: each login gets their own dir (and their own team-git working copy).
+    Single-user: id is always ``default``.
+    """
     try:
         import folder_paths
     except Exception:
         return None
     try:
-        return Path(folder_paths.get_user_directory()) / "default" / "workflows"
+        uid = (user_id or "default").strip() or "default"
+        base = folder_paths.get_public_user_directory(uid)
+        if not base:
+            return None
+        return Path(base) / "workflows"
     except Exception:
         return None
 
 
-def _resolve_native_path(rel_path: str) -> Optional[Path]:
-    root = _native_workflows_dir()
+def _resolve_native_path(rel_path: str, user_id: Optional[str] = None) -> Optional[Path]:
+    root = _native_workflows_dir(user_id)
     if root is None:
         return None
     root = root.resolve()
@@ -36,8 +66,11 @@ def _resolve_native_path(rel_path: str) -> Optional[Path]:
     return candidate
 
 
-def list_native_workflows(kind: Optional[str] = None) -> list[dict]:
-    root = _native_workflows_dir()
+def list_native_workflows(
+    kind: Optional[str] = None,
+    user_id: Optional[str] = None,
+) -> list[dict]:
+    root = _native_workflows_dir(user_id)
     if root is None or not root.is_dir():
         return []
 
@@ -83,10 +116,15 @@ def list_native_workflows(kind: Optional[str] = None) -> list[dict]:
     return items
 
 
-def link_workflow(kind: str, rel_path: str, label: Optional[str] = None) -> dict:
+def link_workflow(
+    kind: str,
+    rel_path: str,
+    label: Optional[str] = None,
+    user_id: Optional[str] = None,
+) -> dict:
     db.init()
 
-    path = _resolve_native_path(rel_path)
+    path = _resolve_native_path(rel_path, user_id=user_id)
     if path is None:
         raise ValueError("path is outside ComfyUI's workflow library")
     if not path.is_file():

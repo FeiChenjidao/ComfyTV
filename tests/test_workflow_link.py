@@ -18,7 +18,7 @@ API = json.dumps({"3": {"class_type": "KSampler", "inputs": {}}})
 def native_dir(tmp_path, monkeypatch):
     d = tmp_path / "native" / "workflows"
     d.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr(wdb.link, "_native_workflows_dir", lambda: d)
+    monkeypatch.setattr(wdb.link, "_native_workflows_dir", lambda *_a, **_k: d)
     return d
 
 

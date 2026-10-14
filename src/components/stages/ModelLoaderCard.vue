@@ -2,16 +2,34 @@
   <div
     :class="[
       'ctv:flex ctv:flex-col ctv:gap-1.5 ctv:size-full ctv:p-2 ctv:box-border ctv:text-xs ctv:text-base-foreground',
-      fileDrop.dragActive.value
+      !hasLinkedModel && fileDrop.dragActive.value
         && 'ctv:rounded ctv:outline ctv:outline-2 ctv:-outline-offset-2 ctv:outline-primary-background/70 ctv:bg-primary-background/5',
     ]"
-    @dragenter="fileDrop.onDragEnter"
-    @dragover="fileDrop.onDragOver"
-    @dragleave="fileDrop.onDragLeave"
-    @drop="fileDrop.onDrop"
+    @dragenter="!hasLinkedModel && fileDrop.onDragEnter($event)"
+    @dragover="!hasLinkedModel && fileDrop.onDragOver($event)"
+    @dragleave="!hasLinkedModel && fileDrop.onDragLeave($event)"
+    @drop="!hasLinkedModel && fileDrop.onDrop($event)"
     @contextmenu.stop.prevent
   >
+    <div
+      v-if="hasLinkedModel"
+      class="ctv:flex ctv:items-center ctv:gap-1.5 ctv:w-full ctv:h-8 ctv:px-1.5
+             ctv:rounded ctv:border ctv:border-border-default ctv:bg-secondary-background
+             ctv:text-xs ctv:text-base-foreground"
+    >
+      <span class="ctv:relative ctv:size-6 ctv:shrink-0 ctv:overflow-hidden ctv:rounded-sm ctv:bg-secondary-background-hover">
+        <ModelThumb v-if="linkedModel" :src="linkedModel" :alt="baseName(linkedModel)">
+          <IconBox class="ctv:size-3.5" />
+        </ModelThumb>
+      </span>
+      <span class="ctv:flex-1 ctv:min-w-0 ctv:truncate ctv:text-left">
+        {{ $t('modelLoader.linkedHint') }}
+        <span class="ctv:text-muted-foreground">· {{ baseName(linkedModel || '') }}</span>
+      </span>
+      <i class="pi pi-link ctv:shrink-0 ctv:text-3xs ctv:text-muted-foreground" />
+    </div>
     <button
+      v-else
       ref="triggerEl"
       type="button"
       class="ctv:flex ctv:items-center ctv:gap-1.5 ctv:w-full ctv:h-8 ctv:px-1.5 ctv:cursor-pointer
@@ -30,7 +48,7 @@
       </span>
       <span class="ctv:flex-1 ctv:min-w-0 ctv:truncate ctv:text-left"
             :class="selected ? '' : 'ctv:text-muted-foreground'">
-        {{ selected ? baseName(selected) : $t('modelLoader.pickHint') }}
+        {{ selectedLabel }}
       </span>
       <i :class="['pi', menuOpen ? 'pi-chevron-up' : 'pi-chevron-down', 'ctv:shrink-0 ctv:text-3xs ctv:text-muted-foreground']" />
     </button>
@@ -53,7 +71,7 @@
         <IconBox class="ctv:size-8 ctv:opacity-60" />
         <div class="ctv:text-xs">{{ $t('modelBinder.noModel') }}</div>
       </div>
-      <div v-if="modelSrc" :class="previewActionsClass">
+      <div v-if="modelSrc && !isPrimSrc" :class="previewActionsClass">
         <button type="button" :class="previewActionBtn"
                 :title="$t('stage.action.download')"
                 @click.stop="onDownloadModel"><i class="pi pi-download" /></button>
@@ -154,41 +172,85 @@
             </button>
           </div>
 
-          <div class="comfytv-asset-scroll ctv:h-[300px] ctv:shrink-0 ctv:overflow-y-scroll">
-            <div v-if="filteredFiles.length === 0"
-                 class="ctv:py-4 ctv:px-1.5 ctv:text-center ctv:italic ctv:text-muted-foreground/60">
-              {{ $t('modelLoader.empty') }}
+          <div class="comfytv-asset-scroll ctv:h-[300px] ctv:shrink-0 ctv:overflow-y-scroll ctv:flex ctv:flex-col ctv:gap-2">
+            <div v-if="filteredBuiltins.length" class="ctv:flex ctv:flex-col ctv:gap-1">
+              <div class="ctv:px-0.5 ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground">
+                {{ $t('modelLoader.builtins') }}
+              </div>
+              <div class="ctv:grid ctv:grid-cols-3 ctv:gap-1.5">
+                <button
+                  v-for="b in filteredBuiltins"
+                  :key="b.kind"
+                  type="button"
+                  :class="[
+                    'ctv:relative ctv:flex ctv:flex-col ctv:items-center ctv:gap-1 ctv:p-1.5 ctv:cursor-pointer ctv:rounded',
+                    'ctv:bg-secondary-background ctv:border ctv:[font-family:inherit] ctv:transition-colors',
+                    selectedKind === b.kind
+                      ? 'ctv:border-primary-background'
+                      : 'ctv:border-border-subtle ctv:hover:border-primary-background/60',
+                  ]"
+                  :title="$t(`meshPrimitive.kind.${b.kind}`)"
+                  @click="onPickBuiltin(b.kind)"
+                >
+                  <span
+                    class="ctv:flex ctv:size-10 ctv:items-center ctv:justify-center ctv:rounded-sm
+                           ctv:bg-secondary-background-hover ctv:text-muted-foreground"
+                    aria-hidden="true"
+                  >
+                    <span :class="primIconClass(b.kind)" />
+                  </span>
+                  <span
+                    v-if="selectedKind === b.kind"
+                    class="ctv:absolute ctv:top-0.5 ctv:right-0.5 ctv:flex ctv:items-center ctv:justify-center
+                           ctv:size-4 ctv:rounded-full ctv:text-3xs ctv:leading-none
+                           ctv:bg-primary-background ctv:text-white"
+                  ><i class="pi pi-check" /></span>
+                  <span class="ctv:w-full ctv:truncate ctv:text-center ctv:text-3xs ctv:text-muted-foreground">
+                    {{ $t(`meshPrimitive.kind.${b.kind}`) }}
+                  </span>
+                </button>
+              </div>
             </div>
-            <div v-else class="ctv:grid ctv:grid-cols-4 ctv:gap-1.5">
-              <button
-                v-for="file in filteredFiles"
-                :key="file"
-                type="button"
-                :class="[
-                  'ctv:relative ctv:flex ctv:flex-col ctv:p-0 ctv:cursor-pointer ctv:overflow-hidden ctv:rounded',
-                  'ctv:bg-secondary-background ctv:border ctv:[font-family:inherit] ctv:transition-colors',
-                  file === selected
-                    ? 'ctv:border-primary-background'
-                    : 'ctv:border-border-subtle ctv:hover:border-primary-background/60',
-                ]"
-                :title="file"
-                @click="onPick(file)"
-              >
-                <div class="ctv:relative ctv:w-full ctv:aspect-square ctv:bg-secondary-background-hover">
-                  <ModelThumb :src="file" :alt="baseName(file)">
-                    <IconBox class="ctv:size-7" />
-                  </ModelThumb>
-                </div>
-                <span
-                  v-if="file === selected"
-                  class="ctv:absolute ctv:top-0.5 ctv:right-0.5 ctv:flex ctv:items-center ctv:justify-center
-                         ctv:size-4 ctv:rounded-full ctv:text-3xs ctv:leading-none
-                         ctv:bg-primary-background ctv:text-white"
-                ><i class="pi pi-check" /></span>
-                <span class="ctv:w-full ctv:truncate ctv:py-0.5 ctv:px-1 ctv:text-left ctv:text-3xs ctv:text-muted-foreground">
-                  {{ baseName(file) }}
-                </span>
-              </button>
+
+            <div class="ctv:flex ctv:flex-col ctv:gap-1">
+              <div class="ctv:px-0.5 ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground">
+                {{ $t('modelLoader.uploaded') }}
+              </div>
+              <div v-if="filteredFiles.length === 0"
+                   class="ctv:py-3 ctv:px-1.5 ctv:text-center ctv:italic ctv:text-muted-foreground/60">
+                {{ $t('modelLoader.empty') }}
+              </div>
+              <div v-else class="ctv:grid ctv:grid-cols-4 ctv:gap-1.5">
+                <button
+                  v-for="file in filteredFiles"
+                  :key="file"
+                  type="button"
+                  :class="[
+                    'ctv:relative ctv:flex ctv:flex-col ctv:p-0 ctv:cursor-pointer ctv:overflow-hidden ctv:rounded',
+                    'ctv:bg-secondary-background ctv:border ctv:[font-family:inherit] ctv:transition-colors',
+                    file === selected
+                      ? 'ctv:border-primary-background'
+                      : 'ctv:border-border-subtle ctv:hover:border-primary-background/60',
+                  ]"
+                  :title="file"
+                  @click="onPick(file)"
+                >
+                  <div class="ctv:relative ctv:w-full ctv:aspect-square ctv:bg-secondary-background-hover">
+                    <ModelThumb :src="file" :alt="baseName(file)">
+                      <IconBox class="ctv:size-7" />
+                    </ModelThumb>
+                  </div>
+                  <span
+                    v-if="file === selected"
+                    class="ctv:absolute ctv:top-0.5 ctv:right-0.5 ctv:flex ctv:items-center ctv:justify-center
+                           ctv:size-4 ctv:rounded-full ctv:text-3xs ctv:leading-none
+                           ctv:bg-primary-background ctv:text-white"
+                  ><i class="pi pi-check" /></span>
+                  <span class="ctv:w-full ctv:truncate ctv:py-0.5 ctv:px-1 ctv:text-left ctv:text-3xs ctv:text-muted-foreground">
+                    {{ baseName(file) }}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -278,6 +340,7 @@ import {
   menuPanelStyle,
   useModelLoader,
 } from '@/composables/stages/useModelLoader'
+import { isPrimitivePayload } from '@/widgets/three/primitiveGeometry'
 import { useOutputAssetTagging } from '@/composables/stages/useOutputAssetTagging'
 import { downloadFile } from '@/utils/download'
 import { MODEL_FILE_EXTENSIONS } from '@/widgets/three/modelFormats'
@@ -315,6 +378,10 @@ const {
   uploading,
   uploadError,
   filteredFiles,
+  filteredBuiltins,
+  linkedModel,
+  hasLinkedModel,
+  selectedKind,
   modelSrc,
   selectedPart,
   bindings,
@@ -328,10 +395,39 @@ const {
   togglePart,
   unbind,
   onPick,
+  onPickBuiltin,
   uploadModelFiles,
   onPickFiles,
   scheduleCapture,
 } = loader
+
+const selectedLabel = computed(() => {
+  if (selectedKind.value) return t(`meshPrimitive.kind.${selectedKind.value}`)
+  if (selected.value) return baseName(selected.value)
+  return t('modelLoader.pickHint')
+})
+
+const isPrimSrc = computed(() => isPrimitivePayload(modelSrc.value))
+
+function primIconClass(kind: string): string {
+  const base = 'ctv:block ctv:border ctv:border-current/70'
+  switch (kind) {
+    case 'plane':
+      return `${base} ctv:size-6 ctv:rounded-sm ctv:bg-current/15`
+    case 'cube':
+      return `${base} ctv:size-5 ctv:rounded-[2px] ctv:bg-current/20 ctv:shadow-[2px_2px_0_0_currentColor]`
+    case 'sphere':
+      return `${base} ctv:size-6 ctv:rounded-full ctv:bg-current/20`
+    case 'cylinder':
+      return `${base} ctv:h-6 ctv:w-4 ctv:rounded-full ctv:bg-current/20`
+    case 'cone':
+      return 'ctv:block ctv:size-0 ctv:border-l-[10px] ctv:border-r-[10px] ctv:border-b-[18px] ctv:border-l-transparent ctv:border-r-transparent ctv:border-b-current/70'
+    case 'torus':
+      return `${base} ctv:size-6 ctv:rounded-full ctv:bg-transparent ctv:border-[5px]`
+    default:
+      return `${base} ctv:size-5 ctv:rounded-sm ctv:bg-current/20`
+  }
+}
 
 const {
   tagMenu,

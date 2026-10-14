@@ -123,7 +123,16 @@ export function bindStageWidgets(opts: {
     if (uploadWidget) {
       const sync = () => {
         const v = String(uploadWidget.value ?? '')
-        store.setOutputSlot(state, 0, v ? inputFileUrl(v) : null)
+        if (!v) {
+          store.setOutputSlot(state, 0, null)
+          return
+        }
+        // Built-in mesh primitives are stored as {"__prim__":{...}} JSON, not file paths.
+        if (v.trim().startsWith('{') && v.includes('__prim__')) {
+          store.setOutputSlot(state, 0, v)
+          return
+        }
+        store.setOutputSlot(state, 0, inputFileUrl(v))
       }
       sync()
       uploadWidget.callback = useChainCallback(uploadWidget.callback, sync)

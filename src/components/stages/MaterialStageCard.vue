@@ -43,13 +43,33 @@
           :value="params.color"
           @change="(e) => setColor((e.target as HTMLInputElement).value)"
         />
+        <span
+          v-if="params.map"
+          class="ctv:text-3xs ctv:text-primary-background"
+          :title="params.map"
+        >× {{ $t('materialStage.mapSlot.map') }}</span>
+      </div>
+
+      <div class="ctv:flex ctv:flex-wrap ctv:items-center ctv:gap-1 ctv:py-0.5">
+        <span :class="paramLabelClass">{{ $t('materialStage.maps') }}</span>
+        <span
+          v-if="!liveMaps.length"
+          class="ctv:text-2xs ctv:italic ctv:text-muted-foreground"
+        >{{ $t('materialStage.mapHint') }}</span>
+        <span
+          v-for="key in liveMaps"
+          :key="key"
+          class="ctv:inline-flex ctv:items-center ctv:gap-0.5 ctv:rounded ctv:border ctv:border-border-subtle
+                 ctv:bg-secondary-background ctv:px-1.5 ctv:py-0.5 ctv:text-3xs ctv:text-base-foreground"
+          :title="params[key] || ''"
+        >{{ $t(`materialStage.mapSlot.${key}`) }}</span>
       </div>
 
       <FxSlider
-        v-for="s in SLIDERS"
+        v-for="s in visibleSliders"
         :key="s.key"
         :model-value="params[s.key]"
-        :label="$t(`materialStage.param.${s.key}`)"
+        :label="sliderLabel(s.key)"
         :min="s.min"
         :max="s.max"
         :step="s.step"
@@ -74,7 +94,8 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import type { LGraphNode } from '@/lib/comfyApp'
 import MaterialSphere from '@/components/widgets/MaterialSphere.vue'
@@ -85,8 +106,16 @@ import {
   CAPTURE_SIZE,
   MATERIAL_SLIDERS as SLIDERS,
   useMaterialStage,
+  type MaterialSliderKey,
 } from '@/composables/stages/useMaterialStage'
-import { MATERIAL_PRESETS } from '@/widgets/material/types'
+import {
+  MATERIAL_MAP_KEYS,
+  MATERIAL_PRESETS,
+  MATERIAL_SCALAR_MAP,
+  type MaterialMapKey,
+} from '@/widgets/material/types'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   state: StageState
@@ -110,6 +139,21 @@ const {
   getState: () => props.state,
   captureCanvas: () => sphereEl.value?.captureCanvas(CAPTURE_SIZE, CAPTURE_SIZE) ?? null,
 })
+
+const liveMaps = computed(() =>
+  MATERIAL_MAP_KEYS.filter((k) => !!params[k]),
+)
+
+const visibleSliders = computed(() =>
+  SLIDERS.filter((s) => !s.whenMap || !!params[s.whenMap]),
+)
+
+function sliderLabel(key: MaterialSliderKey): string {
+  const base = t(`materialStage.param.${key}`)
+  const mapKey = MATERIAL_SCALAR_MAP[key as keyof typeof MATERIAL_SCALAR_MAP] as MaterialMapKey | undefined
+  if (mapKey && params[mapKey]) return `${base} ×`
+  return base
+}
 
 onBeforeUnmount(() => {
   teardown()
