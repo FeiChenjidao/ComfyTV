@@ -38,6 +38,8 @@ export const NativeWorkflowGitStatusSchema = z.object({
   assets_restored: z.number().optional(),
   assets_skipped: z.number().optional(),
   assets_warnings: z.array(z.string()).optional(),
+  /** Untracked locals renamed to *.local-backup so pull can proceed */
+  local_backups: z.array(z.string()).optional(),
 })
 export type NativeWorkflowGitStatus = z.infer<typeof NativeWorkflowGitStatusSchema>
 export type NativeWorkflowGitFile = z.infer<typeof NativeWorkflowGitFileSchema>

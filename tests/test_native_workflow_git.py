@@ -39,6 +39,24 @@ def _load_mod():
     common.routes = _Routes()
     sys.modules["ComfyTV.api._common"] = common
 
+    # Stub assets hook used by pull/push (avoid loading folder_paths).
+    assets = types.ModuleType("ComfyTV.api.native_workflow_assets")
+
+    class _Pack:
+        packed_files = 0
+        warnings: list[str] = []
+
+    class _Restore:
+        restored = 0
+        skipped = 0
+        warnings: list[str] = []
+
+    assets.restore_assets = lambda *_a, **_k: _Restore()
+    assets.pack_for_workflows = lambda *_a, **_k: _Pack()
+    sys.modules["ComfyTV.api.native_workflow_assets"] = assets
+    api_pkg = sys.modules["ComfyTV.api"]
+    api_pkg.native_workflow_assets = assets
+
     path = root / "api" / "native_workflow_git.py"
     spec = importlib.util.spec_from_file_location(
         "ComfyTV.api.native_workflow_git", path)
@@ -204,6 +222,37 @@ class TestNativeWorkflowGit:
         assert by["a.json"]["state"] == "modified"
         # Local edits alone must NOT look like "Update available"
         assert by["a.json"]["remote_diff"] is False
+
+    def test_pull_quarantines_untracked_collision(self, tmp_path):
+        """Local untracked same-name JSON must not block pull (colleague case)."""
+        mod = _load_mod()
+        root = _init_repo(tmp_path)
+        remote = tmp_path / "remote.git"
+        _git(tmp_path, "init", "--bare", str(remote))
+        _git(root, "remote", "add", "origin", str(remote))
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=str(root), capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        _git(root, "push", "-u", "origin", branch)
+
+        other = tmp_path / "other"
+        _git(tmp_path, "clone", str(remote), str(other))
+        _git(other, "config", "user.email", "test@example.com")
+        _git(other, "config", "user.name", "Test")
+        (other / "高清毛发工作流.json").write_text('{"nodes":["remote"]}', encoding="utf-8")
+        _git(other, "add", "-A")
+        _git(other, "commit", "-m", "add hair wf")
+        _git(other, "push")
+
+        # Colleague dropped a local copy without committing
+        (root / "高清毛发工作流.json").write_text('{"nodes":["local"]}', encoding="utf-8")
+        out = mod.pull_repo(root=root)
+        assert out["ok"] is True
+        assert out.get("pulled") is True
+        assert "高清毛发工作流.json" in (out.get("local_backups") or [])
+        assert (root / "高清毛发工作流.json").read_text(encoding="utf-8") == '{"nodes":["remote"]}'
+        assert (root / "高清毛发工作流.json.local-backup").read_text(encoding="utf-8") == '{"nodes":["local"]}'
 
     def test_ensure_workflow_credentials_seeds_from_plugin(self, tmp_path, monkeypatch):
         mod = _load_mod()

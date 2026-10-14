@@ -262,6 +262,14 @@ async function onGitUpdate() {
       t('v2.bottomBar.gitPullOk'),
       restored > 0 ? t('v2.bottomBar.gitAssetsRestored', { n: restored }) : '',
     )
+    const backups = res.local_backups || []
+    if (backups.length) {
+      toast(
+        'warn',
+        t('v2.bottomBar.gitPullLocalBackup', { names: backups.slice(0, 5).join(', ') }),
+        '',
+      )
+    }
     if (res.assets_warnings?.length) {
       toast('warn', t('v2.bottomBar.gitAssetsWarn'), res.assets_warnings.slice(0, 3).join(' · '))
     }

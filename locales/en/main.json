@@ -130,6 +130,7 @@
       "gitNeedUpdate": "Remote has new commits. Click Update first, then Commit again.",
       "gitNeedUpdateAfterCommit": "Saved locally, but remote moved ahead. Click Update, then Commit once more to finish the push.",
       "gitPullConflict": "Update failed (possible conflict). Close the panel and retry, or check uncommitted local edits.",
+      "gitPullLocalBackup": "Local untracked file(s) collided with remote; renamed to *.local-backup: {names}",
       "gitNothingToCommit": "No changes to commit for the selected workflows",
       "gitAssetsPacked": "Packed {n} media asset(s)",
       "gitAssetsRestored": "Restored {n} media asset(s) locally",

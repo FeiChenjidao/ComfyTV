@@ -646,6 +646,88 @@ def _remote_json_index(root: Path, upstream: str) -> tuple[set[str], set[str]]:
     return paths, names
 
 
+def _remote_tree_paths(root: Path, remote: str, branch: str) -> set[str]:
+    """Paths present on the tracking tip (after fetch). Empty if unavailable."""
+    tip = f"{remote}/{branch}"
+    r = _run_git(root, "-c", "core.quotepath=false", "ls-tree", "-r", "--name-only", tip)
+    if r.returncode != 0:
+        return set()
+    return {ln.strip().replace("\\", "/") for ln in (r.stdout or "").splitlines() if ln.strip()}
+
+
+def _untracked_paths(root: Path) -> list[str]:
+    r = _run_git(root, "-c", "core.quotepath=false", "status", "--porcelain", "-u")
+    if r.returncode != 0:
+        return []
+    out: list[str] = []
+    for ln in (r.stdout or "").splitlines():
+        if not ln.startswith("??"):
+            continue
+        rel = ln[3:].strip().replace("\\", "/").rstrip("/")
+        if rel:
+            out.append(rel)
+    return out
+
+
+def _unique_backup_path(path: Path) -> Path:
+    """Pick path.json.local-backup, or .local-backup-2, … if already taken."""
+    base = Path(str(path) + ".local-backup")
+    if not base.exists():
+        return base
+    for i in range(2, 50):
+        cand = Path(str(path) + f".local-backup-{i}")
+        if not cand.exists():
+            return cand
+    return Path(str(path) + f".local-backup-{os.getpid()}")
+
+
+def quarantine_untracked_collisions(
+    root: Path, remote: str = "origin", branch: str = "main"
+) -> list[str]:
+    """Rename local untracked files that would block checkout of the same remote path.
+
+    Colleagues often drop a workflow JSON into the folder without committing; pull then
+    fails with 'untracked working tree files would be overwritten by checkout'.
+    """
+    remote_paths = _remote_tree_paths(root, remote, branch)
+    if not remote_paths:
+        return []
+    moved: list[str] = []
+    for rel in _untracked_paths(root):
+        if rel not in remote_paths:
+            continue
+        src = root / rel
+        if not src.is_file():
+            continue
+        dest = _unique_backup_path(src)
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            src.rename(dest)
+            moved.append(rel)
+            _log.info("quarantined untracked %s -> %s", rel, dest.name)
+        except OSError as e:
+            _log.warning("could not quarantine %s: %s", rel, e)
+    return moved
+
+
+_OVERWRITE_UNTRACKED_RE = re.compile(
+    r"untracked working tree files would be overwritten by checkout:\s*(.+?)(?:Please move|Aborting)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _parse_overwrite_untracked(detail: str) -> list[str]:
+    m = _OVERWRITE_UNTRACKED_RE.search(detail or "")
+    if not m:
+        return []
+    names: list[str] = []
+    for ln in m.group(1).splitlines():
+        name = ln.strip().replace("\\", "/")
+        if name and not name.lower().startswith("please"):
+            names.append(name)
+    return names
+
+
 def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dict[str, Any]:
     """Pull team workflows: prefer ff-only, then rebase so a failed push can recover."""
     root = _workflows_root(root, user_id)
@@ -660,6 +742,8 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
     try:
         remote = status.get("remote") or "origin"
         branch = status.get("branch") or "main"
+        # Avoid "untracked … would be overwritten by checkout" (common colleague case).
+        local_backups = quarantine_untracked_collisions(root, remote, branch)
         with _authed_origin(root):
             r = _run_git(root, "pull", "--ff-only", remote, branch)
             if r.returncode != 0:
@@ -669,6 +753,23 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
                 r = _run_git(root, "pull", "--rebase", remote, branch)
             if r.returncode != 0:
                 r = _run_git(root, "pull", "--rebase")
+            # One more chance: parse overwrite error and quarantine those names.
+            if r.returncode != 0:
+                detail = (r.stderr or r.stdout or "")
+                if "overwritten by checkout" in detail.lower():
+                    extra = _parse_overwrite_untracked(detail)
+                    for rel in extra:
+                        src = root / rel
+                        if src.is_file():
+                            try:
+                                src.rename(_unique_backup_path(src))
+                                local_backups.append(rel)
+                            except OSError:
+                                pass
+                    if extra:
+                        r = _run_git(root, "pull", "--ff-only", remote, branch)
+                        if r.returncode != 0:
+                            r = _run_git(root, "pull", "--rebase", remote, branch)
         if r.returncode != 0:
             detail = (r.stderr or r.stdout or "").strip()[:500]
             # Leave a half-finished rebase in a recoverable state
@@ -678,6 +779,7 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
             status["ok"] = False
             status["error_code"] = "pull_conflict"
             status["error"] = detail or "git pull failed"
+            status["local_backups"] = local_backups
             return status
         restored = native_workflow_assets.restore_assets(root)
         status = collect_status(root, fetch_remote=False)
@@ -685,6 +787,7 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
         status["assets_restored"] = restored.restored
         status["assets_skipped"] = restored.skipped
         status["assets_warnings"] = restored.warnings[:40]
+        status["local_backups"] = local_backups
         return status
     except Exception as e:
         status = collect_status(root, fetch_remote=False)

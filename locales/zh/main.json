@@ -130,6 +130,7 @@
       "gitNeedUpdate": "远程有新版本。请先点「更新」，再重新点「提交」。",
       "gitNeedUpdateAfterCommit": "本地已保存提交，但远程有更新。请先点「更新」，再点一次「提交」完成推送。",
       "gitPullConflict": "更新失败（可能有冲突）。请关掉面板后再试，或检查本机未保存的改动。",
+      "gitPullLocalBackup": "本地未入库文件与远程同名，已改名为 *.local-backup：{names}",
       "gitNothingToCommit": "所选工作流没有可提交的改动",
       "gitAssetsPacked": "已打包 {n} 个媒体资产",
       "gitAssetsRestored": "已同步 {n} 个媒体资产到本机",
