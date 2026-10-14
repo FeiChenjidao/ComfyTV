@@ -258,6 +258,42 @@ class TestNativeWorkflowGit:
         assert (root / "高清毛发工作流.json").read_text(encoding="utf-8") == '{"nodes":["remote"]}'
         assert (root / "高清毛发工作流.json.local-backup").read_text(encoding="utf-8") == '{"nodes":["local"]}'
 
+    def test_pull_with_unstaged_local_edit(self, tmp_path):
+        """Unstaged local-only edits must not block pull --rebase."""
+        mod = _load_mod()
+        root = _init_repo(tmp_path)
+        remote = tmp_path / "remote.git"
+        _git(tmp_path, "init", "--bare", str(remote))
+        _git(root, "remote", "add", "origin", str(remote))
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=str(root), capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        _git(root, "push", "-u", "origin", branch)
+
+        # Local commit so we are ahead (forces rebase path when remote also moves)
+        (root / "mine.json").write_text('{"nodes":["mine"]}', encoding="utf-8")
+        _git(root, "add", "-A")
+        _git(root, "commit", "-m", "local ahead")
+
+        other = tmp_path / "other"
+        _git(tmp_path, "clone", str(remote), str(other))
+        _git(other, "config", "user.email", "test@example.com")
+        _git(other, "config", "user.name", "Test")
+        (other / "remote-new.json").write_text('{"nodes":["r"]}', encoding="utf-8")
+        _git(other, "add", "-A")
+        _git(other, "commit", "-m", "remote ahead")
+        _git(other, "push")
+
+        # Dirty working tree (the error the user hit)
+        (root / "mine.json").write_text('{"nodes":["dirty"]}', encoding="utf-8")
+        out = mod.pull_repo(root=root)
+        assert out["ok"] is True, out.get("error")
+        assert out.get("pulled") is True
+        assert (root / "remote-new.json").is_file()
+        # Local dirty edit restored via stash pop
+        assert (root / "mine.json").read_text(encoding="utf-8") == '{"nodes":["dirty"]}'
+
     def test_ensure_workflow_credentials_seeds_from_plugin(self, tmp_path, monkeypatch):
         mod = _load_mod()
         secrets = tmp_path / "plugin" / "secrets"

@@ -799,6 +799,48 @@ def _overwrite_templates_from_tip(root: Path, remote: str, branch: str) -> list[
     return done
 
 
+def _working_tree_dirty(root: Path) -> bool:
+    """True when there are staged or unstaged changes (untracked ignored)."""
+    r = _run_git(root, "status", "--porcelain", "-uno")
+    return bool((r.stdout or "").strip())
+
+
+def _stash_for_pull(root: Path) -> bool:
+    """Stash tracked + untracked (except ignored) so pull --rebase can run.
+
+    Local-only workflows are restored with stash pop after pull.
+    """
+    # Avoid pushing an empty stash
+    por = _run_git(root, "-c", "core.quotepath=false", "status", "--porcelain", "-u")
+    if not (por.stdout or "").strip():
+        return False
+    r = _run_git(
+        root,
+        "stash",
+        "push",
+        "-u",
+        "-m",
+        "comfytv-auto-before-pull",
+    )
+    return r.returncode == 0
+
+
+def _stash_pop_safe(root: Path) -> list[str]:
+    """Pop auto-stash; on conflict keep stash and return warning strings."""
+    warnings: list[str] = []
+    listed = _run_git(root, "stash", "list")
+    if "comfytv-auto-before-pull" not in (listed.stdout or ""):
+        return warnings
+    r = _run_git(root, "stash", "pop")
+    if r.returncode != 0:
+        detail = (r.stderr or r.stdout or "").strip()[:240]
+        warnings.append(
+            "local edits were stashed as comfytv-auto-before-pull; "
+            f"stash pop had issues: {detail or 'conflict'}"
+        )
+    return warnings
+
+
 def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dict[str, Any]:
     """Pull team templates: overwrite cloud workflows locally; keep local-only files."""
     root = _workflows_root(root, user_id)
@@ -810,19 +852,22 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
         )
         return status
     assert root is not None
+    stashed = False
     try:
         remote = status.get("remote") or "origin"
         branch = status.get("branch") or "main"
         # Avoid "untracked … would be overwritten by checkout" (common colleague case).
         local_backups = quarantine_untracked_collisions(root, remote, branch)
-        # Templates: force-overwrite local copies from remote tip (云端有更新直接覆盖).
-        overwritten = _overwrite_templates_from_tip(root, remote, branch)
+        # pull --rebase refuses dirty trees — stash local work first (incl. untracked).
+        if _working_tree_dirty(root) or _untracked_paths(root):
+            stashed = _stash_for_pull(root)
         with _authed_origin(root):
             upstream = _upstream_ref(root) or f"{remote}/{branch}"
             ahead_now, behind_now = _ahead_behind(root, upstream)
             r: subprocess.CompletedProcess[str]
             if behind_now > 0 and ahead_now == 0:
-                # Align HEAD to remote; untracked local workflows kept.
+                # Align HEAD to remote; untracked local workflows kept if not stashed,
+                # or restored via stash pop below.
                 r = _run_git(root, "reset", "--hard", upstream)
             else:
                 r = _run_git(root, "pull", "--ff-only", remote, branch)
@@ -830,9 +875,18 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
                     r = _run_git(root, "pull", "--ff-only")
                 # After a rejected push, local has commits remote doesn't — rebase onto remote.
                 if r.returncode != 0:
+                    # Rebase needs a clean tree; stash again if something re-dirtied.
+                    if _working_tree_dirty(root) and not stashed:
+                        stashed = _stash_for_pull(root)
                     r = _run_git(root, "pull", "--rebase", remote, branch)
                 if r.returncode != 0:
-                    r = _run_git(root, "pull", "--rebase")
+                    detail_l = (r.stderr or r.stdout or "").lower()
+                    if "unstaged" in detail_l or "uncommitted" in detail_l:
+                        if _stash_for_pull(root):
+                            stashed = True
+                        r = _run_git(root, "pull", "--rebase", remote, branch)
+                    if r.returncode != 0:
+                        r = _run_git(root, "pull", "--rebase")
             # One more chance: parse overwrite error and quarantine those names.
             if r.returncode != 0:
                 detail = (r.stderr or r.stdout or "")
@@ -855,23 +909,29 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
             # Leave a half-finished rebase in a recoverable state
             if (root / ".git" / "rebase-merge").exists() or (root / ".git" / "rebase-apply").exists():
                 _run_git(root, "rebase", "--abort")
+            if stashed:
+                _stash_pop_safe(root)
             status = collect_status(root, fetch_remote=False)
             status["ok"] = False
             status["error_code"] = "pull_conflict"
             status["error"] = detail or "git pull failed"
             status["local_backups"] = local_backups
-            status["templates_overwritten"] = overwritten
             return status
+        # Templates: force-overwrite from tip after HEAD moved (云端有更新直接覆盖).
+        overwritten = _overwrite_templates_from_tip(root, remote, branch)
+        stash_warnings = _stash_pop_safe(root) if stashed else []
         restored = native_workflow_assets.restore_assets(root)
         status = collect_status(root, fetch_remote=False)
         status["pulled"] = True
         status["assets_restored"] = restored.restored
         status["assets_skipped"] = restored.skipped
-        status["assets_warnings"] = restored.warnings[:40]
+        status["assets_warnings"] = (restored.warnings + stash_warnings)[:40]
         status["local_backups"] = local_backups
         status["templates_overwritten"] = overwritten
         return status
     except Exception as e:
+        if stashed:
+            _stash_pop_safe(root)
         status = collect_status(root, fetch_remote=False)
         status["ok"] = False
         status["error"] = str(e) or type(e).__name__
