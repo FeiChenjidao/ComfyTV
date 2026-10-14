@@ -43,7 +43,9 @@ def _load_mod():
     assets = types.ModuleType("ComfyTV.api.native_workflow_assets")
 
     class _Pack:
+        added: list[str] = []
         packed_files = 0
+        packed_bytes = 0
         warnings: list[str] = []
 
     class _Restore:
@@ -57,6 +59,8 @@ def _load_mod():
     api_pkg = sys.modules["ComfyTV.api"]
     api_pkg.native_workflow_assets = assets
 
+    # Drop cached module so stubs (pack_for_workflows etc.) always rebind.
+    sys.modules.pop("ComfyTV.api.native_workflow_git", None)
     path = root / "api" / "native_workflow_git.py"
     spec = importlib.util.spec_from_file_location(
         "ComfyTV.api.native_workflow_git", path)
