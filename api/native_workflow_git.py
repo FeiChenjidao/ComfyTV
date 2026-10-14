@@ -394,6 +394,7 @@ def collect_status(
         "dirty": False,
         "changes": [],
         "files": [],
+        "remote_workflows": [],
         "has_git": bool(_git_bin()),
         "error": "",
         "user_id": user_id or "default",
@@ -450,8 +451,18 @@ def collect_status(
         payload["dirty"] = bool(dirty_workflows)
         payload["changes"] = sorted(dirty_workflows)[:80]
 
-        # Workflow JSON on disk + dirty workflow paths
-        paths: set[str] = set(dirty_workflows)
+        remote = str(payload.get("remote") or "origin")
+        branch = str(payload.get("branch") or "main")
+        tip = upstream or (f"{remote}/{branch}" if remote and branch else "")
+        remote_workflows = sorted(
+            p for p in (_remote_tree_paths(root, remote, branch) if tip else set())
+            if _is_workflow_rel(p)
+        )
+        remote_set = set(remote_workflows)
+        payload["remote_workflows"] = remote_workflows
+
+        # Workflow JSON on disk + dirty workflow paths + remote-only templates
+        paths: set[str] = set(dirty_workflows) | remote_set
         for p in root.rglob("*.json"):
             if not p.is_file():
                 continue
@@ -465,31 +476,64 @@ def collect_status(
             code = porcelain.get(rel, "")
             untracked = code.strip() == "??" or code == "??"
             dirty = rel in dirty_workflows
+            on_remote = rel in remote_set
+            # 模板 = 云端有的；工作流 = 仅本地
+            kind = "template" if on_remote else "local"
             # "可更新" = remote tip changed this file vs our HEAD, and we are behind.
             # Do NOT use working-tree diff — local edits must show as 已改动 only.
             committed_diff = (
                 False if untracked
                 else _committed_diff_vs_upstream(root, rel, upstream)
             )
-            remote_diff = bool(committed_diff and behind > 0)
-            if not dirty and not remote_diff:
+            remote_diff = bool(on_remote and committed_diff and behind > 0)
+            missing_local = on_remote and not (root / rel).is_file()
+            if not dirty and not remote_diff and not missing_local and on_remote:
+                # Synced template — still list for UI split (kind only)
+                files.append({
+                    "path": rel,
+                    "dirty": False,
+                    "untracked": False,
+                    "remote_diff": False,
+                    "can_update": False,
+                    "can_commit": False,
+                    "state": "synced",
+                    "kind": kind,
+                })
                 continue
-            if untracked:
+            if not dirty and not remote_diff and not missing_local and not on_remote:
+                # Local file with no git dirt — still list as local workflow
+                files.append({
+                    "path": rel,
+                    "dirty": False,
+                    "untracked": untracked,
+                    "remote_diff": False,
+                    "can_update": False,
+                    "can_commit": untracked,
+                    "state": "new" if untracked else "synced",
+                    "kind": kind,
+                })
+                continue
+            if untracked and not on_remote:
                 state = "new"
+            elif missing_local:
+                state = "outdated"
             elif dirty and remote_diff:
                 state = "diverged"
             elif dirty:
                 state = "modified"
-            else:
+            elif remote_diff:
                 state = "outdated"
+            else:
+                state = "synced"
             files.append({
                 "path": rel,
                 "dirty": dirty,
                 "untracked": untracked,
-                "remote_diff": remote_diff,
-                "can_update": remote_diff,
-                "can_commit": dirty,
+                "remote_diff": remote_diff or missing_local,
+                "can_update": remote_diff or missing_local,
+                "can_commit": dirty and not missing_local,
                 "state": state,
+                "kind": kind,
             })
         payload["files"] = files
     except subprocess.TimeoutExpired:
@@ -728,8 +772,35 @@ def _parse_overwrite_untracked(detail: str) -> list[str]:
     return names
 
 
+def _overwrite_templates_from_tip(root: Path, remote: str, branch: str) -> list[str]:
+    """Checkout every remote workflow JSON from tip into the working tree (overwrite).
+
+    Local-only files (not on remote) are untouched. Used so「更新」always replaces
+    template copies with the cloud version.
+    """
+    tip = f"{remote}/{branch}"
+    remote_wfs = [p for p in _remote_tree_paths(root, remote, branch) if _is_workflow_rel(p)]
+    if not remote_wfs:
+        return []
+    # Checkout in batches to avoid argv limits on huge libraries
+    done: list[str] = []
+    batch: list[str] = []
+    for rel in remote_wfs:
+        batch.append(rel)
+        if len(batch) >= 40:
+            r = _run_git(root, "checkout", tip, "--", *batch)
+            if r.returncode == 0:
+                done.extend(batch)
+            batch = []
+    if batch:
+        r = _run_git(root, "checkout", tip, "--", *batch)
+        if r.returncode == 0:
+            done.extend(batch)
+    return done
+
+
 def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dict[str, Any]:
-    """Pull team workflows: prefer ff-only, then rebase so a failed push can recover."""
+    """Pull team templates: overwrite cloud workflows locally; keep local-only files."""
     root = _workflows_root(root, user_id)
     status = collect_status(root, fetch_remote=True, user_id=user_id)
     if not status.get("is_repo"):
@@ -744,15 +815,24 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
         branch = status.get("branch") or "main"
         # Avoid "untracked … would be overwritten by checkout" (common colleague case).
         local_backups = quarantine_untracked_collisions(root, remote, branch)
+        # Templates: force-overwrite local copies from remote tip (云端有更新直接覆盖).
+        overwritten = _overwrite_templates_from_tip(root, remote, branch)
         with _authed_origin(root):
-            r = _run_git(root, "pull", "--ff-only", remote, branch)
-            if r.returncode != 0:
-                r = _run_git(root, "pull", "--ff-only")
-            # After a rejected push, local has commits remote doesn't — rebase onto remote.
-            if r.returncode != 0:
-                r = _run_git(root, "pull", "--rebase", remote, branch)
-            if r.returncode != 0:
-                r = _run_git(root, "pull", "--rebase")
+            upstream = _upstream_ref(root) or f"{remote}/{branch}"
+            ahead_now, behind_now = _ahead_behind(root, upstream)
+            r: subprocess.CompletedProcess[str]
+            if behind_now > 0 and ahead_now == 0:
+                # Align HEAD to remote; untracked local workflows kept.
+                r = _run_git(root, "reset", "--hard", upstream)
+            else:
+                r = _run_git(root, "pull", "--ff-only", remote, branch)
+                if r.returncode != 0:
+                    r = _run_git(root, "pull", "--ff-only")
+                # After a rejected push, local has commits remote doesn't — rebase onto remote.
+                if r.returncode != 0:
+                    r = _run_git(root, "pull", "--rebase", remote, branch)
+                if r.returncode != 0:
+                    r = _run_git(root, "pull", "--rebase")
             # One more chance: parse overwrite error and quarantine those names.
             if r.returncode != 0:
                 detail = (r.stderr or r.stdout or "")
@@ -780,6 +860,7 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
             status["error_code"] = "pull_conflict"
             status["error"] = detail or "git pull failed"
             status["local_backups"] = local_backups
+            status["templates_overwritten"] = overwritten
             return status
         restored = native_workflow_assets.restore_assets(root)
         status = collect_status(root, fetch_remote=False)
@@ -788,6 +869,7 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
         status["assets_skipped"] = restored.skipped
         status["assets_warnings"] = restored.warnings[:40]
         status["local_backups"] = local_backups
+        status["templates_overwritten"] = overwritten
         return status
     except Exception as e:
         status = collect_status(root, fetch_remote=False)

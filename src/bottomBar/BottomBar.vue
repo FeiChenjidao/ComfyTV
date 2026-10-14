@@ -95,6 +95,7 @@ type GitBadge = { key: string; label: string }
 
 function gitBadgesForFile(f: NativeWorkflowGitStatus['files'][number]): GitBadge[] {
   const badges: GitBadge[] = []
+  if (f.state === 'synced') return badges
   if (f.untracked || f.state === 'new') {
     badges.push({ key: 'new', label: t('v2.bottomBar.gitStateNew') })
   } else if (f.dirty || f.state === 'modified' || f.state === 'diverged') {
@@ -115,6 +116,49 @@ const gitBadgesByPath = computed(() => {
 function gitBadgesFor(path: string): GitBadge[] {
   return gitBadgesByPath.value.get(path) || []
 }
+
+/** Cloud templates = paths present on remote tip; everything else is local-only. */
+const remoteTemplateSet = computed(() => {
+  const fromStatus = gitStatus.value?.remote_workflows
+  if (fromStatus?.length) return new Set(fromStatus)
+  const fromFiles = new Set<string>()
+  for (const f of gitStatus.value?.files || []) {
+    if (f.kind === 'template') fromFiles.add(f.path)
+  }
+  return fromFiles
+})
+
+const templateWorkflows = computed(() => {
+  const remote = remoteTemplateSet.value
+  if (!remote.size) {
+    // No remote catalog yet — show nothing on the left until connected/fetched
+    return [] as NativeWorkflow[]
+  }
+  const byPath = new Map(workflows.value.map((w) => [w.path, w]))
+  const rows: NativeWorkflow[] = []
+  for (const path of remote) {
+    const existing = byPath.get(path)
+    if (existing) {
+      rows.push(existing)
+      continue
+    }
+    const name = path.replace(/\\/g, '/').split('/').pop()?.replace(/\.json$/i, '') || path
+    rows.push({
+      path,
+      name,
+      mtime: 0,
+      size: 0,
+      is_linked: false,
+      linked_id: null,
+    })
+  }
+  return rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+})
+
+const localWorkflows = computed(() => {
+  const remote = remoteTemplateSet.value
+  return workflows.value.filter((w) => !remote.has(w.path))
+})
 
 const filtered = computed(() => filterNodes(catalog.value, searchQ.value, searchCat.value))
 
@@ -190,6 +234,17 @@ async function refreshGitStatusInBackground() {
     // 2) Then silent fetch for 可更新 / behind
     const remote = await fetchNativeWorkflowGitStatus(true).catch(() => null)
     if (remote) gitStatus.value = remote
+
+    // Cloud templates behind → overwrite locally without asking
+    if (
+      remote?.ok
+      && remote.is_repo
+      && remote.behind > 0
+      && !gitBusy.value
+      && panel.value === 'workflows'
+    ) {
+      void onGitUpdate()
+    }
   } finally {
     gitChecking.value = false
   }
@@ -285,7 +340,12 @@ function openCommitPicker() {
   if (!canGitActions.value) return
   commitPickOpen.value = true
   const next: Record<string, boolean> = {}
-  for (const row of workflows.value) next[row.path] = false
+  // Commit is for local workflows (right column), not cloud templates
+  for (const row of localWorkflows.value) {
+    const badges = gitBadgesFor(row.path)
+    const dirty = badges.some((b) => b.key === 'new' || b.key === 'modified')
+    next[row.path] = dirty
+  }
   commitSelected.value = next
 }
 
@@ -415,7 +475,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
           <button
             type="button"
             class="ctv-bbar__git-btn ctv-bbar__git-btn--primary"
-            :disabled="!canGitActions || !workflows.length"
+            :disabled="!canGitActions || !localWorkflows.length"
             @click="openCommitPicker"
           >{{ t('v2.bottomBar.gitCommit') }}</button>
         </div>
@@ -435,7 +495,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
         >
         <div class="ctv-bbar__commit-list">
           <label
-            v-for="row in workflows"
+            v-for="row in localWorkflows"
             :key="row.path"
             class="ctv-bbar__commit-item"
           >
@@ -455,6 +515,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
               {{ nativeWorkflowFolder(row.path) }}
             </span>
           </label>
+          <div v-if="!localWorkflows.length" class="ctv-bbar__muted">
+            {{ t('v2.bottomBar.localWorkflowsEmpty') }}
+          </div>
         </div>
         <div class="ctv-bbar__git-actions">
           <button
@@ -474,33 +537,72 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
 
       <div v-if="workflowsLoading" class="ctv-bbar__muted">{{ t('v2.bottomBar.workflowLoading') }}</div>
       <div v-else-if="workflowError" class="ctv-bbar__muted">{{ workflowError }}</div>
-      <div v-else-if="!workflows.length" class="ctv-bbar__muted">{{ t('v2.bottomBar.workflowEmpty') }}</div>
-      <div v-else class="ctv-bbar__scroll">
-        <button
-          v-for="row in workflows"
-          :key="row.path"
-          type="button"
-          class="ctv-bbar__row"
-          :class="{
-            'ctv-bbar__row--git-new': gitBadgesFor(row.path).some((b) => b.key === 'new'),
-            'ctv-bbar__row--git-modified': gitBadgesFor(row.path).some((b) => b.key === 'modified'),
-            'ctv-bbar__row--git-outdated': gitBadgesFor(row.path).some((b) => b.key === 'outdated'),
-          }"
-          :disabled="openingPath === row.path"
-          :title="row.path"
-          @click="onOpenWorkflow(row)"
-        >
-          <span class="ctv-bbar__row-main">{{ row.name }}</span>
-          <span
-            v-for="b in gitBadgesFor(row.path)"
-            :key="b.key"
-            class="ctv-bbar__git-badge"
-            :class="`ctv-bbar__git-badge--${b.key}`"
-          >{{ b.label }}</span>
-          <span v-if="nativeWorkflowFolder(row.path)" class="ctv-bbar__badge">
-            {{ nativeWorkflowFolder(row.path) }}
-          </span>
-        </button>
+      <div
+        v-else-if="!templateWorkflows.length && !localWorkflows.length"
+        class="ctv-bbar__muted"
+      >{{ t('v2.bottomBar.workflowEmpty') }}</div>
+      <div v-else class="ctv-bbar__split">
+        <div class="ctv-bbar__col">
+          <div class="ctv-bbar__col-head">{{ t('v2.bottomBar.templates') }}</div>
+          <div class="ctv-bbar__scroll ctv-bbar__scroll--col">
+            <div v-if="!templateWorkflows.length" class="ctv-bbar__muted">
+              {{ t('v2.bottomBar.templatesEmpty') }}
+            </div>
+            <button
+              v-for="row in templateWorkflows"
+              :key="`t-${row.path}`"
+              type="button"
+              class="ctv-bbar__row"
+              :class="{
+                'ctv-bbar__row--git-outdated': gitBadgesFor(row.path).some((b) => b.key === 'outdated'),
+                'ctv-bbar__row--git-modified': gitBadgesFor(row.path).some((b) => b.key === 'modified'),
+              }"
+              :disabled="openingPath === row.path || row.mtime === 0"
+              :title="row.path"
+              @click="onOpenWorkflow(row)"
+            >
+              <span class="ctv-bbar__row-main">{{ row.name }}</span>
+              <span
+                v-for="b in gitBadgesFor(row.path)"
+                :key="b.key"
+                class="ctv-bbar__git-badge"
+                :class="`ctv-bbar__git-badge--${b.key}`"
+              >{{ b.label }}</span>
+            </button>
+          </div>
+        </div>
+        <div class="ctv-bbar__col">
+          <div class="ctv-bbar__col-head">{{ t('v2.bottomBar.localWorkflows') }}</div>
+          <div class="ctv-bbar__scroll ctv-bbar__scroll--col">
+            <div v-if="!localWorkflows.length" class="ctv-bbar__muted">
+              {{ t('v2.bottomBar.localWorkflowsEmpty') }}
+            </div>
+            <button
+              v-for="row in localWorkflows"
+              :key="`l-${row.path}`"
+              type="button"
+              class="ctv-bbar__row"
+              :class="{
+                'ctv-bbar__row--git-new': gitBadgesFor(row.path).some((b) => b.key === 'new'),
+                'ctv-bbar__row--git-modified': gitBadgesFor(row.path).some((b) => b.key === 'modified'),
+              }"
+              :disabled="openingPath === row.path"
+              :title="row.path"
+              @click="onOpenWorkflow(row)"
+            >
+              <span class="ctv-bbar__row-main">{{ row.name }}</span>
+              <span
+                v-for="b in gitBadgesFor(row.path)"
+                :key="b.key"
+                class="ctv-bbar__git-badge"
+                :class="`ctv-bbar__git-badge--${b.key}`"
+              >{{ b.label }}</span>
+              <span v-if="nativeWorkflowFolder(row.path)" class="ctv-bbar__badge">
+                {{ nativeWorkflowFolder(row.path) }}
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -720,6 +822,38 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
 
 .ctv-bbar__pop--wide {
   width: min(360px, 88vw);
+}
+
+.ctv-bbar__pop--wide:has(.ctv-bbar__split) {
+  width: min(640px, 94vw);
+}
+
+.ctv-bbar__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-height: 0;
+}
+
+.ctv-bbar__col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-base-foreground, #fff) 4%, transparent);
+  padding: 4px;
+}
+
+.ctv-bbar__col-head {
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.65;
+  letter-spacing: 0.02em;
+}
+
+.ctv-bbar__scroll--col {
+  max-height: min(42vh, 320px);
 }
 
 .ctv-bbar__cats {

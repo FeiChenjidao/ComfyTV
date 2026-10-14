@@ -7,8 +7,10 @@ export const NativeWorkflowGitFileSchema = z.object({
   can_update: z.boolean(),
   can_commit: z.boolean(),
   untracked: z.boolean().optional().default(false),
-  /** new | modified | outdated | diverged */
+  /** new | modified | outdated | diverged | synced */
   state: z.string().optional(),
+  /** template = on remote; local = local-only */
+  kind: z.enum(['template', 'local']).optional(),
 })
 
 export const NativeWorkflowGitStatusSchema = z.object({
@@ -22,6 +24,8 @@ export const NativeWorkflowGitStatusSchema = z.object({
   dirty: z.boolean(),
   changes: z.array(z.string()),
   files: z.array(NativeWorkflowGitFileSchema).default([]),
+  /** Workflow JSON paths present on remote tip (templates) */
+  remote_workflows: z.array(z.string()).optional(),
   has_git: z.boolean(),
   error: z.string(),
   error_code: z.string().optional(),
@@ -40,6 +44,7 @@ export const NativeWorkflowGitStatusSchema = z.object({
   assets_warnings: z.array(z.string()).optional(),
   /** Untracked locals renamed to *.local-backup so pull can proceed */
   local_backups: z.array(z.string()).optional(),
+  templates_overwritten: z.array(z.string()).optional(),
 })
 export type NativeWorkflowGitStatus = z.infer<typeof NativeWorkflowGitStatusSchema>
 export type NativeWorkflowGitFile = z.infer<typeof NativeWorkflowGitFileSchema>

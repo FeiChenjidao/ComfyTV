@@ -17498,8 +17498,10 @@ const NativeWorkflowGitFileSchema = object({
   can_update: boolean(),
   can_commit: boolean(),
   untracked: boolean().optional().default(false),
-  /** new | modified | outdated | diverged */
-  state: string().optional()
+  /** new | modified | outdated | diverged | synced */
+  state: string().optional(),
+  /** template = on remote; local = local-only */
+  kind: _enum(["template", "local"]).optional()
 });
 const NativeWorkflowGitStatusSchema = object({
   ok: boolean(),
@@ -17512,6 +17514,8 @@ const NativeWorkflowGitStatusSchema = object({
   dirty: boolean(),
   changes: array(string()),
   files: array(NativeWorkflowGitFileSchema).default([]),
+  /** Workflow JSON paths present on remote tip (templates) */
+  remote_workflows: array(string()).optional(),
   has_git: boolean(),
   error: string(),
   error_code: string().optional(),
@@ -17529,7 +17533,8 @@ const NativeWorkflowGitStatusSchema = object({
   assets_skipped: number$1().optional(),
   assets_warnings: array(string()).optional(),
   /** Untracked locals renamed to *.local-backup so pull can proceed */
-  local_backups: array(string()).optional()
+  local_backups: array(string()).optional(),
+  templates_overwritten: array(string()).optional()
 });
 class ApiError extends Error {
   constructor(path, status, message2) {
@@ -59898,7 +59903,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-Dg2FC7jQ.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-DPWtHycX.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -62796,7 +62801,7 @@ const psdLayerTree$1 = { "clickHint": "Click to select a layer", "clipping": "Cl
 const run$2 = { "run": "Run", "runAllStages": "Run all stages", "stagesRunComplete": "ComfyTV stages finished in dependency order.", "stagesRunFailed": "A ComfyTV stage failed during the sequential run.", "stagesRunPerNode": "ComfyTV stages run individually — use each node's Run button. Nothing to run with the global Run here." };
 const shareWorkflow$3 = { "saveFailedTitle": "Save failed", "saveFailedDescription": "The workflow could not be saved: {detail}" };
 const dialog$1 = { "confirm": "OK", "cancel": "Cancel", "close": "Close" };
-const v2$1 = /* @__PURE__ */ JSON.parse(`{"meta":{"fps":"{n} fps","silent":"no audio","mono":"mono","stereo":"stereo","channels":"{n} ch","frames":"{n} frames","genTime":"Generated in {t}"},"genopt":{"resolution":"Resolution","ratio":"Aspect ratio","count":"Count"},"panelCollapse":"Collapse the panel — keeps a one-line summary and Run","panelExpand":"Expand the panel","imageStageTitle":"Image · ImageStage","pickerTitle":"Pick · Image Picker","cropTitle":"Crop · Edit","ed":{"rotate":"Rotate · Edit","mirror":"Mirror · Edit","grade":"Color Grade · Edit","compare":"Compare · Edit","gridSplit":"Grid Split · Edit","customSplit":"Custom Split · Edit","psdLayerTree":"PSD Layer Tree · Edit","layerSeparation":"Layer Separation · Edit","imagesSplit":"Split Images · Edit","imageMerge":"Merge Images · Edit","compareHint":"Wire two images into A and B to compare","wired":"wired","empty":"empty"},"bottomBar":{"add":"Add node","assets":"Assets","workflows":"Workflows","search":"Search","searchPlaceholder":"Search ComfyTV nodes…","categories":"Categories","searchEmpty":"No matching nodes","cat":{"all":"All","generate":"Generate","input":"Input","image":"Image","edit":"Edit","video":"Video","audio":"Audio","text":"Text","model3d":"3D","bridge":"Bridge","utils":"Utils","other":"Other"},"createImage":"Image","createVideo":"Video","createAudio":"Audio","createText":"Text","createModel":"3D Model","workflowEmpty":"No workflows yet. Save graphs into ComfyUI’s user/default/workflows, or clone your team Git repo there, then reopen this panel.","workflowLoading":"Loading…","workflowOpenFailed":"Failed to open workflow","gitNoRepo":"This account has no team workflows Git yet. Click Connect to clone into this user’s workflows folder (each multi-user account is separate).","gitNoGit":"git was not found on this machine — install it and add it to PATH.","gitSynced":"In sync with remote","gitBehind":"{n} remote commit(s) available","gitDirty":"Local uncommitted changes","gitUpdate":"Update","gitCommit":"Commit","gitConnect":"Connect team repo","gitConnecting":"Connecting team repo…","gitConnectOk":"Connected to team workflows repo","gitCommitPick":"Select local workflows to commit","gitCommitConfirm":"Confirm commit","gitCommitCancel":"Cancel","gitMessagePlaceholder":"Commit message (optional)","gitChecking":"Checking remote status…","gitUpdating":"Updating from remote…","gitPushing":"Committing & pushing…","gitPullOk":"Updated from remote","gitPushOk":"Committed & pushed","gitError":"Sync failed","gitDuplicate":"Cannot commit: remote already has a workflow with the same name","gitNothingSelected":"Select at least one workflow to commit","gitNeedUpdate":"Remote has new commits. Click Update first, then Commit again.","gitNeedUpdateAfterCommit":"Saved locally, but remote moved ahead. Click Update, then Commit once more to finish the push.","gitPullConflict":"Update failed (possible conflict). Close the panel and retry, or check uncommitted local edits.","gitPullLocalBackup":"Local untracked file(s) collided with remote; renamed to *.local-backup: {names}","gitNothingToCommit":"No changes to commit for the selected workflows","gitAssetsPacked":"Packed {n} media asset(s)","gitAssetsRestored":"Restored {n} media asset(s) locally","gitAssetsWarn":"Some assets were skipped","gitStateNew":"Uncommitted","gitStateModified":"Modified","gitStateOutdated":"Update available","gitStateDiverged":"Diverged","gitLegend":"Uncommitted=new local · Modified=local edits · Update=remote newer"},"stageHint":"Connect references, press ↑ to generate","apiCostHint":"Estimated workflow API cost","toolbar":{"hd":"HD","expand":"Expand","angles":"Angles","relight":"Relight","redraw":"Redraw","erase":"Erase","cutout":"Cutout","grid":"Grid split","panorama":"Panorama","crop":"Crop","download":"Download","generate":"Generate"},"pickerHint":"Connect an upstream batch, click to pick","cropHint":"Connect an upstream image to start cropping","batchCount":"{n}","batchPos":"{i}/{n}","refsCount":"{n} refs","poolCount":"{n} in pool","clear":"Clear","linkWorkflow":"Link workflow","videoColorTitle":"Color · Video FX","videoCurvesTitle":"Curves · Video FX","fxChainTitle":"FX Chain · Render","renderChain":"Render chain","outputLabel":"Output","livePreview":"Live","fxChainHint":"Connect an upstream video to preview the chain","scene3dTitle":"3D Scene · Editor","relightTitle":"Relight · Light ball","applying":"Applying…","appliedLive":"Applied · live downstream","dragToApply":"Drag the box to apply","loaderHint":"Drop a file here, or click to upload","loaderEmpty":"Nothing loaded","assetLoaderHint":"Click to pick from the asset library","assetLoaderEmpty":"No asset selected","params":"Params","generatorHint":"Press ↑ to generate","change":"Change","upload":"Upload","renameHint":"Double-click to rename","removeItem":"Remove","moreActions":"More","fx":{"lut":"LUT · Grade","selectiveColor":"Selective Color · Grade","cdl":"CDL · Grade","histogramEq":"Histogram EQ · Grade","awb":"Auto White Balance · Grade","pseudocolor":"Pseudocolor · Grade","hueCorrect":"Hue Correct · Grade","select0r":"Select0r · Grade","keyer":"Keyer · Key","pik":"PIK · Key","despill":"Despill · Key","colorSuppress":"Color Suppress · Key","matteMorph":"Matte Morph · Key","shapeMask":"Shape Mask · Key","lensDistort":"Lens Distort · Optics","chromaticAberration":"Chromatic Aberration · Optics","lensFlare":"Lens Flare · Optics","glow":"Glow · Optics","godRays":"God Rays · Optics","blurSharpen":"Blur & Sharpen · Restore","denoise":"Denoise · Restore","deinterlace":"Deinterlace · Restore","posterize":"Posterize · Look","oldFilm":"Old Film · Look","artFx":"Art FX · Look","glitch":"Glitch · Look","kaleidoscope":"Kaleidoscope · Look","waveWarp":"Wave Warp · Look","strobe":"Strobe · Look","feedback":"Feedback · Look","regrain":"Regrain · Look","stylize":"Quick Looks · Look","chromaShift":"Chroma Shift · Look","transform":"Transform · Geo","video360":"360 Video · Geo","card3d":"Card 3D · Geo","particles":"Particles · FX","water":"Water · FX","lightGraffiti":"Light Graffiti · FX","trim":"Trim · Cut","vcrop":"Crop · Cut","vsplit":"Split · Cut","concat":"Concat · Cut","speed":"Speed · Cut","rotate":"Rotate & Flip · Cut","volume":"Volume · Cut","muxAudio":"Mux Audio · Cut","resize":"Resize · Cut","frames":"Frames · Cut","timeRemap":"Time Remap · Cut","sequence":"Sequence · Cut","sceneDetect":"Scene Detect · Cut","chromaKey":"Chroma Key · Comp","composite":"Composite · Comp","cornerPin":"Corner Pin · Comp","rotoMask":"Roto Mask · Comp","keyMix":"Key Mix · Comp","matteMonitor":"Matte Monitor · Comp","maskPropagate":"Mask Propagate · Comp","paintStroke":"Paint Stroke · Comp","stmap":"STMap · Comp","stmapGen":"STMap Gen · Comp","zDefocus":"Z Defocus · Comp","frameBlend":"Frame Blend · Comp","transition":"Transition · Blend","lumaWipe":"Luma Wipe · Blend","stabilize":"Stabilize · Restore","stabilizePro":"Stabilize Pro · Restore","stabilize360":"360 Stabilize · Restore","interpolate":"Interpolate · Restore","faceBlur":"Face Blur · Restore","spotRemover":"Spot Remover · Restore","scopes":"Scopes · Monitor","contactSheet":"Contact Sheet · Monitor","audioMeter":"Audio Meter · Monitor","title":"Title · Text","subtitle":"Subtitle · Text","annotate":"Annotate · Text","kenBurns":"Ken Burns · FX","slitScan":"Slit Scan · FX"},"rich":{"score":"Score · Music","scoreEditor":"Score Editor · Music","midiEditor":"MIDI Editor · Music","expression":"Expression · Anim","motionTrack":"Motion Track · Anim","pattern":"Pattern · Gen","panorama":"Panorama · 360","panoView":"Current View · 360","panoMulti":"Multi View · 360","storyboard":"Storyboard · Story","storyboardEditor":"Storyboard Studio · Story","layerEditor":"Layer Editor · Image","material":"Material · 3D","modelLoader":"Load Model · 3D","meshPrimitive":"Primitive · 3D","meshOp":"Mesh Ops · 3D","meshBake":"Bake Maps · 3D","meshBoolean":"Boolean · 3D","lineArt":"Line Art · Image","poster":"Poster · Image","splitPart":"Split Parts · Image","erase":"Erase · Paint","inpaint":"Inpaint · Paint","outpaint":"Outpaint · Paint","multiangle":"Multi-angle · Image","director":"Director · Cut"},"afx":{"dynamics":"Compressor · Dyn","loudness":"Loudness · Dyn","duck":"Ducking · Dyn","eq":"EQ · Tone","saturate":"Saturate · Tone","modulation":"Modulation · Tone","echo":"Echo · Tone","stereo":"Stereo Field · Tone","timePitch":"Time & Pitch · Tone","denoise":"Denoise · Restore","noiseReduction":"Spectral Gate · Restore","repair":"Repair · Restore","convolve":"Convolve IR · Space","deconvolve":"Deconvolve · Space","museReverb":"Reverb · Space","mix":"Mixer · Mix","crossfade":"Crossfade · Mix","stemSplit":"Stem Split · Mix","demuxAudio":"Audio Track · Mix","demuxVideo":"Silent Video · Mix","clip":"Trim · Cut","split":"Split · Cut","analyze":"Analyze · Meter","mir":"Music Info · Meter","visualize":"Visualize · Meter","segmentExport":"Segments · Meter","reactive":"Reactive Keys · Meter","sweep":"Sweep · Synth","sf2":"SoundFont · Synth","clickTrack":"Click Track · Synth","chordAccomp":"Chords · Synth","scoreToMidi":"Score Player · Synth","demuxAudioHint":"Extract the audio track from the video","demuxVideoHint":"Strip the audio, keep the picture"},"customParams":{"title":"Workflow params","add":"Add","addHint":"Attach a parameter exposed by the bound workflow","remove":"Remove parameter"},"custom":{"title":"Custom Stage","expose":"Expose I/O","hint":"Pick a workflow, then choose which of its inputs and outputs this card exposes","noWorkflow":"Pick a workflow first","inputs":"Inputs","outputs":"Outputs","exposed":"Exposed","search":"Search nodes…","noCandidates":"This workflow has no exposable {what}","linked":"Wired","unlinked":"Not wired","required":"Required","optional":"Optional","label":"Label","batch":"Batch","save":"Save","cancel":"Cancel","saving":"Saving…","saved":"Saved","loadFailed":"Could not load workflow: {detail}","saveFailed":"Save failed: {detail}","needsOutput":"Pick at least one output","kinds":{"image":"image","images":"image batch","video":"video","audio":"audio","model":"3D model","text":"text","param":"param"},"summary":"{inputs} inputs · {outputs} outputs","moveUp":"Move up","asPrompt":"Feed from the card's main prompt ({'@'} references work there)","viaRef":"From asset reference","saveAs":"Save as…","saveAsHint":"Save these choices as a separate configuration of the same workflow","saveAsPrompt":"Name of the new configuration","asRandom":"Draw a fresh random value on every run (seed)","randomEachRun":"random on every run","moveDown":"Move down"},"ctl":{"duration":"Duration (s)","generateAudio":"Generate audio","lyrics":"Lyrics","bpm":"BPM","timeSignature":"Time signature","keyScale":"Key","language":"Language","voice":"Voice","speed":"Speed","referenceText":"Reference transcript","variantCount":"Variant count"}}`);
+const v2$1 = /* @__PURE__ */ JSON.parse(`{"meta":{"fps":"{n} fps","silent":"no audio","mono":"mono","stereo":"stereo","channels":"{n} ch","frames":"{n} frames","genTime":"Generated in {t}"},"genopt":{"resolution":"Resolution","ratio":"Aspect ratio","count":"Count"},"panelCollapse":"Collapse the panel — keeps a one-line summary and Run","panelExpand":"Expand the panel","imageStageTitle":"Image · ImageStage","pickerTitle":"Pick · Image Picker","cropTitle":"Crop · Edit","ed":{"rotate":"Rotate · Edit","mirror":"Mirror · Edit","grade":"Color Grade · Edit","compare":"Compare · Edit","gridSplit":"Grid Split · Edit","customSplit":"Custom Split · Edit","psdLayerTree":"PSD Layer Tree · Edit","layerSeparation":"Layer Separation · Edit","imagesSplit":"Split Images · Edit","imageMerge":"Merge Images · Edit","compareHint":"Wire two images into A and B to compare","wired":"wired","empty":"empty"},"bottomBar":{"add":"Add node","assets":"Assets","workflows":"Workflows","search":"Search","searchPlaceholder":"Search ComfyTV nodes…","categories":"Categories","searchEmpty":"No matching nodes","cat":{"all":"All","generate":"Generate","input":"Input","image":"Image","edit":"Edit","video":"Video","audio":"Audio","text":"Text","model3d":"3D","bridge":"Bridge","utils":"Utils","other":"Other"},"createImage":"Image","createVideo":"Video","createAudio":"Audio","createText":"Text","createModel":"3D Model","workflowEmpty":"Nothing here yet. Templates (left) come from the team repo; workflows (right) are local-only.","workflowLoading":"Loading…","workflowOpenFailed":"Failed to open workflow","templates":"Templates","localWorkflows":"Workflows","templatesEmpty":"No cloud templates yet. Click Connect or Update templates to pull.","localWorkflowsEmpty":"No local workflows. Save a graph into this user’s workflows folder to see it here.","gitNoRepo":"This account has no team workflows Git yet. Click Connect to clone into this user’s workflows folder (each multi-user account is separate).","gitNoGit":"git was not found on this machine — install it and add it to PATH.","gitSynced":"In sync with remote","gitBehind":"{n} cloud template commit(s) ready to overwrite","gitDirty":"Local workflows have uncommitted changes","gitUpdate":"Update templates","gitCommit":"Commit workflows","gitConnect":"Connect team repo","gitConnecting":"Connecting team repo…","gitConnectOk":"Connected to team workflows repo","gitCommitPick":"Select local workflows to commit","gitCommitConfirm":"Confirm commit","gitCommitCancel":"Cancel","gitMessagePlaceholder":"Commit message (optional)","gitChecking":"Checking remote status…","gitUpdating":"Overwriting local templates from cloud…","gitPushing":"Committing & pushing…","gitPullOk":"Cloud templates overwritten locally","gitPushOk":"Committed & pushed","gitError":"Sync failed","gitDuplicate":"Cannot commit: remote already has a workflow with the same name","gitNothingSelected":"Select at least one workflow to commit","gitNeedUpdate":"Remote has new commits. Click Update templates first, then Commit workflows again.","gitNeedUpdateAfterCommit":"Saved locally, but remote moved ahead. Click Update templates, then Commit workflows once more to finish the push.","gitPullConflict":"Update failed (possible conflict). Close the panel and retry, or check uncommitted local edits.","gitPullLocalBackup":"Local untracked file(s) collided with remote; renamed to *.local-backup: {names}","gitNothingToCommit":"No changes to commit for the selected workflows","gitAssetsPacked":"Packed {n} media asset(s)","gitAssetsRestored":"Restored {n} media asset(s) locally","gitAssetsWarn":"Some assets were skipped","gitStateNew":"Uncommitted","gitStateModified":"Modified","gitStateOutdated":"Update available","gitStateDiverged":"Diverged","gitLegend":"Left: cloud templates (update overwrites) · Right: local workflows (commit to push)"},"stageHint":"Connect references, press ↑ to generate","apiCostHint":"Estimated workflow API cost","toolbar":{"hd":"HD","expand":"Expand","angles":"Angles","relight":"Relight","redraw":"Redraw","erase":"Erase","cutout":"Cutout","grid":"Grid split","panorama":"Panorama","crop":"Crop","download":"Download","generate":"Generate"},"pickerHint":"Connect an upstream batch, click to pick","cropHint":"Connect an upstream image to start cropping","batchCount":"{n}","batchPos":"{i}/{n}","refsCount":"{n} refs","poolCount":"{n} in pool","clear":"Clear","linkWorkflow":"Link workflow","videoColorTitle":"Color · Video FX","videoCurvesTitle":"Curves · Video FX","fxChainTitle":"FX Chain · Render","renderChain":"Render chain","outputLabel":"Output","livePreview":"Live","fxChainHint":"Connect an upstream video to preview the chain","scene3dTitle":"3D Scene · Editor","relightTitle":"Relight · Light ball","applying":"Applying…","appliedLive":"Applied · live downstream","dragToApply":"Drag the box to apply","loaderHint":"Drop a file here, or click to upload","loaderEmpty":"Nothing loaded","assetLoaderHint":"Click to pick from the asset library","assetLoaderEmpty":"No asset selected","params":"Params","generatorHint":"Press ↑ to generate","change":"Change","upload":"Upload","renameHint":"Double-click to rename","removeItem":"Remove","moreActions":"More","fx":{"lut":"LUT · Grade","selectiveColor":"Selective Color · Grade","cdl":"CDL · Grade","histogramEq":"Histogram EQ · Grade","awb":"Auto White Balance · Grade","pseudocolor":"Pseudocolor · Grade","hueCorrect":"Hue Correct · Grade","select0r":"Select0r · Grade","keyer":"Keyer · Key","pik":"PIK · Key","despill":"Despill · Key","colorSuppress":"Color Suppress · Key","matteMorph":"Matte Morph · Key","shapeMask":"Shape Mask · Key","lensDistort":"Lens Distort · Optics","chromaticAberration":"Chromatic Aberration · Optics","lensFlare":"Lens Flare · Optics","glow":"Glow · Optics","godRays":"God Rays · Optics","blurSharpen":"Blur & Sharpen · Restore","denoise":"Denoise · Restore","deinterlace":"Deinterlace · Restore","posterize":"Posterize · Look","oldFilm":"Old Film · Look","artFx":"Art FX · Look","glitch":"Glitch · Look","kaleidoscope":"Kaleidoscope · Look","waveWarp":"Wave Warp · Look","strobe":"Strobe · Look","feedback":"Feedback · Look","regrain":"Regrain · Look","stylize":"Quick Looks · Look","chromaShift":"Chroma Shift · Look","transform":"Transform · Geo","video360":"360 Video · Geo","card3d":"Card 3D · Geo","particles":"Particles · FX","water":"Water · FX","lightGraffiti":"Light Graffiti · FX","trim":"Trim · Cut","vcrop":"Crop · Cut","vsplit":"Split · Cut","concat":"Concat · Cut","speed":"Speed · Cut","rotate":"Rotate & Flip · Cut","volume":"Volume · Cut","muxAudio":"Mux Audio · Cut","resize":"Resize · Cut","frames":"Frames · Cut","timeRemap":"Time Remap · Cut","sequence":"Sequence · Cut","sceneDetect":"Scene Detect · Cut","chromaKey":"Chroma Key · Comp","composite":"Composite · Comp","cornerPin":"Corner Pin · Comp","rotoMask":"Roto Mask · Comp","keyMix":"Key Mix · Comp","matteMonitor":"Matte Monitor · Comp","maskPropagate":"Mask Propagate · Comp","paintStroke":"Paint Stroke · Comp","stmap":"STMap · Comp","stmapGen":"STMap Gen · Comp","zDefocus":"Z Defocus · Comp","frameBlend":"Frame Blend · Comp","transition":"Transition · Blend","lumaWipe":"Luma Wipe · Blend","stabilize":"Stabilize · Restore","stabilizePro":"Stabilize Pro · Restore","stabilize360":"360 Stabilize · Restore","interpolate":"Interpolate · Restore","faceBlur":"Face Blur · Restore","spotRemover":"Spot Remover · Restore","scopes":"Scopes · Monitor","contactSheet":"Contact Sheet · Monitor","audioMeter":"Audio Meter · Monitor","title":"Title · Text","subtitle":"Subtitle · Text","annotate":"Annotate · Text","kenBurns":"Ken Burns · FX","slitScan":"Slit Scan · FX"},"rich":{"score":"Score · Music","scoreEditor":"Score Editor · Music","midiEditor":"MIDI Editor · Music","expression":"Expression · Anim","motionTrack":"Motion Track · Anim","pattern":"Pattern · Gen","panorama":"Panorama · 360","panoView":"Current View · 360","panoMulti":"Multi View · 360","storyboard":"Storyboard · Story","storyboardEditor":"Storyboard Studio · Story","layerEditor":"Layer Editor · Image","material":"Material · 3D","modelLoader":"Load Model · 3D","meshPrimitive":"Primitive · 3D","meshOp":"Mesh Ops · 3D","meshBake":"Bake Maps · 3D","meshBoolean":"Boolean · 3D","lineArt":"Line Art · Image","poster":"Poster · Image","splitPart":"Split Parts · Image","erase":"Erase · Paint","inpaint":"Inpaint · Paint","outpaint":"Outpaint · Paint","multiangle":"Multi-angle · Image","director":"Director · Cut"},"afx":{"dynamics":"Compressor · Dyn","loudness":"Loudness · Dyn","duck":"Ducking · Dyn","eq":"EQ · Tone","saturate":"Saturate · Tone","modulation":"Modulation · Tone","echo":"Echo · Tone","stereo":"Stereo Field · Tone","timePitch":"Time & Pitch · Tone","denoise":"Denoise · Restore","noiseReduction":"Spectral Gate · Restore","repair":"Repair · Restore","convolve":"Convolve IR · Space","deconvolve":"Deconvolve · Space","museReverb":"Reverb · Space","mix":"Mixer · Mix","crossfade":"Crossfade · Mix","stemSplit":"Stem Split · Mix","demuxAudio":"Audio Track · Mix","demuxVideo":"Silent Video · Mix","clip":"Trim · Cut","split":"Split · Cut","analyze":"Analyze · Meter","mir":"Music Info · Meter","visualize":"Visualize · Meter","segmentExport":"Segments · Meter","reactive":"Reactive Keys · Meter","sweep":"Sweep · Synth","sf2":"SoundFont · Synth","clickTrack":"Click Track · Synth","chordAccomp":"Chords · Synth","scoreToMidi":"Score Player · Synth","demuxAudioHint":"Extract the audio track from the video","demuxVideoHint":"Strip the audio, keep the picture"},"customParams":{"title":"Workflow params","add":"Add","addHint":"Attach a parameter exposed by the bound workflow","remove":"Remove parameter"},"custom":{"title":"Custom Stage","expose":"Expose I/O","hint":"Pick a workflow, then choose which of its inputs and outputs this card exposes","noWorkflow":"Pick a workflow first","inputs":"Inputs","outputs":"Outputs","exposed":"Exposed","search":"Search nodes…","noCandidates":"This workflow has no exposable {what}","linked":"Wired","unlinked":"Not wired","required":"Required","optional":"Optional","label":"Label","batch":"Batch","save":"Save","cancel":"Cancel","saving":"Saving…","saved":"Saved","loadFailed":"Could not load workflow: {detail}","saveFailed":"Save failed: {detail}","needsOutput":"Pick at least one output","kinds":{"image":"image","images":"image batch","video":"video","audio":"audio","model":"3D model","text":"text","param":"param"},"summary":"{inputs} inputs · {outputs} outputs","moveUp":"Move up","asPrompt":"Feed from the card's main prompt ({'@'} references work there)","viaRef":"From asset reference","saveAs":"Save as…","saveAsHint":"Save these choices as a separate configuration of the same workflow","saveAsPrompt":"Name of the new configuration","asRandom":"Draw a fresh random value on every run (seed)","randomEachRun":"random on every run","moveDown":"Move down"},"ctl":{"duration":"Duration (s)","generateAudio":"Generate audio","lyrics":"Lyrics","bpm":"BPM","timeSignature":"Time signature","keyScale":"Key","language":"Language","voice":"Voice","speed":"Speed","referenceText":"Reference transcript","variantCount":"Variant count"}}`);
 const workflow$1 = { "uploadButton": "⬆ Upload workflow", "imported": 'Imported "{label}"', "importFailed": "Workflow import failed", "notJson": "That file isn't valid JSON", "linkButton": "🔗 Link workflow" };
 const stage$1 = { "run": "Run", "rerun": "Re-run", "running": "Running…", "cancel": "Cancel", "preparingWorkflow": "Preparing workflow…", "noWorkflowShort": "No workflow installed — use Upload / Link", "noWorkflowInstalled": "No {kind} workflow is installed — import one with the card's Upload / Link buttons, or under ComfyTV → Stages in the sidebar.", "outputDurationHint": "Generation time", "section": { "context": "Context", "pool": "Pool", "output": "Output ({type})", "actions": "Actions" }, "pool": { "clear": "Clear", "clearHint": "Empty the picker pool and reset the selection", "confirmClear": "Clear pool?", "confirm": "Yes", "cancel": "No", "modeAppend": "Mode: Append", "modeReplace": "Mode: Replace", "modeHint": "How new run results enter the pool (click to switch). Append: keep existing items and add new ones on top. Replace: keep only the latest batch. Identical images are kept once — the pool dedupes by image." }, "empty": { "no_output": "no output yet", "generating": "generating…", "pending_upstream": "upstream pending", "unsupported_type": "unsupported type {type}" }, "source": { "upstream": "← upstream", "pending": "… waiting" }, "disconnect": "Disconnect", "starting": "starting…", "runByKind": { "text": "Generate Text", "image": "Generate Image", "image-batch": "Generate Images", "video": "Generate Video", "audio": "Generate Audio", "panorama": "Generate Panorama", "storyboard": "Generate Storyboard", "model": "Generate 3D Model", "material": "Generate Material" }, "action": { "viewFull": "View full size", "download": "Download", "copyText": "Copy text", "saveTextAsset": "Save to asset library", "renderMarkdown": "Render as Markdown", "showRawText": "Show raw text", "addTag": "Save to library / tag", "removeFromPicker": "Remove from picker", "close": "Close", "loadAsset": "Load as asset node", "prev": "Previous", "next": "Next", "pick": "Select this track" }, "preparingWorkflowDetail": "Hang on — converting workflow to api JSON. Try Run again in a moment." };
 const error$1 = { "dismiss": "Dismiss", "cancelled": "Cancelled", "upstreamNotReady": "Upstream not ready", "upstreamNotReadyDetail": "Upstream not ready: {list}. Run those stage(s) first so they produce a snapshot, then Run this stage again.", "droppedFromQueue": "Removed from the queue before it ran — the queue was cleared or the prompt was deleted.", "workerDied": "Backend stopped without sending a result. The prompt worker likely died (CUDA OOM during cleanup is the usual cause). Restart ComfyUI to recover." };
@@ -63000,7 +63005,7 @@ const psdLayerTree = { "clickHint": "点击选择图层", "clipping": "剪贴", 
 const run$1 = { "run": "运行", "runAllStages": "运行全部 Stage", "stagesRunComplete": "ComfyTV 节点已按依赖顺序全部完成。", "stagesRunFailed": "按顺序运行 ComfyTV 节点时有节点失败。", "stagesRunPerNode": "ComfyTV 节点各自独立运行 — 请用每个节点上的运行按钮。全局 Run 在这里没有可执行的节点。" };
 const shareWorkflow$2 = { "saveFailedTitle": "保存失败", "saveFailedDescription": "工作流保存失败：{detail}" };
 const dialog = { "confirm": "确定", "cancel": "取消", "close": "关闭" };
-const v2 = { "meta": { "fps": "{n} fps", "silent": "无音轨", "mono": "单声道", "stereo": "立体声", "channels": "{n} 声道", "frames": "{n} 帧", "genTime": "生成耗时 {t}" }, "genopt": { "resolution": "清晰度", "ratio": "比例", "count": "生成数量" }, "panelCollapse": "收起面板——只保留一行信息和运行按钮", "panelExpand": "展开面板", "imageStageTitle": "图像阶段 · 生成", "pickerTitle": "图片选择器 · 挑选", "cropTitle": "裁剪 · 编辑", "ed": { "rotate": "旋转 · 编辑", "mirror": "镜像 · 编辑", "grade": "调色 · 编辑", "compare": "对比 · 编辑", "gridSplit": "宫格切分 · 编辑", "customSplit": "自定义切分 · 编辑", "psdLayerTree": "PSD 图层树 · 编辑", "layerSeparation": "图层分离 · 编辑", "imagesSplit": "图像组分离 · 编辑", "imageMerge": "图片合并 · 编辑", "compareHint": "接入 A、B 两张图开始对比", "wired": "已接入", "empty": "未接入" }, "bottomBar": { "add": "添加节点", "assets": "素材库", "workflows": "工作流", "search": "搜索", "searchPlaceholder": "搜索 ComfyTV 节点…", "categories": "节点分类", "searchEmpty": "没有匹配的节点", "cat": { "all": "全部", "generate": "生成", "input": "输入", "image": "图片", "edit": "编辑", "video": "视频", "audio": "音频", "text": "文本", "model3d": "3D", "bridge": "桥接", "utils": "工具", "other": "其他" }, "createImage": "图片", "createVideo": "视频", "createAudio": "音频", "createText": "文本", "createModel": "模型", "workflowEmpty": "暂无工作流。在 ComfyUI 里保存到 user/default/workflows，或把团队 Git 仓 clone 到该目录后再打开本面板。", "workflowLoading": "加载中…", "workflowOpenFailed": "打开工作流失败", "gitNoRepo": "当前账号尚未连接团队工作流仓。点「连接团队仓」会克隆到本账号的 workflows 目录（多用户互不影响）。", "gitNoGit": "本机未找到 git，请先安装并加入 PATH。", "gitSynced": "已与远程同步", "gitBehind": "远程有 {n} 个提交可更新", "gitDirty": "本地有未提交改动", "gitUpdate": "更新", "gitCommit": "提交", "gitConnect": "连接团队仓", "gitConnecting": "正在连接团队仓…", "gitConnectOk": "已连接团队工作流仓", "gitCommitPick": "选择要提交的本地工作流", "gitCommitConfirm": "确认提交", "gitCommitCancel": "取消", "gitMessagePlaceholder": "提交说明（可空）", "gitChecking": "正在校验远程状态…", "gitUpdating": "正在从远程更新…", "gitPushing": "正在提交并推送…", "gitPullOk": "已从远程更新", "gitPushOk": "已提交并推送", "gitError": "同步失败", "gitDuplicate": "无法提交：远程已有同名工作流", "gitNothingSelected": "请先勾选要提交的工作流", "gitNeedUpdate": "远程有新版本。请先点「更新」，再重新点「提交」。", "gitNeedUpdateAfterCommit": "本地已保存提交，但远程有更新。请先点「更新」，再点一次「提交」完成推送。", "gitPullConflict": "更新失败（可能有冲突）。请关掉面板后再试，或检查本机未保存的改动。", "gitPullLocalBackup": "本地未入库文件与远程同名，已改名为 *.local-backup：{names}", "gitNothingToCommit": "所选工作流没有可提交的改动", "gitAssetsPacked": "已打包 {n} 个媒体资产", "gitAssetsRestored": "已同步 {n} 个媒体资产到本机", "gitAssetsWarn": "部分资产未打包/未覆盖", "gitStateNew": "未提交", "gitStateModified": "已改动", "gitStateOutdated": "可更新", "gitStateDiverged": "冲突", "gitLegend": "未提交=本地新建 · 已改动=本地修改 · 可更新=远程有新版本" }, "stageHint": "连入参考，点 ↑ 生成", "apiCostHint": "估算工作流 API 费用", "toolbar": { "hd": "高清", "expand": "扩图", "angles": "多角度", "relight": "打光", "redraw": "重绘", "erase": "擦除", "cutout": "抠图", "grid": "宫格切分", "panorama": "全景", "crop": "裁剪", "download": "下载", "generate": "生成" }, "pickerHint": "连入上游批次，点选一张", "cropHint": "连入上游图片开始裁剪", "batchCount": "{n}张", "batchPos": "{i}/{n}张", "refsCount": "{n} 个引用", "poolCount": "池内 {n} 张", "clear": "清空", "linkWorkflow": "关联工作流", "videoColorTitle": "调色 · Video FX", "videoCurvesTitle": "曲线 · Video FX", "fxChainTitle": "FX 链 · 出片", "renderChain": "渲染整链", "outputLabel": "成片", "livePreview": "实时", "fxChainHint": "连入上游视频即可预览整链", "scene3dTitle": "3D 场景 · 编辑台", "relightTitle": "打光 · 光球", "applying": "应用中…", "appliedLive": "已应用 · 下游实时", "dragToApply": "拖框即应用", "loaderHint": "拖入文件，或点击上传", "loaderEmpty": "未加载内容", "assetLoaderHint": "点击从资产库选择", "assetLoaderEmpty": "未选择资产", "params": "参数", "generatorHint": "点 ↑ 生成", "change": "更换", "upload": "上传", "renameHint": "双击重命名", "removeItem": "移除", "moreActions": "更多", "fx": { "lut": "LUT · 调色", "selectiveColor": "选择性色彩 · 调色", "cdl": "CDL · 调色", "histogramEq": "直方图均衡 · 调色", "awb": "自动白平衡 · 调色", "pseudocolor": "伪彩色 · 调色", "hueCorrect": "色相修正 · 调色", "select0r": "二级校色 · 调色", "keyer": "键控 · 抠像", "pik": "IBK 键控 · 抠像", "despill": "去溢色 · 抠像", "colorSuppress": "色彩抑制 · 抠像", "matteMorph": "遮罩形态 · 抠像", "shapeMask": "形状遮罩 · 抠像", "lensDistort": "镜头畸变 · 光学", "chromaticAberration": "镜头色差 · 光学", "lensFlare": "镜头光晕 · 光学", "glow": "辉光 · 光学", "godRays": "体积光 · 光学", "blurSharpen": "模糊与锐化 · 修复", "denoise": "降噪 · 修复", "deinterlace": "去隔行 · 修复", "posterize": "色调分离 · 风格", "oldFilm": "老电影 · 风格", "artFx": "艺术画风 · 风格", "glitch": "故障艺术 · 风格", "kaleidoscope": "万花筒 · 风格", "waveWarp": "波纹扭曲 · 风格", "strobe": "频闪 · 风格", "feedback": "拖影反馈 · 风格", "regrain": "胶片颗粒 · 风格", "stylize": "快速滤镜 · 风格", "chromaShift": "通道错位 · 风格", "transform": "变换 · 几何", "video360": "360 全景 · 几何", "card3d": "3D 卡片 · 几何", "particles": "粒子 · 特效", "water": "水面 · 特效", "lightGraffiti": "光绘 · 特效", "trim": "修剪 · 剪辑", "vcrop": "画面裁切 · 剪辑", "vsplit": "分割 · 剪辑", "concat": "拼接 · 剪辑", "speed": "变速 · 剪辑", "rotate": "旋转翻转 · 剪辑", "volume": "音量 · 剪辑", "muxAudio": "合成音轨 · 剪辑", "resize": "缩放 · 剪辑", "frames": "逐帧抽取 · 剪辑", "timeRemap": "时间重映射 · 剪辑", "sequence": "片段序列 · 剪辑", "sceneDetect": "场景检测 · 剪辑", "chromaKey": "色度抠像 · 合成", "composite": "叠加合成 · 合成", "cornerPin": "四角定位 · 合成", "rotoMask": "手绘遮罩 · 合成", "keyMix": "键混合 · 合成", "matteMonitor": "遮罩监视 · 合成", "maskPropagate": "遮罩追踪 · 合成", "paintStroke": "笔迹绘制 · 合成", "stmap": "UV 重映射 · 合成", "stmapGen": "STMap 生成 · 合成", "zDefocus": "深度散景 · 合成", "frameBlend": "帧混合 · 合成", "transition": "交叉转场 · 转场", "lumaWipe": "亮度擦除 · 转场", "stabilize": "视频稳定 · 修复", "stabilizePro": "专业稳定 · 修复", "stabilize360": "360 稳定 · 修复", "interpolate": "补帧 · 修复", "faceBlur": "人脸打码 · 修复", "spotRemover": "污点移除 · 修复", "scopes": "示波器 · 监看", "contactSheet": "审片宫格 · 监看", "audioMeter": "电平表 · 监看", "title": "标题 · 图文", "subtitle": "字幕 · 图文", "annotate": "标注 · 图文", "kenBurns": "静照运镜 · 特效", "slitScan": "狭缝扫描 · 特效" }, "rich": { "score": "乐谱 · 音乐", "scoreEditor": "打谱器 · 音乐", "midiEditor": "MIDI 编辑 · 音乐", "expression": "表达式 · 动画", "motionTrack": "运动跟踪 · 动画", "pattern": "图案发生 · 生成", "panorama": "全景 · 360", "panoView": "当前视角 · 360", "panoMulti": "多视角 · 360", "storyboard": "故事板 · 叙事", "storyboardEditor": "故事板工作台 · 叙事", "layerEditor": "图层编辑器 · 图像", "material": "材质球 · 3D", "modelLoader": "加载模型 · 3D", "meshPrimitive": "基元 · 3D", "meshOp": "网格加工 · 3D", "meshBake": "烘焙贴图 · 3D", "meshBoolean": "布尔 · 3D", "lineArt": "线稿 · 图像", "poster": "排版 · 图像", "splitPart": "部件分割 · 图像", "erase": "擦除 · 涂抹", "inpaint": "局部重绘 · 涂抹", "outpaint": "扩图 · 涂抹", "multiangle": "多角度 · 图像", "director": "导演台 · 剪辑" }, "afx": { "dynamics": "压缩器 · 动态", "loudness": "响度 · 动态", "duck": "闪避 · 动态", "eq": "均衡器 · 音色", "saturate": "饱和 · 音色", "modulation": "调制 · 音色", "echo": "回声 · 音色", "stereo": "声场 · 音色", "timePitch": "变速变调 · 音色", "denoise": "降噪 · 修复", "noiseReduction": "谱门控 · 修复", "repair": "修复工具 · 修复", "convolve": "卷积混响 · 空间", "deconvolve": "逆卷积 · 空间", "museReverb": "算法混响 · 空间", "mix": "调音台 · 混音", "crossfade": "交叉淡化 · 混音", "stemSplit": "分轨 · 混音", "demuxAudio": "抽出音轨 · 混音", "demuxVideo": "抽出画面 · 混音", "clip": "修剪 · 剪辑", "split": "分割 · 剪辑", "analyze": "分析 · 监测", "mir": "乐理探测 · 监测", "visualize": "频谱图 · 监测", "segmentExport": "分段导出 · 监测", "reactive": "节奏打点 · 监测", "sweep": "扫频 · 合成", "sf2": "音源渲染 · 合成", "clickTrack": "节拍轨 · 合成", "chordAccomp": "和弦伴奏 · 合成", "scoreToMidi": "乐谱演奏 · 合成", "demuxAudioHint": "从视频中抽出音轨", "demuxVideoHint": "去掉声音，只留画面" }, "customParams": { "title": "工作流参数", "add": "添加", "addHint": "挂载绑定工作流暴露的自定义参数", "remove": "移除参数" }, "custom": { "title": "自定义节点", "expose": "暴露输入输出", "hint": "先选工作流，再选择这张卡片要暴露的输入和输出", "noWorkflow": "请先选择工作流", "inputs": "输入", "outputs": "输出", "exposed": "已暴露", "search": "搜索节点…", "noCandidates": "这个工作流没有可暴露的{what}", "linked": "已连接", "unlinked": "未连接", "required": "必填", "optional": "可选", "label": "名称", "batch": "批量", "save": "保存", "cancel": "取消", "saving": "保存中…", "saved": "已保存", "loadFailed": "工作流加载失败：{detail}", "saveFailed": "保存失败：{detail}", "needsOutput": "至少选择一个输出", "kinds": { "image": "图像", "images": "图像批次", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本", "param": "参数" }, "summary": "{inputs} 个输入 · {outputs} 个输出", "moveUp": "上移", "asPrompt": "由卡片主提示词驱动（支持 {'@'} 引用）", "viaRef": "来自资产引用", "saveAs": "另存为…", "saveAsHint": "把这组选择另存为同一工作流的一份新配置", "saveAsPrompt": "新配置名称", "asRandom": "每次运行随机取值（用于 seed）", "randomEachRun": "每次运行随机", "moveDown": "下移" }, "ctl": { "duration": "时长（秒）", "generateAudio": "生成伴音", "lyrics": "歌词", "bpm": "BPM", "timeSignature": "拍号", "keyScale": "调式", "language": "语言", "voice": "音色", "speed": "语速", "referenceText": "参考文本", "variantCount": "变体数量" } };
+const v2 = { "meta": { "fps": "{n} fps", "silent": "无音轨", "mono": "单声道", "stereo": "立体声", "channels": "{n} 声道", "frames": "{n} 帧", "genTime": "生成耗时 {t}" }, "genopt": { "resolution": "清晰度", "ratio": "比例", "count": "生成数量" }, "panelCollapse": "收起面板——只保留一行信息和运行按钮", "panelExpand": "展开面板", "imageStageTitle": "图像阶段 · 生成", "pickerTitle": "图片选择器 · 挑选", "cropTitle": "裁剪 · 编辑", "ed": { "rotate": "旋转 · 编辑", "mirror": "镜像 · 编辑", "grade": "调色 · 编辑", "compare": "对比 · 编辑", "gridSplit": "宫格切分 · 编辑", "customSplit": "自定义切分 · 编辑", "psdLayerTree": "PSD 图层树 · 编辑", "layerSeparation": "图层分离 · 编辑", "imagesSplit": "图像组分离 · 编辑", "imageMerge": "图片合并 · 编辑", "compareHint": "接入 A、B 两张图开始对比", "wired": "已接入", "empty": "未接入" }, "bottomBar": { "add": "添加节点", "assets": "素材库", "workflows": "工作流", "search": "搜索", "searchPlaceholder": "搜索 ComfyTV 节点…", "categories": "节点分类", "searchEmpty": "没有匹配的节点", "cat": { "all": "全部", "generate": "生成", "input": "输入", "image": "图片", "edit": "编辑", "video": "视频", "audio": "音频", "text": "文本", "model3d": "3D", "bridge": "桥接", "utils": "工具", "other": "其他" }, "createImage": "图片", "createVideo": "视频", "createAudio": "音频", "createText": "文本", "createModel": "模型", "workflowEmpty": "暂无内容。左侧模板来自团队仓；右侧工作流是本机新建。", "workflowLoading": "加载中…", "workflowOpenFailed": "打开工作流失败", "templates": "模板", "localWorkflows": "工作流", "templatesEmpty": "暂无云端模板。点「连接团队仓」或「更新模板」拉取。", "localWorkflowsEmpty": "暂无本地工作流。在 ComfyUI 保存到本账号 workflows 即可出现在这里。", "gitNoRepo": "当前账号尚未连接团队工作流仓。点「连接团队仓」会克隆到本账号的 workflows 目录（多用户互不影响）。", "gitNoGit": "本机未找到 git，请先安装并加入 PATH。", "gitSynced": "已与远程同步", "gitBehind": "云端模板有 {n} 个提交可覆盖更新", "gitDirty": "本地工作流有未提交改动", "gitUpdate": "更新模板", "gitCommit": "提交工作流", "gitConnect": "连接团队仓", "gitConnecting": "正在连接团队仓…", "gitConnectOk": "已连接团队工作流仓", "gitCommitPick": "选择要提交的本地工作流", "gitCommitConfirm": "确认提交", "gitCommitCancel": "取消", "gitMessagePlaceholder": "提交说明（可空）", "gitChecking": "正在校验远程状态…", "gitUpdating": "正在覆盖更新云端模板…", "gitPushing": "正在提交并推送…", "gitPullOk": "云端模板已覆盖到本机", "gitPushOk": "已提交并推送", "gitError": "同步失败", "gitDuplicate": "无法提交：远程已有同名工作流", "gitNothingSelected": "请先勾选要提交的工作流", "gitNeedUpdate": "远程有新版本。请先点「更新模板」，再重新点「提交工作流」。", "gitNeedUpdateAfterCommit": "本地已保存提交，但远程有更新。请先点「更新模板」，再点一次「提交工作流」完成推送。", "gitPullConflict": "更新失败（可能有冲突）。请关掉面板后再试，或检查本机未保存的改动。", "gitPullLocalBackup": "本地未入库文件与远程同名，已改名为 *.local-backup：{names}", "gitNothingToCommit": "所选工作流没有可提交的改动", "gitAssetsPacked": "已打包 {n} 个媒体资产", "gitAssetsRestored": "已同步 {n} 个媒体资产到本机", "gitAssetsWarn": "部分资产未打包/未覆盖", "gitStateNew": "未提交", "gitStateModified": "已改动", "gitStateOutdated": "可更新", "gitStateDiverged": "冲突", "gitLegend": "左：云端模板（更新直接覆盖）· 右：本地工作流（提交推送）" }, "stageHint": "连入参考，点 ↑ 生成", "apiCostHint": "估算工作流 API 费用", "toolbar": { "hd": "高清", "expand": "扩图", "angles": "多角度", "relight": "打光", "redraw": "重绘", "erase": "擦除", "cutout": "抠图", "grid": "宫格切分", "panorama": "全景", "crop": "裁剪", "download": "下载", "generate": "生成" }, "pickerHint": "连入上游批次，点选一张", "cropHint": "连入上游图片开始裁剪", "batchCount": "{n}张", "batchPos": "{i}/{n}张", "refsCount": "{n} 个引用", "poolCount": "池内 {n} 张", "clear": "清空", "linkWorkflow": "关联工作流", "videoColorTitle": "调色 · Video FX", "videoCurvesTitle": "曲线 · Video FX", "fxChainTitle": "FX 链 · 出片", "renderChain": "渲染整链", "outputLabel": "成片", "livePreview": "实时", "fxChainHint": "连入上游视频即可预览整链", "scene3dTitle": "3D 场景 · 编辑台", "relightTitle": "打光 · 光球", "applying": "应用中…", "appliedLive": "已应用 · 下游实时", "dragToApply": "拖框即应用", "loaderHint": "拖入文件，或点击上传", "loaderEmpty": "未加载内容", "assetLoaderHint": "点击从资产库选择", "assetLoaderEmpty": "未选择资产", "params": "参数", "generatorHint": "点 ↑ 生成", "change": "更换", "upload": "上传", "renameHint": "双击重命名", "removeItem": "移除", "moreActions": "更多", "fx": { "lut": "LUT · 调色", "selectiveColor": "选择性色彩 · 调色", "cdl": "CDL · 调色", "histogramEq": "直方图均衡 · 调色", "awb": "自动白平衡 · 调色", "pseudocolor": "伪彩色 · 调色", "hueCorrect": "色相修正 · 调色", "select0r": "二级校色 · 调色", "keyer": "键控 · 抠像", "pik": "IBK 键控 · 抠像", "despill": "去溢色 · 抠像", "colorSuppress": "色彩抑制 · 抠像", "matteMorph": "遮罩形态 · 抠像", "shapeMask": "形状遮罩 · 抠像", "lensDistort": "镜头畸变 · 光学", "chromaticAberration": "镜头色差 · 光学", "lensFlare": "镜头光晕 · 光学", "glow": "辉光 · 光学", "godRays": "体积光 · 光学", "blurSharpen": "模糊与锐化 · 修复", "denoise": "降噪 · 修复", "deinterlace": "去隔行 · 修复", "posterize": "色调分离 · 风格", "oldFilm": "老电影 · 风格", "artFx": "艺术画风 · 风格", "glitch": "故障艺术 · 风格", "kaleidoscope": "万花筒 · 风格", "waveWarp": "波纹扭曲 · 风格", "strobe": "频闪 · 风格", "feedback": "拖影反馈 · 风格", "regrain": "胶片颗粒 · 风格", "stylize": "快速滤镜 · 风格", "chromaShift": "通道错位 · 风格", "transform": "变换 · 几何", "video360": "360 全景 · 几何", "card3d": "3D 卡片 · 几何", "particles": "粒子 · 特效", "water": "水面 · 特效", "lightGraffiti": "光绘 · 特效", "trim": "修剪 · 剪辑", "vcrop": "画面裁切 · 剪辑", "vsplit": "分割 · 剪辑", "concat": "拼接 · 剪辑", "speed": "变速 · 剪辑", "rotate": "旋转翻转 · 剪辑", "volume": "音量 · 剪辑", "muxAudio": "合成音轨 · 剪辑", "resize": "缩放 · 剪辑", "frames": "逐帧抽取 · 剪辑", "timeRemap": "时间重映射 · 剪辑", "sequence": "片段序列 · 剪辑", "sceneDetect": "场景检测 · 剪辑", "chromaKey": "色度抠像 · 合成", "composite": "叠加合成 · 合成", "cornerPin": "四角定位 · 合成", "rotoMask": "手绘遮罩 · 合成", "keyMix": "键混合 · 合成", "matteMonitor": "遮罩监视 · 合成", "maskPropagate": "遮罩追踪 · 合成", "paintStroke": "笔迹绘制 · 合成", "stmap": "UV 重映射 · 合成", "stmapGen": "STMap 生成 · 合成", "zDefocus": "深度散景 · 合成", "frameBlend": "帧混合 · 合成", "transition": "交叉转场 · 转场", "lumaWipe": "亮度擦除 · 转场", "stabilize": "视频稳定 · 修复", "stabilizePro": "专业稳定 · 修复", "stabilize360": "360 稳定 · 修复", "interpolate": "补帧 · 修复", "faceBlur": "人脸打码 · 修复", "spotRemover": "污点移除 · 修复", "scopes": "示波器 · 监看", "contactSheet": "审片宫格 · 监看", "audioMeter": "电平表 · 监看", "title": "标题 · 图文", "subtitle": "字幕 · 图文", "annotate": "标注 · 图文", "kenBurns": "静照运镜 · 特效", "slitScan": "狭缝扫描 · 特效" }, "rich": { "score": "乐谱 · 音乐", "scoreEditor": "打谱器 · 音乐", "midiEditor": "MIDI 编辑 · 音乐", "expression": "表达式 · 动画", "motionTrack": "运动跟踪 · 动画", "pattern": "图案发生 · 生成", "panorama": "全景 · 360", "panoView": "当前视角 · 360", "panoMulti": "多视角 · 360", "storyboard": "故事板 · 叙事", "storyboardEditor": "故事板工作台 · 叙事", "layerEditor": "图层编辑器 · 图像", "material": "材质球 · 3D", "modelLoader": "加载模型 · 3D", "meshPrimitive": "基元 · 3D", "meshOp": "网格加工 · 3D", "meshBake": "烘焙贴图 · 3D", "meshBoolean": "布尔 · 3D", "lineArt": "线稿 · 图像", "poster": "排版 · 图像", "splitPart": "部件分割 · 图像", "erase": "擦除 · 涂抹", "inpaint": "局部重绘 · 涂抹", "outpaint": "扩图 · 涂抹", "multiangle": "多角度 · 图像", "director": "导演台 · 剪辑" }, "afx": { "dynamics": "压缩器 · 动态", "loudness": "响度 · 动态", "duck": "闪避 · 动态", "eq": "均衡器 · 音色", "saturate": "饱和 · 音色", "modulation": "调制 · 音色", "echo": "回声 · 音色", "stereo": "声场 · 音色", "timePitch": "变速变调 · 音色", "denoise": "降噪 · 修复", "noiseReduction": "谱门控 · 修复", "repair": "修复工具 · 修复", "convolve": "卷积混响 · 空间", "deconvolve": "逆卷积 · 空间", "museReverb": "算法混响 · 空间", "mix": "调音台 · 混音", "crossfade": "交叉淡化 · 混音", "stemSplit": "分轨 · 混音", "demuxAudio": "抽出音轨 · 混音", "demuxVideo": "抽出画面 · 混音", "clip": "修剪 · 剪辑", "split": "分割 · 剪辑", "analyze": "分析 · 监测", "mir": "乐理探测 · 监测", "visualize": "频谱图 · 监测", "segmentExport": "分段导出 · 监测", "reactive": "节奏打点 · 监测", "sweep": "扫频 · 合成", "sf2": "音源渲染 · 合成", "clickTrack": "节拍轨 · 合成", "chordAccomp": "和弦伴奏 · 合成", "scoreToMidi": "乐谱演奏 · 合成", "demuxAudioHint": "从视频中抽出音轨", "demuxVideoHint": "去掉声音，只留画面" }, "customParams": { "title": "工作流参数", "add": "添加", "addHint": "挂载绑定工作流暴露的自定义参数", "remove": "移除参数" }, "custom": { "title": "自定义节点", "expose": "暴露输入输出", "hint": "先选工作流，再选择这张卡片要暴露的输入和输出", "noWorkflow": "请先选择工作流", "inputs": "输入", "outputs": "输出", "exposed": "已暴露", "search": "搜索节点…", "noCandidates": "这个工作流没有可暴露的{what}", "linked": "已连接", "unlinked": "未连接", "required": "必填", "optional": "可选", "label": "名称", "batch": "批量", "save": "保存", "cancel": "取消", "saving": "保存中…", "saved": "已保存", "loadFailed": "工作流加载失败：{detail}", "saveFailed": "保存失败：{detail}", "needsOutput": "至少选择一个输出", "kinds": { "image": "图像", "images": "图像批次", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本", "param": "参数" }, "summary": "{inputs} 个输入 · {outputs} 个输出", "moveUp": "上移", "asPrompt": "由卡片主提示词驱动（支持 {'@'} 引用）", "viaRef": "来自资产引用", "saveAs": "另存为…", "saveAsHint": "把这组选择另存为同一工作流的一份新配置", "saveAsPrompt": "新配置名称", "asRandom": "每次运行随机取值（用于 seed）", "randomEachRun": "每次运行随机", "moveDown": "下移" }, "ctl": { "duration": "时长（秒）", "generateAudio": "生成伴音", "lyrics": "歌词", "bpm": "BPM", "timeSignature": "拍号", "keyScale": "调式", "language": "语言", "voice": "音色", "speed": "语速", "referenceText": "参考文本", "variantCount": "变体数量" } };
 const workflow = { "uploadButton": "⬆ 上传工作流", "imported": "已导入「{label}」", "importFailed": "工作流导入失败", "notJson": "该文件不是合法 JSON", "linkButton": "🔗 链接工作流" };
 const stage = { "run": "运行", "rerun": "重新运行", "running": "运行中…", "cancel": "取消", "preparingWorkflow": "准备工作流中…", "noWorkflowShort": "没有可用工作流 — 请上传 / 链接", "noWorkflowInstalled": "没有可用的 {kind} 工作流 — 用卡片上的「关联工作流」按钮导入一个，或到侧栏 ComfyTV → 阶段管理里添加。", "promptNotBound": "「{label}」没有绑定阶段提示词，卡片上的提示词不会生效。到侧栏 ComfyTV → 工作流，把提示词节点的 text 绑定到「阶段提示词」。", "outputDurationHint": "生成耗时", "section": { "context": "上游输入", "pool": "图片池", "output": "输出 ({type})", "actions": "动作" }, "pool": { "clear": "清除", "clearHint": "清空图片池并重置选择", "confirmClear": "确认清空？", "confirm": "是", "cancel": "否", "modeAppend": "模式:追加", "modeReplace": "模式:覆盖", "modeHint": "新结果进池方式(点击切换)。追加:保留已有并把新结果放到最前;覆盖:每次运行只保留最新一批。相同图片只保留一份(按图片去重)。" }, "empty": { "no_output": "暂无输出", "generating": "生成中…", "pending_upstream": "上游待运行", "unsupported_type": "不支持的类型 {type}" }, "source": { "upstream": "← 上游", "pending": "… 等待中" }, "disconnect": "断开此连接", "starting": "启动中…", "runByKind": { "text": "生成文本", "image": "生成图片", "image-batch": "生成图片", "video": "生成视频", "audio": "生成音频", "panorama": "生成全景图", "storyboard": "生成分镜", "model": "生成3D模型", "material": "生成材质" }, "action": { "viewFull": "查看大图", "download": "下载", "copyText": "复制文本", "saveTextAsset": "存入资产库", "renderMarkdown": "渲染 Markdown", "showRawText": "显示原文", "addTag": "存入资产库 / 打标签", "removeFromPicker": "从选择器移除", "close": "关闭", "loadAsset": "作为资产节点加载", "prev": "上一张", "next": "下一张", "pick": "选用这条" }, "preparingWorkflowDetail": "稍等 — 正在把工作流转换成 api JSON。稍后再点运行。" };
 const error = { "dismiss": "清除", "cancelled": "已取消", "upstreamNotReady": "上游未就绪", "upstreamNotReadyDetail": "上游未就绪:{list}。请先运行这些阶段生成快照,然后再运行此阶段。", "refMissing": "参考素材已失效", "refMissingDetail": "{list} 对应的资产已从资产库移除，或文件已丢失。从参考区移除后重新添加，再运行。", "droppedFromQueue": "尚未运行就被移出队列 — 队列被清空或该任务被删除。", "workerDied": "后端未返回结果就停止了。prompt worker 可能已崩溃(通常是清理阶段 CUDA OOM)。重启 ComfyUI 后恢复。" };
@@ -87070,7 +87075,7 @@ const _sfc_main$4D = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-5W-WVY9s.mjs"),
+      loader: () => import("./AgentPanelRoot-DO0UzfbK.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -90278,20 +90283,20 @@ const _hoisted_46$4 = {
 };
 const _hoisted_47$4 = { class: "ctv:m-0 ctv:italic ctv:text-muted-foreground/60" };
 const _hoisted_48$4 = { class: "ctv:m-0 ctv:text-muted-foreground/80" };
-const _hoisted_49$3 = ["disabled", "title"];
-const _hoisted_50$1 = {
+const _hoisted_49$4 = ["disabled", "title"];
+const _hoisted_50$2 = {
   key: 0,
   class: "ctv:text-destructive-background"
 };
-const _hoisted_51$1 = { key: 5 };
-const _hoisted_52 = { class: "ctv:flex ctv:flex-col ctv:gap-1 ctv:px-1 ctv:text-2xs" };
-const _hoisted_53 = { class: "ctv:font-mono ctv:text-3xs ctv:py-px ctv:px-1.5 ctv:rounded-lg ctv:bg-base-foreground/5 ctv:text-muted-foreground" };
-const _hoisted_54 = { class: "ctv:m-0 ctv:text-2xs ctv:italic ctv:text-muted-foreground/60" };
-const _hoisted_55 = { key: 6 };
-const _hoisted_56 = { class: "ctv:flex ctv:flex-col ctv:gap-1.5 ctv:px-1" };
-const _hoisted_57 = { class: "ctv:grid ctv:grid-cols-[42px_1fr] ctv:items-center ctv:gap-1.5" };
-const _hoisted_58 = { class: "ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground" };
-const _hoisted_59 = {
+const _hoisted_51$2 = { key: 5 };
+const _hoisted_52$1 = { class: "ctv:flex ctv:flex-col ctv:gap-1 ctv:px-1 ctv:text-2xs" };
+const _hoisted_53$1 = { class: "ctv:font-mono ctv:text-3xs ctv:py-px ctv:px-1.5 ctv:rounded-lg ctv:bg-base-foreground/5 ctv:text-muted-foreground" };
+const _hoisted_54$1 = { class: "ctv:m-0 ctv:text-2xs ctv:italic ctv:text-muted-foreground/60" };
+const _hoisted_55$1 = { key: 6 };
+const _hoisted_56$1 = { class: "ctv:flex ctv:flex-col ctv:gap-1.5 ctv:px-1" };
+const _hoisted_57$1 = { class: "ctv:grid ctv:grid-cols-[42px_1fr] ctv:items-center ctv:gap-1.5" };
+const _hoisted_58$1 = { class: "ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground" };
+const _hoisted_59$1 = {
   key: 0,
   class: "ctv:grid ctv:grid-cols-[42px_1fr] ctv:items-center ctv:gap-1.5"
 };
@@ -90717,41 +90722,41 @@ const _sfc_main$4w = /* @__PURE__ */ defineComponent({
               }, [
                 _cache2[14] || (_cache2[14] = createBaseVNode("i", { class: "pi pi-upload" }, null, -1)),
                 createTextVNode(" " + toDisplayString$1(_ctx.$t("configSidebar.uploadApi")), 1)
-              ], 8, _hoisted_49$3),
-              unref(uploadApiError) ? (openBlock(), createElementBlock("span", _hoisted_50$1, toDisplayString$1(unref(uploadApiError)), 1)) : createCommentVNode("", true)
+              ], 8, _hoisted_49$4),
+              unref(uploadApiError) ? (openBlock(), createElementBlock("span", _hoisted_50$2, toDisplayString$1(unref(uploadApiError)), 1)) : createCommentVNode("", true)
             ], 64)) : createCommentVNode("", true)
           ])),
-          unref(config2).has_api && isCustom.value ? (openBlock(), createElementBlock("section", _hoisted_51$1, [
+          unref(config2).has_api && isCustom.value ? (openBlock(), createElementBlock("section", _hoisted_51$2, [
             createBaseVNode("h3", {
               class: normalizeClass(sectionHeading)
             }, toDisplayString$1(_ctx.$t("configSidebar.section.result")), 1),
-            createBaseVNode("div", _hoisted_52, [
+            createBaseVNode("div", _hoisted_52$1, [
               (openBlock(true), createElementBlock(Fragment$1, null, renderList(customOutputs.value, (o, i) => {
                 return openBlock(), createElementBlock("div", {
                   key: i,
                   class: "ctv:flex ctv:items-center ctv:gap-1.5"
                 }, [
-                  createBaseVNode("span", _hoisted_53, toDisplayString$1(o.kind), 1),
+                  createBaseVNode("span", _hoisted_53$1, toDisplayString$1(o.kind), 1),
                   createBaseVNode("span", null, toDisplayString$1(o.label), 1)
                 ]);
               }), 128)),
-              createBaseVNode("p", _hoisted_54, toDisplayString$1(_ctx.$t("configSidebar.customOutputsHint")), 1)
+              createBaseVNode("p", _hoisted_54$1, toDisplayString$1(_ctx.$t("configSidebar.customOutputsHint")), 1)
             ])
           ])) : createCommentVNode("", true),
-          unref(config2).has_api && !isCustom.value ? (openBlock(), createElementBlock("section", _hoisted_55, [
+          unref(config2).has_api && !isCustom.value ? (openBlock(), createElementBlock("section", _hoisted_55$1, [
             createBaseVNode("h3", {
               class: normalizeClass(sectionHeading)
             }, toDisplayString$1(_ctx.$t("configSidebar.section.result")), 1),
-            createBaseVNode("div", _hoisted_56, [
-              createBaseVNode("div", _hoisted_57, [
-                createBaseVNode("span", _hoisted_58, toDisplayString$1(_ctx.$t("configSidebar.resultNode")), 1),
+            createBaseVNode("div", _hoisted_56$1, [
+              createBaseVNode("div", _hoisted_57$1, [
+                createBaseVNode("span", _hoisted_58$1, toDisplayString$1(_ctx.$t("configSidebar.resultNode")), 1),
                 createVNode(_sfc_main$4L, {
                   "model-value": unref(resultNodeModel),
                   options: unref(resultNodeOptions),
                   "onUpdate:modelValue": _cache2[5] || (_cache2[5] = ($event) => unref(onResultNodeChange)($event))
                 }, null, 8, ["model-value", "options"])
               ]),
-              unref(hasResultNode) && unref(resultTypeOptions).length > 1 ? (openBlock(), createElementBlock("div", _hoisted_59, [
+              unref(hasResultNode) && unref(resultTypeOptions).length > 1 ? (openBlock(), createElementBlock("div", _hoisted_59$1, [
                 createBaseVNode("span", _hoisted_60, toDisplayString$1(_ctx.$t("configSidebar.resultType.label")), 1),
                 createVNode(_sfc_main$4L, {
                   "model-value": unref(resultType),
@@ -94901,64 +94906,84 @@ const _hoisted_17$M = {
   key: 0,
   class: "ctv-bbar__badge"
 };
-const _hoisted_18$H = { class: "ctv-bbar__git-actions" };
-const _hoisted_19$E = ["disabled"];
+const _hoisted_18$H = {
+  key: 0,
+  class: "ctv-bbar__muted"
+};
+const _hoisted_19$E = { class: "ctv-bbar__git-actions" };
 const _hoisted_20$y = ["disabled"];
-const _hoisted_21$s = {
+const _hoisted_21$s = ["disabled"];
+const _hoisted_22$r = {
   key: 1,
   class: "ctv-bbar__muted"
 };
-const _hoisted_22$r = {
+const _hoisted_23$o = {
   key: 2,
   class: "ctv-bbar__muted"
 };
-const _hoisted_23$o = {
+const _hoisted_24$m = {
   key: 3,
   class: "ctv-bbar__muted"
 };
-const _hoisted_24$m = {
+const _hoisted_25$j = {
   key: 4,
-  class: "ctv-bbar__scroll"
+  class: "ctv-bbar__split"
 };
-const _hoisted_25$j = ["disabled", "title", "onClick"];
-const _hoisted_26$h = { class: "ctv-bbar__row-main" };
-const _hoisted_27$h = {
+const _hoisted_26$h = { class: "ctv-bbar__col" };
+const _hoisted_27$h = { class: "ctv-bbar__col-head" };
+const _hoisted_28$d = { class: "ctv-bbar__scroll ctv-bbar__scroll--col" };
+const _hoisted_29$b = {
   key: 0,
-  class: "ctv-bbar__badge"
+  class: "ctv-bbar__muted"
 };
-const _hoisted_28$d = ["aria-label"];
-const _hoisted_29$b = { class: "ctv-bbar__search" };
-const _hoisted_30$b = ["placeholder"];
-const _hoisted_31$a = ["aria-label"];
-const _hoisted_32$8 = ["aria-label"];
-const _hoisted_33$6 = ["aria-selected"];
-const _hoisted_34$5 = ["aria-selected", "onClick"];
+const _hoisted_30$b = ["disabled", "title", "onClick"];
+const _hoisted_31$a = { class: "ctv-bbar__row-main" };
+const _hoisted_32$8 = { class: "ctv-bbar__col" };
+const _hoisted_33$6 = { class: "ctv-bbar__col-head" };
+const _hoisted_34$5 = { class: "ctv-bbar__scroll ctv-bbar__scroll--col" };
 const _hoisted_35$5 = {
   key: 0,
   class: "ctv-bbar__muted"
 };
-const _hoisted_36$5 = {
+const _hoisted_36$5 = ["disabled", "title", "onClick"];
+const _hoisted_37$5 = { class: "ctv-bbar__row-main" };
+const _hoisted_38$5 = {
+  key: 0,
+  class: "ctv-bbar__badge"
+};
+const _hoisted_39$5 = ["aria-label"];
+const _hoisted_40$4 = { class: "ctv-bbar__search" };
+const _hoisted_41$4 = ["placeholder"];
+const _hoisted_42$3 = ["aria-label"];
+const _hoisted_43$3 = ["aria-label"];
+const _hoisted_44$3 = ["aria-selected"];
+const _hoisted_45$3 = ["aria-selected", "onClick"];
+const _hoisted_46$3 = {
+  key: 0,
+  class: "ctv-bbar__muted"
+};
+const _hoisted_47$3 = {
   key: 1,
   class: "ctv-bbar__muted"
 };
-const _hoisted_37$5 = {
+const _hoisted_48$3 = {
   key: 2,
   class: "ctv-bbar__scroll"
 };
-const _hoisted_38$5 = {
+const _hoisted_49$3 = {
   key: 0,
   class: "ctv-bbar__group-head"
 };
-const _hoisted_39$5 = ["onClick"];
-const _hoisted_40$4 = { class: "ctv-bbar__row-main" };
-const _hoisted_41$4 = ["aria-label"];
-const _hoisted_42$3 = ["aria-label", "aria-expanded", "title"];
-const _hoisted_43$3 = ["aria-label", "aria-expanded", "title"];
-const _hoisted_44$3 = { class: "ctv-bbar__btn-label" };
-const _hoisted_45$3 = ["aria-label", "aria-expanded", "title"];
-const _hoisted_46$3 = { class: "ctv-bbar__btn-label" };
-const _hoisted_47$3 = ["aria-label", "aria-expanded", "title"];
-const _hoisted_48$3 = { class: "ctv-bbar__btn-label" };
+const _hoisted_50$1 = ["onClick"];
+const _hoisted_51$1 = { class: "ctv-bbar__row-main" };
+const _hoisted_52 = ["aria-label"];
+const _hoisted_53 = ["aria-label", "aria-expanded", "title"];
+const _hoisted_54 = ["aria-label", "aria-expanded", "title"];
+const _hoisted_55 = { class: "ctv-bbar__btn-label" };
+const _hoisted_56 = ["aria-label", "aria-expanded", "title"];
+const _hoisted_57 = { class: "ctv-bbar__btn-label" };
+const _hoisted_58 = ["aria-label", "aria-expanded", "title"];
+const _hoisted_59 = { class: "ctv-bbar__btn-label" };
 const _sfc_main$4r = /* @__PURE__ */ defineComponent({
   __name: "BottomBar",
   setup(__props) {
@@ -95016,6 +95041,7 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
     );
     function gitBadgesForFile(f2) {
       const badges = [];
+      if (f2.state === "synced") return badges;
       if (f2.untracked || f2.state === "new") {
         badges.push({ key: "new", label: t2("v2.bottomBar.gitStateNew") });
       } else if (f2.dirty || f2.state === "modified" || f2.state === "diverged") {
@@ -95035,6 +95061,46 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
     function gitBadgesFor(path) {
       return gitBadgesByPath.value.get(path) || [];
     }
+    const remoteTemplateSet = computed(() => {
+      var _a2, _b2;
+      const fromStatus = (_a2 = gitStatus.value) == null ? void 0 : _a2.remote_workflows;
+      if (fromStatus == null ? void 0 : fromStatus.length) return new Set(fromStatus);
+      const fromFiles = /* @__PURE__ */ new Set();
+      for (const f2 of ((_b2 = gitStatus.value) == null ? void 0 : _b2.files) || []) {
+        if (f2.kind === "template") fromFiles.add(f2.path);
+      }
+      return fromFiles;
+    });
+    const templateWorkflows = computed(() => {
+      var _a2;
+      const remote = remoteTemplateSet.value;
+      if (!remote.size) {
+        return [];
+      }
+      const byPath = new Map(workflows.value.map((w) => [w.path, w]));
+      const rows = [];
+      for (const path of remote) {
+        const existing = byPath.get(path);
+        if (existing) {
+          rows.push(existing);
+          continue;
+        }
+        const name = ((_a2 = path.replace(/\\/g, "/").split("/").pop()) == null ? void 0 : _a2.replace(/\.json$/i, "")) || path;
+        rows.push({
+          path,
+          name,
+          mtime: 0,
+          size: 0,
+          is_linked: false,
+          linked_id: null
+        });
+      }
+      return rows.sort((a2, b) => a2.name.localeCompare(b.name, void 0, { sensitivity: "base" }));
+    });
+    const localWorkflows = computed(() => {
+      const remote = remoteTemplateSet.value;
+      return workflows.value.filter((w) => !remote.has(w.path));
+    });
     const filtered = computed(() => filterNodes(catalog.value, searchQ.value, searchCat.value));
     const searchGrouped = computed(() => {
       const list = filtered.value;
@@ -95096,6 +95162,9 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
         }
         const remote = await fetchNativeWorkflowGitStatus(true).catch(() => null);
         if (remote) gitStatus.value = remote;
+        if ((remote == null ? void 0 : remote.ok) && remote.is_repo && remote.behind > 0 && !gitBusy.value && panel.value === "workflows") {
+          void onGitUpdate();
+        }
       } finally {
         gitChecking.value = false;
       }
@@ -95186,7 +95255,11 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
       if (!canGitActions.value) return;
       commitPickOpen.value = true;
       const next = {};
-      for (const row of workflows.value) next[row.path] = false;
+      for (const row of localWorkflows.value) {
+        const badges = gitBadgesFor(row.path);
+        const dirty = badges.some((b) => b.key === "new" || b.key === "modified");
+        next[row.path] = dirty;
+      }
       commitSelected.value = next;
     }
     function closeCommitPicker() {
@@ -95310,7 +95383,7 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
               createBaseVNode("button", {
                 type: "button",
                 class: "ctv-bbar__git-btn ctv-bbar__git-btn--primary",
-                disabled: !canGitActions.value || !workflows.value.length,
+                disabled: !canGitActions.value || !localWorkflows.value.length,
                 onClick: openCommitPicker
               }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommit")), 9, _hoisted_9$1V)
             ]),
@@ -95333,7 +95406,7 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
               [vModelText, gitMessage.value]
             ]),
             createBaseVNode("div", _hoisted_14$12, [
-              (openBlock(true), createElementBlock(Fragment$1, null, renderList(workflows.value, (row) => {
+              (openBlock(true), createElementBlock(Fragment$1, null, renderList(localWorkflows.value, (row) => {
                 return openBlock(), createElementBlock("label", {
                   key: row.path,
                   class: "ctv-bbar__commit-item"
@@ -95354,47 +95427,80 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
                   }), 128)),
                   unref(nativeWorkflowFolder)(row.path) ? (openBlock(), createElementBlock("span", _hoisted_17$M, toDisplayString$1(unref(nativeWorkflowFolder)(row.path)), 1)) : createCommentVNode("", true)
                 ]);
-              }), 128))
+              }), 128)),
+              !localWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_18$H, toDisplayString$1(unref(t2)("v2.bottomBar.localWorkflowsEmpty")), 1)) : createCommentVNode("", true)
             ]),
-            createBaseVNode("div", _hoisted_18$H, [
+            createBaseVNode("div", _hoisted_19$E, [
               createBaseVNode("button", {
                 type: "button",
                 class: "ctv-bbar__git-btn",
                 disabled: !!gitBusy.value,
                 onClick: closeCommitPicker
-              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitCancel")), 9, _hoisted_19$E),
+              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitCancel")), 9, _hoisted_20$y),
               createBaseVNode("button", {
                 type: "button",
                 class: "ctv-bbar__git-btn ctv-bbar__git-btn--primary",
                 disabled: !!gitBusy.value || !selectedCommitPaths.value.length,
                 onClick: onGitCommitConfirm
-              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitConfirm")), 9, _hoisted_20$y)
+              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitConfirm")), 9, _hoisted_21$s)
             ])
           ])) : createCommentVNode("", true),
-          workflowsLoading.value ? (openBlock(), createElementBlock("div", _hoisted_21$s, toDisplayString$1(unref(t2)("v2.bottomBar.workflowLoading")), 1)) : workflowError.value ? (openBlock(), createElementBlock("div", _hoisted_22$r, toDisplayString$1(workflowError.value), 1)) : !workflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_23$o, toDisplayString$1(unref(t2)("v2.bottomBar.workflowEmpty")), 1)) : (openBlock(), createElementBlock("div", _hoisted_24$m, [
-            (openBlock(true), createElementBlock(Fragment$1, null, renderList(workflows.value, (row) => {
-              return openBlock(), createElementBlock("button", {
-                key: row.path,
-                type: "button",
-                class: normalizeClass(["ctv-bbar__row", {
-                  "ctv-bbar__row--git-new": gitBadgesFor(row.path).some((b) => b.key === "new"),
-                  "ctv-bbar__row--git-modified": gitBadgesFor(row.path).some((b) => b.key === "modified"),
-                  "ctv-bbar__row--git-outdated": gitBadgesFor(row.path).some((b) => b.key === "outdated")
-                }]),
-                disabled: openingPath.value === row.path,
-                title: row.path,
-                onClick: ($event) => onOpenWorkflow(row)
-              }, [
-                createBaseVNode("span", _hoisted_26$h, toDisplayString$1(row.name), 1),
-                (openBlock(true), createElementBlock(Fragment$1, null, renderList(gitBadgesFor(row.path), (b) => {
-                  return openBlock(), createElementBlock("span", {
-                    key: b.key,
-                    class: normalizeClass(["ctv-bbar__git-badge", `ctv-bbar__git-badge--${b.key}`])
-                  }, toDisplayString$1(b.label), 3);
-                }), 128)),
-                unref(nativeWorkflowFolder)(row.path) ? (openBlock(), createElementBlock("span", _hoisted_27$h, toDisplayString$1(unref(nativeWorkflowFolder)(row.path)), 1)) : createCommentVNode("", true)
-              ], 10, _hoisted_25$j);
-            }), 128))
+          workflowsLoading.value ? (openBlock(), createElementBlock("div", _hoisted_22$r, toDisplayString$1(unref(t2)("v2.bottomBar.workflowLoading")), 1)) : workflowError.value ? (openBlock(), createElementBlock("div", _hoisted_23$o, toDisplayString$1(workflowError.value), 1)) : !templateWorkflows.value.length && !localWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_24$m, toDisplayString$1(unref(t2)("v2.bottomBar.workflowEmpty")), 1)) : (openBlock(), createElementBlock("div", _hoisted_25$j, [
+            createBaseVNode("div", _hoisted_26$h, [
+              createBaseVNode("div", _hoisted_27$h, toDisplayString$1(unref(t2)("v2.bottomBar.templates")), 1),
+              createBaseVNode("div", _hoisted_28$d, [
+                !templateWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_29$b, toDisplayString$1(unref(t2)("v2.bottomBar.templatesEmpty")), 1)) : createCommentVNode("", true),
+                (openBlock(true), createElementBlock(Fragment$1, null, renderList(templateWorkflows.value, (row) => {
+                  return openBlock(), createElementBlock("button", {
+                    key: `t-${row.path}`,
+                    type: "button",
+                    class: normalizeClass(["ctv-bbar__row", {
+                      "ctv-bbar__row--git-outdated": gitBadgesFor(row.path).some((b) => b.key === "outdated"),
+                      "ctv-bbar__row--git-modified": gitBadgesFor(row.path).some((b) => b.key === "modified")
+                    }]),
+                    disabled: openingPath.value === row.path || row.mtime === 0,
+                    title: row.path,
+                    onClick: ($event) => onOpenWorkflow(row)
+                  }, [
+                    createBaseVNode("span", _hoisted_31$a, toDisplayString$1(row.name), 1),
+                    (openBlock(true), createElementBlock(Fragment$1, null, renderList(gitBadgesFor(row.path), (b) => {
+                      return openBlock(), createElementBlock("span", {
+                        key: b.key,
+                        class: normalizeClass(["ctv-bbar__git-badge", `ctv-bbar__git-badge--${b.key}`])
+                      }, toDisplayString$1(b.label), 3);
+                    }), 128))
+                  ], 10, _hoisted_30$b);
+                }), 128))
+              ])
+            ]),
+            createBaseVNode("div", _hoisted_32$8, [
+              createBaseVNode("div", _hoisted_33$6, toDisplayString$1(unref(t2)("v2.bottomBar.localWorkflows")), 1),
+              createBaseVNode("div", _hoisted_34$5, [
+                !localWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_35$5, toDisplayString$1(unref(t2)("v2.bottomBar.localWorkflowsEmpty")), 1)) : createCommentVNode("", true),
+                (openBlock(true), createElementBlock(Fragment$1, null, renderList(localWorkflows.value, (row) => {
+                  return openBlock(), createElementBlock("button", {
+                    key: `l-${row.path}`,
+                    type: "button",
+                    class: normalizeClass(["ctv-bbar__row", {
+                      "ctv-bbar__row--git-new": gitBadgesFor(row.path).some((b) => b.key === "new"),
+                      "ctv-bbar__row--git-modified": gitBadgesFor(row.path).some((b) => b.key === "modified")
+                    }]),
+                    disabled: openingPath.value === row.path,
+                    title: row.path,
+                    onClick: ($event) => onOpenWorkflow(row)
+                  }, [
+                    createBaseVNode("span", _hoisted_37$5, toDisplayString$1(row.name), 1),
+                    (openBlock(true), createElementBlock(Fragment$1, null, renderList(gitBadgesFor(row.path), (b) => {
+                      return openBlock(), createElementBlock("span", {
+                        key: b.key,
+                        class: normalizeClass(["ctv-bbar__git-badge", `ctv-bbar__git-badge--${b.key}`])
+                      }, toDisplayString$1(b.label), 3);
+                    }), 128)),
+                    unref(nativeWorkflowFolder)(row.path) ? (openBlock(), createElementBlock("span", _hoisted_38$5, toDisplayString$1(unref(nativeWorkflowFolder)(row.path)), 1)) : createCommentVNode("", true)
+                  ], 10, _hoisted_36$5);
+                }), 128))
+              ])
+            ])
           ]))
         ], 8, _hoisted_3$40)) : panel.value === "search" ? (openBlock(), createElementBlock("div", {
           key: 2,
@@ -95402,7 +95508,7 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
           role: "dialog",
           "aria-label": unref(t2)("v2.bottomBar.search")
         }, [
-          createBaseVNode("div", _hoisted_29$b, [
+          createBaseVNode("div", _hoisted_40$4, [
             createVNode(unref(IconSearch), { class: "ctv-bbar__search-icon" }),
             withDirectives(createBaseVNode("input", {
               ref_key: "searchInput",
@@ -95412,7 +95518,7 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
               class: "ctv-bbar__search-input",
               placeholder: unref(t2)("v2.bottomBar.searchPlaceholder"),
               autocomplete: "off"
-            }, null, 8, _hoisted_30$b), [
+            }, null, 8, _hoisted_41$4), [
               [vModelText, searchQ.value]
             ]),
             searchQ.value ? (openBlock(), createElementBlock("button", {
@@ -95423,7 +95529,7 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
               onClick: _cache2[4] || (_cache2[4] = ($event) => searchQ.value = "")
             }, [
               createVNode(unref(IconX), { class: "ctv:size-3.5" })
-            ], 8, _hoisted_31$a)) : createCommentVNode("", true)
+            ], 8, _hoisted_42$3)) : createCommentVNode("", true)
           ]),
           createBaseVNode("div", {
             class: "ctv-bbar__cats",
@@ -95436,7 +95542,7 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
               class: normalizeClass(["ctv-bbar__cat", { "ctv-bbar__cat--on": searchCat.value === "all" }]),
               "aria-selected": searchCat.value === "all",
               onClick: _cache2[5] || (_cache2[5] = ($event) => searchCat.value = "all")
-            }, toDisplayString$1(unref(t2)("v2.bottomBar.cat.all")), 11, _hoisted_33$6),
+            }, toDisplayString$1(unref(t2)("v2.bottomBar.cat.all")), 11, _hoisted_44$3),
             (openBlock(true), createElementBlock(Fragment$1, null, renderList(unref(SEARCH_CATEGORY_IDS), (cat2) => {
               return openBlock(), createElementBlock("button", {
                 key: cat2,
@@ -95445,16 +95551,16 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
                 class: normalizeClass(["ctv-bbar__cat", { "ctv-bbar__cat--on": searchCat.value === cat2 }]),
                 "aria-selected": searchCat.value === cat2,
                 onClick: ($event) => searchCat.value = cat2
-              }, toDisplayString$1(unref(t2)(`v2.bottomBar.cat.${cat2}`)), 11, _hoisted_34$5);
+              }, toDisplayString$1(unref(t2)(`v2.bottomBar.cat.${cat2}`)), 11, _hoisted_45$3);
             }), 128))
-          ], 8, _hoisted_32$8),
-          catalogLoading.value ? (openBlock(), createElementBlock("div", _hoisted_35$5, toDisplayString$1(unref(t2)("v2.bottomBar.workflowLoading")), 1)) : !searchGrouped.value.length ? (openBlock(), createElementBlock("div", _hoisted_36$5, toDisplayString$1(unref(t2)("v2.bottomBar.searchEmpty")), 1)) : (openBlock(), createElementBlock("div", _hoisted_37$5, [
+          ], 8, _hoisted_43$3),
+          catalogLoading.value ? (openBlock(), createElementBlock("div", _hoisted_46$3, toDisplayString$1(unref(t2)("v2.bottomBar.workflowLoading")), 1)) : !searchGrouped.value.length ? (openBlock(), createElementBlock("div", _hoisted_47$3, toDisplayString$1(unref(t2)("v2.bottomBar.searchEmpty")), 1)) : (openBlock(), createElementBlock("div", _hoisted_48$3, [
             (openBlock(true), createElementBlock(Fragment$1, null, renderList(searchGrouped.value, (group) => {
               return openBlock(), createElementBlock("section", {
                 key: group.id,
                 class: "ctv-bbar__group"
               }, [
-                searchCat.value === "all" ? (openBlock(), createElementBlock("div", _hoisted_38$5, toDisplayString$1(unref(t2)(group.labelKey)), 1)) : createCommentVNode("", true),
+                searchCat.value === "all" ? (openBlock(), createElementBlock("div", _hoisted_49$3, toDisplayString$1(unref(t2)(group.labelKey)), 1)) : createCommentVNode("", true),
                 (openBlock(true), createElementBlock(Fragment$1, null, renderList(group.nodes, (n) => {
                   return openBlock(), createElementBlock("button", {
                     key: n.classType,
@@ -95462,13 +95568,13 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
                     class: "ctv-bbar__row",
                     onClick: ($event) => onCreate2(n.classType)
                   }, [
-                    createBaseVNode("span", _hoisted_40$4, toDisplayString$1(n.label), 1)
-                  ], 8, _hoisted_39$5);
+                    createBaseVNode("span", _hoisted_51$1, toDisplayString$1(n.label), 1)
+                  ], 8, _hoisted_50$1);
                 }), 128))
               ]);
             }), 128))
           ]))
-        ], 8, _hoisted_28$d)) : createCommentVNode("", true),
+        ], 8, _hoisted_39$5)) : createCommentVNode("", true),
         createBaseVNode("div", {
           class: "ctv-bbar__pill",
           role: "toolbar",
@@ -95483,7 +95589,7 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
             onClick: _cache2[6] || (_cache2[6] = ($event) => toggle("plus"))
           }, [
             createVNode(unref(IconPlus), { class: "ctv:size-4" })
-          ], 8, _hoisted_42$3),
+          ], 8, _hoisted_53),
           _cache2[10] || (_cache2[10] = createBaseVNode("span", {
             class: "ctv-bbar__sep",
             "aria-hidden": "true"
@@ -95497,8 +95603,8 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
             onClick: _cache2[7] || (_cache2[7] = ($event) => toggle("assets"))
           }, [
             createVNode(unref(IconImages), { class: "ctv:size-4" }),
-            createBaseVNode("span", _hoisted_44$3, toDisplayString$1(unref(t2)("v2.bottomBar.assets")), 1)
-          ], 8, _hoisted_43$3),
+            createBaseVNode("span", _hoisted_55, toDisplayString$1(unref(t2)("v2.bottomBar.assets")), 1)
+          ], 8, _hoisted_54),
           _cache2[11] || (_cache2[11] = createBaseVNode("span", {
             class: "ctv-bbar__sep",
             "aria-hidden": "true"
@@ -95512,8 +95618,8 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
             onClick: _cache2[8] || (_cache2[8] = ($event) => toggle("workflows"))
           }, [
             createVNode(unref(IconWorkflow), { class: "ctv:size-4" }),
-            createBaseVNode("span", _hoisted_46$3, toDisplayString$1(unref(t2)("v2.bottomBar.workflows")), 1)
-          ], 8, _hoisted_45$3),
+            createBaseVNode("span", _hoisted_57, toDisplayString$1(unref(t2)("v2.bottomBar.workflows")), 1)
+          ], 8, _hoisted_56),
           _cache2[12] || (_cache2[12] = createBaseVNode("span", {
             class: "ctv-bbar__sep",
             "aria-hidden": "true"
@@ -95527,14 +95633,14 @@ const _sfc_main$4r = /* @__PURE__ */ defineComponent({
             onClick: _cache2[9] || (_cache2[9] = ($event) => toggle("search"))
           }, [
             createVNode(unref(IconSearch), { class: "ctv:size-4" }),
-            createBaseVNode("span", _hoisted_48$3, toDisplayString$1(unref(t2)("v2.bottomBar.search")), 1)
-          ], 8, _hoisted_47$3)
-        ], 8, _hoisted_41$4)
+            createBaseVNode("span", _hoisted_59, toDisplayString$1(unref(t2)("v2.bottomBar.search")), 1)
+          ], 8, _hoisted_58)
+        ], 8, _hoisted_52)
       ], 512);
     };
   }
 });
-const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4r, [["__scopeId", "data-v-9c75136e"]]);
+const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4r, [["__scopeId", "data-v-84b388cd"]]);
 const HOST_ID = "comfytv-bottom-bar";
 const MAX_FRAMES = 600;
 let pinia$1 = null;
@@ -154139,7 +154245,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-DBy_g0U0.mjs");
+    const { STLLoader } = await import("./STLLoader-C6VR64YQ.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -154147,7 +154253,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-u5jxJHFj.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-CC_4idfk.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -260671,4 +260777,4 @@ export {
   DropdownMenuRoot_default as y,
   DropdownMenuTrigger_default as z
 };
-//# sourceMappingURL=main-BkzQN5RA.mjs.map
+//# sourceMappingURL=main-BQB4VO3K.mjs.map
