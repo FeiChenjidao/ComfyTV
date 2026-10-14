@@ -112,11 +112,17 @@ async function load(): Promise<void> {
     model: String(settings[`bot-model-${p.id}`] ?? ''),
   }))
   const configured = String(settings['bot-provider'] ?? '')
-  provider.value = providers.value.some((p) => p.id === configured)
-    ? configured
-    : (providers.value.find((p) => p.available)?.id ?? '')
+  const configuredRow = providers.value.find((p) => p.id === configured)
+  const available = providers.value.find((p) => p.available)
+  provider.value = configuredRow?.available
+    ? configuredRow.id
+    : (available?.id ?? configuredRow?.id ?? '')
   model.value = current.value?.model ?? ''
   loaded.value = true
+  if (provider.value && provider.value !== configured && available?.id === provider.value) {
+    settings['bot-provider'] = provider.value
+    await putSettings({ 'bot-provider': provider.value })
+  }
 }
 
 async function setProvider(selected: unknown): Promise<void> {

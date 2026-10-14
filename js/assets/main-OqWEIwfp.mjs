@@ -59903,7 +59903,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-DPWtHycX.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-BxQmsjBB.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -87075,7 +87075,7 @@ const _sfc_main$4D = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-DO0UzfbK.mjs"),
+      loader: () => import("./AgentPanelRoot-CYozvsvt.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -87251,7 +87251,7 @@ const _sfc_main$4C = /* @__PURE__ */ defineComponent({
     }
     let settings2 = {};
     async function load() {
-      var _a2, _b2, _c;
+      var _a2, _b2;
       const rows = ((_a2 = await fetchJson2("/comfytv/settings")) == null ? void 0 : _a2.settings) ?? [];
       settings2 = Object.fromEntries(rows.map((r2) => [r2.key, r2.value]));
       const data = await fetchJson2("/comfytv/bot/status");
@@ -87260,9 +87260,15 @@ const _sfc_main$4C = /* @__PURE__ */ defineComponent({
         model: String(settings2[`bot-model-${p2.id}`] ?? "")
       }));
       const configured = String(settings2["bot-provider"] ?? "");
-      provider.value = providers.value.some((p2) => p2.id === configured) ? configured : ((_b2 = providers.value.find((p2) => p2.available)) == null ? void 0 : _b2.id) ?? "";
-      model.value = ((_c = current.value) == null ? void 0 : _c.model) ?? "";
+      const configuredRow = providers.value.find((p2) => p2.id === configured);
+      const available = providers.value.find((p2) => p2.available);
+      provider.value = (configuredRow == null ? void 0 : configuredRow.available) ? configuredRow.id : (available == null ? void 0 : available.id) ?? (configuredRow == null ? void 0 : configuredRow.id) ?? "";
+      model.value = ((_b2 = current.value) == null ? void 0 : _b2.model) ?? "";
       loaded.value = true;
+      if (provider.value && provider.value !== configured && (available == null ? void 0 : available.id) === provider.value) {
+        settings2["bot-provider"] = provider.value;
+        await putSettings({ "bot-provider": provider.value });
+      }
     }
     async function setProvider(selected) {
       var _a2;
@@ -123097,8 +123103,8 @@ function collectMaterialTextures(p2, opts = {}) {
     }
     const kind = textureKindForMap(key);
     const cached2 = getCachedMaterialTexture(url, { kind, flipY });
-    textures[key] = cached2;
-    if (!cached2) missing.push({ key, url });
+    if (cached2) textures[key] = cached2;
+    else missing.push({ key, url });
   }
   return { textures, missing };
 }
@@ -123250,10 +123256,14 @@ function useModelPreview(props, emit2, host) {
             () => {
               var _a3;
               const bound = boundMaterials.get(key);
-              if (!bound || !((_a3 = props.partMaterials) == null ? void 0 : _a3[key])) return;
-              applyMaterialWithMaps(bound, props.partMaterials[key], mapOpts);
+              const latest = (_a3 = props.partMaterials) == null ? void 0 : _a3[key];
+              if (!bound || !latest) return;
+              applyMaterialWithMaps(bound, latest, mapOpts);
               invalidatePreviewMaterialClone(mesh);
+              if (highlightKey === key) setHighlight(key);
+              else mesh.material = bound;
               emit2("view-changed");
+              emit2("part-materials-ready");
             },
             mapOpts
           );
@@ -130204,7 +130214,7 @@ const _sfc_main$4e = /* @__PURE__ */ defineComponent({
     channel: {},
     controls: { type: Boolean, default: false }
   },
-  emits: ["view-changed", "parts-changed", "part-pick", "model-stats"],
+  emits: ["view-changed", "parts-changed", "part-pick", "model-stats", "part-materials-ready"],
   setup(__props, { expose: __expose, emit: __emit }) {
     const props = __props;
     const emit2 = __emit;
@@ -130241,7 +130251,15 @@ const _sfc_main$4e = /* @__PURE__ */ defineComponent({
     let modelDispose = null;
     let sparkRenderer = null;
     let animationId = null;
-    const mp = useModelPreview(previewProps, emit2, {
+    const previewEmit = ((event, ...args) => {
+      if (event === "part-materials-ready") {
+        if (modelRoot && activeChannel.value === "material") applyPbrFactors();
+        emit2("view-changed");
+        return;
+      }
+      return emit2(event, ...args);
+    });
+    const mp = useModelPreview(previewProps, previewEmit, {
       getCamera: () => camera2,
       getModelRoot: () => modelRoot,
       getCanvasRect: () => (view == null ? void 0 : view.canvas.getBoundingClientRect()) ?? null,
@@ -130486,7 +130504,7 @@ const _sfc_main$4e = /* @__PURE__ */ defineComponent({
     });
     watch(() => props.partMaterials, () => {
       if (!modelRoot || activeChannel.value !== "material") return;
-      applyPbrFactors();
+      applyShading();
     }, { deep: true });
     onBeforeUnmount(() => {
       var _a2, _b2;
@@ -154245,7 +154263,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-C6VR64YQ.mjs");
+    const { STLLoader } = await import("./STLLoader-BKqcVop3.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -154253,7 +154271,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-CC_4idfk.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-cJ6t9Hym.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -213201,13 +213219,18 @@ function useMaterialStage(node, opts) {
   function applyPreset(p2) {
     Object.assign(params2, p2.params);
   }
-  function syncOutputSlots() {
+  function syncOutputSlots(forceNotify = false) {
     const json = serializeMaterialState(params2);
     writeWidget(node, "material_state", json);
-    stageStore.setOutputSlot(opts.getState(), 0, json);
+    const state2 = opts.getState();
+    stageStore.setOutputSlot(state2, 0, json);
+    if (forceNotify) stageStore.notifyConsumers(state2);
   }
   watch(() => opts.getState().output, (payload) => {
-    if (!payload) return;
+    if (!payload) {
+      syncOutputSlots(true);
+      return;
+    }
     const incoming = parseMaterialState(payload);
     if (serializeMaterialState(incoming) !== serializeMaterialState(params2)) {
       Object.assign(params2, incoming);
@@ -213254,15 +213277,24 @@ function useMaterialStage(node, opts) {
       syncMapsFromInputs();
     }
   );
+  function publishForDownstream() {
+    syncOutputSlots(true);
+    const captured = readWidgetStr(node, "captured_image", "");
+    const state2 = opts.getState();
+    stageStore.setOutputSlot(state2, 1, captured || null);
+    stageStore.notifyConsumers(state2);
+    queueMicrotask(() => stageStore.notifyConsumers(state2));
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => stageStore.notifyConsumers(state2));
+    }
+  }
   onNodeConfigure(node, () => {
     Object.assign(params2, parseMaterialState(readWidgetStr(node, "material_state", "")));
     syncMapsFromInputs();
-    syncOutputSlots();
-    const captured = readWidgetStr(node, "captured_image", "");
-    stageStore.setOutputSlot(opts.getState(), 1, captured || null);
+    publishForDownstream();
   });
   syncMapsFromInputs();
-  syncOutputSlots();
+  publishForDownstream();
   function teardown() {
     captureSeq++;
     if (captureTimer != null) window.clearTimeout(captureTimer);
@@ -240160,6 +240192,7 @@ function bindOutputRestore(opts) {
   async function restoreLatestOutput(projectId) {
     if (variant === "loader") return;
     if (String(node.comfyClass) === IMAGES_SPLIT_CLASS) return;
+    if (kind === "material") return;
     if (isPoolPickerKind(kind)) return;
     if (!node.id || node.id < 0) return;
     const uid2 = ensureStageUid(node);
@@ -260777,4 +260810,4 @@ export {
   DropdownMenuRoot_default as y,
   DropdownMenuTrigger_default as z
 };
-//# sourceMappingURL=main-BQB4VO3K.mjs.map
+//# sourceMappingURL=main-OqWEIwfp.mjs.map

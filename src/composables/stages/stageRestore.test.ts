@@ -93,4 +93,19 @@ describe('restoreLatestOutput', () => {
     expect(state.outputs).toEqual(['/a.png', '/b.png'])
     expect(state.output).toBe('/a.png')
   })
+
+  it('does not wipe widget-backed material JSON when no db row exists', async () => {
+    project.fetchLatestOutput.mockResolvedValue(null)
+    const state = makeState()
+    const mat = '{"color":"#ff0000","metalness":0.5}'
+    state.output = mat
+    state.outputs = [mat, '/cap.png']
+    const node: any = makeNode()
+    node.comfyClass = 'ComfyTV.MaterialStage'
+    bindOutputRestore({ node, state, store, kind: 'material', variant: 'generator' })
+    await flush()
+    expect(project.fetchLatestOutput).not.toHaveBeenCalled()
+    expect(state.output).toBe(mat)
+    expect(state.outputs).toEqual([mat, '/cap.png'])
+  })
 })

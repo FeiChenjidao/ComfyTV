@@ -91,6 +91,10 @@ export function bindOutputRestore(opts: {
   async function restoreLatestOutput(projectId: string) {
     if (variant === 'loader') return
     if (String(node.comfyClass) === IMAGES_SPLIT_CLASS) return
+    // Material is widget-backed (material_state). Project restore must not wipe the
+    // live slot-0 JSON we publish on mount — that caused bound previews to flash
+    // then fall back to the mesh's original materials.
+    if (kind === 'material') return
     if (isPoolPickerKind(kind)) return
     if (!node.id || node.id < 0) return
     const uid = ensureStageUid(node)

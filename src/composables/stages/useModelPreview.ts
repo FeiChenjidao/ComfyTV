@@ -91,6 +91,8 @@ export type ModelPreviewEmit = {
   (e: 'parts-changed', keys: string[]): void
   (e: 'part-pick', key: string | null): void
   (e: 'model-stats', stats: ModelStats): void
+  /** Fired after async material maps finish loading onto bound parts. */
+  (e: 'part-materials-ready'): void
 }
 
 export interface ModelPreviewHost {
@@ -188,10 +190,16 @@ export function useModelPreview(
               || JSON.stringify(props.partMaterials?.[key]) === JSON.stringify(snap),
             () => {
               const bound = boundMaterials.get(key)
-              if (!bound || !props.partMaterials?.[key]) return
-              applyMaterialWithMaps(bound, props.partMaterials[key]!, mapOpts)
+              const latest = props.partMaterials?.[key]
+              if (!bound || !latest) return
+              applyMaterialWithMaps(bound, latest, mapOpts)
+              // Preview shading may have cloned the pre-map material onto the mesh;
+              // drop the clone and re-bind so the loaded maps become visible.
               invalidatePreviewMaterialClone(mesh)
+              if (highlightKey === key) setHighlight(key)
+              else mesh.material = bound
               emit('view-changed')
+              emit('part-materials-ready')
             },
             mapOpts,
           )

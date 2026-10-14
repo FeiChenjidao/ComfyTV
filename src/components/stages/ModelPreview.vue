@@ -78,6 +78,7 @@ const emit = defineEmits<{
   (e: 'parts-changed', keys: string[]): void
   (e: 'part-pick', key: string | null): void
   (e: 'model-stats', stats: ModelStats): void
+  (e: 'part-materials-ready'): void
 }>()
 
 const hostEl = ref<HTMLDivElement | null>(null)
@@ -121,7 +122,18 @@ let modelDispose: (() => void) | null = null
 let sparkRenderer: THREE.Object3D | null = null
 let animationId: number | null = null
 
-const mp = useModelPreview(previewProps, emit, {
+const previewEmit: typeof emit = ((event: any, ...args: any[]) => {
+  if (event === 'part-materials-ready') {
+    // Maps finished loading after applyShading cloned the pre-map material —
+    // re-apply × metalness/roughness onto the freshly rebound meshes.
+    if (modelRoot && activeChannel.value === 'material') applyPbrFactors()
+    emit('view-changed')
+    return
+  }
+  return (emit as any)(event, ...args)
+}) as typeof emit
+
+const mp = useModelPreview(previewProps, previewEmit, {
   getCamera: () => camera,
   getModelRoot: () => modelRoot,
   getCanvasRect: () => view?.canvas.getBoundingClientRect() ?? null,
@@ -400,8 +412,10 @@ watch(() => props.channel, () => {
 })
 
 watch(() => props.partMaterials, () => {
+  // Materials often arrive after the model finishes loading (upstream Material
+  // stage hydrates a tick later). Re-run full shading so bindings + maps apply.
   if (!modelRoot || activeChannel.value !== 'material') return
-  applyPbrFactors()
+  applyShading()
 }, { deep: true })
 
 onBeforeUnmount(() => {

@@ -34,8 +34,10 @@ export function collectMaterialTextures(
     }
     const kind = textureKindForMap(key)
     const cached = getCachedMaterialTexture(url, { kind, flipY })
-    textures[key] = cached
-    if (!cached) missing.push({ key, url })
+    // Leave uncached slots undefined so applyMaterialParams does not wipe maps
+    // that are still loading (or already applied on a concurrent pass).
+    if (cached) textures[key] = cached
+    else missing.push({ key, url })
   }
   return { textures, missing }
 }

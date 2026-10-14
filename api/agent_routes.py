@@ -34,11 +34,40 @@ def _setting(key: str, default: Any = None) -> Any:
     return default if value in (None, "") else value
 
 
-def default_provider() -> str:
+async def _provider_available(provider) -> bool:
+    try:
+        return bool((await provider.probe()).available)
+    except Exception:
+        _log.exception("[ComfyTV/agent] probe failed for %s", getattr(provider, "id", "?"))
+        return False
+
+
+async def default_provider() -> str:
+    """Pick the engine for a new thread.
+
+    A blank setting used to fall through to the first registered provider
+    (Claude Code). This machine may only have Codex installed, so a missing
+    CLI must not win over one that is actually available.
+    """
     configured = str(_setting("bot-provider", "") or "")
-    if configured and get_provider(configured) is not None:
-        return configured
     providers = list_providers()
+    by_id = {p.id: p for p in providers}
+    chosen = by_id.get(configured)
+    if chosen is not None and await _provider_available(chosen):
+        return configured
+    for provider in providers:
+        if provider is chosen:
+            continue
+        if not await _provider_available(provider):
+            continue
+        if not configured:
+            try:
+                storage.set_settings({"bot-provider": provider.id})
+            except Exception:
+                _log.exception("[ComfyTV/agent] failed to store bot-provider")
+        return provider.id
+    if chosen is not None:
+        return configured
     return providers[0].id if providers else "claude-code"
 
 
@@ -134,7 +163,7 @@ async def agent_post_message(request: web.Request) -> web.Response:
     if not text and not has_attachments and not skill_name:
         return _error("content must be a non-empty string")
     if thread_id == "new":
-        provider_id = str(body.get("provider") or default_provider())
+        provider_id = str(body.get("provider") or await default_provider())
         if get_provider(provider_id) is None:
             return _error(f"unknown provider {provider_id!r}")
         chat = storage.create_bot_chat(provider=provider_id)

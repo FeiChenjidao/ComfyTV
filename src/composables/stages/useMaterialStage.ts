@@ -71,14 +71,24 @@ export function useMaterialStage(node: LGraphNode, opts: UseMaterialStageOptions
     Object.assign(params, p.params)
   }
 
-  function syncOutputSlots(): void {
+  function syncOutputSlots(forceNotify = false): void {
     const json = serializeMaterialState(params)
     writeWidget(node, 'material_state', json)
-    stageStore.setOutputSlot(opts.getState(), 0, json)
+    const state = opts.getState()
+    stageStore.setOutputSlot(state, 0, json)
+    // setOutputSlot skips notify when the value is unchanged — on workflow reopen
+    // the Model Loader may have refreshed while we were still empty, then never
+    // hears about the restored material_state. Force a consumer refresh.
+    if (forceNotify) stageStore.notifyConsumers(state)
   }
 
   watch(() => opts.getState().output, (payload) => {
-    if (!payload) return
+    // Slot 0 is the live material JSON. If something external clears it, republish
+    // from params so Model Loader bindings do not briefly lose their content.
+    if (!payload) {
+      syncOutputSlots(true)
+      return
+    }
     const incoming = parseMaterialState(payload)
     if (serializeMaterialState(incoming) !== serializeMaterialState(params)) {
       Object.assign(params, incoming)
@@ -131,16 +141,27 @@ export function useMaterialStage(node: LGraphNode, opts: UseMaterialStageOptions
     () => { syncMapsFromInputs() },
   )
 
+  function publishForDownstream(): void {
+    syncOutputSlots(true)
+    const captured = readWidgetStr(node, 'captured_image', '')
+    const state = opts.getState()
+    stageStore.setOutputSlot(state, 1, captured || null)
+    stageStore.notifyConsumers(state)
+    // Late-mounted Model Loader cards register refreshers after the first notify.
+    queueMicrotask(() => stageStore.notifyConsumers(state))
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => stageStore.notifyConsumers(state))
+    }
+  }
+
   onNodeConfigure(node, () => {
     Object.assign(params, parseMaterialState(readWidgetStr(node, 'material_state', '')))
     syncMapsFromInputs()
-    syncOutputSlots()
-    const captured = readWidgetStr(node, 'captured_image', '')
-    stageStore.setOutputSlot(opts.getState(), 1, captured || null)
+    publishForDownstream()
   })
 
   syncMapsFromInputs()
-  syncOutputSlots()
+  publishForDownstream()
 
   function teardown(): void {
     captureSeq++

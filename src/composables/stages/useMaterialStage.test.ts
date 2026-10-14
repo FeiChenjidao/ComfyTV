@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   uploadCanvas: vi.fn(),
   setOutputSlot: vi.fn(),
+  notifyConsumers: vi.fn(),
 }))
 
 vi.mock('@/utils/uploadCanvas', () => ({
@@ -11,7 +12,10 @@ vi.mock('@/utils/uploadCanvas', () => ({
 }))
 
 vi.mock('@/stores/stageStore', () => ({
-  useStageStore: () => ({ setOutputSlot: mocks.setOutputSlot }),
+  useStageStore: () => ({
+    setOutputSlot: mocks.setOutputSlot,
+    notifyConsumers: mocks.notifyConsumers,
+  }),
 }))
 
 import type { StageState } from '@/stores/stageStore'
@@ -70,6 +74,7 @@ function makeStage(over: {
 beforeEach(() => {
   mocks.uploadCanvas.mockReset()
   mocks.setOutputSlot.mockReset()
+  mocks.notifyConsumers.mockReset()
 })
 
 afterEach(() => {
@@ -123,6 +128,22 @@ describe('useMaterialStage', () => {
     state.output = serializeMaterialState(stage.params)
     await nextTick()
     expect({ ...stage.params }).toEqual(before)
+  })
+
+  it('republishes params when an external clear wipes slot 0', async () => {
+    const { stage, state } = makeStage()
+    mocks.setOutputSlot.mockClear()
+    mocks.notifyConsumers.mockClear()
+    state.output = serializeMaterialState(stage.params)
+    await nextTick()
+    state.output = null
+    await nextTick()
+    expect(mocks.setOutputSlot).toHaveBeenCalledWith(
+      state,
+      0,
+      serializeMaterialState(stage.params),
+    )
+    expect(mocks.notifyConsumers).toHaveBeenCalled()
   })
 
   it('captures after the settle delay, persists the url and fills slot 1', async () => {
