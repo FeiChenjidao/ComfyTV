@@ -128,6 +128,20 @@ def _ensure_workflow_credentials(root: Path) -> None:
             _log.warning("[ComfyTV/native-git] could not seed remote: %s", e)
 
 
+def _normalize_remote_url(url: str) -> str:
+    """Canonical clean remote URL. GitHub PAT auth requires https (not http)."""
+    text = (url or "").strip()
+    if not text:
+        return ""
+    # Common misconfig: http://github.com/... → PAT auth fails with
+    # "Invalid username or token" / "Password authentication is not supported".
+    if text.lower().startswith("http://github.com/"):
+        text = "https://" + text[7:]
+    elif text.lower().startswith("http://www.github.com/"):
+        text = "https://" + text[7:]
+    return text
+
+
 def _split_auth(url: str) -> tuple[str, str]:
     """Return (clean_https_url, token_or_password)."""
     text = (url or "").strip()
@@ -135,14 +149,14 @@ def _split_auth(url: str) -> tuple[str, str]:
         return "", ""
     m = _AUTH_IN_URL_RE.match(text)
     if not m or not m.group("user"):
-        return text, ""
+        return _normalize_remote_url(text), ""
     user = unquote(m.group("user") or "")
     pw = unquote(m.group("pw") or "")
     # GitHub PAT style: x-access-token:PAT or oauth2:TOKEN or PAT as user
     token = pw or user
     if user.lower() in ("x-access-token", "oauth2", "git") and pw:
         token = pw
-    clean = f"{m.group('scheme')}{m.group('rest')}"
+    clean = _normalize_remote_url(f"{m.group('scheme')}{m.group('rest')}")
     return clean, token
 
 
@@ -151,16 +165,25 @@ def _strip_auth(url: str) -> str:
 
 
 def _with_token(url: str, token: str) -> str:
-    clean = _strip_auth(url)
+    clean = _normalize_remote_url(_strip_auth(url))
     tok = (token or "").strip()
     if not clean or not tok:
         return clean
     parts = urlsplit(clean)
     if parts.scheme not in ("http", "https") or not parts.netloc:
         return clean
+    # Always https for github.com when injecting a PAT
+    scheme = parts.scheme
+    host = (parts.hostname or "").lower()
+    if host in ("github.com", "www.github.com") and scheme == "http":
+        scheme = "https"
     # Never log this URL — used only for ephemeral git remotes.
     netloc = f"x-access-token:{quote(tok, safe='')}@{parts.netloc}"
-    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+    if host in ("github.com", "www.github.com"):
+        # Rebuild netloc without forcing port quirks: userinfo@host[:port]
+        hostport = parts.netloc.split("@")[-1]
+        netloc = f"x-access-token:{quote(tok, safe='')}@{hostport}"
+    return urlunsplit((scheme, netloc, parts.path, parts.query, parts.fragment))
 
 
 def _ensure_local_identity(root: Path) -> None:
@@ -180,11 +203,12 @@ def _origin_url(root: Path) -> str:
 
 
 def _sanitize_origin_remote(root: Path) -> None:
-    """Move embedded PATs out of origin URL into .comfytv-git-token."""
+    """Move embedded PATs out of origin URL into .comfytv-git-token; force https for GitHub."""
     raw = _origin_url(root)
     if not raw:
         return
     clean, token = _split_auth(raw)
+    clean = _normalize_remote_url(clean)
     if token:
         tok_path = root / _TOKEN_NAME
         if not tok_path.exists():
@@ -192,8 +216,8 @@ def _sanitize_origin_remote(root: Path) -> None:
                 tok_path.write_text(token + "\n", encoding="utf-8")
             except OSError as e:
                 _log.warning("[ComfyTV/native-git] could not write token file: %s", e)
-        if clean and clean != raw:
-            _run_git(root, "remote", "set-url", "origin", clean)
+    if clean and clean != raw:
+        _run_git(root, "remote", "set-url", "origin", clean)
     if clean and not _read_configured_remote(root):
         try:
             (root / _REMOTE_NAME).write_text(clean + "\n", encoding="utf-8")
@@ -201,14 +225,51 @@ def _sanitize_origin_remote(root: Path) -> None:
             pass
 
 
+def _refresh_token_from_plugin(root: Path, *, force: bool = False) -> bool:
+    """Copy plugin-bundled PAT into workflows dir. force=True overwrites a bad local token."""
+    seed = _secrets_dir() / _SEED_TOKEN_NAME
+    dest = root / _TOKEN_NAME
+    if not seed.is_file():
+        return False
+    text = _read_text_file(seed)
+    if not text:
+        return False
+    if dest.exists() and not force:
+        return False
+    try:
+        dest.write_text(text + "\n", encoding="utf-8")
+        return True
+    except OSError as e:
+        _log.warning("[ComfyTV/native-git] could not refresh token: %s", e)
+        return False
+
+
 @contextmanager
 def _authed_origin(root: Path) -> Iterator[None]:
     """Temporarily inject token into origin for network ops; restore clean URL after."""
-    clean = _strip_auth(_origin_url(root)) or _read_configured_remote(root) or _DEFAULT_REMOTE
+    _ensure_workflow_credentials(root)
+    clean = _normalize_remote_url(
+        _strip_auth(_origin_url(root)) or _read_configured_remote(root) or _DEFAULT_REMOTE
+    )
     token = _read_token(root)
+    if not token:
+        # Old/empty local token — pick up the plugin-bundled PAT.
+        _refresh_token_from_plugin(root, force=True)
+        token = _read_token(root)
     if not token or not clean.startswith("http"):
         yield
         return
+    # Persist https clean URL so future ops never hit http://github.com
+    cur = _strip_auth(_origin_url(root))
+    if clean and clean != cur:
+        rem_chk = _run_git(root, "remote")
+        remotes_chk = [ln.strip() for ln in (rem_chk.stdout or "").splitlines() if ln.strip()]
+        if "origin" in remotes_chk:
+            _run_git(root, "remote", "set-url", "origin", clean)
+        try:
+            (root / _REMOTE_NAME).write_text(clean + "\n", encoding="utf-8")
+        except OSError:
+            pass
     authed = _with_token(clean, token)
     rem = _run_git(root, "remote")
     remotes = [ln.strip() for ln in (rem.stdout or "").splitlines() if ln.strip()]

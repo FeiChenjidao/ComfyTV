@@ -186,6 +186,18 @@ class TestNativeWorkflowGit:
         assert tok == "secretPAT"
         assert mod._strip_auth(clean) == clean
 
+    def test_normalize_github_http_to_https(self):
+        mod = _load_mod()
+        assert mod._normalize_remote_url(
+            "http://github.com/FeiChenjidao/comfytv-team-workflows.git"
+        ) == "https://github.com/FeiChenjidao/comfytv-team-workflows.git"
+        authed = mod._with_token(
+            "http://github.com/FeiChenjidao/comfytv-team-workflows.git",
+            "github_pat_test",
+        )
+        assert authed.startswith("https://x-access-token:")
+        assert "http://github.com" not in authed
+
     def test_push_blocked_when_behind(self, tmp_path):
         mod = _load_mod()
         root = _init_repo(tmp_path)
