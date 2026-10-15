@@ -50,6 +50,7 @@ import {
   PromptBeautifyResultSchema,
   NativeWorkflowGitStatusSchema,
   NativeWorkflowGitTokenSchema,
+  PluginUpdateStatusSchema,
 } from './schemas'
 import type {
   WorkflowConfig,
@@ -58,6 +59,7 @@ import type {
   PromptBeautifyResult,
   NativeWorkflowGitStatus,
   NativeWorkflowGitToken,
+  PluginUpdateStatus,
   AdoptAssetsResult,
   ApiSidecarResult,
   BackupResult,
@@ -530,6 +532,15 @@ export function saveNativeWorkflowGitToken(token: string): Promise<NativeWorkflo
   return apiSend('/comfytv/workflows/native/git/token', 'PUT', NativeWorkflowGitTokenSchema, {
     token,
   })
+}
+
+export function fetchPluginUpdateStatus(fetchRemote = true): Promise<PluginUpdateStatus> {
+  const q = fetchRemote ? '?fetch=1' : '?fetch=0'
+  return apiFetch(`/comfytv/plugin/update${q}`, PluginUpdateStatusSchema)
+}
+
+export function applyPluginUpdate(): Promise<PluginUpdateStatus> {
+  return apiSend('/comfytv/plugin/update', 'POST', PluginUpdateStatusSchema, {})
 }
 
 export * from './schemas'

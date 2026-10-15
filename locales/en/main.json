@@ -29,7 +29,7 @@
     "applying": "Applying…",
     "applied": "Applied"
   },
-  "imagesSplit": { "aspect11": "1:1", "connect": "Connect an image batch", "empty": "No images", "flipFailed": "Flip failed", "flipH": "Flip H", "flipV": "Flip V", "merge": "Merge images", "mergeFailed": "Merge failed", "processing": "Processing…", "selectHint": "Select images to process", "squareFailed": "Failed to make 1:1", "squaring": "Making 1:1…", "truncated": "Some images were truncated", "variations": "Generate" },
+  "imagesSplit": { "aspect11": "1:1", "connect": "Connect an image batch", "empty": "No images", "flipFailed": "Flip failed", "flipH": "Flip H", "flipV": "Flip V", "generate": "Generate", "generateFailed": "Generate failed", "merge": "Merge images", "mergeFailed": "Merge failed", "processing": "Processing…", "selectHint": "Select images to process", "squareFailed": "Failed to make 1:1", "squaring": "Making 1:1…", "truncated": "Some images were truncated" },
   "mediaAsset": { "selection": { "downloadsStarted": "Downloads started" } },
   "progressToast": { "downloadsFailed": "Downloads failed" },
   "psdLayerTree": { "clickHint": "Click to select a layer", "clipping": "Clipping", "compositing": "Previewing…", "dims": "Dimensions", "dirtyHint": "Preview updated · Export & expand", "done": "Exported", "dropHint": "Drop a PSD (needs a local path)", "expand": "Expand", "export": "Export & Expand", "exporting": "Exporting…", "loading": "Loading…", "memory": "Memory", "pathMissing": "PSD path missing", "pathUnavailable": "Cannot get a local path — use the pick button", "pick": "Choose PSD", "pickHint": "Pick a local PSD (path only, no copy)", "previewReady": "Preview ready", "scaled": "Scaled", "warning": "Warning" },
@@ -39,6 +39,18 @@
     "confirm": "OK",
     "cancel": "Cancel",
     "close": "Close"
+  },
+  "pluginUpdate": {
+    "title": "ComfyTV update available",
+    "message": "A newer ComfyTV is on the remote.\n\nCurrent: v{local}\nLatest: v{remote}\nBehind by {n} commit(s).\n\nUpdate now, then restart ComfyUI.",
+    "messageDirty": "A newer ComfyTV is on the remote (v{local} → v{remote}, {n} commit(s)), but this checkout has local changes.\n\nCommit or stash them, then update.",
+    "updateNow": "Update now",
+    "updating": "Updating…",
+    "later": "Remind later",
+    "dismiss": "Skip this version",
+    "failed": "Update failed",
+    "restartTitle": "Restart ComfyUI",
+    "restartDetail": "ComfyTV files were updated. Restart ComfyUI (or reload custom nodes) for the new version to load."
   },
   "v2": {
     "meta": {

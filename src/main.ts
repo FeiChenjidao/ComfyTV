@@ -51,6 +51,7 @@ import { installMcpCommandBus } from '@/composables/stages/useMcpCommandBus'
 import { installPhotoshopBridge } from '@/composables/stages/photoshopBridge'
 import { installClipboardImagePaste } from '@/composables/stages/clipboardImagePaste'
 import { installAppModeHint } from '@/composables/appModeHint'
+import { installPluginUpdateCheck } from '@/composables/pluginUpdateCheck'
 import { guardGhostPlacement } from '@/composables/ghostPlacementInert'
 import { installWorkflowRegistrySync } from '@/composables/stages/workflowRegistrySync'
 import '@/v2/imageBatchShell'
@@ -367,6 +368,7 @@ const extension: ComfyExtension = {
     installBottomBar(pinia)
     installDeleteKeyFix()
     void refreshAgentStatus()
+    installPluginUpdateCheck()
   },
 
   async beforeRegisterNodeDef(nodeType, nodeData: ComfyNodeDef) {

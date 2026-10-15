@@ -36,6 +36,7 @@ from . import blender    # noqa: F401
 from . import llm        # noqa: F401
 from . import prompt_beautify  # noqa: F401
 from . import native_workflow_git  # noqa: F401
+from . import plugin_update  # noqa: F401
 from . import view_patch  # noqa: F401
 from . import photoshop   # noqa: F401
 from . import upload_file  # noqa: F401
