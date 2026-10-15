@@ -5,8 +5,8 @@ import { app } from '@/lib/comfyApp'
 import { t } from '@/i18n'
 import { useStageStore, type StageState } from '@/stores/stageStore'
 import {
+  spawnImageGenerateFromSlots,
   spawnImageMergeFromSlots,
-  spawnImageVariationsFromSlots,
 } from '@/composables/stages/spawnFollowUp'
 import { containFitSquare, slotIndexesInDocumentOrder } from '@/composables/stages/imageMerge'
 import { mirrorToCanvas } from '@/composables/stages/imageOrientPreview'
@@ -122,7 +122,7 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
   const canTransform = computed(() => selected.value.length >= 1 && !busy.value)
   const canSquare = canTransform
   const canFlip = canTransform
-  const canVariations = computed(() => selected.value.length >= 1 && !busy.value)
+  const canGenerate = computed(() => selected.value.length >= 1 && !busy.value)
 
   function displayItems(rawItems: ImageGroupItem[]): ImageGroupItem[] {
     return rawItems.map((it) => {
@@ -267,10 +267,11 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
     return flipSelected(false, true)
   }
 
-  function spawnVariations() {
+  function spawnGenerate() {
     if (!selected.value.length) return
     actionError.value = ''
-    spawnImageVariationsFromSlots(node, selected.value)
+    const created = spawnImageGenerateFromSlots(node, selected.value)
+    if (!created.length) actionError.value = t('imagesSplit.generateFailed')
   }
 
   function reloadPersisted() {
@@ -285,14 +286,14 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
   )
 
   watch(
-    [canMerge, canSquare, canFlip, canVariations],
+    [canMerge, canSquare, canFlip, canGenerate],
     () => {
       setToolbarDisabled(node, {
         'split:merge': !canMerge.value,
         'split:square': !canSquare.value,
         'split:flip-h': !canFlip.value,
         'split:flip-v': !canFlip.value,
-        'split:variations': !canVariations.value,
+        'split:generate': !canGenerate.value,
       })
     },
     { immediate: true },
@@ -303,7 +304,7 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
     'split:square': () => { void squareSelected() },
     'split:flip-h': () => { void flipHorizontalSelected() },
     'split:flip-v': () => { void flipVerticalSelected() },
-    'split:variations': () => spawnVariations(),
+    'split:generate': () => spawnGenerate(),
   })
   if (getCurrentScope()) onScopeDispose(disposeHandlers)
 
@@ -312,12 +313,12 @@ export function useImagesSplit(node: LGraphNode, state: StageState) {
   return {
     items, truncated, connected, max: IMAGES_SPLIT_MAX,
     selected, selectedSet,
-    canMerge, canSquare, canFlip, canVariations,
+    canMerge, canSquare, canFlip, canGenerate,
     actionError,
     /** @deprecated alias — prefer `busy` */
     squaring: busy,
     busy,
     selectItem, mergeSelected, squareSelected,
-    flipHorizontalSelected, flipVerticalSelected, spawnVariations,
+    flipHorizontalSelected, flipVerticalSelected, spawnGenerate,
   }
 }

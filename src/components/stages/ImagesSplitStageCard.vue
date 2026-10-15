@@ -22,8 +22,8 @@
         {{ $t('imagesSplit.flipV') }}
       </button>
     </div>
-    <button type="button" :class="btnClass" :disabled="!canVariations" @click="spawnVariations">
-      {{ $t('imagesSplit.variations') }}
+    <button type="button" :class="btnClass" :disabled="!canGenerate" @click="spawnGenerate">
+      {{ $t('imagesSplit.generate') }}
     </button>
     <div v-if="actionError" class="ctv:text-2xs ctv:text-center ctv:text-destructive-background">
       {{ actionError }}
@@ -61,9 +61,9 @@ const props = defineProps<{
 
 const {
   items, truncated, connected, max,
-  selectedSet, canMerge, canSquare, canFlip, canVariations, actionError,
+  selectedSet, canMerge, canSquare, canFlip, canGenerate, actionError,
   selectItem, mergeSelected, squareSelected,
-  flipHorizontalSelected, flipVerticalSelected, spawnVariations,
+  flipHorizontalSelected, flipVerticalSelected, spawnGenerate,
 } = useImagesSplit(props.node, props.state)
 
 const btnClass = [

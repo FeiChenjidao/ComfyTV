@@ -26,6 +26,7 @@ import {
   spawnAssetImageLoader,
   spawnFollowUpStage,
   spawnOrFocusImagesSplit,
+  spawnImageGenerateFromSlots,
   spawnImageVariationsFromSlots,
   spawnImageMergeFromSlots,
   spawnSeededImageLoader,
@@ -298,6 +299,30 @@ describe('spawnImageVariationsFromSlots', () => {
   it('does nothing when nothing is selected', () => {
     const src = makeNode()
     expect(spawnImageVariationsFromSlots(src, [])).toEqual([])
+    expect((window as any).LiteGraph.createNode).not.toHaveBeenCalled()
+  })
+})
+
+describe('spawnImageGenerateFromSlots', () => {
+  it('wires each selected split socket onto its own ImageStage', () => {
+    inputsByClass['ComfyTV.ImageStage'] = ['images.image0']
+    const src = makeNode({
+      outputs: [{ name: '梅花', links: [] }, { name: '鱼', links: [] }],
+    })
+    const nodes = spawnImageGenerateFromSlots(src, [1, 0])
+    expect(nodes).toHaveLength(2)
+    expect(nodes.map((n: any) => n.comfyClass)).toEqual([
+      'ComfyTV.ImageStage',
+      'ComfyTV.ImageStage',
+    ])
+    expect(src.connect).toHaveBeenCalledWith(0, nodes[0], 0)
+    expect(src.connect).toHaveBeenCalledWith(1, nodes[1], 0)
+    expect(nodes[1].pos[1]).toBeGreaterThan(nodes[0].pos[1])
+  })
+
+  it('does nothing when nothing is selected', () => {
+    const src = makeNode()
+    expect(spawnImageGenerateFromSlots(src, [])).toEqual([])
     expect((window as any).LiteGraph.createNode).not.toHaveBeenCalled()
   })
 })

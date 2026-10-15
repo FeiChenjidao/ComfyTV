@@ -238,6 +238,35 @@ export function spawnImageVariationsFromSlots(srcNode: any, slotIndexes: number[
   return created
 }
 
+export const IMAGE_GENERATE_CLASS = 'ComfyTV.ImageStage'
+
+/** Images Split「生成」→ one ImageStage per selected slot, wired into images.* */
+export function spawnImageGenerateFromSlots(srcNode: any, slotIndexes: number[]) {
+  const slots = [...new Set(slotIndexes.filter(i => Number.isInteger(i) && i >= 0))].sort((a, b) => a - b)
+  if (!srcNode || !slots.length) return []
+  const store = useStageStore()
+  const created: any[] = []
+  const baseX = (srcNode.pos?.[0] || 0) + (srcNode.size?.[0] || 280) + 60
+  let y = srcNode.pos?.[1] || 0
+  for (const slot of slots) {
+    const node = createNodeAt(IMAGE_GENERATE_CLASS, [baseX, y])
+    if (!node) continue
+    const inSlot = findFirstAutogrowSlot(node, 'images')
+    if (inSlot >= 0) srcNode.connect(slot, node, inSlot)
+    else console.warn('[ComfyTV/images-split] ImageStage has no images autogrow slot')
+    stampLineage(srcNode, node)
+    created.push(node)
+    y += (node.size?.[1] || 260) + 40
+  }
+  const canvas = (app as any)?.canvas
+  if (created[0]) {
+    canvas?.centerOnNode?.(created[0])
+    canvas?.selectNode?.(created[0])
+  }
+  store.notifyDownstream()
+  return created
+}
+
 export function spawnSeededImageLoader(srcNode: any, fileKey: string, viewUrl: string) {
   const node = createNodeAt(IMAGE_LOADER_CLASS, posRightOf(srcNode))
   if (!node) return null

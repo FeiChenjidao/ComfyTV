@@ -5,7 +5,7 @@ import { effectScope, nextTick, reactive } from 'vue'
 import type { ResolvedInput, StageState } from '@/stores/stageStore'
 
 const spawnMock = vi.hoisted(() => ({
-  spawnImageVariationsFromSlots: vi.fn(),
+  spawnImageGenerateFromSlots: vi.fn(() => [{ id: 88 }]),
   spawnImageMergeFromSlots: vi.fn(() => ({ id: 99 })),
 }))
 
@@ -94,7 +94,7 @@ describe('useImagesSplit', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     spawnMock.spawnImageMergeFromSlots.mockClear()
-    spawnMock.spawnImageVariationsFromSlots.mockClear()
+    spawnMock.spawnImageGenerateFromSlots.mockClear()
     uploadMock.uploadBlob.mockClear()
   })
 
@@ -163,6 +163,22 @@ describe('useImagesSplit', () => {
     selectItem(2, { shiftKey: false, ctrlKey: true, metaKey: false } as MouseEvent)
     mergeSelected()
     expect(spawnMock.spawnImageMergeFromSlots).toHaveBeenCalledWith(node, [0, 2])
+  })
+
+  it('spawns ImageStage generate nodes for selected slots', async () => {
+    const node = makeNode()
+    const state = makeState(JSON.stringify({
+      images: [
+        { index: '1', label: 'A', image_url: '/a' },
+        { index: '2', label: 'B', image_url: '/b' },
+      ],
+    }), 'upstream')
+    const { selectItem, spawnGenerate, canGenerate } = withScope(() => useImagesSplit(node, state))
+    expect(canGenerate.value).toBe(false)
+    selectItem(1, { shiftKey: false, ctrlKey: false, metaKey: false } as MouseEvent)
+    expect(canGenerate.value).toBe(true)
+    spawnGenerate()
+    expect(spawnMock.spawnImageGenerateFromSlots).toHaveBeenCalledWith(node, [1])
   })
 
   function stubImageLoad() {
