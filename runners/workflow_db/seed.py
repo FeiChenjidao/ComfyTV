@@ -51,17 +51,28 @@ def _write_sync_manifest(root: Path, manifest: dict) -> None:
         _log.warning("[ComfyTV/workflow_db] could not write sync manifest: %s", e)
 
 
-def _sync_legacy_workflows(root: Path) -> tuple[list[str], list[str]]:
+def _workflow_rel_key(rel_key: str) -> str:
+    """Map a synced sidecar path back to its workflow JSON ledger key."""
+    if rel_key.endswith("_preset.json"):
+        return rel_key[: -len("_preset.json")] + ".json"
+    if rel_key.endswith(".api.json"):
+        return rel_key[: -len(".api.json")] + ".json"
+    return rel_key
+
+
+def _sync_legacy_workflows(root: Path) -> tuple[list[str], list[str], list[str]]:
     if _LEGACY_WORKFLOWS_DIR is None:
-        return [], []
+        return [], [], []
     src_root = Path(_LEGACY_WORKFLOWS_DIR)
     if not src_root.is_dir():
-        return [], []
+        return [], [], []
 
     manifest = _read_sync_manifest(root)
     dirty = False
     copied: list[str] = []
     updated: list[str] = []
+    removed: list[str] = []
+    src_keys: set[str] = set()
     for src in sorted(src_root.rglob("*.json")):
         if not src.is_file():
             continue
@@ -72,6 +83,7 @@ def _sync_legacy_workflows(root: Path) -> tuple[list[str], list[str]]:
         src_hash = _file_sha256(src)
         if src_hash is None:
             continue
+        src_keys.add(rel_key)
         dest = root / rel
 
         if not dest.exists():
@@ -95,20 +107,47 @@ def _sync_legacy_workflows(root: Path) -> tuple[list[str], list[str]]:
             manifest[rel_key] = src_hash
             dirty = True
 
+    # Drop pristine user copies of shipped files that no longer exist in the
+    # plugin tree. Edited copies (dest hash ≠ last synced) are kept.
+    for rel_key in sorted(manifest.keys()):
+        if rel_key in src_keys:
+            continue
+        dest = root / Path(rel_key)
+        if dest.exists():
+            dest_hash = _file_sha256(dest)
+            if dest_hash != manifest.get(rel_key):
+                continue
+            try:
+                dest.unlink()
+            except OSError as e:
+                _log.warning(
+                    "[ComfyTV/workflow_db] could not remove retired shipped "
+                    "file %s: %s", dest, e)
+                continue
+            parent = dest.parent
+            if parent != root and parent.is_dir() and not any(parent.iterdir()):
+                try:
+                    parent.rmdir()
+                except OSError:
+                    pass
+        del manifest[rel_key]
+        removed.append(rel_key)
+        dirty = True
+
     if dirty and root.exists():
         _write_sync_manifest(root, manifest)
-    if copied or updated:
+    if copied or updated or removed:
         _log.warning(
             "[ComfyTV/workflow_db] %s is a legacy workflows location — "
-            "copied %d new and updated %d unchanged file(s) in %s: %s. "
-            "Put new workflow files under %s instead; this directory is only "
-            "mirrored one-way at startup/rescan, and files you have edited "
-            "there are never overwritten.",
-            src_root, len(copied), len(updated), root,
-            ", ".join(copied + updated), root,
+            "copied %d new, updated %d unchanged, removed %d retired "
+            "file(s) in %s: %s. "
+            "Put new workflow files under %s instead; this directory is "
+            "mirrored at startup/rescan. Edited local copies are never "
+            "overwritten or deleted.",
+            src_root, len(copied), len(updated), len(removed), root,
+            ", ".join(copied + updated + removed), root,
         )
-    return copied, updated
-
+    return copied, updated, removed
 
 def _marker_rel(p: Path, parent_marker: str) -> Optional[Path]:
     parts = p.parts
@@ -298,10 +337,10 @@ def reset_workflow_to_preset(workflow_id: int) -> Optional[dict]:
 def seed_workflows_from_disk(kinds: tuple[str, ...]) -> dict:
     db.init()
     root = _workflows_dir()
-    synced, updated = _sync_legacy_workflows(root)
+    synced, updated, removed = _sync_legacy_workflows(root)
     if not root.exists():
         return {"added": [], "pruned": 0, "total": 0,
-                "synced": synced, "updated": updated}
+                "synced": synced, "updated": updated, "removed": removed}
 
     seen = 0
     added: list[dict] = []
@@ -309,6 +348,10 @@ def seed_workflows_from_disk(kinds: tuple[str, ...]) -> dict:
     manifest = _read_sync_manifest(root)
     ledger = _read_preset_ledger(root)
     ledger_dirty = False
+    for rel_key in removed:
+        wf_key = _workflow_rel_key(rel_key)
+        if ledger.pop(wf_key, None) is not None:
+            ledger_dirty = True
     with db.get_session() as s:
         pre_populated = s.execute(
             select(db.Workflow.id).limit(1)
@@ -363,9 +406,10 @@ def seed_workflows_from_disk(kinds: tuple[str, ...]) -> dict:
 
     if not pre_populated:
         added = []
-    _log.info("[ComfyTV/workflow_db] seeded %d workflows%s%s",
+    _log.info("[ComfyTV/workflow_db] seeded %d workflows%s%s%s",
               seen,
               f", {len(added)} new" if added else "",
-              f", pruned {pruned} orphan rows" if pruned else "")
+              f", pruned {pruned} orphan rows" if pruned else "",
+              f", removed {len(removed)} retired shipped files" if removed else "")
     return {"added": added, "pruned": pruned, "total": seen,
-            "synced": synced, "updated": updated}
+            "synced": synced, "updated": updated, "removed": removed}

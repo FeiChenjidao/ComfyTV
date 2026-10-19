@@ -192,23 +192,31 @@ def _reapply_preset_to_row(s, row: db.Workflow, preset: dict) -> None:
 
 def _refresh_shipped_preset(s, manifest: dict, ledger: dict, root: Path,
                             row: db.Workflow, path: Path) -> bool:
+    """Reconcile DB bindings with the on-disk shipped preset.
+
+    Runs on every startup/rescan for pristine plugin copies. Local sidebar
+    edits (row hash ≠ last applied) and user-edited files are left alone.
+    """
     preset_path = _preset_file_path(path)
     preset_hash = _file_sha256(preset_path)
     if preset_hash is None:
         return False
-    rel_key = path.relative_to(root).as_posix()
-    entry = ledger.get(rel_key)
-    if isinstance(entry, dict) and entry.get("preset") == preset_hash:
-        return False
     if not (_file_pristine(manifest, root, path)
             and _file_pristine(manifest, root, preset_path)):
         return False
+    rel_key = path.relative_to(root).as_posix()
+    entry = ledger.get(rel_key)
     row_hash = _row_state_hash(s, row)
+    if (isinstance(entry, dict)
+            and entry.get("preset") == preset_hash
+            and entry.get("row") == row_hash):
+        return False
     if isinstance(entry, dict) and entry.get("row") != row_hash:
-        _log.info(
-            "[ComfyTV/workflow_db] shipped preset changed for %s/%s but the "
-            "row has local edits — kept (use 'Reset to shipped preset' to "
-            "adopt the update)", row.kind, row.label)
+        if entry.get("preset") != preset_hash:
+            _log.info(
+                "[ComfyTV/workflow_db] shipped preset changed for %s/%s but "
+                "the row has local edits — kept (use 'Reset to shipped "
+                "preset' to adopt the update)", row.kind, row.label)
         return False
     preset = _read_preset(path)
     if not preset:

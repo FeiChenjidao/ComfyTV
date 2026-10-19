@@ -234,3 +234,50 @@ class TestLegacyMigration:
         rows = wdb.list_workflows_overview("image")
         under_new = [r for r in rows if str(user_root) in r["file_path"]]
         assert len(under_new) == 1
+
+    def test_retired_shipped_files_removed_from_user_root(
+            self, reset_db, tmp_path, monkeypatch):
+        """Plugin deletes a shipped workflow → pristine user copy + DB row go."""
+        legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
+        (legacy / "image" / "keep.json").write_text(json.dumps({"nodes": []}))
+        (legacy / "image" / "keep_preset.json").write_text(
+            json.dumps({"label": "Keep"}))
+        (legacy / "image" / "gone.json").write_text(json.dumps({"nodes": []}))
+        (legacy / "image" / "gone_preset.json").write_text(
+            json.dumps({"label": "Gone",
+                        "inputs": {"3": {"seed": {"from": "option:seed"}}}}))
+        wdb.seed_workflows_from_disk(("image",))
+        assert {r["label"] for r in wdb.list_workflows_overview("image")} \
+            == {"Keep", "Gone"}
+
+        (legacy / "image" / "gone.json").unlink()
+        (legacy / "image" / "gone_preset.json").unlink()
+        result = wdb.seed_workflows_from_disk(("image",))
+
+        assert sorted(result["removed"]) == [
+            "image/gone.json", "image/gone_preset.json",
+        ]
+        assert not (user_root / "image" / "gone.json").exists()
+        assert not (user_root / "image" / "gone_preset.json").exists()
+        assert (user_root / "image" / "keep.json").exists()
+        labels = {r["label"] for r in wdb.list_workflows_overview("image")}
+        assert labels == {"Keep"}
+        assert result["pruned"] == 1
+
+    def test_user_edited_retired_copy_is_kept(
+            self, reset_db, tmp_path, monkeypatch):
+        legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
+        (legacy / "image" / "fork.json").write_text(json.dumps({"nodes": []}))
+        (legacy / "image" / "fork_preset.json").write_text(
+            json.dumps({"label": "fork"}))
+        wdb.seed_workflows_from_disk(("image",))
+
+        edited = json.dumps({"nodes": [{"id": 1, "type": "UserFork"}]})
+        (user_root / "image" / "fork.json").write_text(edited)
+        (legacy / "image" / "fork.json").unlink()
+        (legacy / "image" / "fork_preset.json").unlink()
+
+        result = wdb.seed_workflows_from_disk(("image",))
+        assert "image/fork.json" not in result["removed"]
+        assert (user_root / "image" / "fork.json").read_text() == edited
+        assert any(r["label"] == "fork" for r in wdb.list_workflows_overview("image"))

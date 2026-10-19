@@ -310,4 +310,4 @@ class TestSeedAddedReporting:
         wdb.seed_workflows_from_disk(("image",))
         result = wdb.seed_workflows_from_disk(("image",))
         assert result == {"added": [], "pruned": 0, "total": 1,
-                          "synced": [], "updated": []}
+                          "synced": [], "updated": [], "removed": []}
