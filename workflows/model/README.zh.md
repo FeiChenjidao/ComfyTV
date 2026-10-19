@@ -24,7 +24,9 @@
 
 - **Tripo**（`tripo.json` + `_preset.json`）— 正/左/后/右多视图 → **网格**（GLB 或 FBX）。走 Comfy Org Tripo API（`TripoMultiviewToModelNode`，默认 v3.1）；`File3DFirst` 自动取有数据的那一侧，Stage `quad` 开/关都可。正面必填，侧面可选。
 - **Tripo P2**（`tripo-p2.json` + `_preset.json`）— 正/左/后/右多视图 → 低模 **网格**（GLB 或 FBX，`TripoPSeriesMultiviewToModelNode` / P2）。参数都在 `model` DynamicCombo 下；`File3DFirst` 配合 Stage `quad` 取 GLB/FBX。正面必填；API 至少还要一张侧视图。
+- **Rodin Gen25**（`rodin-gen25.json` + `_preset.json`）— 1–5 张图 → **网格**（`Rodin3D_Gen25_Image` / Rodin Gen-2.5 图生 3D）。Stage 正/左/背/右/辅对应 `images.image0`…`image4`，缺的侧面会 prune。绑定 `material` / `mode` / `polygon_count` / `geometry_file_format` / `texture_mode` / `seed` / `tapose` / `hd_texture` / `texture_delight` / `addon_highpack`。
 
 ## 引用的模型
 
-两个内置工作流都是 **Tripo API**——不用下本地 3D 扩散模型。Run 前在 ComfyUI 里配好 Tripo / Comfy Org API。另见 [docs/models.md](../../docs/models.md)。
+内置工作流都是 **API**（Tripo / Rodin）——不用下本地 3D 扩散模型。Run 前在 ComfyUI 里配好 Comfy Org API。另见 [docs/models.md](../../docs/models.md)。
+

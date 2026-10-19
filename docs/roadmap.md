@@ -24,7 +24,7 @@ Legend: ✅ done · ⏳ pending.
 | **Video · Local LTX 2.3** (T2V + I2V + FLF2V + IA2V) | Fast; recommended default. T2V from text only; I2V needs an image; FLF2V interpolates between two keyframes; IA2V follows an audio track. |
 | **Video · Local MiniMax H3** (T2V + FLF2V + R2V) | Video **with sound** in one pass. R2V takes multiple image/audio references for identity-locked shots. Lightning LoRAs wired in (~half the render time). |
 | **Audio · MiniMax Music 3** | Higher-quality text-to-music alongside ACE-Step. |
-| **3D Model · Tripo / Tripo P2** | Multiview → mesh (GLB/FBX) via Tripo API, as builtin `model` workflows. |
+| **3D Model · Tripo / Tripo P2 / Rodin Gen25** | Multiview / 1–5 images → mesh via Tripo or Rodin Gen-2.5 API, as builtin `model` workflows. |
 | **Director + master timeline** | Shot-by-shot production console: generated clips, per-clip transitions, shared reference cast, content-addressed re-renders, ruler + playhead + unified film preview. |
 | **MCP server + ComfyTV Bot** | 45-tool agent endpoint (stages + native graph) and the embedded sidebar agent with four providers (Claude Code / Codex / Qwen Code / Local LLM), attachments and per-provider models. |
 | **Agent Skills** | SKILL.md instruction packs served to agents via MCP and to the Bot (`/` palette); manage in Settings → Skills. |

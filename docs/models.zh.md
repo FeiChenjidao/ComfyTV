@@ -86,8 +86,9 @@ ACE-Step v1 和 MiniMax Music 3 都是 ComfyUI 核心原生支持,不需要装�
 |---|---|---|
 | **Tripo**(多视图 → 网格) | *(API — Comfy Org Tripo；无本地模型)* | — |
 | **Tripo P2**(多视图 → 低模网格) | *(API — Tripo P2；无本地模型)* | — |
+| **Rodin Gen25**(1–5 图 → 网格) | *(API — Rodin Gen-2.5 图生 3D；无本地模型)* | — |
 
-Run 前在 ComfyUI 里配好 Tripo / Comfy Org API。
+Run 前在 ComfyUI 里配好 Comfy Org / Tripo / Rodin API。
 
 ---
 

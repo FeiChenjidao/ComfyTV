@@ -1,0 +1,102 @@
+{
+  "_comment": "Shipped preset for Rodin Gen-2.5 Image-to-3D. Chain: LoadImage #10-14 -> Rodin3D_Gen25_Image #1 -> SaveGLB #3. Up to 5 Stage face images (正/左/背/右/辅); missing sides are pruned.",
+  "label": "Rodin Gen25",
+  "description": "Rodin Gen-2.5 Image-to-3D (API). 1–5 reference images → mesh (glb/fbx/obj/stl). Front required; extra views optional. Stage knobs bind material / mode / polygon_count / geometry_file_format / texture_mode / seed / tapose / hd_texture / texture_delight / addon_highpack.",
+  "result": {
+    "type": "ui_save_url",
+    "node": "3"
+  },
+  "inputs": {
+    "1": {
+      "mode": {
+        "from": "option:mode"
+      },
+      "mode.polygon_count": {
+        "from": "option:polygon_count"
+      },
+      "material": {
+        "from": "option:material"
+      },
+      "geometry_file_format": {
+        "from": "option:geometry_file_format"
+      },
+      "texture_mode": {
+        "from": "option:texture_mode"
+      },
+      "seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      },
+      "TAPose": {
+        "from": "option:tapose",
+        "cast": "bool"
+      },
+      "hd_texture": {
+        "from": "option:hd_texture",
+        "cast": "bool"
+      },
+      "texture_delight": {
+        "from": "option:texture_delight",
+        "cast": "bool"
+      },
+      "addon_highpack": {
+        "from": "option:addon_highpack",
+        "cast": "bool"
+      }
+    },
+    "10": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    },
+    "11": {
+      "image": {
+        "from": "upstream_image:annotated[1]"
+      }
+    },
+    "12": {
+      "image": {
+        "from": "upstream_image:annotated[2]"
+      }
+    },
+    "13": {
+      "image": {
+        "from": "upstream_image:annotated[3]"
+      }
+    },
+    "14": {
+      "image": {
+        "from": "upstream_image:annotated[4]"
+      }
+    }
+  },
+  "order": 30,
+  "prune_when_missing": [
+    {
+      "when": "upstream_image:value[1]",
+      "drop_upstream_of": [
+        { "node": "1", "input": "images.image1" }
+      ]
+    },
+    {
+      "when": "upstream_image:value[2]",
+      "drop_upstream_of": [
+        { "node": "1", "input": "images.image2" }
+      ]
+    },
+    {
+      "when": "upstream_image:value[3]",
+      "drop_upstream_of": [
+        { "node": "1", "input": "images.image3" }
+      ]
+    },
+    {
+      "when": "upstream_image:value[4]",
+      "drop_upstream_of": [
+        { "node": "1", "input": "images.image4" }
+      ]
+    }
+  ]
+}

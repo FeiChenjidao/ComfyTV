@@ -90,9 +90,10 @@ Text-to-speech. Ships with a **Kokoro TTS** workflow: type the line to speak, pi
 
 ![3D model stage](/images/model3d-run.png)
 
-Generates a **3D model (GLB)** via a `model`-kind workflow. Two ship today:
+Generates a **3D model (GLB)** via a `model`-kind workflow. Three ship today:
 
 - **Tripo** — multiview → mesh (GLB/FBX) via Tripo API.
 - **Tripo P2** — multiview → low-poly mesh (GLB/FBX) via Tripo P2 API.
+- **Rodin Gen25** — 1–5 images → mesh via Rodin Gen-2.5 Image-to-3D API.
 
-Both are API-backed (see [models.md](/guides/models)); you can also link or upload your own `model`-kind workflow. The node embeds an orbit preview; after you orbit, it auto-captures a screenshot into its image output, so downstream image stages can consume the model's look. The GLB itself flows to the 3D nodes — Scene3D, mesh ops, materials; see the Node Reference.
+All are API-backed (see [models.md](/guides/models)); you can also link or upload your own `model`-kind workflow. The node embeds an orbit preview; after you orbit, it auto-captures a screenshot into its image output, so downstream image stages can consume the model's look. The GLB itself flows to the 3D nodes — Scene3D, mesh ops, materials; see the Node Reference.

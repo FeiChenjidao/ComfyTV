@@ -36,6 +36,9 @@
 !model/tripo_preset.json
 !model/tripo-p2.json
 !model/tripo-p2_preset.json
+!model/rodin-gen25.json
+!model/rodin-gen25_preset.json
+
 !multiangle/qwen-edit-2511-multiangle.json
 !multiangle/qwen-edit-2511-multiangle_preset.json
 !outpaint/flux-fill-outpaint.json
