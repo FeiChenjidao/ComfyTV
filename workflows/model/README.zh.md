@@ -25,9 +25,11 @@
 - **Tripo**（`tripo.json` + `_preset.json`）— 正/左/后/右多视图 → **网格**（GLB 或 FBX）。走 Comfy Org Tripo API（`TripoMultiviewToModelNode`，默认 v3.1）；Stage `images.image0`…`image3` 按下标绑到各视角。`File3DFirst` 自动取有数据的那一侧，Stage `quad` 开/关都可。正面必填，侧面可选。
 - **Tripo P2**（`tripo-p2.json` + `_preset.json`）— 正/左/后/右多视图 → 低模 **网格**（GLB 或 FBX，`TripoPSeriesMultiviewToModelNode` / P2）。参数都在 `model` DynamicCombo 下；`File3DFirst` 配合 Stage `quad` 取 GLB/FBX。正面必填；API 至少还要一张侧视图。
 - **Rodin Gen25**（`rodin-gen25.json` + `_preset.json`）— 1–5 张图 → **网格**（`Rodin3D_Gen25_Image` / Rodin Gen-2.5 图生 3D）。Stage 槽位 `images.image0`…`image4` 与 Rodin 节点入口同名一一对应；缺的参考图会 prune。绑定 `material` / `mode` / `polygon_count` / `geometry_file_format` / `texture_mode` / `seed` / `tapose` / `hd_texture` / `texture_delight` / `addon_highpack`。
-- **Stage 图像槽位**统一为 `images.image0`…`image4`（与 Rodin 同名）。接 Tripo 时按下标理解：0 正 / 1 左 / 2 背 / 3 右 / 4 辅。
+- **Meshy Multi**（`meshy-multi.json` + `_preset.json`）— 2–4 张图 → **网格**（`MeshyMultiImageToModelNode`）。Stage `images.image0`…`image3` 与 Meshy 入口同名（API 至少 2 张）；`File3DFirst` 取 GLB/FBX。绑定 `seed` / `pbr`。
+- **Stage 图像槽位**统一为 `images.image0`…`image4`。Rodin 用 0–4；Meshy 用 0–3（最少 2 张）；Tripo 按下标：0 正 / 1 左 / 2 背 / 3 右 / 4 辅。
 
 ## 引用的模型
 
-内置工作流都是 **API**（Tripo / Rodin）——不用下本地 3D 扩散模型。Run 前在 ComfyUI 里配好 Comfy Org API。另见 [docs/models.md](../../docs/models.md)。
+内置工作流都是 **API**（Tripo / Rodin / Meshy）——不用下本地 3D 扩散模型。Run 前在 ComfyUI 里配好 Comfy Org API。另见 [docs/models.md](../../docs/models.md)。
+
 

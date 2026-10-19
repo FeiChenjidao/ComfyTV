@@ -87,8 +87,9 @@ Download: <https://huggingface.co/Comfy-Org/MiniMax-Music-3>
 | **Tripo** (multiview → mesh) | *(API — Comfy Org Tripo; no local checkpoint)* | — |
 | **Tripo P2** (multiview → low-poly mesh) | *(API — Tripo P2; no local checkpoint)* | — |
 | **Rodin Gen25** (1–5 images → mesh) | *(API — Rodin Gen-2.5 Image-to-3D; no local checkpoint)* | — |
+| **Meshy Multi** (2–4 images → mesh) | *(API — Meshy Multi-Image to Model; no local checkpoint)* | — |
 
-Configure Comfy Org / Tripo / Rodin API access in ComfyUI before Run.
+Configure Comfy Org / Tripo / Rodin / Meshy API access in ComfyUI before Run.
 
 ---
 

@@ -1,0 +1,59 @@
+{
+  "_comment": "Shipped preset for Meshy Multi-Image to Model. Chain: LoadImage #10-13 -> MeshyMultiImageToModelNode #1 -> File3DFirst #62 (GLB then FBX) -> SaveGLB #3. Stage images.image0..image3 map 1:1 onto Meshy images.image0..image3 (API requires ≥2). Stage image4 unused.",
+  "label": "Meshy Multi",
+  "description": "Meshy Multi-Image to Model (API). 2–4 reference images → mesh (GLB/FBX via File3DFirst). image0+image1 required; image2/image3 optional. Stage socket names match the Meshy node. Binds seed / pbr.",
+  "result": {
+    "type": "ui_save_url",
+    "node": "3"
+  },
+  "inputs": {
+    "1": {
+      "seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      },
+      "should_texture.enable_pbr": {
+        "from": "option:pbr",
+        "cast": "bool"
+      }
+    },
+    "10": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    },
+    "11": {
+      "image": {
+        "from": "upstream_image:annotated[1]",
+        "required": true
+      }
+    },
+    "12": {
+      "image": {
+        "from": "upstream_image:annotated[2]"
+      }
+    },
+    "13": {
+      "image": {
+        "from": "upstream_image:annotated[3]"
+      }
+    }
+  },
+  "order": 35,
+  "prune_when_missing": [
+    {
+      "when": "upstream_image:value[2]",
+      "drop_upstream_of": [
+        { "node": "1", "input": "images.image2" }
+      ]
+    },
+    {
+      "when": "upstream_image:value[3]",
+      "drop_upstream_of": [
+        { "node": "1", "input": "images.image3" }
+      ]
+    }
+  ]
+}

@@ -38,6 +38,8 @@
 !model/tripo-p2_preset.json
 !model/rodin-gen25.json
 !model/rodin-gen25_preset.json
+!model/meshy-multi.json
+!model/meshy-multi_preset.json
 
 !multiangle/qwen-edit-2511-multiangle.json
 !multiangle/qwen-edit-2511-multiangle_preset.json

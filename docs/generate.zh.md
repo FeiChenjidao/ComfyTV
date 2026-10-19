@@ -92,10 +92,11 @@
 <!-- TODO(screenshot): 3D Model Stage（轨道预览视口） -->
 ![3D model stage](images/model3d-run.png)
 
-通过 `model` kind 的工作流生成 **3D 模型（GLB）**。自带三个：
+通过 `model` kind 的工作流生成 **3D 模型（GLB）**。自带四个：
 
 - **Tripo** —— 多视图 → 网格（GLB/FBX），走 Tripo API。
 - **Tripo P2** —— 多视图 → 低模网格（GLB/FBX），走 Tripo P2 API。
 - **Rodin Gen25** —— 1–5 张图 → 网格，走 Rodin Gen-2.5 图生 3D API。
+- **Meshy Multi** —— 2–4 张图 → 网格，走 Meshy 多图转模型 API。
 
 都是 API 调用（见 [models.zh.md](models.zh.md)）；也可以 Link 或 Upload 你自己的 `model` kind 工作流。节点内嵌轨道预览；旋转视角后会自动截图进它的图片输出，下游图像 stage 可以直接消费模型的外观。GLB 本体流向 3D 节点——Scene3D、网格操作、材质，详见节点参考。
