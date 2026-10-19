@@ -26,10 +26,12 @@
     },
     "17": {
       "model.aspect_ratio": {
-        "from": "option:aspect_ratio"
+        "from": "option:aspect_ratio",
+        "default": "auto"
       },
       "model.resolution": {
-        "from": "option:resolution"
+        "from": "option:resolution",
+        "default": "2K"
       },
       "prompt": {
         "from": "main_prompt"

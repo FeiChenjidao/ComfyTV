@@ -46,7 +46,7 @@
       },
       "model.size": {
         "from": "option:size",
-        "default": "Custom"
+        "default": "auto"
       },
       "n": {
         "from": "option:batch_size",

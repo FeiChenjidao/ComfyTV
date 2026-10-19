@@ -361,7 +361,7 @@
       "widgets_values": [
         "",
         "gpt-image-2.5-flare",
-        "Custom",
+        "auto",
         1024,
         1024,
         "auto",
@@ -373,7 +373,7 @@
       "widgets_values_named": {
         "prompt": "",
         "model": "gpt-image-2.5-flare",
-        "model.size": "Custom",
+        "model.size": "auto",
         "model.custom_width": 1024,
         "model.custom_height": 1024,
         "model.background": "auto",
