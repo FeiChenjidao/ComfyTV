@@ -22,11 +22,12 @@
 
 内置生成式工作流在适用处保留官方参数默认值。公共自定义参数：`seed`（未设置时每次 Run 随机）。
 
-- **Tripo**（`tripo.json` + `_preset.json`）— 正/左/后/右多视图 → **网格**（GLB 或 FBX）。走 Comfy Org Tripo API（`TripoMultiviewToModelNode`，默认 v3.1）；Stage `images.image0`…`image3` 按下标绑到各视角。`File3DFirst` 自动取有数据的那一侧，Stage `quad` 开/关都可。正面必填，侧面可选。
-- **Tripo P2**（`tripo-p2.json` + `_preset.json`）— 正/左/后/右多视图 → 低模 **网格**（GLB 或 FBX，`TripoPSeriesMultiviewToModelNode` / P2）。参数都在 `model` DynamicCombo 下；`File3DFirst` 配合 Stage `quad` 取 GLB/FBX。正面必填；API 至少还要一张侧视图。
+- **Tripo**（`tripo.json` + `_preset.json`）— 1 张图 → `TripoImageToModelNodeV2`；2–4 张（正 + 侧）→ `TripoMultiviewToModelNode`（`upstream_image:count_lt/ge[2]` 自动切换）。Stage `images.image0`…`image3` = 正 / 左 / 后 / 右。`File3DFirst` 取 GLB/FBX，Stage `quad` 开/关都可。
+- **Tripo P1**（`tripo-p1.json` + `_preset.json`）— 同样的 1↔2–4 自动切换（`TripoP1ImageToModelNode` / `TripoP1MultiviewToModelNode`，仅 GLB）。
+- **Tripo P2**（`tripo-p2.json` + `_preset.json`）— 同样自动切换（`TripoPSeriesImageToModelNode` / `TripoPSeriesMultiviewToModelNode` / P2）。参数在 `model` DynamicCombo 下；`File3DFirst` 配合 Stage `quad` 取 GLB/FBX。
 - **Rodin Gen25**（`rodin-gen25.json` + `_preset.json`）— 1–5 张图 → **网格**（`Rodin3D_Gen25_Image` / Rodin Gen-2.5 图生 3D）。Stage 槽位 `images.image0`…`image4` 与 Rodin 节点入口同名一一对应；缺的参考图会 prune。绑定 `material` / `mode` / `polygon_count` / `geometry_file_format` / `texture_mode` / `seed` / `tapose` / `hd_texture` / `texture_delight` / `addon_highpack`。
-- **Meshy Multi**（`meshy-multi.json` + `_preset.json`）— 2–4 张图 → **网格**（`MeshyMultiImageToModelNode`）。Stage `images.image0`…`image3` 与 Meshy 入口同名（API 至少 2 张）；`File3DFirst` 取 GLB/FBX。绑定 `seed` / `pbr`。
-- **Stage 图像槽位**统一为 `images.image0`…`image4`。Rodin 用 0–4；Meshy 用 0–3（最少 2 张）；Tripo 按下标：0 正 / 1 左 / 2 背 / 3 右 / 4 辅。
+- **Meshy**（`meshy-multi.json` + `_preset.json`）— 1 张图 → `MeshyImageToModelNode`；2–4 张 → `MeshyMultiImageToModelNode`（同样按数量自动切换）。`File3DFirst` 取 GLB/FBX。绑定 `seed` / `pbr` 等 Meshy 旋钮。
+- **Stage 图像槽位**统一为 `images.image0`…`image4`。Rodin 用 0–4；Tripo / Meshy 用 0–3（按下标：0 正 / 1 左 / 2 背 / 3 右）。
 
 ## 引用的模型
 

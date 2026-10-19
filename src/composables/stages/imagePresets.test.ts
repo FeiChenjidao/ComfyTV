@@ -26,15 +26,6 @@ describe('IMAGE_VARIANT_PRESETS', () => {
     }
   })
 
-  it('multi-view presets pick variant_count widget', () => {
-    for (const p of IMAGE_VARIANT_PRESETS) {
-      if (p.targetClass === 'ComfyTV.ImageVariationsStage') {
-        expect(p.widgets?.workflow).toBeTruthy()
-        expect(typeof p.widgets?.variant_count).toBe('number')
-      }
-    }
-  })
-
   it('cinematic-light preset is prompt-only on ImageEditStage', () => {
     expect(IMAGE_VARIANT_PRESETS.some(p => p.targetClass === 'ComfyTV.RelightStage')).toBe(false)
     const cinematic = IMAGE_VARIANT_PRESETS.find(p => p.id === 'cinematic-light')

@@ -7,7 +7,7 @@ PENDING_STAGES: frozenset[str] = frozenset({
 })
 
 NON_STAGE_NODES: frozenset[str] = frozenset({
-    'MaskCleanup', 'MakeProxyStage', 'BatchLoop',
+    'MaskCleanup', 'MakeProxyStage', 'BatchLoop', 'File3DFirst',
 })
 
 STAGE_META: dict[str, dict] = {
@@ -45,8 +45,6 @@ STAGE_META: dict[str, dict] = {
     'ImageMergeStage':              {'kind': 'image',       'variant': 'transform'},
     'DirectorTimelineStage':        {'kind': 'timeline',    'variant': 'transform'},
     'TimelineVideoStage':           {'kind': 'video',        'workflow_kind': 'timeline'},
-    'ImageVariationsStage':         {'kind': 'image-batch',  'workflow_kind': 'multiview',
-                                     'workflow_kinds': ['multiview', 'sequence']},
     'LayerSeparationStage':         {'kind': 'image-batch',  'workflow_kind': 'layer-separation'},
     'RelightStage':                 {'kind': 'image',       'variant': 'loader'},
     'MultiangleStage':              {'kind': 'image',        'workflow_kind': 'multiangle'},

@@ -21,7 +21,7 @@ Grid Split 在浏览器按像素矩形切图，写入隐藏参数 `rows`、`cols
 
 - **无 Run**；切分逻辑纯前端。
 - `selected_index`（默认 1）决定 **image** 单输出口对应批量中第几张（从 1 起计）。
-- 与 **Image Variations** 不同：后者是 AI **生成** 多张关联图，需 Run + workflow。
+- 与
 
 ## 类型说明（COMFYTV_* vs ComfyUI 原生）
 
@@ -98,7 +98,7 @@ Bridge：`→ ComfyTV Image(s)` / `← ComfyTV Images` — [bridges.zh.md](https
 **Q：格子是空的？**  
 A：检查上游图片；别把单元格切太小。
 
-**Q：和 Image Variations 九宫格有什么区别？**  
+**Q：和
 A：Grid Split 是物理切割；Variations 是 AI 生成多视角（需 Run）。
 
 **Q：要接原生节点？**  
@@ -107,6 +107,5 @@ A：Bridge `← ComfyTV Images`，或只使用 **image** 单张输出。
 ## 相关节点
 
 - **Image Picker** — 浏览批量
-- **Image Variations** — AI 多图生成
 - **Crop** — 切前可先裁主体
 - **Upscale** — 单格放大

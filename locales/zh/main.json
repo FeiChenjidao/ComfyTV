@@ -444,7 +444,7 @@
       "cancel": "否",
       "modeAppend": "模式:追加",
       "modeReplace": "模式:覆盖",
-      "modeHint": "新结果进池方式(点击切换)。追加:保留已有并把新结果放到最前;覆盖:每次运行只保留最新一批。相同图片只保留一份(按图片去重)。"
+      "modeHint": "新结果如何进入池（点击切换）。追加：保留已有并把新结果放到最上。覆盖：每次运行只保留最新结果。相同 URL 只保留一份。"
     },
     "empty": {
       "no_output": "暂无输出",
@@ -472,6 +472,10 @@
     "action": {
       "viewFull": "查看大图",
       "download": "下载",
+      "exportObjZip": "导出 OBJ + 纹理（ZIP）",
+      "exportObjZipBusy": "正在导出 OBJ 压缩包…",
+      "exportObjZipDone": "OBJ 压缩包已下载",
+      "exportObjZipFailed": "OBJ 导出失败",
       "copyText": "复制文本",
       "saveTextAsset": "存入资产库",
       "renderMarkdown": "渲染 Markdown",
@@ -1301,29 +1305,9 @@
   },
   "presets": {
     "imageVariant": {
-      "multi-cam-9": {
-        "label": "多机位九宫格",
-        "tooltip": "9 个相机角度排列"
-      },
-      "story-4": {
-        "label": "剧情推演四宫格",
-        "tooltip": "4 连贯剧情画面"
-      },
-      "face-3view": {
-        "label": "角色脸部三视图",
-        "tooltip": "人脸正/侧/45° 视图"
-      },
-      "product-3view": {
-        "label": "产品三视图",
-        "tooltip": "产品正/侧/背"
-      },
-      "character-3view": {
-        "label": "角色三视图",
-        "tooltip": "全身角色正/侧/背"
-      },
-      "storyboard-25": {
-        "label": "25 宫格连贯分镜",
-        "tooltip": "25 张连贯分镜"
+      "layer-separation": {
+        "label": "图层分离",
+        "tooltip": "将图像分离为可编辑图层"
       },
       "cinematic-light": {
         "label": "电影级光影校正",

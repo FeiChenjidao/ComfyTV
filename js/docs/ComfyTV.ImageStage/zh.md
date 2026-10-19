@@ -4,7 +4,7 @@
 
 ## 这个节点是做什么的
 
-**Image Stage** 负责**文生图 (t2i)** 和**图生图 (i2i)**。你写 **main_prompt**（画面描述），选 **workflow**（例如 Local SD1.5 或 Ideogram4），设置分辨率、比例和批量大小，点 **▶ 运行**，节点上会显示缩略图预览。
+**Image Stage** 负责**文生图**和**带参考图生图**。你写 **main_prompt**（画面描述），选 **workflow**（例如 NanoBanana2 或 GPT Image 2.5），按工作流需要设置分辨率、比例和批量大小，点 **▶ 运行**，节点上会显示缩略图预览。
 
 它有两个输出口：
 
@@ -56,9 +56,8 @@ i2i workflow 额外把 **images** 上游的第一张图绑到子图里的 `LoadI
 
 | 选项 | 模式 | 说明 |
 | --- | --- | --- |
-| **Local SD1.5** | t2i | 经典 SD1.5 文生图 |
-| **Local SD1.5 I2I** | i2i | 同一 checkpoint，VAEEncode + denoise &lt; 1 |
-| **Image Ideogram4 T2I** | t2i | Ideogram 4 + Qwen3-VL 文本编码器 |
+| **NanoBanana2** | API | Gemini NanoBanana 2；可选参考图 |
+| **GPT Image 2.5** | API | OpenAI GPT Image；可选参考图 |
 
 模型文件见 [models.zh.md](https://github.com/jtydhr88/ComfyTV/blob/main/docs/models.zh.md)。workflow 详情：[README.zh.md](https://github.com/jtydhr88/ComfyTV/blob/main/workflows/image/README.zh.md)。
 
@@ -86,7 +85,7 @@ i2i workflow 额外把 **images** 上游的第一张图绑到子图里的 `LoadI
 
 ### images（上游参考图）
 
-**图生图必用**：选 **Local SD1.5 I2I**（或其它 i2i workflow），把参考图接到 **images.image0**（第一张生效）。t2i workflow 会忽略上游图。
+可选参考图：把图接到 **images.image0**…，供 NanoBanana2 / GPT Image 2.5 使用。未接的槽位会被忽略。
 
 可接：Image Stage 的 **image**、Image Picker、Asset Loader、Bridge → ComfyTV Image。
 
@@ -108,14 +107,13 @@ i2i workflow 额外把 **images** 上游的第一张图绑到子图里的 `LoadI
 ## 新手一步一步
 
 1. 放 **Project**，再 **Add Node → ComfyTV → Generate → Image Stage**。
-2. **workflow** 选 **Local SD1.5**（首次建议用最轻量的 t2i）。
+2. **workflow** 选 **NanoBanana2** 或 **GPT Image 2.5**（先配好 API 凭证）。
 3. **main_prompt** 输入：`a red apple on a wooden table`。
-4. **resolution** 保持 `1K`，**aspect_ratio** `1:1`，**batch_size** `1`。
-5. 确认已下载 `v1-5-pruned-emaonly.safetensors`（见 [models.zh.md](https://github.com/jtydhr88/ComfyTV/blob/main/docs/models.zh.md)）。
-6. 点 **▶ 运行**，等待缩略图出现；首次运行可能自动出现 **Image Picker**。
-7. 点击喜欢的缩略图 → 工具栏里选 **Upscale** 或 **Crop** 继续编辑。
+4. 按工作流需要设置 **resolution** / **aspect_ratio** / **batch_size**。
+5. 点 **▶ 运行**，等待缩略图出现；首次运行可能自动出现 **Image Picker**。
+6. 点击喜欢的缩略图 → 工具栏里选 **Upscale** 或 **Crop** 继续编辑。
 
-**图生图额外步骤**：workflow 改 **Local SD1.5 I2I** → 上游 **Load Image from Asset** 或另一 Image Stage 的 **image** 接到 **images** → main_prompt 写「改成水彩风格」→ Run。
+**带参考图**：把上游 **image** 接到 **images** → main_prompt 写「改成水彩风格」→ Run。
 
 ## 完整教程（推荐阅读）
 

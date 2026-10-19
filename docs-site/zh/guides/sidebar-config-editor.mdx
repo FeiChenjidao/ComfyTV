@@ -1,6 +1,6 @@
 ---
 title: "侧边栏配置编辑器"
-translationSourceHash: "de47f785972b7713"
+translationSourceHash: "9ae40bfcfaa3f55e"
 ---
 
 每个 ComfyTV stage 都跑在它下拉框选中的 **workflow** 上。**ComfyTV** 侧边栏标签让你查看和编辑「stage 输入怎么映射到工作流节点」,不用碰任何磁盘文件,改完即生效。
@@ -33,7 +33,7 @@ translationSourceHash: "de47f785972b7713"
 每个 widget 行有三块:
 
 - **`.<widget 名>`** , 比如 `.seed`、`.text`、`.filename_prefix`。
-- **值编辑器** , 该 widget 原本的输入控件(数字框 / 文本框 / 下拉 / 开关)。直接改这里 = 把工作流出厂值替换成你输入的常量。当这一行已经被绑到 stage 输入(下拉里选了非 `(use this value)` 的项)时,值编辑器会变灰禁用 , 因为运行时这里的值是上游推过来的。
+- **值编辑器** — 该 widget 原本的输入控件(数字框 / 文本框 / 下拉 / 开关)。**绑定到** 为 `(use this value)` 时,直接改这里 = 把工作流出厂值替换成常量。绑到 stage 的 **option / computed** 时,同一控件用来设置**兜底默认值**(stage 控件为空时生效)。上游图片/遮罩绑定仍会灰掉编辑器(值来自连线)。
 - **绑定到:** , 下一节讲。
 
 ---

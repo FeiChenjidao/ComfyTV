@@ -12,7 +12,7 @@ Two outputs: **images** (full batch JSON) and **image** (the item at **selected_
 
 - Multi-camera storyboard frames from one HDRI / generated panorama
 - Orbit showcases for characters or products (3-view, 4-view)
-- Consistent-environment frames for Image Variations or Video FLF2V
+- Consistent-environment frames for
 
 ## How ComfyTV designed this
 
@@ -95,4 +95,3 @@ A: Browser-side capture is usually fast; 4K increases file size.
 
 - **Panorama** / **Current View**
 - **Image Picker**
-- **Image Variations**

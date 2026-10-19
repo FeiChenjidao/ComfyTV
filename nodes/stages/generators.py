@@ -244,6 +244,17 @@ class Model3DStage(io.ComfyNode):
                                 socketless=True, extra_dict={"hidden": True},
                                 tooltip="Internal — /view? URL of the latest preview-viewport snapshot. "
                                         "Written by the 3D preview in the node body; becomes the `image` output."),
+                io.Int.Input("selected_index", default=1, min=1, max=999, step=1,
+                             socketless=True, extra_dict={"hidden": True},
+                             tooltip="Which prior model run to show (1-indexed). Set by the history strip."),
+                io.String.Input("pool", default="", multiline=False,
+                                socketless=True, extra_dict={"hidden": True},
+                                tooltip="Accumulated model pool (JSON {images:[{index,image_url},…]}). "
+                                        "Managed by the UI — each successful Run appends or replaces."),
+                io.Boolean.Input("append_results", default=True, socketless=True,
+                                 extra_dict={"hidden": True},
+                                 tooltip="On: new Runs are appended to the pool (existing kept). "
+                                         "Off: each Run replaces the pool with only the latest result."),
                 _custom_params_input(),
             ],
             outputs=[COMFYTV_MODEL.Output("model"), COMFYTV_IMAGE.Output("image")],
@@ -263,7 +274,8 @@ class Model3DStage(io.ComfyNode):
                       tapose=False, hd_texture=False, texture_delight=False,
                       addon_highpack=False,
                       main_prompt="", texts=None, images=None,
-                      models=None, captured_image="", custom_params="{}"):
+                      models=None, captured_image="", selected_index=1, pool="",
+                      append_results=True, custom_params="{}"):
 
         text_vals = _autogrow_values(texts)
         combined_prompt = _combine_prompt(main_prompt, text_vals)

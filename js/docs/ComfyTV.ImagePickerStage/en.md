@@ -2,7 +2,7 @@
 
 ## What this node does
 
-**Image Picker** is a **Compose** stage. Upstream stages like **Image Stage**, **Grid Split**, **Image Variations**, and **Panorama Multi-View** output **multiple** images. This node shows a thumbnail strip; whichever you click becomes the sole **`COMFYTV_IMAGE`** on the **image** output.
+**Image Picker** is a **Compose** stage. Upstream stages like **Image Stage**, **Grid Split**,. This node shows a thumbnail strip; whichever you click becomes the sole **`COMFYTV_IMAGE`** on the **image** output.
 
 After selection, an **action toolbar** appears: `✏️ Edit`, `🌐 Panorama`, `📐 Multiangle`, `💡 Relight`, variation presets, etc.—ComfyTV's "pick and go" menu.
 
@@ -63,7 +63,7 @@ Details: [bridges.md](https://github.com/jtydhr88/ComfyTV/blob/main/docs/bridges
 
 ## Step by step for beginners
 
-1. Add **Project** + **Image Stage**, prompt, workflow (e.g. Local SD1.5).
+1. Add **Project** + **Image Stage**, prompt, workflow (e.g. NanoBanana2).
 2. **▶ Run** Image Stage—ComfyTV inserts **Image Picker** if missing.
 3. **Click** your favorite thumbnail; watch the toolbar appear.
 4. (Optional) Click `✏️ Edit` or wire **Upscale** manually.
@@ -111,5 +111,5 @@ A: Loaders import existing files; Image Stage generates batches. After generatio
 - **Image Stage** — common upstream; auto-creates Picker on first Run.
 - **Shot Images** — storyboard batch; wire Picker to pick one shot.
 - **Compare** — before/after slider (two separate `COMFYTV_IMAGE` wires).
-- **Grid Split** / **Image Variations** / **Panorama Multi-View** — multi-image upstream.
+- **Grid Split** /.
 - **→ ComfyTV Images** — import native batches.

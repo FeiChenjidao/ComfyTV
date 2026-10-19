@@ -131,6 +131,11 @@ def _cast(value: Any, cast: str | None) -> Any:
         if isinstance(value, bool): return value
         s = str(value).strip().lower()
         return s in ("true", "1", "yes", "on")
+    if cast == "truefalse":
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        s = str(value).strip().lower()
+        return "true" if s in ("true", "1", "yes", "on") else "false"
     raise RuntimeError(f"unknown cast {cast!r}")
 
 

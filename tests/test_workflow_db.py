@@ -285,12 +285,43 @@ class TestNodeWidgetMeta:
 
         comfy_nodes.NODE_CLASS_MAPPINGS["Foo"] = Foo
         meta = wdb._node_widget_meta("Foo")
-        assert meta[0] == {
-            "name": "preset", "type": "COMBO", "options": {"values": ["preset-a"]},
-        }
+        assert meta[0]["name"] == "preset"
+        assert meta[0]["type"] == "COMBO"
+        assert meta[0]["options"]["values"] == ["preset-a"]
+        assert meta[0]["options"]["dynamic_branches"] == {"preset-a": ["preset.variant"]}
         assert meta[1] == {
-            "name": "preset.variant", "type": "COMBO", "options": {"values": ["default", "custom"]},
+            "name": "preset.variant", "type": "COMBO",
+            "options": {
+                "values": ["default", "custom"],
+                "dynamic_parent": "preset",
+                "dynamic_when": ["preset-a"],
+            },
         }
+
+    def test_define_schema_marks_advanced_inputs(self, comfy_nodes):
+        class Input:
+            def __init__(self, name, io_type, options=None, advanced=None):
+                self.id = name
+                self._io_type = io_type
+                self.options = options
+                self.advanced = advanced
+
+            def get_io_type(self):
+                return self._io_type
+
+        class Foo:
+            @classmethod
+            def define_schema(cls):
+                return type("Schema", (), {"inputs": [
+                    Input("mode", "COMBO", ["a", "b"]),
+                    Input("seed", "INT", advanced=True),
+                ]})()
+
+        comfy_nodes.NODE_CLASS_MAPPINGS["Foo"] = Foo
+        meta = wdb._node_widget_meta("Foo")
+        by_name = {m["name"]: m for m in meta}
+        assert "advanced" not in by_name["mode"]["options"]
+        assert by_name["seed"]["options"].get("advanced") is True
 
     def test_define_schema_overrides_legacy_string_metadata(self, comfy_nodes):
         class Input:

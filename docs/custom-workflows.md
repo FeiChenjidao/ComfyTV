@@ -39,7 +39,7 @@ user/comfytv/workflows/
     my-workflow.json                    GUI workflow export
     my-workflow_preset.json             optional preset (bindings)
   image-edit/   inpaint/   erase/   outpaint/   upscale/   multiangle/
-  cutout/   multiview/   sequence/   speech/
+  cutout/   speech/
   video/   text/   audio/   audio-vocal/   audio-bg/
   shot-images/  storyboard/  panorama/  timeline/  model/
   split-part/   material-estimate/   speech-to-text/   custom/  ← Custom Stage (you choose the exposed I/O)
@@ -47,7 +47,7 @@ user/comfytv/workflows/
 
 **The folder decides the kind.** Copy a JSON in and restart ComfyUI (or trigger a rescan from the sidebar) and it shows up in the matching stage's dropdown. The shipped workflows are seeded into this directory on startup; entries that came with ComfyTV carry a **builtin** badge, and files you've edited are never overwritten by updates.
 
-The full list of kinds: `text, image, shot-images, video, audio, speech, storyboard, panorama, timeline, upscale, outpaint, inpaint, erase, image-edit, multiangle, cutout, multiview, sequence, audio-vocal, audio-bg, model, split-part, material-estimate, speech-to-text, custom`.
+The full list of kinds: `text, image, shot-images, video, audio, speech, storyboard, panorama, timeline, upscale, outpaint, inpaint, erase, image-edit, multiangle, cutout, audio-vocal, audio-bg, model, split-part, material-estimate, speech-to-text, custom`.
 
 Each shipped kind has a `README.md` next to its JSONs documenting the run-time inputs and the nodes a workflow typically needs. Read the relevant per-kind README first:
 
@@ -60,8 +60,6 @@ Each shipped kind has a `README.md` next to its JSONs documenting the run-time i
 - [`workflows/cutout/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/cutout)
 - [`workflows/erase/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/erase)
 - [`workflows/multiangle/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/multiangle)
-- [`workflows/multiview/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/multiview)
-- [`workflows/sequence/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/sequence)
 - [`workflows/panorama/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/panorama)
 - [`workflows/speech/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/speech)
 - [`workflows/text/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/text)

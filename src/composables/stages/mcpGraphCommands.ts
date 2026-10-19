@@ -502,6 +502,7 @@ export async function handleGraphRun(app: any): Promise<CommandResult> {
     throw new Error('queuePrompt unavailable in this tab')
   }
   const data = await app.graphToPrompt()
+  ;(data as any).__comfytvOwnRun = true
   let res: any
   try {
     res = await app.api.queuePrompt(0, data)

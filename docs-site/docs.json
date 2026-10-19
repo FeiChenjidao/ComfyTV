@@ -133,7 +133,6 @@
                   "node-reference/cutout",
                   "node-reference/upscale",
                   "node-reference/relight",
-                  "node-reference/image-variations",
                   "node-reference/multiangle",
                   "node-reference/split-part"
                 ]
@@ -393,6 +392,12 @@
                   "node-reference/bridge-to-text",
                   "node-reference/bridge-from-mask"
                 ]
+              },
+              {
+                "group": "Uncategorized",
+                "pages": [
+                  "node-reference/custom"
+                ]
               }
             ]
           }
@@ -488,7 +493,6 @@
                   "zh/node-reference/cutout",
                   "zh/node-reference/upscale",
                   "zh/node-reference/relight",
-                  "zh/node-reference/image-variations",
                   "zh/node-reference/multiangle",
                   "zh/node-reference/split-part"
                 ]
@@ -747,6 +751,12 @@
                   "zh/node-reference/bridge-from-text",
                   "zh/node-reference/bridge-to-text",
                   "zh/node-reference/bridge-from-mask"
+                ]
+              },
+              {
+                "group": "Uncategorized",
+                "pages": [
+                  "zh/node-reference/custom"
                 ]
               }
             ]

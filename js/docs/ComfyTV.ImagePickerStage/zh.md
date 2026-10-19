@@ -2,7 +2,7 @@
 
 ## 这个节点是做什么的
 
-**图片选择器**（Image Picker）属于 **Compose** 分类。上游常接 **Image Stage**、**Grid Split**、**Image Variations**、**Panorama Multi-View** 等产出**多张图**的 stage。本节点展示缩略图条，你点哪张，**image** 输出口就只向下游传递那一张 `COMFYTV_IMAGE`。
+**图片选择器**（Image Picker）属于 **Compose** 分类。上游常接 **Image Stage**、**Grid Split**、
 
 选中后会出现 **操作工具栏**：`✏️ Edit`（裁剪/旋转等）、`🌐 Panorama`、`📐 Multiangle`、`💡 Relight`、各类变体 preset 等——相当于 ComfyTV 的「选中即开工」菜单。
 
@@ -65,7 +65,7 @@
 
 ## 新手一步一步
 
-1. 添加 **Project** + **Image Stage**，填 prompt，选 workflow（如 Local SD1.5）。
+1. 添加 **Project** + **Image Stage**，填 prompt，选 workflow（如 NanoBanana2）。
 2. **▶ 运行** Image Stage——ComfyTV 自动插入 **Image Picker**（若尚未有）。
 3. 在 Picker 缩略图条上**点击**最满意的一张；观察工具栏出现。
 4. （可选）点 `✏️ Edit` 进入裁剪，或手动连 **Upscale** 等。
@@ -114,5 +114,5 @@ A：Loader 导入已有文件；Image Stage 生成批量图。生成后先用 Pi
 - **Image Stage** —— 常见上游；首次 Run 自动创建 Picker。
 - **Shot Images** —— 分镜批量；可再接 Picker 挑单镜。
 - **Compare** —— 对比改前改后（需两张独立 `COMFYTV_IMAGE`）。
-- **Grid Split** / **Image Variations** / **Panorama Multi-View** —— 多图上游。
+- **Grid Split** /
 - **→ ComfyTV Images** —— 原生批量转入。

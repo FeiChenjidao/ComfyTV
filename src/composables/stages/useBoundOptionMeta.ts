@@ -21,6 +21,14 @@ export interface BoundOptionMeta {
   step?: number
   label?: string
   defaultValue?: string
+  /** True when the partner-node input is marked advanced=True. */
+  advanced?: boolean
+  /** Option key of the DynamicCombo parent this child depends on. */
+  dynamicParent?: string
+  /** Parent combo values for which this child is visible. */
+  dynamicWhen?: string[]
+  /** parent DynamicCombo: optionKey -> child option keys visible in that branch */
+  dynamicBranches?: Record<string, string[]>
 }
 
 function leafName(widgetName: string): string {
@@ -39,17 +47,30 @@ function metaFromWidget(key: string, w: {
   widget_props?: Record<string, unknown> | null
   widget_name?: string
   override_value?: string | null
-}): BoundOptionMeta {
+}, parentOptionKey?: string | null): BoundOptionMeta {
   const props = w.widget_props ?? {}
   const type = String(w.widget_type ?? '').toUpperCase()
   const defaultValue = w.override_value == null || w.override_value === ''
     ? undefined
     : String(w.override_value)
+  const advanced = props.advanced === true
+  const whenRaw = props.dynamic_when
+  const dynamicWhen = Array.isArray(whenRaw) ? whenRaw.map(String) : undefined
+  const dynamicParent = parentOptionKey
+    || (typeof props.dynamic_parent === 'string' ? props.dynamic_parent : undefined)
   if (type === 'BOOLEAN') {
-    return { key, control: 'toggle', label: key, defaultValue }
+    return { key, control: 'toggle', label: key, defaultValue, advanced, dynamicParent, dynamicWhen }
   }
   if (type === 'COMBO') {
-    return { key, control: 'combo', options: comboValues(props), label: key, defaultValue }
+      const branchesRaw = props.dynamic_branches
+  let dynamicBranches: Record<string, string[]> | undefined
+  if (branchesRaw && typeof branchesRaw === 'object' && !Array.isArray(branchesRaw)) {
+    dynamicBranches = {}
+    for (const [opt, kids] of Object.entries(branchesRaw as Record<string, unknown>)) {
+      dynamicBranches[opt] = Array.isArray(kids) ? kids.map(String) : []
+    }
+  }
+  return { key, control: 'combo', options: comboValues(props), label: key, defaultValue, advanced, dynamicParent, dynamicWhen, dynamicBranches }
   }
   if (type === 'INT' || type === 'FLOAT') {
     return {
@@ -60,9 +81,12 @@ function metaFromWidget(key: string, w: {
       step: typeof props.step === 'number' ? props.step : (type === 'INT' ? 1 : 0.1),
       label: key,
       defaultValue,
+      advanced,
+      dynamicParent,
+      dynamicWhen,
     }
   }
-  return { key, control: 'text', label: leafName(String(w.widget_name ?? key)), defaultValue }
+  return { key, control: 'text', label: leafName(String(w.widget_name ?? key)), defaultValue, advanced, dynamicParent, dynamicWhen }
 }
 
 /**
@@ -112,13 +136,43 @@ export function useBoundOptionMeta(
         || kind !== kindOf()
         || currentKeys !== keySignature
       ) return
+      const widgetToOption = new Map<string, string>()
+      for (const w of cfg.exposed_widgets ?? []) {
+        const binding = w.stage_binding
+        if (typeof binding !== 'string' || !binding.startsWith('option:')) continue
+        const key = binding.slice('option:'.length)
+        if (!key || typeof w.widget_name !== 'string') continue
+        widgetToOption.set(w.widget_name, key)
+      }
       const next = new Map<string, BoundOptionMeta>()
       for (const w of cfg.exposed_widgets ?? []) {
         const binding = w.stage_binding
         if (typeof binding !== 'string' || !binding.startsWith('option:')) continue
         const key = binding.slice('option:'.length)
         if (!keys.has(key)) continue
-        next.set(key, metaFromWidget(key, w))
+        const parentWidget = typeof w.widget_props?.dynamic_parent === 'string'
+          ? w.widget_props.dynamic_parent
+          : null
+        const parentOption = parentWidget
+          ? (widgetToOption.get(parentWidget) ?? leafName(parentWidget))
+          : null
+        const meta = metaFromWidget(key, w, parentOption)
+        const prev = next.get(key)
+        // Prefer a primary (non-advanced) binding when several widgets share a key.
+        if (!prev || (prev.advanced && !meta.advanced)) next.set(key, meta)
+        else if (prev && meta.dynamicWhen?.length) {
+          const mergedWhen = [...new Set([...(prev.dynamicWhen ?? []), ...meta.dynamicWhen])]
+          next.set(key, { ...prev, dynamicWhen: mergedWhen, dynamicParent: prev.dynamicParent ?? meta.dynamicParent })
+        }
+      }
+      // Remap parent dynamic_branches child widget names to option:* keys.
+      for (const [key, meta] of next) {
+        if (!meta.dynamicBranches) continue
+        const mapped: Record<string, string[]> = {}
+        for (const [opt, kids] of Object.entries(meta.dynamicBranches)) {
+          mapped[opt] = kids.map(wn => widgetToOption.get(wn) ?? leafName(wn))
+        }
+        next.set(key, { ...meta, dynamicBranches: mapped })
       }
       metaByKey.value = next
     } catch {

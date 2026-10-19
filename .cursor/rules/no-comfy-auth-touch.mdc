@@ -1,0 +1,18 @@
+---
+description: Never modify ComfyUI / comfy.org auth credential paths in ComfyTV
+alwaysApply: true
+---
+
+# Do not touch ComfyUI auth
+
+Do **not** change code that reads, writes, copies, restores, or invents ComfyUI / comfy.org credentials unless the user explicitly asks for an auth change in that turn.
+
+Forbidden without an explicit ask:
+
+- `src/utils/comfyOrgAuth.ts` and its tests
+- `api.authToken` / `api.apiKey` mutation in `globalRunBridge` or elsewhere
+- `runners/auth_extra.py`, nested `extra_data` auth keys, `install_auth_passthrough`
+- Adding Hidden `auth_token_comfy_org` / `api_key_comfy_org` plumbing
+- Host Run paths calling `attachComfyOrgAuth` / `withOwnAuth`
+
+Host-initiated `queuePrompt` must pass through without touching auth. Only `__comfytvOwnRun` may fill missing credentials for ComfyTV-owned queues.

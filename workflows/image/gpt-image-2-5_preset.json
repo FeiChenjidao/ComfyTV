@@ -1,6 +1,13 @@
 {
   "_comment": "Exported preset for the 'GPT_Image_2.5' workflow (kind=image). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
   "label": "GPT_Image_2.5",
+  "result": {
+    "type": "ui_save_batch",
+    "node": "282"
+  },
+  "meta": {
+    "image_panel": "gpt"
+  },
   "inputs": {
     "277": {
       "image": {
@@ -19,14 +26,6 @@
       }
     },
     "280": {
-      "model": {
-        "from": "option:model",
-        "default": "gpt-image-2.5-flare"
-      },
-      "model.size": {
-        "from": "option:size",
-        "default": "Custom"
-      },
       "model.background": {
         "from": "option:background",
         "default": "auto"
@@ -43,7 +42,11 @@
       },
       "model.quality": {
         "from": "option:quality",
-        "default": "high"
+        "default": "low"
+      },
+      "model.size": {
+        "from": "option:size",
+        "default": "Custom"
       },
       "n": {
         "from": "option:batch_size",
@@ -52,11 +55,6 @@
       },
       "prompt": {
         "from": "main_prompt"
-      }
-    },
-    "293": {
-      "image": {
-        "from": "upstream_image:masked[0]"
       }
     }
   }

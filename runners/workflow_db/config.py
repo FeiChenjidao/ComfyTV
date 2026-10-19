@@ -176,24 +176,33 @@ def _node_widget_meta(class_type: str) -> list[dict]:
                      class_type, e)
         return out
 
-    def expand_input(inp, prefix: str = ""):
+    def expand_input(inp, prefix: str = "",
+                     dynamic_parent: str | None = None,
+                     dynamic_when: list[str] | None = None):
         name = getattr(inp, "id", None)
         if not name:
             return
         full_name = f"{prefix}.{name}" if prefix else str(name)
-        yield inp, full_name
+        yield inp, full_name, dynamic_parent, dynamic_when
         io_type = getattr(inp, "get_io_type", lambda: None)()
         if io_type != "COMFY_DYNAMICCOMBO_V3":
             return
         for option in getattr(inp, "options", ()) or ():
+            opt_key = getattr(option, "key", None)
+            if opt_key is None:
+                continue
             for child in getattr(option, "inputs", ()) or ():
-                yield from expand_input(child, full_name)
+                yield from expand_input(
+                    child, full_name,
+                    dynamic_parent=full_name,
+                    dynamic_when=[str(opt_key)],
+                )
 
     expanded_inputs = []
     for inp in getattr(schema, "inputs", ()) or ():
         expanded_inputs.extend(expand_input(inp) or ())
 
-    for inp, name in expanded_inputs:
+    for inp, name, dynamic_parent, dynamic_when in expanded_inputs:
         if not name:
             continue
         io_type = getattr(inp, "get_io_type", lambda: None)()
@@ -207,6 +216,19 @@ def _node_widget_meta(class_type: str) -> list[dict]:
         elif io_type == "COMFY_DYNAMICCOMBO_V3":
             values = [getattr(option, "key", None) for option in getattr(inp, "options", ())]
             options["values"] = [value for value in values if value is not None]
+            branches: dict[str, list[str]] = {}
+            for option in getattr(inp, "options", ()) or ():
+                opt_key = getattr(option, "key", None)
+                if opt_key is None:
+                    continue
+                kids: list[str] = []
+                for child in getattr(option, "inputs", ()) or ():
+                    cid = getattr(child, "id", None)
+                    if cid:
+                        kids.append(f"{name}.{cid}")
+                branches[str(opt_key)] = kids
+            if branches:
+                options["dynamic_branches"] = branches
             widget_type = "COMBO"
         elif io_type in _WIDGET_TYPES:
             widget_type = io_type
@@ -216,11 +238,17 @@ def _node_widget_meta(class_type: str) -> list[dict]:
                     options[key] = value
         else:
             continue
+        if getattr(inp, "advanced", None):
+            options["advanced"] = True
+        if dynamic_parent:
+            options["dynamic_parent"] = dynamic_parent
+        if dynamic_when:
+            options["dynamic_when"] = list(dynamic_when)
         out.append({"name": str(name), "type": widget_type, "options": options})
 
     # Dynamic schemas can expose the same child input in several branches.
     # Keep one stable row while preserving every enum value declared by those
-    # branches.
+    # branches. Prefer non-advanced when any branch exposes the input as primary.
     merged: dict[str, dict] = {}
     for item in out:
         previous = merged.get(item["name"])
@@ -236,8 +264,34 @@ def _node_widget_meta(class_type: str) -> list[dict]:
         new_values = item["options"].get("values")
         if isinstance(old_values, list) and isinstance(new_values, list):
             previous["options"]["values"] = list(dict.fromkeys(old_values + new_values))
+        new_advanced = bool(item["options"].get("advanced"))
+        old_advanced = bool(previous["options"].get("advanced"))
         for key, value in item["options"].items():
+            if key in ("advanced", "dynamic_when", "dynamic_branches"):
+                continue
+            if key in ("min", "max") and key in previous["options"] and isinstance(value, (int, float)):
+                cur = previous["options"][key]
+                if isinstance(cur, (int, float)):
+                    previous["options"][key] = min(cur, value) if key == "min" else max(cur, value)
+                    continue
             previous["options"].setdefault(key, value)
+        old_when = previous["options"].get("dynamic_when") or []
+        new_when = item["options"].get("dynamic_when") or []
+        if old_when or new_when:
+            previous["options"]["dynamic_when"] = list(dict.fromkeys([*old_when, *new_when]))
+        old_branches = previous["options"].get("dynamic_branches")
+        new_branches = item["options"].get("dynamic_branches")
+        if isinstance(old_branches, dict) and isinstance(new_branches, dict):
+            merged_branches = dict(old_branches)
+            for bk, bv in new_branches.items():
+                merged_branches[bk] = list(dict.fromkeys((merged_branches.get(bk) or []) + list(bv or [])))
+            previous["options"]["dynamic_branches"] = merged_branches
+        elif new_branches and not old_branches:
+            previous["options"]["dynamic_branches"] = new_branches
+        if old_advanced and new_advanced:
+            previous["options"]["advanced"] = True
+        else:
+            previous["options"].pop("advanced", None)
     return list(merged.values())
 
 
@@ -373,14 +427,23 @@ def _exposed_widgets(workflow_id: int, file_path: str,
 
         widget_meta = _node_widget_meta(class_type)
         known_names: set[str] = set()
+        api_top_keys = set(api_inputs)
         for wm in widget_meta:
             wname = wm["name"]
             known_names.add(wname)
-            if wname not in api_inputs:
-                continue
-            current = api_inputs[wname]
-            if isinstance(current, list) and len(current) == 2:
-                continue
+            binding = bindings_by_key.get((node_id, wname))
+            in_api = wname in api_inputs
+            parent = wname.split(".", 1)[0] if "." in wname else None
+            # Include inactive DynamicCombo branch children (not in current API
+            # snapshot) when the parent combo is present or the field is bound.
+            if not in_api:
+                if binding is None and not (parent and parent in api_top_keys):
+                    continue
+                current = None
+            else:
+                current = api_inputs[wname]
+                if isinstance(current, list) and len(current) == 2:
+                    continue
             out.append(row(wname, wm["type"], wm.get("options") or {}, current))
 
         # New-schema and third-party nodes may not implement INPUT_TYPES().

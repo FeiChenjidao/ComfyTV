@@ -1,20 +1,106 @@
 {
-  "_comment": "Shipped preset for Meshy Multi-Image to Model. Chain: LoadImage #10-13 -> MeshyMultiImageToModelNode #1 -> File3DFirst #62 (GLB then FBX) -> SaveGLB #3. Stage images.image0..image3 map 1:1 onto Meshy images.image0..image3 (API requires ≥2). Stage image4 unused.",
-  "label": "Meshy Multi",
-  "description": "Meshy Multi-Image to Model (API). 2–4 reference images → mesh (GLB/FBX via File3DFirst). image0+image1 required; image2/image3 optional. Stage socket names match the Meshy node. Binds seed / pbr.",
+  "_comment": "Exported preset for the 'Meshy Multi' workflow (kind=model). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "Meshy",
+  "order": 35,
+  "description": "Meshy Image / Multi-Image to Model (API). 1 image → MeshyImageToModelNode; 2–4 images → MeshyMultiImageToModelNode. Auto-switches by ref count. File3DFirst picks GLB/FBX.",
   "result": {
     "type": "ui_save_url",
     "node": "3"
   },
+  "prune_when_missing": [
+    {
+      "when": "upstream_image:count_lt[2]",
+      "drop_nodes": [
+        "1",
+        "11",
+        "12",
+        "13",
+        "62"
+      ],
+      "drop_inputs": [
+        {
+          "node": "64",
+          "input": "model_a"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:count_ge[2]",
+      "drop_nodes": [
+        "2",
+        "63"
+      ],
+      "drop_inputs": [
+        {
+          "node": "64",
+          "input": "model_b"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[2]",
+      "drop_upstream_of": [
+        {
+          "node": "1",
+          "input": "images.image2"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[3]",
+      "drop_upstream_of": [
+        {
+          "node": "1",
+          "input": "images.image3"
+        }
+      ]
+    }
+  ],
   "inputs": {
     "1": {
+      "model": {
+        "from": "option:model_version"
+      },
+      "pose_mode": {
+        "from": "option:pose_mode"
+      },
       "seed": {
         "from": "option:seed",
         "default": "random_int31",
         "cast": "int"
       },
+      "should_remesh": {
+        "from": "option:should_remesh",
+        "default": "true",
+        "cast": "truefalse"
+      },
+      "should_remesh.target_polycount": {
+        "from": "option:target_polycount",
+        "cast": "int"
+      },
+      "should_remesh.topology": {
+        "from": "option:topology"
+      },
+      "should_texture": {
+        "from": "option:texture",
+        "cast": "truefalse"
+      },
       "should_texture.enable_pbr": {
         "from": "option:pbr",
+        "cast": "bool"
+      },
+      "should_texture.texture_prompt": {
+        "from": "option:texture_prompt"
+      },
+      "should_texture.texture_resolution": {
+        "from": "option:texture_resolution"
+      },
+      "symmetry_mode": {
+        "from": "option:symmetry_mode"
+      },
+      "ultra_mode": {
+        "from": "option:ultra_mode",
+        "default": "false",
         "cast": "bool"
       }
     },
@@ -26,8 +112,7 @@
     },
     "11": {
       "image": {
-        "from": "upstream_image:annotated[1]",
-        "required": true
+        "from": "upstream_image:annotated[1]"
       }
     },
     "12": {
@@ -39,21 +124,53 @@
       "image": {
         "from": "upstream_image:annotated[3]"
       }
-    }
-  },
-  "order": 35,
-  "prune_when_missing": [
-    {
-      "when": "upstream_image:value[2]",
-      "drop_upstream_of": [
-        { "node": "1", "input": "images.image2" }
-      ]
     },
-    {
-      "when": "upstream_image:value[3]",
-      "drop_upstream_of": [
-        { "node": "1", "input": "images.image3" }
-      ]
+    "2": {
+      "model": {
+        "from": "option:model_version"
+      },
+      "pose_mode": {
+        "from": "option:pose_mode"
+      },
+      "seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      },
+      "should_remesh": {
+        "from": "option:should_remesh",
+        "default": "true",
+        "cast": "truefalse"
+      },
+      "should_remesh.target_polycount": {
+        "from": "option:target_polycount",
+        "cast": "int"
+      },
+      "should_remesh.topology": {
+        "from": "option:topology"
+      },
+      "should_texture": {
+        "from": "option:texture",
+        "cast": "truefalse"
+      },
+      "should_texture.enable_pbr": {
+        "from": "option:pbr",
+        "cast": "bool"
+      },
+      "should_texture.texture_prompt": {
+        "from": "option:texture_prompt"
+      },
+      "should_texture.texture_resolution": {
+        "from": "option:texture_resolution"
+      },
+      "symmetry_mode": {
+        "from": "option:symmetry_mode"
+      },
+      "ultra_mode": {
+        "from": "option:ultra_mode",
+        "default": "false",
+        "cast": "bool"
+      }
     }
-  ]
+  }
 }

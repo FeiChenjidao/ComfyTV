@@ -458,7 +458,7 @@ describe('handleGraphRun', () => {
     const out: any = await handleGraphRun(app)
     expect(out).toEqual({ queued: true, prompt_id: 'p-1' })
     expect(app.api.queuePrompt).toHaveBeenCalledWith(
-      0, { output: { 1: {} }, workflow: {} })
+      0, { output: { 1: {} }, workflow: {}, __comfytvOwnRun: true })
   })
 
   it('surfaces node_errors when nothing was queued', async () => {

@@ -45,11 +45,11 @@ export function createStageNodeActions(opts: {
       }
       return
     }
-    if (actionId === 'clear-pool' && isPoolPickerKind(kind)) {
+    if (actionId === 'clear-pool' && (isPoolPickerKind(kind) || kind === 'model')) {
       store.clearPickerPool(node, state)
       return
     }
-    if (actionId === 'remove-pool-item' && context && isPoolPickerKind(kind)) {
+    if (actionId === 'remove-pool-item' && context && (isPoolPickerKind(kind) || kind === 'model')) {
       const removedIndex = Number(context.index) || 0
       const merged = removeImageFromPool(state.pool, context.imageUrl ?? '')
       const count = imagePoolCount(merged)
@@ -67,7 +67,8 @@ export function createStageNodeActions(opts: {
       if (out !== state.output) store.setOutputSlot(state, 0, out)
       return
     }
-    if (actionId === 'pick-item' && context && (isPoolPickerKind(kind) || kind === 'image-batch')) {
+    if (actionId === 'pick-item' && context
+        && (isPoolPickerKind(kind) || kind === 'image-batch' || kind === 'model')) {
       const newIdx = Number(context.index) || 1
       applyPickedIndex(newIdx)
       setWidget(node, 'selected_index', newIdx)

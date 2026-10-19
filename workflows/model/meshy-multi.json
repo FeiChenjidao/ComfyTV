@@ -1,23 +1,51 @@
 {
   "id": "d9f2a3b1-5c6e-4f70-a821-meshy-multi-i2m",
   "revision": 0,
-  "last_node_id": 62,
-  "last_link_id": 45,
+  "last_node_id": 64,
+  "last_link_id": 54,
   "nodes": [
     {
       "id": 1,
       "type": "MeshyMultiImageToModelNode",
-      "pos": [-460, 910],
-      "size": [400, 440],
+      "pos": [
+        -460,
+        910
+      ],
+      "size": [
+        400,
+        440
+      ],
       "flags": {},
       "order": 4,
       "mode": 0,
       "showAdvanced": true,
       "inputs": [
-        { "label": "image0", "name": "images.image0", "type": "IMAGE", "link": 10 },
-        { "label": "image1", "name": "images.image1", "type": "IMAGE", "link": 11 },
-        { "label": "image2", "name": "images.image2", "shape": 7, "type": "IMAGE", "link": 12 },
-        { "label": "image3", "name": "images.image3", "shape": 7, "type": "IMAGE", "link": 13 },
+        {
+          "label": "image0",
+          "name": "images.image0",
+          "type": "IMAGE",
+          "link": 10
+        },
+        {
+          "label": "image1",
+          "name": "images.image1",
+          "type": "IMAGE",
+          "link": 11
+        },
+        {
+          "label": "image2",
+          "name": "images.image2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 12
+        },
+        {
+          "label": "image3",
+          "name": "images.image3",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 13
+        },
         {
           "label": "texture_image",
           "name": "should_texture.texture_image",
@@ -27,10 +55,30 @@
         }
       ],
       "outputs": [
-        { "name": "model_file", "type": "STRING", "links": null },
-        { "name": "meshy_task_id", "type": "MESHY_TASK_ID", "links": null },
-        { "name": "GLB", "type": "FILE_3D_GLB", "links": [42] },
-        { "name": "FBX", "type": "FILE_3D_FBX", "links": [43] }
+        {
+          "name": "model_file",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "name": "meshy_task_id",
+          "type": "MESHY_TASK_ID",
+          "links": null
+        },
+        {
+          "name": "GLB",
+          "type": "FILE_3D_GLB",
+          "links": [
+            42
+          ]
+        },
+        {
+          "name": "FBX",
+          "type": "FILE_3D_FBX",
+          "links": [
+            43
+          ]
+        }
       ],
       "properties": {
         "cnr_id": "comfy-core",
@@ -73,8 +121,14 @@
     {
       "id": 62,
       "type": "File3DFirst",
-      "pos": [-40, 950],
-      "size": [225, 54],
+      "pos": [
+        -40,
+        950
+      ],
+      "size": [
+        225,
+        54
+      ],
       "flags": {},
       "order": 5,
       "mode": 0,
@@ -95,7 +149,14 @@
         }
       ],
       "outputs": [
-        { "localized_name": "model_3d", "name": "model_3d", "type": "FILE_3D", "links": [44] }
+        {
+          "localized_name": "model_3d",
+          "name": "model_3d",
+          "type": "FILE_3D",
+          "links": [
+            44
+          ]
+        }
       ],
       "properties": {
         "cnr_id": "comfy-core",
@@ -106,8 +167,14 @@
     {
       "id": 3,
       "type": "SaveGLB",
-      "pos": [240, 910],
-      "size": [400, 550],
+      "pos": [
+        240,
+        910
+      ],
+      "size": [
+        400,
+        550
+      ],
       "flags": {},
       "order": 6,
       "mode": 0,
@@ -116,20 +183,24 @@
           "localized_name": "网格",
           "name": "mesh",
           "type": "MESH,FILE_3D_GLB,FILE_3D_GLTF,FILE_3D_OBJ,FILE_3D_FBX,FILE_3D_STL,FILE_3D_USDZ,FILE_3D_PLY,FILE_3D_SPLAT,FILE_3D_SPZ,FILE_3D_KSPLAT,FILE_3D_SPLAT_ANY,FILE_3D_POINT_CLOUD_ANY,FILE_3D",
-          "link": 44
+          "link": 54
         },
         {
           "localized_name": "文件名前缀",
           "name": "filename_prefix",
           "type": "STRING",
-          "widget": { "name": "filename_prefix" },
+          "widget": {
+            "name": "filename_prefix"
+          },
           "link": null
         },
         {
           "localized_name": "图像",
           "name": "image",
           "type": "PREVIEW_3D",
-          "widget": { "name": "image" },
+          "widget": {
+            "name": "image"
+          },
           "link": null
         }
       ],
@@ -143,7 +214,10 @@
           "backgroundImage": "",
           "backgroundRenderMode": "tiled"
         },
-        "Camera Config": { "cameraType": "perspective", "fov": 35 },
+        "Camera Config": {
+          "cameraType": "perspective",
+          "fov": 35
+        },
         "Light Config": {
           "intensity": 3,
           "hdri": {
@@ -154,107 +228,557 @@
           }
         }
       },
-      "widgets_values": ["3d/Meshy_Multi", ""],
-      "widgets_values_named": { "filename_prefix": "3d/Meshy_Multi", "image": "" }
+      "widgets_values": [
+        "3d/Meshy_Multi",
+        ""
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "3d/Meshy_Multi",
+        "image": ""
+      }
     },
     {
       "id": 10,
       "type": "LoadImage",
-      "pos": [-900, 700],
-      "size": [282.75, 314],
+      "pos": [
+        -900,
+        700
+      ],
+      "size": [
+        282.75,
+        314
+      ],
       "flags": {},
       "order": 0,
       "mode": 0,
       "inputs": [
-        { "localized_name": "图像", "name": "image", "type": "COMBO", "widget": { "name": "image" }, "link": null },
-        { "localized_name": "选择文件上传", "name": "upload", "type": "IMAGEUPLOAD", "widget": { "name": "upload" }, "link": null }
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "选择文件上传",
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "widget": {
+            "name": "upload"
+          },
+          "link": null
+        }
       ],
       "outputs": [
-        { "localized_name": "图像", "name": "IMAGE", "type": "IMAGE", "links": [10] },
-        { "localized_name": "遮罩", "name": "MASK", "type": "MASK", "links": null }
+        {
+          "localized_name": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            10,
+            50
+          ]
+        },
+        {
+          "localized_name": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
       ],
       "title": "image0",
-      "properties": { "cnr_id": "comfy-core", "ver": "0.36.0", "Node name for S&R": "LoadImage" },
-      "widgets_values": ["example.png", "image"],
-      "widgets_values_named": { "image": "example.png", "upload": "image" }
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.36.0",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ],
+      "widgets_values_named": {
+        "image": "example.png",
+        "upload": "image"
+      }
     },
     {
       "id": 11,
       "type": "LoadImage",
-      "pos": [-900, 1040],
-      "size": [282.75, 314],
+      "pos": [
+        -900,
+        1040
+      ],
+      "size": [
+        282.75,
+        314
+      ],
       "flags": {},
       "order": 1,
       "mode": 0,
       "inputs": [
-        { "localized_name": "图像", "name": "image", "type": "COMBO", "widget": { "name": "image" }, "link": null },
-        { "localized_name": "选择文件上传", "name": "upload", "type": "IMAGEUPLOAD", "widget": { "name": "upload" }, "link": null }
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "选择文件上传",
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "widget": {
+            "name": "upload"
+          },
+          "link": null
+        }
       ],
       "outputs": [
-        { "localized_name": "图像", "name": "IMAGE", "type": "IMAGE", "links": [11] },
-        { "localized_name": "遮罩", "name": "MASK", "type": "MASK", "links": null }
+        {
+          "localized_name": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11
+          ]
+        },
+        {
+          "localized_name": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
       ],
       "title": "image1",
-      "properties": { "cnr_id": "comfy-core", "ver": "0.36.0", "Node name for S&R": "LoadImage" },
-      "widgets_values": ["example.png", "image"],
-      "widgets_values_named": { "image": "example.png", "upload": "image" }
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.36.0",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ],
+      "widgets_values_named": {
+        "image": "example.png",
+        "upload": "image"
+      }
     },
     {
       "id": 12,
       "type": "LoadImage",
-      "pos": [-900, 1380],
-      "size": [282.75, 314],
+      "pos": [
+        -900,
+        1380
+      ],
+      "size": [
+        282.75,
+        314
+      ],
       "flags": {},
       "order": 2,
       "mode": 0,
       "inputs": [
-        { "localized_name": "图像", "name": "image", "type": "COMBO", "widget": { "name": "image" }, "link": null },
-        { "localized_name": "选择文件上传", "name": "upload", "type": "IMAGEUPLOAD", "widget": { "name": "upload" }, "link": null }
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "选择文件上传",
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "widget": {
+            "name": "upload"
+          },
+          "link": null
+        }
       ],
       "outputs": [
-        { "localized_name": "图像", "name": "IMAGE", "type": "IMAGE", "links": [12] },
-        { "localized_name": "遮罩", "name": "MASK", "type": "MASK", "links": null }
+        {
+          "localized_name": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            12
+          ]
+        },
+        {
+          "localized_name": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
       ],
       "title": "image2",
-      "properties": { "cnr_id": "comfy-core", "ver": "0.36.0", "Node name for S&R": "LoadImage" },
-      "widgets_values": ["example.png", "image"],
-      "widgets_values_named": { "image": "example.png", "upload": "image" }
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.36.0",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ],
+      "widgets_values_named": {
+        "image": "example.png",
+        "upload": "image"
+      }
     },
     {
       "id": 13,
       "type": "LoadImage",
-      "pos": [-900, 1720],
-      "size": [282.75, 314],
+      "pos": [
+        -900,
+        1720
+      ],
+      "size": [
+        282.75,
+        314
+      ],
       "flags": {},
       "order": 3,
       "mode": 0,
       "inputs": [
-        { "localized_name": "图像", "name": "image", "type": "COMBO", "widget": { "name": "image" }, "link": null },
-        { "localized_name": "选择文件上传", "name": "upload", "type": "IMAGEUPLOAD", "widget": { "name": "upload" }, "link": null }
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "选择文件上传",
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "widget": {
+            "name": "upload"
+          },
+          "link": null
+        }
       ],
       "outputs": [
-        { "localized_name": "图像", "name": "IMAGE", "type": "IMAGE", "links": [13] },
-        { "localized_name": "遮罩", "name": "MASK", "type": "MASK", "links": null }
+        {
+          "localized_name": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            13
+          ]
+        },
+        {
+          "localized_name": "遮罩",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
       ],
       "title": "image3",
-      "properties": { "cnr_id": "comfy-core", "ver": "0.36.0", "Node name for S&R": "LoadImage" },
-      "widgets_values": ["example.png", "image"],
-      "widgets_values_named": { "image": "example.png", "upload": "image" }
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.36.0",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ],
+      "widgets_values_named": {
+        "image": "example.png",
+        "upload": "image"
+      }
+    },
+    {
+      "id": 2,
+      "type": "MeshyImageToModelNode",
+      "pos": [
+        -460,
+        410
+      ],
+      "size": [
+        400,
+        420
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "showAdvanced": true,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 50
+        },
+        {
+          "label": "texture_image",
+          "name": "should_texture.texture_image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model_file",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "name": "meshy_task_id",
+          "type": "MESHY_TASK_ID",
+          "links": null
+        },
+        {
+          "name": "GLB",
+          "type": "FILE_3D_GLB",
+          "links": [
+            51
+          ]
+        },
+        {
+          "name": "FBX",
+          "type": "FILE_3D_FBX",
+          "links": [
+            52
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.36.0",
+        "Node name for S&R": "MeshyImageToModelNode"
+      },
+      "widgets_values_named": {
+        "model": "meshy-7.1",
+        "should_remesh": "true",
+        "should_remesh.topology": "triangle",
+        "should_remesh.target_polycount": 300000,
+        "symmetry_mode": "auto",
+        "should_texture": "true",
+        "should_texture.enable_pbr": false,
+        "should_texture.texture_prompt": "",
+        "should_texture.texture_resolution": "2k",
+        "pose_mode": "",
+        "seed": 0,
+        "control_after_generate": "randomize",
+        "ultra_mode": false
+      },
+      "color": "#432",
+      "bgcolor": "#653",
+      "title": "Meshy Image (auto)"
+    },
+    {
+      "id": 63,
+      "type": "File3DFirst",
+      "pos": [
+        -100,
+        430
+      ],
+      "size": [
+        225,
+        54
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model_a",
+          "name": "model_a",
+          "shape": 7,
+          "type": "FILE_3D_GLB,FILE_3D_GLTF,FILE_3D_OBJ,FILE_3D_FBX,FILE_3D_STL,FILE_3D_USDZ,FILE_3D_PLY,FILE_3D_SPLAT,FILE_3D_SPZ,FILE_3D_KSPLAT,FILE_3D_SPLAT_ANY,FILE_3D_POINT_CLOUD_ANY,FILE_3D",
+          "link": 51
+        },
+        {
+          "localized_name": "model_b",
+          "name": "model_b",
+          "shape": 7,
+          "type": "FILE_3D_GLB,FILE_3D_GLTF,FILE_3D_OBJ,FILE_3D_FBX,FILE_3D_STL,FILE_3D_USDZ,FILE_3D_PLY,FILE_3D_SPLAT,FILE_3D_SPZ,FILE_3D_KSPLAT,FILE_3D_SPLAT_ANY,FILE_3D_POINT_CLOUD_ANY,FILE_3D",
+          "link": 52
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "model_3d",
+          "name": "model_3d",
+          "type": "FILE_3D",
+          "links": [
+            53
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.36.0",
+        "Node name for S&R": "File3DFirst"
+      }
+    },
+    {
+      "id": 64,
+      "type": "File3DFirst",
+      "pos": [
+        160,
+        950
+      ],
+      "size": [
+        225,
+        54
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model_a",
+          "name": "model_a",
+          "shape": 7,
+          "type": "FILE_3D_GLB,FILE_3D_GLTF,FILE_3D_OBJ,FILE_3D_FBX,FILE_3D_STL,FILE_3D_USDZ,FILE_3D_PLY,FILE_3D_SPLAT,FILE_3D_SPZ,FILE_3D_KSPLAT,FILE_3D_SPLAT_ANY,FILE_3D_POINT_CLOUD_ANY,FILE_3D",
+          "link": 44
+        },
+        {
+          "localized_name": "model_b",
+          "name": "model_b",
+          "shape": 7,
+          "type": "FILE_3D_GLB,FILE_3D_GLTF,FILE_3D_OBJ,FILE_3D_FBX,FILE_3D_STL,FILE_3D_USDZ,FILE_3D_PLY,FILE_3D_SPLAT,FILE_3D_SPZ,FILE_3D_KSPLAT,FILE_3D_SPLAT_ANY,FILE_3D_POINT_CLOUD_ANY,FILE_3D",
+          "link": 53
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "model_3d",
+          "name": "model_3d",
+          "type": "FILE_3D",
+          "links": [
+            54
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.36.0",
+        "Node name for S&R": "File3DFirst"
+      }
     }
   ],
   "links": [
-    [10, 10, 0, 1, 0, "IMAGE"],
-    [11, 11, 0, 1, 1, "IMAGE"],
-    [12, 12, 0, 1, 2, "IMAGE"],
-    [13, 13, 0, 1, 3, "IMAGE"],
-    [42, 1, 2, 62, 0, "FILE_3D_GLB"],
-    [43, 1, 3, 62, 1, "FILE_3D_FBX"],
-    [44, 62, 0, 3, 0, "FILE_3D"]
+    [
+      10,
+      10,
+      0,
+      1,
+      0,
+      "IMAGE"
+    ],
+    [
+      11,
+      11,
+      0,
+      1,
+      1,
+      "IMAGE"
+    ],
+    [
+      12,
+      12,
+      0,
+      1,
+      2,
+      "IMAGE"
+    ],
+    [
+      13,
+      13,
+      0,
+      1,
+      3,
+      "IMAGE"
+    ],
+    [
+      42,
+      1,
+      2,
+      62,
+      0,
+      "FILE_3D_GLB"
+    ],
+    [
+      43,
+      1,
+      3,
+      62,
+      1,
+      "FILE_3D_FBX"
+    ],
+    [
+      50,
+      10,
+      0,
+      2,
+      0,
+      "IMAGE"
+    ],
+    [
+      51,
+      2,
+      2,
+      63,
+      0,
+      "FILE_3D_GLB"
+    ],
+    [
+      52,
+      2,
+      3,
+      63,
+      1,
+      "FILE_3D_FBX"
+    ],
+    [
+      44,
+      62,
+      0,
+      64,
+      0,
+      "FILE_3D"
+    ],
+    [
+      53,
+      63,
+      0,
+      64,
+      1,
+      "FILE_3D"
+    ],
+    [
+      54,
+      64,
+      0,
+      3,
+      0,
+      "FILE_3D"
+    ]
   ],
   "groups": [],
   "config": {},
   "extra": {
-    "ds": { "scale": 0.7, "offset": [1000, -400] },
+    "ds": {
+      "scale": 0.7,
+      "offset": [
+        1000,
+        -400
+      ]
+    },
     "frontendVersion": "1.43.18",
     "workflowRendererVersion": "LG"
   },

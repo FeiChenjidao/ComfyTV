@@ -32,7 +32,7 @@ Under the workflow notes you'll see every editable widget in the workflow, group
 Each widget row has three pieces:
 
 - **`.<widget name>`** — e.g. `.seed`, `.text`, `.filename_prefix`.
-- **Value editor** — the widget's native input control (number box / text box / dropdown / toggle). Editing here means "replace the workflow's factory value with this constant". When the row is bound to a stage input (the dropdown shows anything other than `(use this value)`), the value editor is greyed out — at run time the value comes from upstream instead.
+- **Value editor** — the widget's native input control (number box / text box / dropdown / toggle). Editing here means "replace the workflow's factory value with this constant" when **Bind to** is `(use this value)`. When the row is bound to a stage **option** / **computed** input, the same editor sets the **fallback default** used when the stage control is empty. Upstream image/mask bindings still grey the editor out (value comes from the wire).
 - **Bind to:** — see the next section.
 
 ---

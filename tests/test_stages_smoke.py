@@ -53,7 +53,7 @@ class TestSchemaDefinitions:
         "Model3DStage",
         # Edits
         "UpscaleStage", "InpaintStage", "OutpaintStage", "EraseStage",
-        "ImageEditStage", "ImageVariationsStage", "LayerSeparationStage", "RelightStage",
+        "ImageEditStage", "LayerSeparationStage", "RelightStage",
         "MultiangleStage", "CutoutStage", "CropStage", "RotateStage",
         "MirrorStage", "CompareStage", "GridSplitStage", "CustomSplitStage",
         "ImagesSplitStage", "ImageMergeStage",
@@ -453,15 +453,6 @@ class TestEditStageExecute:
         out = await ImageEditStage.execute(project_id="default", main_prompt="x",
                                            images={"image0": "/view?filename=a.png"})
         assert out.values[0]
-
-    @pytest.mark.asyncio
-    async def test_image_variations(self, reset_db):
-        from ComfyTV.nodes.stages.edits import ImageVariationsStage
-        out = await ImageVariationsStage.execute(
-            project_id="default", image="/view?filename=a.png", variant_count=3,
-        )
-        data = json.loads(out.values[0])
-        assert len(data["images"]) == 3
 
     def test_relight_source(self, reset_db):
         from ComfyTV.nodes.stages.edits import RelightStage

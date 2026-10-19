@@ -55,6 +55,30 @@ interface GeneratorConfig {
 
 const FOOTER_AUTO = ['aspect_ratio', 'resolution', 'batch_size']
 
+let modelModeCss = false
+function ensureModelModeCss() {
+  if (modelModeCss) return
+  modelModeCss = true
+  const style = document.createElement('style')
+  style.textContent = `
+.v2-model-mode {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--v2-chip-border, #34343c);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--v2-text-mid, #a1a1aa);
+  font: 500 11px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.v2-model-mode:hover { background: var(--v2-hover-bg, rgba(255,255,255,.06)); color: var(--v2-text-strong, #f4f4f5); }
+.v2-model-mode[data-replace="1"] { background: rgba(245,158,11,.18); color: #fbbf24; }
+.v2-model-mode[data-replace="1"]:hover { background: rgba(245,158,11,.3); color: #fcd34d; }
+`
+  document.head.appendChild(style)
+}
+
 function el(tag: string, cls: string, html?: string) {
   const e = document.createElement(tag)
   e.className = cls
@@ -94,7 +118,11 @@ function makeGeneratorShell(config: GeneratorConfig) {
     const wfAnchor = el('div', 'v2-panel__selects')
     const serverAnchor = el('div', 'v2-panel__server')
     const run = el('button', 'v2-run', RUN_BUTTON_HTML) as HTMLButtonElement
-    footer.append(wfAnchor, serverAnchor, run)
+    const modeBtn = config.modelOptions
+      ? el('button', 'v2-model-mode') as HTMLButtonElement
+      : null
+    if (modeBtn) footer.append(wfAnchor, serverAnchor, modeBtn, run)
+    else footer.append(wfAnchor, serverAnchor, run)
     panel.append(refsAnchor, promptAnchor, presetAnchor, controlsAnchor, customAnchor, paramsAnchor, footer)
     card.append(preview, panel)
 
@@ -127,6 +155,11 @@ function makeGeneratorShell(config: GeneratorConfig) {
           url: config.preview === 'text' ? null : stageState.output,
           text: config.preview === 'text' ? stageState.output : null,
           hint,
+          ...(config.preview === 'model' ? {
+            poolJson: stageState.pool ?? null,
+            pickedIndex: stageState.pickedIndex ?? 1,
+            onPickIndex: (idx: number) => onAction('pick-item', { index: String(idx) }),
+          } : {}),
         }),
       })
       const specs: Array<[unknown, Record<string, unknown> | null, HTMLElement]> = [
@@ -149,7 +182,7 @@ function makeGeneratorShell(config: GeneratorConfig) {
         }, paramsAnchor])
       }
       if (config.modelOptions) {
-        specs.push([TripoOptionsV2, { getNode: () => node }, controlsAnchor])
+        specs.push([TripoOptionsV2, { getNode: () => node, workflowKind: config.linkKind ?? 'model' }, controlsAnchor])
       }
       if (config.controls?.length) {
         specs.push([StageControlsV2, {
@@ -202,6 +235,35 @@ function makeGeneratorShell(config: GeneratorConfig) {
       if (stageState.running) void onCancelRequest()
       else void onRunRequest()
     })
+
+    if (modeBtn) {
+      const getAppendW = () => anyNode.widgets?.find((w: any) => w.name === 'append_results')
+      const appendOn = () => {
+        const w = getAppendW()
+        return !w || w.value !== false
+      }
+      const syncModeBtn = () => {
+        modeBtn.textContent = appendOn() ? t('stage.pool.modeAppend') : t('stage.pool.modeReplace')
+        modeBtn.title = t('stage.pool.modeHint')
+        modeBtn.dataset.replace = appendOn() ? '' : '1'
+        modeBtn.style.display = getAppendW() ? '' : 'none'
+      }
+      syncModeBtn()
+      modeBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+      modeBtn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const w = getAppendW()
+        if (!w) return
+        w.value = !appendOn()
+        syncModeBtn()
+      })
+      const prevCfg = anyNode.onConfigure
+      anyNode.onConfigure = function (...args: unknown[]) {
+        prevCfg?.apply(this, args)
+        queueMicrotask(syncModeBtn)
+      }
+      ensureModelModeCss()
+    }
 
     bindNodeDrag(node, preview)
     bindShellChrome(node, {

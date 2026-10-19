@@ -38,6 +38,7 @@ import { bindOutputRestore } from '@/composables/stages/stageRestore'
 import { createStageRun } from '@/composables/stages/stageRun'
 import { bindStageWidgets } from '@/composables/stages/stageWidgetSync'
 import { postPickedIndex } from '@/composables/stages/stageApi'
+import { pickModelPoolIndex } from '@/composables/stages/modelPool'
 import { syncMediaTable } from '@/composables/stages/mediaOrderSync'
 import {
   clearBoundOptionEnumsCache,
@@ -66,6 +67,10 @@ export function useStageNode(
   const state = store.registerStage(node, kind, variant)
 
   const applyPickedIndex = (idx: number) => {
+    if (kind === 'model') {
+      pickModelPoolIndex(node, state, store, idx)
+      return
+    }
     state.pickedIndex = idx
     if (kind === 'image-batch') {
       const picked = computePickedFromBatch(toImagePoolJson(state.output), idx)

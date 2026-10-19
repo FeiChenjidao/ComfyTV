@@ -70,6 +70,7 @@ export const LEAF_TO_OPTION_KEY: Record<string, string> = {
   texture_quality: 'texture_quality',
   geometry_quality: 'geometry_quality',
   model_version: 'model_version',
+  model: 'model_version',
   material: 'material',
   Material_Type: 'material',
   mode: 'mode',
@@ -79,6 +80,9 @@ export const LEAF_TO_OPTION_KEY: Record<string, string> = {
   texture_mode: 'texture_mode',
   orientation: 'orientation',
   texture_alignment: 'texture_alignment',
+  tier: 'tier',
+  mesh_mode: 'mesh_mode',
+  mesh_faces: 'mesh_faces',
 }
 
 type ExposedLike = {

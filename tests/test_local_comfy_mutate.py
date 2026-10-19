@@ -26,21 +26,29 @@ class TestApplyPrunes:
         assert pruned == set()
         assert "3" in wf
 
-    def test_prune_drops_nodes_when_upstream_missing(self):
+    def test_prune_drops_nodes_when_upstream_missing(self, comfy_nodes):
+        class _Save:
+            OUTPUT_NODE = True
+        comfy_nodes.NODE_CLASS_MAPPINGS["SaveImage"] = _Save
         wf = {
             "load_ref2": {"class_type": "LoadImage", "inputs": {}},
             "scale_ref2": {"class_type": "ImageScale", "inputs": {}},
             "pos": {"class_type": "Qwen", "inputs": {"image2": ["load_ref2", 0]}},
+            "save": {"class_type": "SaveImage", "inputs": {"images": ["pos", 0]}},
         }
-        cfg = {"prune_when_missing": [{
-            "when": "upstream_image:annotated[1]",
-            "drop_nodes": ["load_ref2", "scale_ref2"],
-            "drop_inputs": [{"node": "pos", "input": "image2"}],
-        }]}
+        cfg = {
+            "result": {"node": "save"},
+            "prune_when_missing": [{
+                "when": "upstream_image:annotated[1]",
+                "drop_nodes": ["load_ref2", "scale_ref2"],
+                "drop_inputs": [{"node": "pos", "input": "image2"}],
+            }],
+        }
         pruned = lc._apply_prunes(wf, cfg, self._ctx())
         assert pruned == {"load_ref2", "scale_ref2"}
         assert "load_ref2" not in wf
         assert "image2" not in wf["pos"]["inputs"]
+        assert set(wf) == {"pos", "save"}
 
     def test_prune_not_triggered_when_upstream_present(self):
         wf = {"load_ref2": {"class_type": "LoadImage", "inputs": {}}}
@@ -155,6 +163,139 @@ class TestApplyPrunes:
         pruned = lc._apply_prunes(wf, cfg, self._ctx())
         assert pruned == {"deadload"}
         assert set(wf) == {"gen"}
+
+    def test_prune_if_present_fires_when_slot_filled(self, comfy_nodes):
+        class _Save:
+            OUTPUT_NODE = True
+        comfy_nodes.NODE_CLASS_MAPPINGS["SaveImage"] = _Save
+        wf = {
+            "load": {"class_type": "LoadImage", "inputs": {}},
+            "save": {"class_type": "SaveImage", "inputs": {"images": ["load", 0]}},
+        }
+        cfg = {
+            "result": {"node": "save"},
+            "prune_when_missing": [{
+                "when": "upstream_image:value[0]",
+                "if": "present",
+                "drop_nodes": ["load"],
+                "drop_inputs": [{"node": "save", "input": "images"}],
+            }],
+        }
+        ctx = self._ctx(upstream={
+            "images": ["/view?filename=a.png"],
+            "videos": [], "audio": [], "texts": [],
+        })
+        pruned = lc._apply_prunes(wf, cfg, ctx)
+        assert pruned == {"load"}
+        assert "images" not in wf["save"]["inputs"]
+
+    def test_prune_if_present_skips_when_slot_empty(self):
+        wf = {"load": {"class_type": "LoadImage", "inputs": {}}}
+        cfg = {"prune_when_missing": [{
+            "when": "upstream_image:value[0]",
+            "if": "present",
+            "drop_nodes": ["load"],
+        }]}
+        pruned = lc._apply_prunes(wf, cfg, self._ctx())
+        assert pruned == set()
+        assert "load" in wf
+
+    def _dual_path_tripo(self):
+        """Minimal API-shaped Tripo dual-path (Image #48 vs Multiview #47 → File3DFirst pick)."""
+        return {
+            "55": {"class_type": "LoadImage", "inputs": {"image": "front.png"}},
+            "56": {"class_type": "LoadImage", "inputs": {"image": "left.png"}},
+            "57": {"class_type": "LoadImage", "inputs": {"image": "back.png"}},
+            "58": {"class_type": "LoadImage", "inputs": {"image": "right.png"}},
+            "47": {"class_type": "TripoMultiviewToModelNode", "inputs": {
+                "image": ["55", 0],
+                "image_left": ["56", 0],
+                "image_back": ["57", 0],
+                "image_right": ["58", 0],
+            }},
+            "48": {"class_type": "TripoImageToModelNodeV2", "inputs": {
+                "image": ["55", 0],
+            }},
+            "62": {"class_type": "File3DFirst", "inputs": {
+                "model_a": ["47", 2], "model_b": ["47", 3],
+            }},
+            "63": {"class_type": "File3DFirst", "inputs": {
+                "model_a": ["48", 1], "model_b": ["48", 2],
+            }},
+            "64": {"class_type": "File3DFirst", "inputs": {
+                "model_a": ["62", 0], "model_b": ["63", 0],
+            }},
+            "43": {"class_type": "SaveGLB", "inputs": {"mesh": ["64", 0]}},
+        }
+
+    def _tripo_count_cfg(self):
+        return {
+            "result": {"node": "43"},
+            "prune_when_missing": [
+                {
+                    "when": "upstream_image:count_lt[2]",
+                    "drop_nodes": ["47", "56", "57", "58", "62"],
+                    "drop_inputs": [{"node": "64", "input": "model_a"}],
+                },
+                {
+                    "when": "upstream_image:count_ge[2]",
+                    "drop_nodes": ["48", "63"],
+                    "drop_inputs": [{"node": "64", "input": "model_b"}],
+                },
+                {
+                    "when": "upstream_image:value[1]",
+                    "drop_upstream_of": [{"node": "47", "input": "image_left"}],
+                },
+                {
+                    "when": "upstream_image:value[2]",
+                    "drop_upstream_of": [{"node": "47", "input": "image_back"}],
+                },
+                {
+                    "when": "upstream_image:value[3]",
+                    "drop_upstream_of": [{"node": "47", "input": "image_right"}],
+                },
+            ],
+        }
+
+    def test_count_lt_keeps_single_image_path(self, comfy_nodes):
+        class _Save:
+            OUTPUT_NODE = True
+        comfy_nodes.NODE_CLASS_MAPPINGS["SaveGLB"] = _Save
+        wf = self._dual_path_tripo()
+        ctx = self._ctx(upstream={
+            "images": ["/view?filename=front.png"],
+            "videos": [], "audio": [], "texts": [],
+        })
+        pruned = lc._apply_prunes(wf, self._tripo_count_cfg(), ctx)
+        assert "47" in pruned and "62" in pruned and "48" not in pruned
+        assert set(wf) >= {"48", "55", "63", "64", "43"}
+        assert "47" not in wf and "56" not in wf
+        assert "model_a" not in wf["64"]["inputs"]
+        assert wf["64"]["inputs"]["model_b"] == ["63", 0]
+
+    def test_count_ge_keeps_multiview_path(self, comfy_nodes):
+        class _Save:
+            OUTPUT_NODE = True
+        comfy_nodes.NODE_CLASS_MAPPINGS["SaveGLB"] = _Save
+        wf = self._dual_path_tripo()
+        ctx = self._ctx(upstream={
+            "images": [
+                "/view?filename=front.png",
+                "/view?filename=left.png",
+            ],
+            "videos": [], "audio": [], "texts": [],
+        })
+        pruned = lc._apply_prunes(wf, self._tripo_count_cfg(), ctx)
+        assert "48" in pruned and "63" in pruned and "47" not in pruned
+        assert set(wf) >= {"47", "55", "56", "62", "64", "43"}
+        assert "48" not in wf and "63" not in wf
+        assert "model_b" not in wf["64"]["inputs"]
+        assert wf["64"]["inputs"]["model_a"] == ["62", 0]
+        # only 2 images → back/right loaders pruned via value[2]/value[3]
+        assert "57" not in wf and "58" not in wf
+        assert "image_back" not in wf["47"]["inputs"]
+        assert "image_right" not in wf["47"]["inputs"]
+        assert wf["47"]["inputs"]["image_left"] == ["56", 0]
 
 
 # ─── _auto_prune_unbound ─────────────────────────────────────────────────────

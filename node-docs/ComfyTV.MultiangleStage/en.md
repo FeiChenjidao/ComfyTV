@@ -10,7 +10,6 @@
 
 - Need side/back product or character views
 - Preview another storyboard angle
-- Before **Image Variations** batch multiview
 
 ## How it works
 
@@ -89,4 +88,3 @@ A: No—the widget builds `<sks>` tags.
 
 ## Related nodes
 
-- **Image Variations**, **Rotate**, **Relight**, **Upscale**

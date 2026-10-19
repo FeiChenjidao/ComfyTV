@@ -2,6 +2,7 @@ import { cancelRemoteJob, remoteRun } from '@/api'
 import { isAutoPickerEnabled } from '@/composables/stages/autoPicker'
 import { outputHasLinks, spawnConsumingNode } from '@/composables/stages/spawnFollowUp'
 import { ensureStageUid } from '@/composables/stages/stageIdentity'
+import { mergeModelOutputIntoPool } from '@/composables/stages/modelPool'
 import { buildRunPrompt } from '@/composables/stages/stagePromptBuild'
 import { useRemotePreflight } from '@/composables/stages/useRemotePreflight'
 import { cancelPrompt, promptInQueue } from '@/composables/stages/queueControl'
@@ -265,6 +266,9 @@ export function createStageRun(opts: {
     runningJobId = null
     if (d.status === 'done') {
       store.applyExecutedPayload(state, d.ui || {})
+      if (kind === 'model' && state.variant === 'generator') {
+        mergeModelOutputIntoPool(node, state, store, state.output)
+      }
     } else if (d.status === 'cancelled') {
       store.applyExecutionError(state, {
         message: t('error.cancelled'),

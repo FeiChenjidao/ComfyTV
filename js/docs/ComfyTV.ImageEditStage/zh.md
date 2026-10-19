@@ -104,5 +104,4 @@ A：收窄指令；降低 denoise；换随机种子。
 
 - **Inpaint / Erase / Outpaint**
 - **Relight** — 专注重打光
-- **Image Variations** — 批量变体
 - **Upscale**

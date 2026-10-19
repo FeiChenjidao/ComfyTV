@@ -3,6 +3,7 @@
 import json
 import logging
 import struct
+import zipfile
 from base64 import b64decode
 from io import BytesIO
 
@@ -129,6 +130,18 @@ def _parse_gltf(data: bytes):
     parts = []   # (vertices, faces, uvs, colors, normals)
     texture = None
     texture_index = None
+    mr_pil = None
+    nm_pil = None
+    em_pil = None
+
+    def _tex_source(mat_tex):
+        if not mat_tex:
+            return None
+        try:
+            return gltf["textures"][mat_tex["index"]].get("source")
+        except (KeyError, IndexError, TypeError):
+            return None
+
     for mesh_idx, world in instances:
         normal_mat = np.linalg.inv(world[:3, :3]).T
         for prim in gltf["meshes"][mesh_idx].get("primitives", []):
@@ -159,7 +172,7 @@ def _parse_gltf(data: bytes):
             if "baseColorFactor" in pbr:
                 base_color = np.array(pbr["baseColorFactor"][:3])
             if "baseColorTexture" in pbr:
-                prim_tex_index = gltf["textures"][pbr["baseColorTexture"]["index"]].get("source")
+                prim_tex_index = _tex_source(pbr["baseColorTexture"])
 
             colors = None
             if "COLOR_0" in prim["attributes"]:
@@ -173,6 +186,18 @@ def _parse_gltf(data: bytes):
                 if texture_index is None:
                     texture_index = prim_tex_index
                     texture = _gltf_image_pil(gltf, buffers, prim_tex_index)
+                    if mr_pil is None:
+                        src = _tex_source(pbr.get("metallicRoughnessTexture"))
+                        if src is not None:
+                            mr_pil = _gltf_image_pil(gltf, buffers, src)
+                    if nm_pil is None:
+                        src = _tex_source(material.get("normalTexture"))
+                        if src is not None:
+                            nm_pil = _gltf_image_pil(gltf, buffers, src)
+                    if em_pil is None:
+                        src = _tex_source(material.get("emissiveTexture"))
+                        if src is not None:
+                            em_pil = _gltf_image_pil(gltf, buffers, src)
                 elif prim_tex_index != texture_index:
                     logging.warning("load_mesh: multiple textures found; keeping the first")
                     uv = None
@@ -202,7 +227,7 @@ def _parse_gltf(data: bytes):
             np.concatenate(uvs) if any_uv else None,
             np.concatenate(colors) if any_color else None,
             np.concatenate(normals) if all_normals else None,
-            texture)
+            texture, mr_pil, nm_pil, em_pil)
 
 
 def _parse_obj(data: bytes):
@@ -256,7 +281,7 @@ def _parse_obj(data: bytes):
     return (np.array(out_v, dtype=np.float32), np.array(faces, dtype=np.int64),
             np.array(out_uv, dtype=np.float32) if has_uv else None,
             np.array(out_c, dtype=np.float32) if has_color else None,
-            None, None)
+            None, None, None, None, None)
 
 
 def _parse_stl(data: bytes):
@@ -280,7 +305,13 @@ def _parse_stl(data: bytes):
     if v.shape[0] < 3:
         raise ValueError("load_mesh: STL contains no triangles")
     faces = np.arange(v.shape[0], dtype=np.int64).reshape(-1, 3)
-    return v, faces, None, None, None, None
+    return v, faces, None, None, None, None, None, None, None
+
+
+def _pil_to_texture_tensor(pil):
+    if pil is None:
+        return None
+    return torch.from_numpy(np.asarray(pil.convert("RGB"), dtype=np.float32) / 255.0)[None]
 
 
 def load_mesh_bytes(data: bytes, fmt: str = ""):
@@ -289,26 +320,26 @@ def load_mesh_bytes(data: bytes, fmt: str = ""):
     if fmt == "fbx":
         raise ValueError("load_mesh: FBX is not supported; re-export the model as GLB")
     if fmt in ("glb", "gltf") or data[:4] == b'glTF':
-        v, f, uv, colors, normals, texture_pil = _parse_gltf(data)
+        v, f, uv, colors, normals, texture_pil, mr_pil, nm_pil, em_pil = _parse_gltf(data)
     elif fmt == "obj":
-        v, f, uv, colors, normals, texture_pil = _parse_obj(data)
+        v, f, uv, colors, normals, texture_pil, mr_pil, nm_pil, em_pil = _parse_obj(data)
     elif fmt == "stl":
-        v, f, uv, colors, normals, texture_pil = _parse_stl(data)
+        v, f, uv, colors, normals, texture_pil, mr_pil, nm_pil, em_pil = _parse_stl(data)
     elif data.lstrip()[:1] == b'{':
-        v, f, uv, colors, normals, texture_pil = _parse_gltf(data)
+        v, f, uv, colors, normals, texture_pil, mr_pil, nm_pil, em_pil = _parse_gltf(data)
     else:
         raise ValueError(f"load_mesh: unsupported format '{fmt or 'unknown'}' (need glb/gltf/obj/stl)")
 
-    texture = None
-    if texture_pil is not None:
-        texture = torch.from_numpy(np.asarray(texture_pil, dtype=np.float32) / 255.0)[None]
     return pack_variable_mesh_batch(
         [torch.from_numpy(np.ascontiguousarray(v))],
         [torch.from_numpy(np.ascontiguousarray(f))],
         colors=[torch.from_numpy(np.ascontiguousarray(colors))] if colors is not None else None,
         uvs=[torch.from_numpy(np.ascontiguousarray(uv))] if uv is not None else None,
         normals=[torch.from_numpy(np.ascontiguousarray(normals))] if normals is not None else None,
-        texture=texture,
+        texture=_pil_to_texture_tensor(texture_pil),
+        metallic_roughness=_pil_to_texture_tensor(mr_pil),
+        normal_map=_pil_to_texture_tensor(nm_pil),
+        emissive=_pil_to_texture_tensor(em_pil),
     )
 
 
@@ -702,8 +733,28 @@ def save_glb(vertices, faces, filepath=None, metadata=None,
     return filepath
 
 
-def export_obj_bytes(mesh, index: int = 0) -> bytes:
-    """Serialize one MESH batch item to Wavefront OBJ (with the Blender "v x y z r g b" vertex-color extension)."""
+def _mesh_map_pil(mesh, attr: str, index: int = 0):
+    t = getattr(mesh, attr, None)
+    if t is None:
+        return None
+    a = (t[index].clamp(0.0, 1.0).cpu().numpy() * 255).astype(np.uint8)
+    if a.ndim != 3 or a.shape[-1] != 3:
+        return None
+    return Image.fromarray(a, mode="RGB")
+
+
+def _png_bytes(pil: Image.Image) -> bytes:
+    buf = BytesIO()
+    pil.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def export_obj_bytes(mesh, index: int = 0, *, mtllib: str | None = None,
+                     material: str | None = None) -> bytes:
+    """Serialize one MESH batch item to Wavefront OBJ (with the Blender "v x y z r g b" vertex-color extension).
+
+    When ``mtllib`` / ``material`` are set, writes ``mtllib`` / ``usemtl`` lines for an accompanying MTL.
+    """
     v, f, colors, uvs, normals = get_mesh_batch_item(mesh, index)
     if v.shape[0] == 0 or f.shape[0] == 0:
         raise ValueError("export_obj: mesh item is empty")
@@ -714,6 +765,8 @@ def export_obj_bytes(mesh, index: int = 0) -> bytes:
     n_np = normals.cpu().numpy().astype(np.float32) if normals is not None else None
 
     out = ["# ComfyTV OBJ export"]
+    if mtllib:
+        out.append(f"mtllib {mtllib}")
     if c_np is not None:
         out.extend(f"v {p[0]:.6f} {p[1]:.6f} {p[2]:.6f} {c[0]:.4f} {c[1]:.4f} {c[2]:.4f}"
                    for p, c in zip(v_np, c_np))
@@ -723,6 +776,9 @@ def export_obj_bytes(mesh, index: int = 0) -> bytes:
         out.extend(f"vt {t[0]:.6f} {1.0 - t[1]:.6f}" for t in uv_np)
     if n_np is not None:
         out.extend(f"vn {n[0]:.4f} {n[1]:.4f} {n[2]:.4f}" for n in n_np)
+
+    if material:
+        out.append(f"usemtl {material}")
 
     if uv_np is not None and n_np is not None:
         fmt = "f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}"
@@ -734,6 +790,65 @@ def export_obj_bytes(mesh, index: int = 0) -> bytes:
         fmt = "f {0} {1} {2}"
     out.extend(fmt.format(a + 1, b + 1, c + 1) for a, b, c in f_np)
     return ("\n".join(out) + "\n").encode("utf-8")
+
+
+def export_obj_bundle(mesh, index: int = 0, stem: str = "model") -> dict[str, bytes]:
+    """Build OBJ + MTL + texture PNGs for one MESH item. Keys are archive-relative filenames."""
+    stem = (stem or "model").strip() or "model"
+    mat_name = "Material"
+    mtl_name = f"{stem}.mtl"
+    maps = {
+        "texture.png": _mesh_map_pil(mesh, "texture", index),
+        "metallic_roughness.png": _mesh_map_pil(mesh, "metallic_roughness", index),
+        "normal.png": _mesh_map_pil(mesh, "normal_map", index),
+        "emissive.png": _mesh_map_pil(mesh, "emissive", index),
+    }
+    has_maps = any(v is not None for v in maps.values())
+    files: dict[str, bytes] = {
+        f"{stem}.obj": export_obj_bytes(
+            mesh, index,
+            mtllib=mtl_name if has_maps else None,
+            material=mat_name if has_maps else None,
+        ),
+    }
+    if not has_maps:
+        return files
+
+    mtl = [
+        "# ComfyTV MTL export",
+        f"newmtl {mat_name}",
+        "Ka 1.000 1.000 1.000",
+        "Kd 1.000 1.000 1.000",
+        "Ks 0.000 0.000 0.000",
+        "d 1.0",
+        "illum 2",
+    ]
+    if maps["texture.png"] is not None:
+        mtl.append("map_Kd texture.png")
+    if maps["metallic_roughness.png"] is not None:
+        # Non-standard but widely recognized PBR hooks; file is still in the zip either way.
+        mtl.append("map_Pm metallic_roughness.png")
+        mtl.append("map_Pr metallic_roughness.png")
+    if maps["normal.png"] is not None:
+        mtl.append("map_Bump -bm 1.0 normal.png")
+        mtl.append("norm normal.png")
+    if maps["emissive.png"] is not None:
+        mtl.append("map_Ke emissive.png")
+    files[mtl_name] = ("\n".join(mtl) + "\n").encode("utf-8")
+    for name, pil in maps.items():
+        if pil is not None:
+            files[name] = _png_bytes(pil)
+    return files
+
+
+def export_obj_zip_bytes(mesh, index: int = 0, stem: str = "model") -> bytes:
+    """Zip OBJ (+ MTL + texture PNGs when present) for one MESH item."""
+    files = export_obj_bundle(mesh, index=index, stem=stem)
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, data in files.items():
+            zf.writestr(name, data)
+    return buf.getvalue()
 
 
 def export_stl_bytes(mesh, index: int = 0) -> bytes:

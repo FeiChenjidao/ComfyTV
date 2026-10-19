@@ -147,20 +147,6 @@ def _fake_image_batch_from_storyboard(storyboard: Any, *seed_parts: Any) -> str:
 _PANORAMA_VIEW_LABELS_4 = ["Front", "Right", "Back", "Left"]
 
 
-def _fake_image_variations(source: Any, count: int, *seed_parts: Any) -> str:
-    n = max(1, int(count or 1))
-    s = _seed(*seed_parts)
-    images = [
-        {
-            "index": str(i + 1),
-            "label": f"#{i + 1}",
-            "image_url": f"https://picsum.photos/seed/{s}-var-{i}/320/180",
-        }
-        for i in range(n)
-    ]
-    return json.dumps({"images": images})
-
-
 def _fake_panorama_views(panorama: Any, view_count: int, *seed_parts: Any) -> str:
     count = max(1, int(view_count or 1))
     s = _seed(*seed_parts)

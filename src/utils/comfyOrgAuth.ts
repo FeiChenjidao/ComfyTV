@@ -1,9 +1,11 @@
 /**
  * Copy the host ComfyUI session onto `api.authToken` / `api.apiKey`.
  *
- * `app.queuePrompt` does this before calling `api.queuePrompt`. ComfyTV queues
- * through `api.queuePrompt` directly, so without this the POST has empty
- * extra_data and API nodes 401 → ComfyUI's own login dialog.
+ * `app.queuePrompt` already sets these from `getWorkspaceAuthToken()` /
+ * `getApiKey()` before calling `api.queuePrompt`. ComfyTV also queues through
+ * `api.queuePrompt` directly (stage runs), so those paths need this fill-in —
+ * but must not overwrite credentials the host already placed, or API nodes
+ * 401 and ComfyUI pops its own login dialog.
  */
 
 function findHostPinia(): any {
@@ -34,6 +36,11 @@ function hostStores(): any[] {
 
 async function tokenFromStore(store: any): Promise<string | undefined> {
   if (!store) return undefined
+  // Same source as app.queuePrompt — prefer workspace token over raw Firebase.
+  try {
+    const t = await store.getWorkspaceAuthToken?.()
+    if (typeof t === 'string' && t) return t
+  } catch { /* store may not expose workspace helper */ }
   try {
     const t = await store.getAuthToken?.()
     if (typeof t === 'string' && t) return t
@@ -71,7 +78,10 @@ async function resolveAuthToken(api: any): Promise<string | undefined> {
     if (t) return t
   }
   for (const store of hostStores()) {
-    if (typeof store?.getAuthToken !== 'function') continue
+    if (
+      typeof store?.getWorkspaceAuthToken !== 'function'
+      && typeof store?.getAuthToken !== 'function'
+    ) continue
     const t = await tokenFromStore(store)
     if (t) return t
   }
@@ -93,12 +103,24 @@ function resolveApiKey(_api: any): string | undefined {
 
 export async function attachComfyOrgAuth(api: any): Promise<void> {
   if (!api || typeof api !== 'object') return
+
+  // Host already attached credentials (normal Run button). Do not replace them
+  // with a different store's token — that was wiping workspace auth and 401'ing
+  // paid API nodes whenever ComfyTV's queuePrompt patch ran.
+  const hadToken = typeof api.authToken === 'string' && !!api.authToken
+  const hadKey = typeof api.apiKey === 'string' && !!api.apiKey
+  if (hadToken && hadKey) return
+
   try {
     await api.waitForAuthInitialization?.()
   } catch { /* desktop / unauthenticated */ }
 
-  const token = await resolveAuthToken(api)
-  const key = resolveApiKey(api)
-  if (token) api.authToken = token
-  if (key) api.apiKey = key
+  if (!hadToken) {
+    const token = await resolveAuthToken(api)
+    if (token) api.authToken = token
+  }
+  if (!hadKey) {
+    const key = resolveApiKey(api)
+    if (key) api.apiKey = key
+  }
 }

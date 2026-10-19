@@ -42,4 +42,36 @@ describe('attachComfyOrgAuth', () => {
     await attachComfyOrgAuth(api)
     expect(api.authToken).toBe('keep-me')
   })
+
+  it('does not overwrite host-attached workspace credentials', async () => {
+    const pinia = {
+      _s: new Map([
+        ['auth', {
+          getWorkspaceAuthToken: vi.fn().mockResolvedValue('wrong-workspace'),
+          getAuthToken: vi.fn().mockResolvedValue('wrong-firebase'),
+        }],
+        ['apiKeyAuth', { getApiKey: vi.fn().mockReturnValue('wrong-key') }],
+      ]),
+    }
+    ;(window as any).__comfytv_host_pinia = pinia
+    const api: any = { authToken: 'workspace-jwt', apiKey: 'host-key' }
+    await attachComfyOrgAuth(api)
+    expect(api.authToken).toBe('workspace-jwt')
+    expect(api.apiKey).toBe('host-key')
+  })
+
+  it('prefers getWorkspaceAuthToken over getAuthToken when filling', async () => {
+    const pinia = {
+      _s: new Map([
+        ['auth', {
+          getWorkspaceAuthToken: vi.fn().mockResolvedValue('workspace-jwt'),
+          getAuthToken: vi.fn().mockResolvedValue('firebase-jwt'),
+        }],
+      ]),
+    }
+    ;(window as any).__comfytv_host_pinia = pinia
+    const api: any = {}
+    await attachComfyOrgAuth(api)
+    expect(api.authToken).toBe('workspace-jwt')
+  })
 })

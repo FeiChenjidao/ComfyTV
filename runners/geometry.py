@@ -236,6 +236,27 @@ def export_model(view_url: str, fmt: str = 'glb'):
     return path_to_view_url(out), ops.mesh_stats(mesh)
 
 
+def export_model_obj_zip(view_url: str, stem: str | None = None) -> tuple[bytes, str]:
+    """Convert a model URL to OBJ (+ MTL + textures) and return (zip_bytes, filename)."""
+    from urllib.parse import parse_qs, urlparse
+
+    from ..mesh3d.io3d import export_obj_zip_bytes
+
+    mesh = load_model_mesh(view_url)
+    name = (stem or "").strip()
+    if not name:
+        try:
+            q = parse_qs(urlparse(view_url).query)
+            raw = (q.get("filename") or [""])[0]
+            name = raw.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        except Exception:
+            name = ""
+    name = name or "model"
+    # Keep zip entry names filesystem-safe.
+    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in name).strip("_") or "model"
+    return export_obj_zip_bytes(mesh, 0, stem=safe), f"{safe}_obj.zip"
+
+
 def lineart_model(view_url: str, camera: dict = None, width: int = 1024, height: int = 1024,
                   thickness: float = 2.0, silhouette: bool = True, crease: bool = True,
                   boundary: bool = True, crease_angle: float = 60.0,

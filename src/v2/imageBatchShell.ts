@@ -312,8 +312,3 @@ function makeImageBatchShell(shellCfg: ImageBatchShellConfig = {}) {
 
 V2_SHELLS['ComfyTV.ImageStage'] = makeImageBatchShell({ gptImageOptions: true })
 V2_SHELLS['ComfyTV.ShotImagesStage'] = makeImageBatchShell({ title: null, linkKind: 'shot-images' })
-V2_SHELLS['ComfyTV.ImageVariationsStage'] = makeImageBatchShell({
-  title: null,
-  linkKind: 'multiview',
-  footerExtra: [{ name: 'variant_count', type: 'number', titleKey: 'v2.ctl.variantCount' }],
-})

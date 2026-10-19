@@ -11,7 +11,7 @@
 - 产品/角色图缺侧面、背面镜头
 - 分镜预览另一机位
 - Image Picker 多角度入口
-- 单张试角度后，用 **Image Variations** 批量出多机位
+- 单张试角度后，用
 
 ## 工作原理
 
@@ -68,7 +68,7 @@
 
 ## 新手一步一步
 
-1. 下载 Qwen 2511 + Multiangle LoRA（同 multiview 套）。
+1. 下载 Qwen 2511 + Multiangle LoRA（见 workflows/multiangle README）。
 2. 添加 **Multiangle**，接入正面或 3/4 源图。
 3. 在 **3D 相机** 拖到目标机位（或调三个滑块）。
 4. 可选填 main_prompt 描述主体。
@@ -110,7 +110,6 @@ A：不能——控件会自动生成 `<sks>` 标签。
 
 ## 相关节点
 
-- **Image Variations** — 多机位/分镜批量
 - **Rotate** — 几何旋转（即时）
 - **Relight** — 同 Qwen 家族不同 LoRA
 - **Upscale**

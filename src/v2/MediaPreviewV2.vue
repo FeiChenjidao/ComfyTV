@@ -24,9 +24,82 @@
       <div v-if="text" class="v2-mp__text" @pointerdown.stop @wheel.stop>{{ text }}</div>
     </template>
     <template v-else-if="kind === 'model'">
-      <div v-if="url" class="v2-mp__model" @pointerdown.stop @wheel.stop>
-        <ModelPreview ref="modelPreviewEl" :src="url" controls @view-changed="onModelViewChanged" />
+      <div v-if="url || poolCount > 0" class="v2-mp__model ctv-hover-host" @pointerdown.stop @wheel.stop>
+        <ModelPreview v-if="url" ref="modelPreviewEl" :src="url" controls @view-changed="onModelViewChanged" />
+        <div
+          v-if="url"
+          :class="modelActionsClass"
+          :data-busy="exporting ? '1' : undefined"
+          @pointerdown.stop
+        >
+          <button
+            type="button"
+            :class="modelExportBtnClass"
+            :disabled="exporting"
+            :title="exporting ? t('stage.action.exportObjZipBusy') : t('stage.action.exportObjZip')"
+            @click.stop="onDownloadModel"
+          >
+            <i :class="exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download'" />
+          </button>
+          <button
+            type="button"
+            :class="modelTagBtnClass"
+            :disabled="exporting"
+            :title="t('stage.action.addTag')"
+            @click.stop="onTagModel($event)"
+          >
+            <i class="pi pi-tag" />
+          </button>
+        </div>
+        <div v-if="poolCount > 1" class="v2-mp__hist" @pointerdown.stop>
+          <button
+            v-for="(_, i) in poolItems"
+            :key="i"
+            type="button"
+            class="v2-mp__histchip"
+            :data-current="i + 1 === safePicked ? '1' : undefined"
+            :title="t('v2.batchPos', { i: i + 1, n: poolCount })"
+            @click.stop="emitPick(i + 1)"
+          >{{ i + 1 }}</button>
+          <span class="v2-mp__histn">{{ safePicked }}/{{ poolCount }}</span>
+        </div>
       </div>
+      <Teleport to="body">
+        <div
+          v-if="tagMenu"
+          class="ctv:fixed ctv:inset-0 ctv:z-[9999]"
+          @click="closeTagMenu"
+          @wheel.prevent.stop
+        >
+          <div
+            class="ctv:absolute ctv:w-44 ctv:max-h-64 ctv:overflow-y-auto ctv:p-1 ctv:rounded ctv:shadow-md ctv:text-xs
+                   ctv:bg-interface-menu-surface ctv:border ctv:border-border-default"
+            :style="tagMenuStyle"
+            @click.stop
+          >
+            <button type="button" :class="menuItemClass" @click.stop="setUncategorized">
+              <span class="ctv:w-3 ctv:inline-block ctv:text-primary-background"><i v-if="tagMenuIsUncategorized()" class="pi pi-check" /></span>
+              <span class="ctv:flex-1 ctv:truncate ctv:italic ctv:text-muted-foreground">{{ t('assets.category.none') }}</span>
+            </button>
+            <div class="ctv:my-1 ctv:border-t ctv:border-border-subtle"></div>
+            <button
+              v-for="cat in categories"
+              :key="cat.id"
+              type="button"
+              :class="menuItemClass"
+              @click.stop="toggleOutputTag(cat.id)"
+            >
+              <span class="ctv:w-3 ctv:inline-block ctv:text-primary-background"><i v-if="tagMenuHas(cat.id)" class="pi pi-check" /></span>
+              <span class="ctv:flex-1 ctv:truncate">{{ cat.name }}</span>
+            </button>
+            <div v-if="categories.length" class="ctv:my-1 ctv:border-t ctv:border-border-subtle"></div>
+            <button type="button" :class="[menuItemClass, 'ctv:text-primary-background']" @click.stop="onCreateCategory">
+              <span class="ctv:w-3 ctv:inline-block"><i class="pi pi-plus" /></span>
+              <span class="ctv:flex-1 ctv:truncate">{{ t('assets.tagPopover.create') }}</span>
+            </button>
+          </div>
+        </div>
+      </Teleport>
     </template>
     <template v-else>
       <ThumbImg v-if="resolvedUrl" class="v2-mp__img" :src="resolvedUrl" :thumb-max="THUMB_PREVIEW" draggable="false" />
@@ -46,13 +119,20 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import ModelPreview from '@/components/stages/ModelPreview.vue'
 import ProxiedVideo from '@/components/widgets/ProxiedVideo.vue'
 import ThumbImg from '@/components/widgets/ThumbImg.vue'
+import { askText } from '@/composables/dialog/useTextInputDialog'
 import { useModelViewCapture } from '@/composables/stages/useModelViewCapture'
+import { useOutputAssetTagging } from '@/composables/stages/useOutputAssetTagging'
 import { app } from '@/lib/comfyApp'
+import { downloadModelObjZip } from '@/utils/download'
 import { THUMB_CELL, THUMB_PREVIEW, thumbUrl } from '@/utils/thumbUrl'
+import { mediaItems, pickedMediaIndex } from '@/v2/mediaItems'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   kind: 'image' | 'video' | 'audio' | 'text' | 'model'
@@ -60,12 +140,52 @@ const props = defineProps<{
   text?: string | null
   hint: string
   onCaptureView?: (url: string) => void
+  /** Model history pool JSON `{ images: [{ index, image_url }] }` from the stage widget. */
+  poolJson?: string | null
+  pickedIndex?: number
+  onPickIndex?: (idx: number) => void
 }>()
 
 const MODEL_CAPTURE_SIZE = 1024
 const MODEL_CAPTURE_DELAY_MS = 250
 
 const modelPreviewEl = ref<InstanceType<typeof ModelPreview> | null>(null)
+
+const {
+  tagMenu,
+  categories,
+  tagMenuStyle,
+  nameFromUrl,
+  isSaved,
+  openTagMenu,
+  closeTagMenu,
+  tagMenuHas,
+  tagMenuIsUncategorized,
+  setUncategorized,
+  toggleOutputTag,
+  createCategoryAndTag,
+} = useOutputAssetTagging()
+
+const modelSaved = computed(() => (props.url ? isSaved(props.url) : false))
+const exporting = ref(false)
+
+const MODEL_BTN_BASE =
+  'ctv:relative ctv:inline-flex ctv:items-center ctv:justify-center ctv:cursor-pointer ctv:appearance-none'
+  + ' ctv:border-none ctv:transition-colors ctv:size-5 ctv:p-0 ctv:rounded-sm ctv:text-sm'
+  + ' ctv:disabled:opacity-60 ctv:disabled:cursor-wait'
+const modelActionsClass =
+  'ctv-hover-reveal ctv:absolute ctv:top-1 ctv:right-1 ctv:z-10 ctv:flex ctv:gap-1'
+const modelExportBtnClass = MODEL_BTN_BASE + ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'
+const modelTagBtnClass = computed(() => MODEL_BTN_BASE
+  + (modelSaved.value
+    ? ' ctv:bg-primary-background ctv:text-white ctv:hover:bg-primary-background/90'
+    : ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'))
+
+function toast(severity: 'info' | 'success' | 'warn' | 'error', summary: string, detail = '') {
+  ;(app as any)?.extensionManager?.toast?.add?.({
+    severity, summary, detail, life: severity === 'info' ? 12000 : 4000,
+  })
+}
 
 const { scheduleCapture } = useModelViewCapture({
   getCanvas: () => modelPreviewEl.value?.captureCanvas(MODEL_CAPTURE_SIZE, MODEL_CAPTURE_SIZE),
@@ -78,6 +198,41 @@ const { scheduleCapture } = useModelViewCapture({
 function onModelViewChanged() {
   if (props.onCaptureView) scheduleCapture()
 }
+
+async function onDownloadModel() {
+  const url = props.url
+  if (!url || exporting.value) return
+  exporting.value = true
+  toast('info', t('stage.action.exportObjZipBusy'))
+  try {
+    await downloadModelObjZip(url)
+    toast('success', t('stage.action.exportObjZipDone'))
+  } catch (e: any) {
+    console.error('[ComfyTV/model-preview] OBJ zip export failed', e)
+    toast('error', t('stage.action.exportObjZipFailed'), String(e?.message || e))
+  } finally {
+    exporting.value = false
+  }
+}
+
+function onTagModel(e: MouseEvent) {
+  const url = props.url
+  if (!url) return
+  openTagMenu(url, nameFromUrl(url), e, 'model')
+}
+
+async function onCreateCategory() {
+  const name = (await askText({
+    title: t('assets.category.new'),
+    label: t('assets.category.newPrompt'),
+  }))?.trim()
+  if (!name) return
+  await createCategoryAndTag(name)
+}
+
+const menuItemClass = 'ctv:flex ctv:items-center ctv:gap-1.5 ctv:w-full ctv:px-1.5 ctv:py-1 ctv:rounded-sm ctv:cursor-pointer '
+  + 'ctv:text-left ctv:text-2xs ctv:bg-transparent ctv:border-none ctv:text-base-foreground '
+  + 'ctv:hover:bg-secondary-background-hover'
 
 const batchImages = computed<string[]>(() => {
   if (props.kind !== 'image') return []
@@ -107,9 +262,20 @@ const posterUrl = computed(() => {
   return t === raw ? undefined : t
 })
 
+const poolItems = computed(() =>
+  props.kind === 'model'
+    ? mediaItems({ output: null, pool: props.poolJson ?? null }, 'pool')
+    : [])
+const poolCount = computed(() => poolItems.value.length)
+const safePicked = computed(() => pickedMediaIndex({ pickedIndex: props.pickedIndex }, poolCount.value))
+
+function emitPick(idx: number) {
+  props.onPickIndex?.(idx)
+}
+
 const hasContent = computed(() =>
   props.kind === 'text' ? !!String(props.text ?? '').trim()
-  : props.kind === 'model' ? !!props.url
+  : props.kind === 'model' ? !!(props.url || poolCount.value)
   : !!resolvedUrl.value)
 </script>
 
@@ -173,10 +339,15 @@ const hasContent = computed(() =>
   cursor: grab;
 }
 .v2-mp__model:active { cursor: grabbing; }
-.v2-mp__model :deep(> *) {
+.v2-mp__model :deep(> *:not(.ctv-hover-reveal)) {
   flex: 1;
   min-height: 0;
   width: 100%;
+}
+/* Keep export/tag visible while OBJ zip is running. */
+.v2-mp__model .ctv-hover-reveal[data-busy='1'] {
+  opacity: 1;
+  pointer-events: auto;
 }
 .v2-mp__text {
   position: absolute;
@@ -208,6 +379,43 @@ const hasContent = computed(() =>
   border-radius: 999px;
   background: rgba(23, 23, 27, 0.75);
   color: #cdbdfc;
+  font: 600 10px/1 system-ui, sans-serif;
+}
+.v2-mp__hist {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(23, 23, 27, 0.78);
+  pointer-events: auto;
+}
+.v2-mp__histchip {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: transparent;
+  color: #d4d4d8;
+  font: 600 10px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.v2-mp__histchip:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.v2-mp__histchip[data-current='1'] {
+  background: rgba(139, 92, 246, 0.35);
+  border-color: rgba(167, 139, 250, 0.7);
+  color: #ede9fe;
+}
+.v2-mp__histn {
+  margin-left: auto;
+  color: #a1a1aa;
   font: 600 10px/1 system-ui, sans-serif;
 }
 </style>

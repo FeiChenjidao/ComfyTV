@@ -71,11 +71,19 @@
         <IconBox class="ctv:size-8 ctv:opacity-60" />
         <div class="ctv:text-xs">{{ $t('modelBinder.noModel') }}</div>
       </div>
-      <div v-if="modelSrc && !isPrimSrc" :class="previewActionsClass">
+      <div
+        v-if="modelSrc && !isPrimSrc"
+        :class="previewActionsClass"
+        :data-busy="exporting ? '1' : undefined"
+      >
         <button type="button" :class="previewActionBtn"
-                :title="$t('stage.action.download')"
-                @click.stop="onDownloadModel"><i class="pi pi-download" /></button>
+                :disabled="exporting"
+                :title="exporting ? $t('stage.action.exportObjZipBusy') : $t('stage.action.exportObjZip')"
+                @click.stop="onDownloadModel">
+          <i :class="exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download'" />
+        </button>
         <button type="button" :class="previewTagBtn"
+                :disabled="exporting"
                 :title="$t('stage.action.addTag')"
                 @click.stop="openTagMenu(modelSrc, nameFromUrl(modelSrc), $event, 'model')"><i class="pi pi-tag" /></button>
       </div>
@@ -327,7 +335,7 @@ import { useI18n } from 'vue-i18n'
 
 import IconBox from '~icons/lucide/box'
 
-import type { LGraphNode } from '@/lib/comfyApp'
+import { app, type LGraphNode } from '@/lib/comfyApp'
 import ModelPreview from '@/components/stages/ModelPreview.vue'
 import ModelThumb from '@/components/widgets/ModelThumb.vue'
 import StageCard from '@/components/stages/StageCard.vue'
@@ -342,10 +350,17 @@ import {
 } from '@/composables/stages/useModelLoader'
 import { isPrimitivePayload } from '@/widgets/three/primitiveGeometry'
 import { useOutputAssetTagging } from '@/composables/stages/useOutputAssetTagging'
-import { downloadFile } from '@/utils/download'
+import { downloadModelObjZip } from '@/utils/download'
 import { MODEL_FILE_EXTENSIONS } from '@/widgets/three/modelFormats'
 
 const { t } = useI18n()
+const exporting = ref(false)
+
+function toast(severity: 'info' | 'success' | 'warn' | 'error', summary: string, detail = '') {
+  ;(app as any)?.extensionManager?.toast?.add?.({
+    severity, summary, detail, life: severity === 'info' ? 12000 : 4000,
+  })
+}
 
 const props = defineProps<{
   state: StageState
@@ -447,6 +462,7 @@ const {
 const PREVIEW_BTN_BASE =
   'ctv:relative ctv:inline-flex ctv:items-center ctv:justify-center ctv:cursor-pointer ctv:appearance-none'
   + ' ctv:border-none ctv:transition-colors ctv:size-5 ctv:p-0 ctv:rounded-sm ctv:text-sm'
+  + ' ctv:disabled:opacity-60 ctv:disabled:cursor-wait'
 const previewActionsClass =
   'ctv-hover-reveal ctv:absolute ctv:top-1 ctv:right-1 ctv:z-10 ctv:flex ctv:gap-1'
 const previewActionBtn = PREVIEW_BTN_BASE + ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'
@@ -456,11 +472,17 @@ const previewTagBtn = computed(() => PREVIEW_BTN_BASE
     : ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'))
 
 async function onDownloadModel(): Promise<void> {
-  if (!modelSrc.value) return
+  if (!modelSrc.value || exporting.value) return
+  exporting.value = true
+  toast('info', t('stage.action.exportObjZipBusy'))
   try {
-    await downloadFile(modelSrc.value)
-  } catch (e) {
-    console.error('[ComfyTV/model-loader] download failed', e)
+    await downloadModelObjZip(modelSrc.value)
+    toast('success', t('stage.action.exportObjZipDone'))
+  } catch (e: any) {
+    console.error('[ComfyTV/model-loader] OBJ zip export failed', e)
+    toast('error', t('stage.action.exportObjZipFailed'), String(e?.message || e))
+  } finally {
+    exporting.value = false
   }
 }
 

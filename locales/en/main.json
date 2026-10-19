@@ -443,7 +443,7 @@
       "cancel": "No",
       "modeAppend": "Mode: Append",
       "modeReplace": "Mode: Replace",
-      "modeHint": "How new run results enter the pool (click to switch). Append: keep existing items and add new ones on top. Replace: keep only the latest batch. Identical images are kept once — the pool dedupes by image."
+      "modeHint": "How new run results enter the pool (click to switch). Append: keep existing items and add new ones on top. Replace: keep only the latest result. Duplicate URLs are kept once."
     },
     "empty": {
       "no_output": "no output yet",
@@ -471,6 +471,10 @@
     "action": {
       "viewFull": "View full size",
       "download": "Download",
+      "exportObjZip": "Export OBJ + textures (ZIP)",
+      "exportObjZipBusy": "Exporting OBJ zip…",
+      "exportObjZipDone": "OBJ zip downloaded",
+      "exportObjZipFailed": "OBJ export failed",
       "copyText": "Copy text",
       "saveTextAsset": "Save to asset library",
       "renderMarkdown": "Render as Markdown",
@@ -1233,29 +1237,9 @@
   },
   "presets": {
     "imageVariant": {
-      "multi-cam-9": {
-        "label": "Multi-cam 9-grid",
-        "tooltip": "9 camera angles arranged in a grid"
-      },
-      "story-4": {
-        "label": "Story Progression (4)",
-        "tooltip": "4 consecutive narrative shots"
-      },
-      "face-3view": {
-        "label": "Face 3-view",
-        "tooltip": "Face: front / side / 45°"
-      },
-      "product-3view": {
-        "label": "Product 3-view",
-        "tooltip": "Product: front / side / back"
-      },
-      "character-3view": {
-        "label": "Character 3-view",
-        "tooltip": "Full-body character: front / side / back"
-      },
-      "storyboard-25": {
-        "label": "25-grid Storyboard",
-        "tooltip": "25 consecutive storyboard shots"
+      "layer-separation": {
+        "label": "Layer Separation",
+        "tooltip": "Separate the image into editable layers"
       },
       "cinematic-light": {
         "label": "Cinematic Lighting",

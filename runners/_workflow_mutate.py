@@ -27,8 +27,6 @@ def _split_runner_id(runner_id: str) -> tuple[str, str]:
 _BATCH_OUTPUT_KINDS = {
     'image',
     'shot-images',
-    'multiview',
-    'sequence',
     'split-part',
 }
 
@@ -99,6 +97,8 @@ def _gc_unreachable(workflow: dict, config: dict) -> set[str]:
         cls = comfy_nodes.NODE_CLASS_MAPPINGS.get(node.get("class_type"))
         if nid == hinted or (cls is not None and getattr(cls, "OUTPUT_NODE", False)):
             stack.append(nid)
+    if not stack:
+        return set()
     keep: set[str] = set()
     while stack:
         nid = stack.pop()
@@ -114,37 +114,126 @@ def _gc_unreachable(workflow: dict, config: dict) -> set[str]:
     return dead
 
 
+_COUNT_PAT = re.compile(
+    r"^upstream_(image|video|audio|text|model):count_(lt|le|gt|ge|eq)\[(\d+)\]$"
+)
+_ANY_PAT = re.compile(
+    r"^upstream_(image|video|audio|text|model):any\[([\d,]+)\]$"
+)
+_NONE_PAT = re.compile(
+    r"^upstream_(image|video|audio|text|model):none\[([\d,]+)\]$"
+)
+
+
+def _parse_index_list(raw: str) -> list[int]:
+    return [int(x) for x in raw.split(",") if x.strip() != ""]
+
+
+def _upstream_slot_filled(upstream, idx: int) -> bool:
+    if isinstance(upstream, str):
+        upstream = [upstream]
+    return idx < len(upstream) and upstream[idx] not in (None, "")
+
+
+def _scrub_dangling_links(workflow: dict) -> None:
+    """Drop input links that point at nodes already removed from the prompt."""
+    for node in workflow.values():
+        if not isinstance(node, dict):
+            continue
+        inputs = node.get("inputs")
+        if not isinstance(inputs, dict):
+            continue
+        for key, val in list(inputs.items()):
+            if isinstance(val, list) and len(val) == 2 and str(val[0]) not in workflow:
+                inputs.pop(key, None)
+
+
+def _upstream_nonempty(ctx: RunnerContext, kind: str) -> list:
+    upstream = ctx.upstream.get(_UPSTREAM_BUCKET_BY_KIND[kind]) or []
+    if isinstance(upstream, str):
+        upstream = [upstream]
+    return [u for u in upstream if u not in (None, "")]
+
+
+def _prune_rule_matches(when: str, ctx: RunnerContext, mode: str) -> bool | None:
+    """Return True if the rule should fire, False if not, None if ``when`` is invalid."""
+    m_count = _COUNT_PAT.match(when)
+    if m_count:
+        kind, op, n_str = m_count.group(1), m_count.group(2), m_count.group(3)
+        n = int(n_str)
+        count = len(_upstream_nonempty(ctx, kind))
+        ok = {
+            "lt": count < n,
+            "le": count <= n,
+            "gt": count > n,
+            "ge": count >= n,
+            "eq": count == n,
+        }[op]
+        # count_* rules ignore ``if`` — the comparison already encodes the condition
+        return ok
+
+    m = _UPSTREAM_PAT.match(when)
+    if not m:
+        return None
+    kind, _suffix, idx_str = m.group(1), m.group(2), m.group(3)
+    idx = int(idx_str) if idx_str else 0
+    upstream = ctx.upstream.get(_UPSTREAM_BUCKET_BY_KIND[kind]) or []
+    if isinstance(upstream, str):
+        upstream = [upstream]
+    have = idx < len(upstream) and upstream[idx] not in (None, "")
+    if mode == "missing":
+        return not have
+    if mode == "present":
+        return have
+    return None
+
+
 def _apply_prunes(workflow: dict, config: dict, ctx: RunnerContext) -> set[str]:
+    """Apply ``prune_when_missing`` rules.
+
+    Slot form: ``upstream_*:value[i]`` / ``annotated[i]`` …
+      - default ``"if": "missing"`` — fire when that slot is empty
+      - ``"if": "present"`` — fire when that slot is filled
+
+    Count form (for single↔multi auto-switch):
+      - ``upstream_image:count_lt[2]`` — fewer than 2 non-empty images
+      - ``upstream_image:count_ge[2]`` — two or more images
+    """
     pruned: set[str] = set()
     gc_needed = False
     rules = config.get("prune_when_missing") or []
     for rule in rules:
         when = str(rule.get("when") or "")
-        m = _UPSTREAM_PAT.match(when)
-        if not m:
+        mode = str(rule.get("if") or "missing").lower()
+        if mode not in ("missing", "present"):
+            _log.warning("prune_when_missing: bad `if` %r — skipped", mode)
+            continue
+        matched = _prune_rule_matches(when, ctx, mode)
+        if matched is None:
             _log.warning("prune_when_missing: bad `when` %r — skipped", when)
             continue
-        kind, _suffix, idx_str = m.group(1), m.group(2), m.group(3)
-        idx = int(idx_str) if idx_str else 0
-        upstream = ctx.upstream.get(_UPSTREAM_BUCKET_BY_KIND[kind]) or []
-        if isinstance(upstream, str):
-            upstream = [upstream]
-        have = idx < len(upstream) and upstream[idx] not in (None, "")
-        if have:
+        if not matched:
             continue
+        dropped_here = False
         for nid in rule.get("drop_nodes") or []:
-            if nid in workflow:
-                workflow.pop(nid)
-                pruned.add(nid)
+            sid = str(nid)
+            if sid in workflow:
+                workflow.pop(sid)
+                pruned.add(sid)
+                dropped_here = True
         for target in (rule.get("drop_inputs") or []) + (rule.get("drop_upstream_of") or []):
-            node = workflow.get(target.get("node"))
+            node = workflow.get(str(target.get("node")))
             if node is None:
                 continue
             node.get("inputs", {}).pop(target.get("input"), None)
-        if rule.get("drop_upstream_of"):
+            dropped_here = True
+        if dropped_here or rule.get("drop_upstream_of") or rule.get("drop_nodes"):
             gc_needed = True
+    if pruned:
+        _scrub_dangling_links(workflow)
     if gc_needed:
         pruned |= _gc_unreachable(workflow, config)
+        _scrub_dangling_links(workflow)
     return pruned
 
 

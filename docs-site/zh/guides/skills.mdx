@@ -1,7 +1,7 @@
 ---
 title: "Agent Skills(技能)"
 description: "技能是可复用的指令包——一个带 `SKILL.md` 的文件夹——教会任何在你 ComfyTV 上干活的 agent 把某类事做好:一套提示词方法论、一条生产管线、一种团队风格。装一次,[Bot](bot.zh.md) 和所有接入 [MCP](mcp.zh.md) 的 agent 都能发现并遵循它。"
-translationSourceHash: "2ba0209ee01d251f"
+translationSourceHash: "43856d5bb36694b7"
 ---
 
 ## 技能是什么
@@ -46,11 +46,7 @@ agent 要遵循的分步指令……
 
 用户技能与内置技能同 `name` 时,**用户版覆盖内置版**。
 
-ComfyTV 目前内置三个技能:
-
-- **`brainstorm`** —— 画布上的前期创意开发:想法/剧本/分镜概念一次收敛一个决策,确认的元素即刻落成 stage,方向锁定前不做任何生成。
-- **`h3-cinematic-director`** —— MiniMax H3 视频生产的导演级方法论:分镜设计、H3 提示词精确 schema(T2VA/I2VA/FL2VA/L2VA/Ref2VA)、一致性审片、单点修复。配合自带的 [H3 工作流](/guides/generate#video-stage)使用。
-- **`video-editor`** —— 对已有素材的会话式剪辑:agent 用 `media_timeline` 合成图「读」视频,从静音段提出剪辑策略,再以 clip/concat/FX/字幕 stage 的形式把剪辑落在画布上——动手前必先确认方案。
+ComfyTV 内置头脑风暴、画布布局、H3 导演、图像图层分离、图像风格路由和视频剪辑技能。用户技能无需修改插件即可扩展或覆盖这些技能。
 
 ## 管理技能
 

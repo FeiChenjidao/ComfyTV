@@ -46,7 +46,7 @@ export function bindStageWidgets(opts: {
       })
     }
 
-    if (isPoolPickerKind(kind) || kind === 'image-batch') {
+    if (isPoolPickerKind(kind) || kind === 'image-batch' || kind === 'model') {
       const idxWidget = node.widgets?.find((w: any) => w.name === 'selected_index')
       if (idxWidget) {
         const syncPickedIndex = () => {
@@ -65,7 +65,7 @@ export function bindStageWidgets(opts: {
       }
     }
 
-    if (isPoolPickerKind(kind)) {
+    if (isPoolPickerKind(kind) || kind === 'model') {
       const poolWidget = node.widgets?.find((w: any) => w.name === 'pool')
       const syncPool = () => {
         state.pool = poolWidget ? (String(poolWidget.value ?? '') || null) : null

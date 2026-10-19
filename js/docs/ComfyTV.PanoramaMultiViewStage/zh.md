@@ -12,7 +12,7 @@
 
 - 从同一 HDRI / 生成全景快速出多机位分镜
 - 角色 / 产品环绕展示（3-view、4-view）
-- 为 Image Variations 或 Video FLF2V 准备一组一致环境的帧
+- 为
 
 ## 工作原理（为什么 ComfyTV 这样设计）
 
@@ -97,4 +97,3 @@ A：浏览器端截取通常很快；4K 会增加文件体积。
 
 - **Panorama** / **Current View**
 - **Image Picker** —— 批量挑选
-- **Image Variations** —— 多视角变体

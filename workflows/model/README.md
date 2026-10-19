@@ -22,11 +22,12 @@ To add your own workflow see [docs/custom-workflows.md](../../docs/custom-workfl
 
 Shipped generative workflows keep official parameter defaults where applicable. Common custom param across generative workflows: `seed` (randomized per Run when unset).
 
-- **Tripo** (`tripo.json` + `_preset.json`) — front/left/back/right views → **mesh** (GLB or FBX). Uses the Comfy Org Tripo API (`TripoMultiviewToModelNode`, default v3.1); Stage `images.image0`…`image3` bind to those views by index. `File3DFirst` picks the populated Tripo output so Stage `quad` on/off both work. Front required; side views optional.
-- **Tripo P2** (`tripo-p2.json` + `_preset.json`) — front/left/back/right views → low-poly **mesh** (GLB or FBX) via `TripoPSeriesMultiviewToModelNode` (P2). All knobs live under the `model` DynamicCombo; `File3DFirst` picks GLB/FBX for Stage `quad`. Front required; API needs at least one side view.
+- **Tripo** (`tripo.json` + `_preset.json`) — 1 image → `TripoImageToModelNodeV2`; 2–4 images (front + sides) → `TripoMultiviewToModelNode` (auto-switch via `upstream_image:count_lt/ge[2]`). Stage `images.image0`…`image3` = front / left / back / right. `File3DFirst` picks GLB/FBX so Stage `quad` on/off both work.
+- **Tripo P1** (`tripo-p1.json` + `_preset.json`) — same 1↔2–4 auto-switch for `TripoP1ImageToModelNode` / `TripoP1MultiviewToModelNode` (GLB only).
+- **Tripo P2** (`tripo-p2.json` + `_preset.json`) — same auto-switch for `TripoPSeriesImageToModelNode` / `TripoPSeriesMultiviewToModelNode` (P2). Knobs under the `model` DynamicCombo; `File3DFirst` picks GLB/FBX for Stage `quad`.
 - **Rodin Gen25** (`rodin-gen25.json` + `_preset.json`) — 1–5 images → **mesh** via `Rodin3D_Gen25_Image` (Rodin Gen-2.5 Image-to-3D). Stage sockets `images.image0`…`image4` match the Rodin node inputs 1:1; missing refs are pruned. Binds `material` / `mode` / `polygon_count` / `geometry_file_format` / `texture_mode` / `seed` / `tapose` / `hd_texture` / `texture_delight` / `addon_highpack`.
-- **Meshy Multi** (`meshy-multi.json` + `_preset.json`) — 2–4 images → **mesh** via `MeshyMultiImageToModelNode`. Stage `images.image0`…`image3` match the Meshy node 1:1 (API min 2); `File3DFirst` picks GLB/FBX. Binds `seed` / `pbr`.
-- **Stage image sockets** are always `images.image0`…`image4`. Rodin uses 0–4; Meshy uses 0–3 (min 2); Tripo order is front / left / back / right / extra by index.
+- **Meshy** (`meshy-multi.json` + `_preset.json`) — 1 image → `MeshyImageToModelNode`; 2–4 images → `MeshyMultiImageToModelNode` (same count auto-switch). `File3DFirst` picks GLB/FBX. Binds `seed` / `pbr` and related Meshy knobs.
+- **Stage image sockets** are always `images.image0`…`image4`. Rodin uses 0–4; Tripo / Meshy use 0–3 (front / left / back / right by index).
 
 ## Models referenced
 

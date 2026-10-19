@@ -1,47 +1,124 @@
 {
-  "_comment": "Shipped preset for Rodin Gen-2.5 Image-to-3D. Chain: LoadImage #10-14 -> Rodin3D_Gen25_Image #1 -> SaveGLB #3. Stage images.image0..image4 map 1:1 onto Rodin images.image0..image4; missing refs are pruned.",
+  "_comment": "Exported preset for the 'Rodin Gen25' workflow (kind=model). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
   "label": "Rodin Gen25",
-  "description": "Rodin Gen-2.5 Image-to-3D (API). 1–5 reference images → mesh (glb/fbx/obj/stl). image0 required; image1–4 optional. Stage socket names match the Rodin node. Stage knobs bind material / mode / polygon_count / geometry_file_format / texture_mode / seed / tapose / hd_texture / texture_delight / addon_highpack.",
+  "order": 30,
+  "description": "Rodin Gen-2.5 Image-to-3D (API). 1–5 reference images → mesh (glb/fbx/obj/stl). image0 required; image1–4 optional. Stage socket names match the Rodin node. Mode DynamicCombo children (tier / polygon_count / creative / mesh_faces / mesh_mode / is_micro) are bound so the control panel follows the built-in node. Advanced: TAPose / hd_texture / texture_delight / use_original_alpha / addon_highpack / bbox_* / height_cm.",
   "result": {
     "type": "ui_save_url",
     "node": "3"
   },
+  "prune_when_missing": [
+    {
+      "when": "upstream_image:value[1]",
+      "drop_upstream_of": [
+        {
+          "node": "1",
+          "input": "images.image1"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[2]",
+      "drop_upstream_of": [
+        {
+          "node": "1",
+          "input": "images.image2"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[3]",
+      "drop_upstream_of": [
+        {
+          "node": "1",
+          "input": "images.image3"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[4]",
+      "drop_upstream_of": [
+        {
+          "node": "1",
+          "input": "images.image4"
+        }
+      ]
+    }
+  ],
   "inputs": {
     "1": {
-      "mode": {
-        "from": "option:mode"
+      "TAPose": {
+        "from": "option:tapose",
+        "cast": "bool"
       },
-      "mode.polygon_count": {
-        "from": "option:polygon_count"
+      "addon_highpack": {
+        "from": "option:addon_highpack",
+        "cast": "bool"
       },
-      "material": {
-        "from": "option:material"
+      "bbox_height": {
+        "from": "option:bbox_height",
+        "cast": "int"
+      },
+      "bbox_length": {
+        "from": "option:bbox_length",
+        "cast": "int"
+      },
+      "bbox_width": {
+        "from": "option:bbox_width",
+        "cast": "int"
       },
       "geometry_file_format": {
         "from": "option:geometry_file_format"
       },
-      "texture_mode": {
-        "from": "option:texture_mode"
+      "hd_texture": {
+        "from": "option:hd_texture",
+        "cast": "bool"
+      },
+      "height_cm": {
+        "from": "option:height_cm",
+        "cast": "int"
+      },
+      "material": {
+        "from": "option:material"
+      },
+      "mode": {
+        "from": "option:mode"
+      },
+      "mode.creative": {
+        "from": "option:creative",
+        "cast": "bool"
+      },
+      "mode.is_micro": {
+        "from": "option:is_micro",
+        "cast": "bool"
+      },
+      "mode.mesh_faces": {
+        "from": "option:mesh_faces",
+        "cast": "int"
+      },
+      "mode.mesh_mode": {
+        "from": "option:mesh_mode"
+      },
+      "mode.polygon_count": {
+        "from": "option:polygon_count"
+      },
+      "mode.tier": {
+        "from": "option:tier"
       },
       "seed": {
         "from": "option:seed",
         "default": "random_int31",
         "cast": "int"
       },
-      "TAPose": {
-        "from": "option:tapose",
-        "cast": "bool"
-      },
-      "hd_texture": {
-        "from": "option:hd_texture",
-        "cast": "bool"
-      },
       "texture_delight": {
         "from": "option:texture_delight",
         "cast": "bool"
       },
-      "addon_highpack": {
-        "from": "option:addon_highpack",
+      "texture_mode": {
+        "from": "option:texture_mode"
+      },
+      "use_original_alpha": {
+        "from": "option:use_original_alpha",
         "cast": "bool"
       }
     },
@@ -71,32 +148,5 @@
         "from": "upstream_image:annotated[4]"
       }
     }
-  },
-  "order": 30,
-  "prune_when_missing": [
-    {
-      "when": "upstream_image:value[1]",
-      "drop_upstream_of": [
-        { "node": "1", "input": "images.image1" }
-      ]
-    },
-    {
-      "when": "upstream_image:value[2]",
-      "drop_upstream_of": [
-        { "node": "1", "input": "images.image2" }
-      ]
-    },
-    {
-      "when": "upstream_image:value[3]",
-      "drop_upstream_of": [
-        { "node": "1", "input": "images.image3" }
-      ]
-    },
-    {
-      "when": "upstream_image:value[4]",
-      "drop_upstream_of": [
-        { "node": "1", "input": "images.image4" }
-      ]
-    }
-  ]
+  }
 }

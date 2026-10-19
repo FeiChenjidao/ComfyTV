@@ -24,8 +24,8 @@ describe('actionLabels', () => {
     expect(actionTooltipKey('video', 'clip')).toBe('actions.video.clip.tooltip')
   })
   it('presetLabelKey builds key from category + id', () => {
-    expect(presetLabelKey('imageVariant', 'face-3view'))
-      .toBe('presets.imageVariant.face-3view.label')
+    expect(presetLabelKey('imageVariant', 'cinematic-light'))
+      .toBe('presets.imageVariant.cinematic-light.label')
   })
   it('presetTooltipKey builds key from category + id', () => {
     expect(presetTooltipKey('imageEdit', 'denoise'))

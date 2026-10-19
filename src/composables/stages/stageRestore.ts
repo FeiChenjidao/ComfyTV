@@ -7,6 +7,7 @@ import { useProjectStore } from '@/stores/projectStore'
 import { IMAGES_SPLIT_CLASS } from '@/composables/stages/imagesSplit'
 import {
   computePickedFromBatch,
+  imagePoolCount,
   isPoolPickerKind,
   toImagePoolJson,
   type StageKind,
@@ -78,6 +79,12 @@ export function bindOutputRestore(opts: {
       if (widget && widget.value !== idx) widget.value = idx
       const picked = computePickedFromBatch(toImagePoolJson(restored), idx)
       store.setOutputSlot(state, 1, picked ?? null)
+    }
+    if (kind === 'model' && restored && imagePoolCount(state.pool) === 0) {
+      store.setPickerPool(node, state, toImagePoolJson(restored))
+      state.pickedIndex = 1
+      const idxW = node.widgets?.find((wi: any) => wi.name === 'selected_index')
+      if (idxW) idxW.value = 1
     }
   }
 

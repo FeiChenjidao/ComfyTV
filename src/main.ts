@@ -17,6 +17,7 @@ import ProjectCard from '@/components/stages/ProjectCard.vue'
 import ComfyTVMountHost from '@/components/ComfyTVMountHost.vue'
 import { registerMount, unregisterMount } from '@/composables/stages/widgetMounts'
 import { useStageNode } from '@/composables/stages/useStageNode'
+import { mergeModelOutputIntoPool } from '@/composables/stages/modelPool'
 import { useChainCallback } from '@/composables/functional/useChainCallback'
 import {
   loadStageMeta,
@@ -383,6 +384,9 @@ const extension: ComfyExtension = {
         const state = store.getStage(this)
         if (!state) return
         store.applyExecutedPayload(state, msg)
+        if (state.kind === 'model' && state.variant === 'generator') {
+          mergeModelOutputIntoPool(this, state, store, state.output)
+        }
       },
     )
     if (nodeData.name === 'ComfyTV.ImageMergeStage') {

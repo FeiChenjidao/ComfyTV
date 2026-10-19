@@ -18,7 +18,7 @@ Browser pixel rects; hidden `rows`, `cols`, `border`, `outer_border`.
 
 - **No Run**.
 - `selected_index` (1-based) picks the **image** output.
-- Unlike **Image Variations** (AI batch, Run + workflow).
+- Unlike.
 
 ## Types
 
@@ -100,7 +100,7 @@ None—instant only.
 **Q: Empty cells?**  
 A: Check upstream image; don’t make cells too small.
 
-**Q: vs Image Variations 9-grid?**  
+**Q: vs
 A: Grid Split = physical cut; Variations = AI-generated views (Run).
 
 **Q: Native nodes?**  
@@ -108,4 +108,4 @@ A: Bridge `← ComfyTV Images` or use **image** only.
 
 ## Related nodes
 
-- **Image Picker**, **Image Variations**, **Crop**, **Upscale**
+- **Image Picker**,

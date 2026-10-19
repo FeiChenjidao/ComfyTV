@@ -84,4 +84,4 @@ A: Narrower commands; lower denoise; new seed.
 
 ## Related nodes
 
-- **Inpaint**, **Erase**, **Relight**, **Image Variations**, **Upscale**
+- **Inpaint**, **Erase**, **Relight**,

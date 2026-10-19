@@ -11,7 +11,7 @@ from .edits import (
     UpscaleStage, OutpaintStage, InpaintStage, ImageEditStage,
     EraseStage, CutoutStage, CropStage, RotateStage, MirrorStage,
     ColorGradeStage,
-    GridSplitStage, CustomSplitStage, ImagesSplitStage, ImageMergeStage, CompareStage, ImageVariationsStage, RelightStage,
+    GridSplitStage, CustomSplitStage, ImagesSplitStage, ImageMergeStage, CompareStage, RelightStage,
     MultiangleStage, LayerSeparationStage,
 )
 from .timeline import (
@@ -121,6 +121,7 @@ from .material import MaterialStage
 from .split_part import SplitPartStage, MaskCleanup
 from .batch_loop import BatchLoop
 from .custom_stage import CustomStage
+from ..file3d_first import File3DFirst
 
 
 def stage_classes() -> list:
@@ -130,7 +131,7 @@ def stage_classes() -> list:
         DirectorStage,
         ImagePickerStage, AudioPickerStage, VideoPickerStage,
         PanoramaStage, PanoramaCurrentViewStage, PanoramaMultiViewStage,
-        MultiangleStage, RelightStage, ImageVariationsStage, LayerSeparationStage,
+        MultiangleStage, RelightStage, LayerSeparationStage,
         UpscaleStage, OutpaintStage, InpaintStage, ImageEditStage,
         EraseStage, CutoutStage, CropStage,
         RotateStage, MirrorStage, ColorGradeStage, CompareStage, GridSplitStage,
@@ -193,6 +194,7 @@ def stage_classes() -> list:
         MaterialStage,
         SplitPartStage, MaskCleanup, BatchLoop,
         CustomStage,
+        File3DFirst,
         *_bridge_classes(),
     ]
 

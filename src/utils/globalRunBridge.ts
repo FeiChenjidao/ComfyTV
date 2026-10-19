@@ -143,7 +143,9 @@ export function installGlobalRunBridge(app: any, deps: InstallGlobalRunBridgeDep
 
   const origQueue = app.api.queuePrompt.bind(app.api)
   const attachAuth = deps.attachAuth
-  const withAuth = async (number: number, data: any, options: any) => {
+  // Only ComfyTV-owned queues (stage / proxy) may fill auth. Host Run already
+  // sets api.authToken/apiKey — never read, write, or restore them on that path.
+  const withOwnAuth = async (number: number, data: any, options: any) => {
     const api = app.api
     const prevToken = api.authToken
     const prevKey = api.apiKey
@@ -158,7 +160,7 @@ export function installGlobalRunBridge(app: any, deps: InstallGlobalRunBridgeDep
   app.api.queuePrompt = async (number: number, data: any, options: any = {}) => {
     if (data?.__comfytvOwnRun) {
       if (data && typeof data === 'object') delete data.__comfytvOwnRun
-      return withAuth(number, data, options)
+      return withOwnAuth(number, data, options)
     }
     const isGlobalRun = !options?.partialExecutionTargets?.length
     if (isGlobalRun) {
@@ -217,7 +219,7 @@ export function installGlobalRunBridge(app: any, deps: InstallGlobalRunBridgeDep
 
       data = { ...data, output: rewritten }
     }
-    return withAuth(number, data, options)
+    return origQueue(number, data, options)
   }
   return true
 }

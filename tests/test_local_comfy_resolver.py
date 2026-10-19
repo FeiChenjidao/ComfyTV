@@ -60,6 +60,13 @@ class TestResolver:
         assert r.resolve("x.y", {"from": "option:missing", "cast": "str"}) == ""
         assert r.resolve("x.y", {"from": "option:missing"}) == ""
 
+    def test_truefalse_cast(self):
+        from ComfyTV.runners._workflow_resolve import _cast
+        assert _cast(True, "truefalse") == "true"
+        assert _cast(False, "truefalse") == "false"
+        assert _cast("yes", "truefalse") == "true"
+        assert _cast("0", "truefalse") == "false"
+
     def test_cast_failure_carries_context(self):
         r = self._r(self._ctx(options={"seed": "abc"}))
         with pytest.raises(RuntimeError, match=r"x\.y: cannot cast 'abc' \(from option:seed\) to int"):

@@ -12,18 +12,6 @@ export interface ImagePreset {
 const cat = 'imageVariant' as const
 
 export const IMAGE_VARIANT_PRESETS: ImagePreset[] = [
-  { id: 'face-3view',      icon: 'pi pi-user', category: cat, targetClass: 'ComfyTV.ImageVariationsStage', inputSocket: 'image',
-    widgets: { workflow: 'Face 3-View',      variant_count: 3 } },
-  { id: 'product-3view',   icon: 'pi pi-box', category: cat, targetClass: 'ComfyTV.ImageVariationsStage', inputSocket: 'image',
-    widgets: { workflow: 'Product 3-View',   variant_count: 3 } },
-  { id: 'character-3view', icon: 'pi pi-id-card', category: cat, targetClass: 'ComfyTV.ImageVariationsStage', inputSocket: 'image',
-    widgets: { workflow: 'Character 3-View', variant_count: 3 } },
-  { id: 'multi-cam-9',     icon: 'pi pi-video', category: cat, targetClass: 'ComfyTV.ImageVariationsStage', inputSocket: 'image',
-    widgets: { workflow: 'Multi-cam 9',      variant_count: 9 } },
-  { id: 'story-4',       icon: 'pi pi-book', category: cat, targetClass: 'ComfyTV.ImageVariationsStage', inputSocket: 'image',
-    widgets: { workflow: 'Story 4',        variant_count: 4 } },
-  { id: 'storyboard-25', icon: 'pi pi-images', category: cat, targetClass: 'ComfyTV.ImageVariationsStage', inputSocket: 'image',
-    widgets: { workflow: 'Storyboard 25',  variant_count: 25 } },
   { id: 'layer-separation', icon: 'pi pi-clone', category: cat, targetClass: 'ComfyTV.LayerSeparationStage', inputSocket: 'image' },
   { id: 'cinematic-light', icon: 'pi pi-video', category: cat, targetClass: 'ComfyTV.ImageEditStage', inputAutogrowGroup: 'images',
     widgets: {

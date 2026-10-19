@@ -1,46 +1,54 @@
 {
   "_comment": "Shipped preset for Tripo P2 Multiview-to-Model. Chain: LoadImage #55-58 -> TripoPSeriesMultiviewToModelNode #47 -> File3DFirst #62 (GLB then FBX) -> SaveGLB #43. All generation knobs live under the model DynamicCombo (P2).",
   "label": "Tripo P2",
-  "description": "Tripo P2 Multiview-to-Model (API). Low-poly mesh with clean topology from front + optional left/back/right images. File3DFirst picks GLB or FBX so Stage quad on/off both work. Front required; at least one side view required by the API.",
+  "description": "Tripo P2 Image / Multiview to Model (API). 1 image → TripoPSeriesImageToModelNode; 2–4 images → TripoPSeriesMultiviewToModelNode. Auto-switches by ref count. Knobs under model.P2; File3DFirst picks GLB/FBX.",
   "result": {
     "type": "ui_save_url",
     "node": "43"
   },
   "inputs": {
     "47": {
-      "model.auto_size": {
-        "from": "option:auto_size"
+      "model.quad": {
+        "from": "option:quad",
+        "default": "false",
+        "cast": "bool"
       },
       "model.face_limit": {
         "from": "option:face_limit",
         "cast": "int"
+      },
+      "model.texture": {
+        "from": "option:texture_quality"
+      },
+      "model.pbr": {
+        "from": "option:pbr"
       },
       "model.model_seed": {
         "from": "option:seed",
         "default": "random_int31",
         "cast": "int"
       },
-      "model.orientation": {
-        "from": "option:orientation"
-      },
-      "model.pbr": {
-        "from": "option:pbr"
-      },
-      "model.quad": {
-        "from": "option:quad",
-        "default": "false",
-        "cast": "bool"
-      },
-      "model.texture": {
-        "from": "option:texture_quality"
-      },
       "model.texture_alignment": {
         "from": "option:texture_alignment"
+      },
+      "model.orientation": {
+        "from": "option:orientation"
       },
       "model.texture_seed": {
         "from": "option:seed",
         "default": "random_int31",
         "cast": "int"
+      },
+      "model.auto_size": {
+        "from": "option:auto_size"
+      },
+      "model.export_uv": {
+        "from": "option:export_uv",
+        "cast": "bool"
+      },
+      "model.compress_geometry": {
+        "from": "option:compress_geometry",
+        "cast": "bool"
       }
     },
     "55": {
@@ -63,10 +71,87 @@
       "image": {
         "from": "upstream_image:annotated[3]"
       }
+    },
+    "48": {
+      "model.quad": {
+        "from": "option:quad",
+        "default": "false",
+        "cast": "bool"
+      },
+      "model.face_limit": {
+        "from": "option:face_limit",
+        "cast": "int"
+      },
+      "model.texture": {
+        "from": "option:texture_quality"
+      },
+      "model.pbr": {
+        "from": "option:pbr"
+      },
+      "model.model_seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      },
+      "model.texture_alignment": {
+        "from": "option:texture_alignment"
+      },
+      "model.orientation": {
+        "from": "option:orientation"
+      },
+      "model.texture_seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      },
+      "model.auto_size": {
+        "from": "option:auto_size"
+      },
+      "model.export_uv": {
+        "from": "option:export_uv",
+        "cast": "bool"
+      },
+      "model.compress_geometry": {
+        "from": "option:compress_geometry",
+        "cast": "bool"
+      },
+      "model.enable_image_autofix": {
+        "from": "option:enable_image_autofix",
+        "cast": "bool"
+      }
     }
   },
   "order": 27,
   "prune_when_missing": [
+    {
+      "when": "upstream_image:count_lt[2]",
+      "drop_nodes": [
+        "47",
+        "56",
+        "57",
+        "58",
+        "62"
+      ],
+      "drop_inputs": [
+        {
+          "node": "64",
+          "input": "model_a"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:count_ge[2]",
+      "drop_nodes": [
+        "48",
+        "63"
+      ],
+      "drop_inputs": [
+        {
+          "node": "64",
+          "input": "model_b"
+        }
+      ]
+    },
     {
       "when": "upstream_image:value[1]",
       "drop_upstream_of": [

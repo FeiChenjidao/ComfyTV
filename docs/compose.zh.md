@@ -7,7 +7,7 @@
 ![Image picker](images/picker-toolbar.png)
 从一批结果里选**一个**。每种媒介都有对应的 picker：
 
-- **Image Picker** —— 来自 Image Stage、Grid Split、Image Variations、Panorama Multi-View……
+- **Image Picker** —— 来自 Image Stage、Grid Split、
 - **Video Picker** —— 来自 Video Stage 的批量输出。
 - **Audio Picker** —— 来自 Music Stage 的批量输出。
 

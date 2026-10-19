@@ -216,7 +216,8 @@ body > .p-overlay-mask.p-blockui-mask-document.p-overlay-mask-leave:empty {
   transition: opacity 0.15s ease;
 }
 .ctv-hover-host:hover .ctv-hover-reveal,
-.ctv-hover-host:focus-within .ctv-hover-reveal {
+.ctv-hover-host:focus-within .ctv-hover-reveal,
+.ctv-hover-reveal[data-busy='1'] {
   opacity: 1;
   pointer-events: auto;
 }

@@ -7,7 +7,7 @@
 ![Image picker](images/picker-toolbar.png)
 Pick **one** item out of a batch. There is a picker per medium:
 
-- **Image Picker** — from an Image Stage, Grid Split, Image Variations, Panorama Multi-View, …
+- **Image Picker** — from an Image Stage, Grid Split,
 - **Video Picker** — from a Video Stage batch.
 - **Audio Picker** — from a Music Stage batch.
 

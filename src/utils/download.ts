@@ -1,3 +1,5 @@
+import { app } from '@/lib/comfyApp'
+
 const DEFAULT_DOWNLOAD_FILENAME = 'download'
 
 export function extractFilenameFromUrl(url: string): string | null {
@@ -64,4 +66,31 @@ export async function downloadFile(url: string, filename?: string): Promise<void
     || DEFAULT_DOWNLOAD_FILENAME
 
   downloadBlob(finalName, blob)
+}
+
+/** Convert a model view URL to OBJ + MTL + textures and download the zip. */
+export async function downloadModelObjZip(modelUrl: string): Promise<void> {
+  if (!modelUrl) throw new Error('downloadModelObjZip: empty url')
+  const path = `/comfytv/model/export_obj_zip?url=${encodeURIComponent(modelUrl)}`
+  const api = (app as any)?.api
+  const response: Response = typeof api?.fetchApi === 'function'
+    ? await api.fetchApi(path)
+    : await fetch(path)
+  if (!response.ok) {
+    let detail = ''
+    try { detail = (await response.json())?.error || '' } catch { /* ignore */ }
+    throw new Error(
+      detail
+        ? `OBJ export failed: ${detail}`
+        : `OBJ export fetch ${response.status} ${response.statusText}`,
+    )
+  }
+  const headerFilename = extractFilenameFromContentDisposition(
+    response.headers.get('Content-Disposition'),
+  )
+  const blob = await response.blob()
+  downloadBlob(
+    headerFilename || extractFilenameFromUrl(modelUrl)?.replace(/\.[^.]+$/, '_obj.zip') || 'model_obj.zip',
+    blob,
+  )
 }

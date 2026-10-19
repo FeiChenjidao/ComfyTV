@@ -224,21 +224,6 @@ class TestFakeImageBatchFromStoryboard:
         assert out["images"] == []
 
 
-class TestFakeImageVariations:
-    def test_basic(self):
-        out = json.loads(c._fake_image_variations("src", 3, "seed"))
-        assert len(out["images"]) == 3
-        assert out["images"][0]["label"] == "#1"
-
-    def test_clamps_minimum_one(self):
-        out = json.loads(c._fake_image_variations("src", 0, "s"))
-        assert len(out["images"]) == 1
-
-    def test_none_count_clamped(self):
-        out = json.loads(c._fake_image_variations("src", None, "s"))
-        assert len(out["images"]) == 1
-
-
 class TestFakePanoramaViews:
     def test_count_4_named_views(self):
         out = json.loads(c._fake_panorama_views("p", 4, "s"))

@@ -17,7 +17,7 @@ const CATEGORY_GROUPS = [
   ['Input & Loaders', ['ImageLoaderStage', 'VideoLoaderStage', 'AudioLoaderStage', 'TextLoaderStage', 'ModelLoaderStage', 'AssetImageLoaderStage', 'AssetVideoLoaderStage', 'AssetAudioLoaderStage', 'AssetTextLoaderStage', 'AssetModelLoaderStage']],
   ['Generate', ['TextStage', 'ImageStage', 'VideoStage', 'AudioStage', 'SpeechStage', 'Model3DStage', 'ShotImagesStage', 'StoryboardStage']],
   ['Pick & Compare', ['ImagePickerStage', 'AudioPickerStage', 'VideoPickerStage', 'CompareStage', 'ContactSheetStage']],
-  ['Image · Edit', ['ImageEditStage', 'InpaintStage', 'OutpaintStage', 'EraseStage', 'CutoutStage', 'UpscaleStage', 'RelightStage', 'ImageVariationsStage', 'MultiangleStage', 'SplitPartStage']],
+  ['Image · Edit', ['ImageEditStage', 'InpaintStage', 'OutpaintStage', 'EraseStage', 'CutoutStage', 'UpscaleStage', 'RelightStage', 'MultiangleStage', 'SplitPartStage']],
   ['Image · Transform', ['CropStage', 'RotateStage', 'MirrorStage', 'GridSplitStage', 'ColorGradeStage']],
   ['2D Editors', ['LayerEditorStage', 'PosterStage', 'StoryboardEditorStage']],
   ['Panorama', ['PanoramaStage', 'PanoramaCurrentViewStage', 'PanoramaMultiViewStage']],

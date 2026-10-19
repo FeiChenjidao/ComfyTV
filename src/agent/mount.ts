@@ -69,6 +69,13 @@ function unmount(mounted: Mounted | null): null {
 }
 
 function overlayRoot(): HTMLElement | null {
+  // Frontend ≥1.55: LiteGraphCanvasSplitterOverlay is flex-col; the dock
+  // belongs in its inner flex-row (where the agent-panel slot lives).
+  const modern = document.querySelector(
+    'div.absolute.z-999.flex-col > div.flex-row',
+  )
+  if (modern instanceof HTMLElement) return modern
+  // Pre-1.55: the overlay itself was the flex-row.
   return document.querySelector('div.absolute.z-999.flex-row')
 }
 

@@ -233,7 +233,28 @@ describe('installGlobalRunBridge (end-to-end via api.queuePrompt)', () => {
     expect(calls).toEqual([1, 2])
   })
 
-  it('attaches comfy.org auth before the real queuePrompt, then restores', async () => {
+  it('host Run never touches auth — only __comfytvOwnRun may attach', async () => {
+    const { app, origQueue, store, toast } = makeApp()
+    app.api.authToken = 'host-jwt'
+    app.api.apiKey = 'host-key'
+    const attachAuth = vi.fn(async (api: any) => {
+      api.authToken = 'wrong'
+      api.apiKey = 'wrong'
+    })
+    installGlobalRunBridge(app, { ...deps(store, toast), attachAuth })
+
+    await app.api.queuePrompt(0, {
+      output: { '9': { class_type: 'KSampler', inputs: {} } },
+      workflow: {},
+    }, {})
+
+    expect(attachAuth).not.toHaveBeenCalled()
+    expect(origQueue).toHaveBeenCalledTimes(1)
+    expect(app.api.authToken).toBe('host-jwt')
+    expect(app.api.apiKey).toBe('host-key')
+  })
+
+  it('own-run attaches comfy.org auth before the real queuePrompt, then restores', async () => {
     const { app, origQueue, store, toast } = makeApp()
     origQueue.mockImplementation(async () => {
       expect(app.api.authToken).toBe('jwt')
@@ -249,6 +270,7 @@ describe('installGlobalRunBridge (end-to-end via api.queuePrompt)', () => {
     await app.api.queuePrompt(0, {
       output: { '9': { class_type: 'KSampler', inputs: {} } },
       workflow: {},
+      __comfytvOwnRun: true,
     }, {})
 
     expect(attachAuth).toHaveBeenCalledTimes(1)

@@ -52,7 +52,7 @@ from .fakes import (
     _seed, _autogrow_values,
     _fake_text, _fake_image, _fake_video, _fake_audio,
     _fake_storyboard, _fake_image_batch_from_storyboard,
-    _fake_image_variations, _fake_panorama_views,
+    _fake_panorama_views,
     _PANORAMA_VIEW_LABELS_4,
     _VIDEO_SAMPLES, _AUDIO_SAMPLES,
 )
@@ -97,7 +97,7 @@ __all__ = [
     "_fake_storyboard", "_fake_image_batch_from_storyboard",
     "_storyboard_llm_prompt", "_shape_storyboard_from_llm",
     "_storyboard_regenerate_shot_prompt", "_parse_shotlist_text",
-    "_fake_image_variations", "_fake_panorama_views",
+    "_fake_panorama_views",
     "_PANORAMA_VIEW_LABELS_4",
     "labels_for", "default_for",
     "RESOLUTIONS", "ASPECT_RATIOS",

@@ -22,6 +22,12 @@ The file must be a **GUI-format** workflow (a normal *Workflow → Save*; **not*
 
 Next to the link button, **⬆ Upload workflow** imports a `.json` file from disk. The workflow is copied into ComfyTV's library and appears in the dropdown right away — no restart. Use this for a file someone sent you; if it's a workflow you'll keep iterating on, prefer linking it instead.
 
+## Team sync via a public Git repo (LAN · full canvases)
+
+To share **your own full graphs** (bottom-bar **Workflows**, not stage dropdowns): clone a dedicated public Git repo as `user/default/workflows`, then push/pull with the scripts in that repo. Starter kit: [`team-workflows/README.md`](../team-workflows/README.md) (Chinese: [team-workflow-git.zh.md](/guides/team-workflow-git)).
+
+Stage node dropdowns still use `user/comfytv/workflows/<kind>/` below — a separate library.
+
 ## Drop files into the library folder
 
 ComfyTV's workflow library lives in ComfyUI's user directory:
@@ -32,15 +38,15 @@ user/comfytv/workflows/
     my-workflow.json                    GUI workflow export
     my-workflow_preset.json             optional preset (bindings)
   image-edit/   inpaint/   erase/   outpaint/   upscale/   multiangle/
-  cutout/   multiview/   sequence/   speech/
+  cutout/   speech/
   video/   text/   audio/   audio-vocal/   audio-bg/
   shot-images/  storyboard/  panorama/  timeline/  model/
-  split-part/   material-estimate/   speech-to-text/
+  split-part/   material-estimate/   speech-to-text/   custom/  ← Custom Stage (you choose the exposed I/O)
 ```
 
 **The folder decides the kind.** Copy a JSON in and restart ComfyUI (or trigger a rescan from the sidebar) and it shows up in the matching stage's dropdown. The shipped workflows are seeded into this directory on startup; entries that came with ComfyTV carry a **builtin** badge, and files you've edited are never overwritten by updates.
 
-The full list of kinds: `text, image, shot-images, video, audio, speech, storyboard, panorama, timeline, upscale, outpaint, inpaint, erase, image-edit, multiangle, cutout, multiview, sequence, audio-vocal, audio-bg, model, split-part, material-estimate, speech-to-text`.
+The full list of kinds: `text, image, shot-images, video, audio, speech, storyboard, panorama, timeline, upscale, outpaint, inpaint, erase, image-edit, multiangle, cutout, audio-vocal, audio-bg, model, split-part, material-estimate, speech-to-text, custom`.
 
 Each shipped kind has a `README.md` next to its JSONs documenting the run-time inputs and the nodes a workflow typically needs. Read the relevant per-kind README first:
 
@@ -53,8 +59,6 @@ Each shipped kind has a `README.md` next to its JSONs documenting the run-time i
 - [`workflows/cutout/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/cutout)
 - [`workflows/erase/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/erase)
 - [`workflows/multiangle/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/multiangle)
-- [`workflows/multiview/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/multiview)
-- [`workflows/sequence/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/sequence)
 - [`workflows/panorama/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/panorama)
 - [`workflows/speech/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/speech)
 - [`workflows/text/README.md`](https://github.com/jtydhr88/ComfyTV/tree/main/workflows/text)
