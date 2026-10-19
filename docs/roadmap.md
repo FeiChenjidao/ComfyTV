@@ -12,23 +12,19 @@ Legend: ✅ done · ⏳ pending.
 
 | Feature | Notes |
 |---------|-------|
-| **Image · Local SD1.5** (text→image) | Real generation; outputs a set of images. |
-| **Image · Local SD1.5 I2I** (image→image) | Needs a reference image wired in. |
-| **Image · Image Ideogram4 T2I** | Ideogram 4 + Qwen3-VL text encoder text-to-image. |
+| **Image · NanoBanana2 / GPT Image 2.5** | API-backed image generation (Gemini / OpenAI); optional reference images. |
 | **Image Edit · Flux Canny Edit** | Prompt-driven image editing. |
 | **Inpaint · Flux Fill Inpaint** + **Fooocus SDXL Inpaint** | Mask-driven regeneration (mask painter produces the mask). |
 | **Erase · LaMa Erase** | Promptless object removal. Requires `Acly/comfyui-inpaint-nodes` + `big-lama.pt`. |
-| **Relight · Flux2 Klein Relight** | A pure-frontend 3D light-ball node renders the lighting reference in the browser; the Image Stage workflow (Flux-2 Klein 9B + Sun-direction LoRA) transfers it onto the subject. |
+| **Relight · light-ball + Image Stage** | A pure-frontend 3D light-ball node renders the lighting reference in the browser; pair it with any Image Stage workflow that accepts a second reference. |
 | **Cutout · BiRefNet Cutout** | Background removal via ComfyUI core's BiRefNet. Outputs PNG with real alpha. |
-| **Image Variations · Face 3-View / Product 3-View / Character 3-View / Multi-cam 9** | Single workflow, N parallel KSampler branches sharing the same model + base latent. Qwen-Image-Edit 2511 + Multiple-Angles LoRA + Lightning 4-step. |
-| **Image Variations · Story 4 / Storyboard 25** | Single workflow, N chained frames — frame N+1 takes frame N as input. Qwen-Image-Edit 2509 + Next-Scene LoRA + Lightning 4-step. |
 | **Outpaint · Flux Fill Outpaint** + **Fooocus SDXL Outpaint** | Canvas extension. |
 | **Upscale · Ultrasharp 4x** | 4x-UltraSharp GAN upscale. |
 | **Multiangle · Qwen Edit 2511 Multiangle** | Qwen Image-Edit + Multiangle LoRA, driven by the 3D camera. |
 | **Video · Local LTX 2.3** (T2V + I2V + FLF2V + IA2V) | Fast; recommended default. T2V from text only; I2V needs an image; FLF2V interpolates between two keyframes; IA2V follows an audio track. |
 | **Video · Local MiniMax H3** (T2V + FLF2V + R2V) | Video **with sound** in one pass. R2V takes multiple image/audio references for identity-locked shots. Lightning LoRAs wired in (~half the render time). |
 | **Audio · MiniMax Music 3** | Higher-quality text-to-music alongside ACE-Step. |
-| **3D Model · Hunyuan3D 2.1 / MoGe-2 / TripoSplat** | Image → textured mesh / depth geometry / Gaussian splat, all as builtin `model` workflows. |
+| **3D Model · Tripo / Tripo P2** | Multiview → mesh (GLB/FBX) via Tripo API, as builtin `model` workflows. |
 | **Director + master timeline** | Shot-by-shot production console: generated clips, per-clip transitions, shared reference cast, content-addressed re-renders, ruler + playhead + unified film preview. |
 | **MCP server + ComfyTV Bot** | 45-tool agent endpoint (stages + native graph) and the embedded sidebar agent with four providers (Claude Code / Codex / Qwen Code / Local LLM), attachments and per-provider models. |
 | **Agent Skills** | SKILL.md instruction packs served to agents via MCP and to the Bot (`/` palette); manage in Settings → Skills. |

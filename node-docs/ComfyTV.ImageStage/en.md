@@ -4,7 +4,7 @@
 
 ## What this node does
 
-**Image Stage** handles **text-to-image (t2i)** and **image-to-image (i2i)**. Write **main_prompt**, pick a **workflow** (e.g. Local SD1.5 or Ideogram4), set resolution, aspect ratio, and batch size, click **▶ Run**, and thumbnails appear on the node.
+**Image Stage** handles **text-to-image** and **reference-image** generation. Write **main_prompt**, pick a **workflow** (e.g. NanoBanana2 or GPT Image 2.5), set resolution, aspect ratio, and batch size when the workflow uses them, click **▶ Run**, and thumbnails appear on the node.
 
 Two outputs:
 
@@ -54,9 +54,8 @@ Backends in [`workflows/image/`](https://github.com/jtydhr88/ComfyTV/tree/main/w
 
 | Option | Mode | Notes |
 | --- | --- | --- |
-| **Local SD1.5** | t2i | Classic SD1.5 text-to-image |
-| **Local SD1.5 I2I** | i2i | Same checkpoint, VAEEncode + denoise &lt; 1 |
-| **Image Ideogram4 T2I** | t2i | Ideogram 4 + Qwen3-VL text encoder |
+| **NanoBanana2** | API | Gemini NanoBanana 2; optional reference images |
+| **GPT Image 2.5** | API | OpenAI GPT Image; optional reference images |
 
 Models: [models.md](https://github.com/jtydhr88/ComfyTV/blob/main/docs/models.md). Details: [README.md](https://github.com/jtydhr88/ComfyTV/blob/main/workflows/image/README.md).
 
@@ -84,7 +83,7 @@ Wire Text Stage **text** or other `COMFYTV_TEXT` for extra prompt context.
 
 ### images
 
-**Required for i2i**: pick **Local SD1.5 I2I**, wire reference to **images.image0** (first image wins). t2i workflows ignore upstream images.
+Optional references: wire images to **images.image0**… for NanoBanana2 / GPT Image 2.5. Unused slots are ignored.
 
 Sources: **image** from Image Stage/Picker, Asset Loader, Bridge → ComfyTV Image.
 
@@ -106,14 +105,13 @@ Sidebar bindings for seed, negative prompt, steps, CFG, etc.
 ## Step by step for beginners
 
 1. Add **Project**, then **ComfyTV → Generate → Image Stage**.
-2. **workflow** → **Local SD1.5**.
+2. **workflow** → **NanoBanana2** or **GPT Image 2.5** (configure API credentials first).
 3. **main_prompt**: `a red apple on a wooden table`.
-4. **resolution** `1K`, **aspect_ratio** `1:1`, **batch_size** `1`.
-5. Download `v1-5-pruned-emaonly.safetensors` ([models.md](https://github.com/jtydhr88/ComfyTV/blob/main/docs/models.md)).
-6. **▶ Run**; Image Picker may appear automatically.
-7. Click a thumbnail → **Upscale** or **Crop** from the toolbar.
+4. **resolution** / **aspect_ratio** / **batch_size** as needed by the workflow.
+5. **▶ Run**; Image Picker may appear automatically.
+6. Click a thumbnail → **Upscale** or **Crop** from the toolbar.
 
-**i2i**: **Local SD1.5 I2I** → wire **image** to **images** → prompt e.g. `watercolor style` → Run.
+**With references**: wire **image** to **images** → prompt e.g. `watercolor style` → Run.
 
 ## Full guides (recommended reading)
 

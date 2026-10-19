@@ -1,12 +1,12 @@
 ---
 title: "图像工具"
-translationSourceHash: "ee3052e97b751903"
+translationSourceHash: "00b0b86ed4d070b1"
 ---
 
 一旦你有了一张图(来自 **Generate → Image** 的批量、**Image Picker** 选出的、或一个 **Load Image** 节点),picker 的 **`✏️ Edit`** 工具栏以及**ComfyTV / Image** 菜单提供一套操作。
 
 - **即时(浏览器端)**,裁剪、旋转、镜像、网格切分。改参数实时更新,立刻可往下游用。
-- **生成式**,修改图片、重绘、擦除、扩图、高清、多角度、打光、抠图,以及图像变体(多视角 / 故事网格 preset)。
+- **生成式**,修改图片、重绘、擦除、扩图、高清、多角度、打光、抠图。
 
 > 要对单张图操作,从 **Image Picker** 入手 , 它带完整的编辑工具栏。
 
@@ -77,31 +77,12 @@ translationSourceHash: "ee3052e97b751903"
 
 ## 打光(Relight)
 
-点**打光**按钮会生成一对节点:一个纯前端的 **Relight** 光源节点(3D 灯光球编辑器 , 围绕黏土球摆放 定向 / 点 / 聚光 灯,或一键套用三点布光 / 伦勃朗 / 轮廓逆光等预设),加一个预选 `Flux2 Klein Relight` 工作流(Flux-2 Klein 9B + Sun-direction LoRA)的 Image Stage。灯光球场景在浏览器里渲染后作为光照参考(`images[1]`)喂给工作流,模型把该光照迁移到主体(`images[0]`)上,身份/几何保持不变。参考位也可以换接任意图(如 Load Image from Asset)。
+点**打光**按钮会生成一对节点:一个纯前端的 **Relight** 光源节点(3D 灯光球编辑器 , 围绕黏土球摆放 定向 / 点 / 聚光 灯,或一键套用三点布光 / 伦勃朗 / 轮廓逆光等预设),加一个 Image Stage。灯光球场景在浏览器里渲染后作为光照参考(`images[1]`)喂给 Image Stage;选任意能吃第二张参考图的图像工作流(或经 Load Image from Asset 换接参考图),把该光照迁移到主体(`images[0]`)上。
 
 ## 抠图(Cutout)
 
 去背景。接图、点运行,输出 PNG 带真实 alpha 透明通道。内置 `BiRefNet Cutout`,需要 `birefnet.safetensors` 放到 `models/background_removal/`(见 [models.zh.md](/guides/models))。
 
-## 图像变体(Image Variations)
-
-由工具栏 preset 驱动 , 点 preset 自动生成一个 Image Variations stage, workflow 下拉框预选成对应的,点运行就出一组关联图。
-
-| Preset | Workflow | 输出 | 后端 |
-|---|---|---|---|
-| 🎬 **多机位九宫格** | `Multi-cam 9` | 9 张批量 | ✅ Qwen Multiple-Angles LoRA,单工作流 9 路并行 sampler |
-| 👤 **脸部三视图** | `Face 3-View` | 3 张批量(正/45°/侧) | ✅ 同上 |
-| 📦 **产品三视图** | `Product 3-View` | 3 张批量(正/侧/背) | ✅ 同上 |
-| 🧍 **角色三视图** | `Character 3-View` | 3 张批量(全身正/侧/背) | ✅ 同上 |
-| 📖 **剧情推演**(4 连贯) | `Story 4` | 4 张批量 | ✅ Qwen Next-Scene LoRA,单工作流 4 帧串行 |
-| 🎞 **25 宫格分镜** | `Storyboard 25` | 25 张批量 | ✅ 同样的链扩展到 25 帧;**~10 帧后会漂** |
-| 🎥 **电影级光影** | (路由到 Relight Stage) | 单图 | ✅ |
-| ⏱️ **推演 +3s/+5s** | (路由到 Image Edit Stage) | 单图 | ✅ |
-
-注意事项:
-
-- **多视角**(Face / Product / Character / Multi-cam 9) , 每张是同一主体的不同角度。提示词写主体描述("一位 30 多岁的亚洲女商人"),每路的角度关键词自动前缀。
-- **序列**(Story 4 / Storyboard 25) , 每一帧基于上一帧生成(Next-Scene LoRA)。Story 4 连贯性好;Storyboard 25 可能 ~10 帧后漂掉。比多视角慢。
 
 ---
 

@@ -7,35 +7,21 @@
 ## stage 提供的输入
 
 - **提示词** + 可选**负向提示词**。
-- **参考图**(可选) , i2i 工作流用上游接进来的第一张。
+- **参考图**(可选) , i2i / 多参考工作流会用上游接进来的图。
 - **分辨率**(`1K` / `2K` / `4K`)、**比例**(`1:1`、`16:9` 等)、**批量大小**(1..8)、**随机 seed**。
 
 ## 工作流需要包含
 
 - 一个 `SaveImage` 输出节点(自动检测;多张输出会合到 `COMFYTV_IMAGES` 批次里)。
-- 一个 `CLIPTextEncode` 接提示词;t2i 工作流再加一个接负向提示词。
-- 一个 `EmptyLatentImage` / `EmptySD3LatentImage` 接 stage 的宽 / 高 / 批量大小。
-- 一个 `KSampler`,用 stage 的 seed。
-- i2i 工作流:一个 `LoadImage` 节点接上游图。
+- 按 preset 绑定消费 stage 提示词 / 图片 / 尺寸 / seed 的节点。
 
 加自己的工作流见 [docs/custom-workflows.zh.md](../../docs/custom-workflows.zh.md);具体绑定在画布上选中 stage 后通过左侧 **ComfyTV** 侧边栏配,详见 [docs/sidebar-config-editor.zh.md](../../docs/sidebar-config-editor.zh.md)。
 
 ## 当前内置
 
-- **Local SD1.5**(`local-sd15.json` + `_preset.json`) , 原始 SD1.5 文生图,用 `v1-5-pruned-emaonly.safetensors`。测试通过。
-- **Local SD1.5 I2I**(`local-sd15-i2i.json` + `_preset.json`) , 同一个模型走 i2i,`VAEEncode + denoise<1.0`。测试通过。
-- **Image Ideogram4 T2I**(`image_ideogram4_t2i.json` + `_preset.json`) , Ideogram 4 + Qwen3-VL 文本编码器文生图。测试通过。
-- **Flux2 Klein Relight**(`flux2klein-relight.json` + `_preset.json`) , Flux-2 Klein 9B + Sun-direction LoRA(4 步)重打光。images[0] = 主体图,images[1] = 灯光参考(如 Relight 节点的 3d light 渲染,或经 Load Image from Asset 接任意图)。输出尺寸跟随主体图。image stage 的**打光**按钮会自动生成并连好这个工作流。
-- **Qwen Product Shot (Canny)**(`qwen-product-shot.json` + `_preset.json`) , 结构锁定的**全重绘**:images[0] → Canny → Qwen-Image-2512 Fun ControlNet-Union + Lightning 4 步 LoRA。只保轮廓,颜色/材质由提示词决定,要显式描述。想保留参考图自身的颜色材质(比如绑好材质的 3D 截图),用图像编辑 stage 的 **Qwen Edit 2511** —— 3D 模型节点的**生成产品图**按钮就是接它。输出尺寸跟随参考图(约 1.6MP)。测试通过。
-- **Qwen Image 2.1 T2I**(`qwen-image-2.1-t2i.json` + `_preset.json`) , 官方 Qwen Image 2.1 文生图(int8 DiT + Qwen3-VL-8B int8 编码器,25 步,cfg 1)。原生 2K:分辨率选 **2K** 直出 2048px。提示词接 `TextEncodeQwenImage21`,它一个节点同时出 positive/negative;stage 的负向提示词只有把 cfg 调高才起作用。测试通过(5090 上 1K 约 25 秒一张)。
-- **Qwen Image 2.1 Transparent (RGBA)**(`qwen-image-2.1-rgba.json` + `_preset.json`) , 同一张图;preset 用官方模板的 RGBA 句式包住你的提示词,2.1 的 VAE 直接解出 alpha 通道,`SaveImage` 存的就是主体在透明背景上的 RGBA PNG,不经过任何抠图模型。只描述主体即可。测试通过(1024² 怀表,56% 像素全透明)。
-- **Qwen Image 2.1 Multi-Ref Edit**(`qwen-image-2.1-multi-ref-edit.json` + `_preset.json`) , 最多 4 张图的指令编辑:images[0] 是编辑目标(输出尺寸跟它),images[1..3] 是参考图。提示词里直接用 stage 的 `@image_1`..`@image_4` 提及(打 `@` 选);preset 设了 `mention_style: qwen_tags`,发给模型时会展开成 `<image1>`..`<image4>`("把 `@image_2` 里的杯子放到 `@image_1` 人物手里")。没接的槽位会自动剪掉,接 1~4 张都能跑。分辨率 / 比例 / 批量不生效。单图编辑用图像编辑 stage 的 **Qwen Image 2.1 Edit**。测试通过。
+- **NanoBanana2**(`NanoBanana2.json` + `_preset.json`) — Gemini NanoBanana 2 API 生图 / 编辑(`GeminiNanoBanana2V2`)。最多 3 张上游参考图;比例走 stage。需要在 ComfyUI 里配好 Gemini / NanoBanana API 凭证。
+- **GPT Image 2.5**(`GPT_Image_2.5.json` + `_preset.json`) — OpenAI GPT Image 2.5 API(`OpenAIGPTImageNodeV2`)。最多 3 张上游参考图;尺寸 / 背景 / 质量等旋钮在 preset 里。需要在 ComfyUI 里配好 OpenAI API 凭证。
 
 ## 需要的模型
 
-- `v1-5-pruned-emaonly.safetensors` , SD1.5 base(~4 GB)
-- Ideogram4:`ideogram4_fp8_scaled.safetensors`、`ideogram4_unconditional_fp8_scaled.safetensors`、`qwen3vl_8b_fp8_scaled.safetensors`、`flux2-vae.safetensors`(详见 [docs/models.zh.md](../../docs/models.zh.md))
-- Flux2 Klein Relight:`flux-2-klein-9b-nvfp4.safetensors`(diffusion_models)、`Sun_direction_LoRA_Flux_2_Klein_9b_v1.safetensors`(loras)、`qwen_3_8b_fp8mixed.safetensors`(clip)、`flux2-vae.safetensors`(vae)
-- Qwen Product Shot:`qwen_image_2512_fp8_e4m3fn.safetensors`(diffusion_models)、`Qwen-Image-2512-Fun-Controlnet-Union-2602.safetensors`(controlnet)、`Qwen-Image-Lightning-4steps-V1.0.safetensors`(loras)、`qwen_2.5_vl_7b_fp8_scaled.safetensors`(clip)、`qwen_image_vae.safetensors`(vae)
-- Qwen Image 2.1(T2I / Transparent / Multi-Ref Edit 共用,约 17 GB):`qwen_image_2.1_int8_convrot.safetensors`(diffusion_models)、`qwen3vl_8b_int8_convrot.safetensors`(text_encoders)、`qwen_image_2.1_vae_bf16.safetensors`(vae),都在 <https://huggingface.co/Comfy-Org/Qwen-Image-2.1>。需要带 `TextEncodeQwenImage21` 节点的 ComfyUI(v0.37+)。
-
+两个内置工作流都是 **API 调用**——不用下本地扩散模型。Run 前在 ComfyUI / 节点设置里配好对应 API key。

@@ -44,7 +44,7 @@ git clone https://github.com/jtydhr88/ComfyTV
 
 1. 加一个 **Generate → Image Stage**。
 2. 在节点文本框输入提示词（例如 `a red apple on a wooden table`）。
-3. 在 **workflow** 下拉框选模型——先用 **`Local SD1.5`**。
+3. 在 **workflow** 下拉框选模型——先用 **`NanoBanana2`** 或 **`GPT Image 2.5`**（需要配好 API 凭证）。
 4. 点 **▶ Run**。
 
 ![Image stage 运行中](images/image-run.png)

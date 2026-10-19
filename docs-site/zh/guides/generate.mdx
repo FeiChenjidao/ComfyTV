@@ -1,6 +1,6 @@
 ---
 title: "生成内容"
-translationSourceHash: "05b916d8492448a9"
+translationSourceHash: "88315743e05977e9"
 ---
 
 **ComfyTV / Generate** 分组里都是从提示词创建新内容的 stage：Text、Image、Video、Music、Speech、3D Model。
@@ -21,13 +21,13 @@ translationSourceHash: "05b916d8492448a9"
 ![Image stage](/images/image-run.png)
 
 - **提示词**：主文本框。上游 **Text** 节点内容会追加进来；上游**图片**喂给当前工作流的 `LoadImage`（只有 i2i 工作流会消费）。`@image_N` 记号可以在文中内联引用接进来的图片槽位。
-- **workflow** —— 自带：**Local SD1.5**（文生图）、**Local SD1.5 I2I**（图生图）、**Image Ideogram4 T2I**——加上你 Link 或 Upload 进来的任何工作流。
-- **resolution / aspect_ratio / batch_size**：目标尺寸档位、画幅、每次 Run 出几张。
+- **workflow** —— 自带：**NanoBanana2**（Gemini API）、**GPT Image 2.5**（OpenAI API）——加上你 Link 或 Upload 进来的任何工作流。
+- **resolution / aspect_ratio / batch_size**：目标尺寸档位、画幅、每次 Run 出几张（取决于所选工作流是否消费它们）。
 
 **两个输出**：`images` 是本次 Run 的整批；`image` 是你在节点上点选的单张（没点之前默认第一张）。
 
-### 图生图
-选 `Local SD1.5 I2I`，把参考图接进 **images** 槽，写提示词，Run。
+### 带参考图生图
+把参考图接进 **images** 槽，写提示词，选 **NanoBanana2** 或 **GPT Image 2.5**，Run。
 
 ---
 
@@ -91,10 +91,9 @@ translationSourceHash: "05b916d8492448a9"
 
 ![3D model stage](/images/model3d-run.png)
 
-通过 `model` kind 的工作流生成 **3D 模型（GLB）**。自带三个：
+通过 `model` kind 的工作流生成 **3D 模型（GLB）**。自带两个：
 
-- **Hunyuan3D 2.1** —— 图生带贴图网格。
-- **MoGe-2 Depth Mesh** —— 单目深度估计图生几何。
-- **TripoSplat Gaussian** —— 图生高斯泼溅（也能载入 Scene3D）。
+- **Tripo** —— 多视图 → 网格（GLB/FBX），走 Tripo API。
+- **Tripo P2** —— 多视图 → 低模网格（GLB/FBX），走 Tripo P2 API。
 
-三者所需模型文件见 [models.zh.md](/guides/models)；也可以 Link 或 Upload 你自己的 `model` kind 工作流。节点内嵌轨道预览；旋转视角后会自动截图进它的图片输出，下游图像 stage 可以直接消费模型的外观。GLB 本体流向 3D 节点——Scene3D、网格操作、材质，详见节点参考。
+两者都是 API 调用（见 [models.zh.md](/guides/models)）；也可以 Link 或 Upload 你自己的 `model` kind 工作流。节点内嵌轨道预览；旋转视角后会自动截图进它的图片输出，下游图像 stage 可以直接消费模型的外观。GLB 本体流向 3D 节点——Scene3D、网格操作、材质，详见节点参考。

@@ -24,11 +24,10 @@ ComfyUI 通常会在首次启动时自动建好所有子目录;缺哪个手动�
 
 | 工作流 | 文件 | 目录 |
 |---|---|---|
-| **Local SD1.5** / **Local SD1.5 I2I** | `v1-5-pruned-emaonly-fp16.safetensors` | `checkpoints/` |
-| **Image Ideogram4 T2I** | `ideogram4_fp8_scaled.safetensors`、`ideogram4_unconditional_fp8_scaled.safetensors`、`qwen3vl_8b_fp8_scaled.safetensors`、`flux2-vae.safetensors` | `diffusion_models/`、`diffusion_models/`、`text_encoders/`、`vae/` |
-| **Qwen Image 2.1 T2I** / **Transparent (RGBA)** / **Multi-Ref Edit** | `qwen_image_2.1_int8_convrot.safetensors`、`qwen3vl_8b_int8_convrot.safetensors`、`qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`、`text_encoders/`、`vae/` |
+| **NanoBanana2** | *(API — Gemini NanoBanana 2；无本地模型)* | — |
+| **GPT Image 2.5** | *(API — OpenAI GPT Image；无本地模型)* | — |
 
-Qwen Image 2.1 文件:<https://huggingface.co/Comfy-Org/Qwen-Image-2.1>(int8 一套约 17 GB;bf16 版也在那)。需要 ComfyUI v0.37+ 的 `TextEncodeQwenImage21` 节点。
+Run 前在 ComfyUI / 节点设置里配好对应 API 凭证。
 
 ---
 
@@ -85,15 +84,10 @@ ACE-Step v1 和 MiniMax Music 3 都是 ComfyUI 核心原生支持,不需要装�
 
 | 工作流 | 文件 | 目录 |
 |---|---|---|
-| **Hunyuan3D 2.1**(图生网格) | `hunyuan_3d_v2.1.safetensors` | `checkpoints/` |
-| **MoGe-2 Mesh**(图生几何) | `moge_2_vitl_normal_fp16.safetensors` | `geometry_estimation/` |
-| **TripoSplat Gaussian**(图生高斯泼溅) | `triposplat_fp16.safetensors`、`dino_v3_vit_h.safetensors`、`flux2-vae.safetensors`、`triposplat_vae_decoder_fp16.safetensors`、`birefnet.safetensors` | `diffusion_models/`、`clip_vision/`、`vae/`、`vae/`、`background_removal/` |
+| **Tripo**(多视图 → 网格) | *(API — Comfy Org Tripo；无本地模型)* | — |
+| **Tripo P2**(多视图 → 低模网格) | *(API — Tripo P2；无本地模型)* | — |
 
-下载:
-- Hunyuan3D 2.1:<https://huggingface.co/Comfy-Org/hunyuan3D_2.1_repackaged>
-- MoGe-2:<https://huggingface.co/Comfy-Org/MoGe_safetensors>
-- TripoSplat:<https://huggingface.co/VAST-AI/TripoSplat>
-- BiRefNet(背景去除):<https://huggingface.co/Comfy-Org/BiRefNet>
+Run 前在 ComfyUI 里配好 Tripo / Comfy Org API。
 
 ---
 
@@ -122,33 +116,18 @@ ACE-Step v1 和 MiniMax Music 3 都是 ComfyUI 核心原生支持,不需要装�
 
 ---
 
-## 图像变体(单工作流 N 输出)
 
-"多视角"(Face / Product / Character / Multi-cam 9)和"序列" (Story 4 / Storyboard 25)两类 preset 共用同一套 Qwen base,**只是 LoRA 不同**。
 
-| 组 | 文件 | 目录 |
-|---|---|---|
-| **Multi-cam / 3-view 套** | `qwen_image_edit_2511_fp8mixed.safetensors`、`Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors`、`qwen-image-edit-2511-multiple-angles-lora.safetensors`、`qwen_2.5_vl_7b_fp8_scaled.safetensors`、`qwen_image_vae.safetensors` | `diffusion_models/`、`loras/`、`loras/`、`text_encoders/`、`vae/` |
-| **Character 3-View (Qwen 2.1)**(不用 LoRA) | `qwen_image_2.1_int8_convrot.safetensors`、`qwen3vl_8b_int8_convrot.safetensors`、`qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`、`text_encoders/`、`vae/` |
-| **Story 4 / Storyboard 25** | `qwen_image_edit_2509_bf16.safetensors`、`Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors`、`next-scene-qwen-image-lora-2509.safetensors`、`qwen_2.5_vl_7b_fp8_scaled.safetensors`、`qwen_image_vae.safetensors` | `diffusion_models/`、`loras/`、`loras/`、`text_encoders/`、`vae/` |
-| **Multiangle**(3D 相机驱动) | 同上面 multi-view 套 | 同 |
-
-下载:
-- Qwen Image Edit base:<https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI>
-- Qwen Image base:<https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI>
-- Lightning 4-step LoRA:<https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning>
-- Multiple-Angles LoRA:一般在 <https://huggingface.co/PVC-Inc/Qwen-Image-Edit-2511-Multiple-Angles-LoRA>
-- Next-Scene LoRA:<https://huggingface.co/lovis93/next-scene-qwen-image-lora-2509>
-
----
-
-## Relight
+## 多角度 (Multiangle)
 
 | 工作流 | 文件 | 目录 |
 |---|---|---|
-| **Flux2 Klein Relight** | `flux-2-klein-9b-nvfp4.safetensors`、`Sun_direction_LoRA_Flux_2_Klein_9b_v1.safetensors`、`qwen_3_8b_fp8mixed.safetensors`、`flux2-vae.safetensors` | `diffusion_models/`、`loras/`、`text_encoders/`、`vae/` |
+| **Qwen Edit 2511 Multiangle** | qwen_image_edit_2511_fp8mixed.safetensors、Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors、qwen-image-edit-2511-multiple-angles-lora.safetensors、qwen_2.5_vl_7b_fp8_scaled.safetensors、qwen_image_vae.safetensors | diffusion_models/、loras/、loras/、text_encoders/、vae/ |
 
----
+下载:
+- Qwen Image Edit base:<https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI>
+- Lightning 4-step LoRA:<https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning>
+- Multiple-Angles LoRA:<https://huggingface.co/fal/Qwen-Image-Edit-2511-Multiple-Angles-LoRA>
 
 ## 全景(Panorama)
 

@@ -24,11 +24,10 @@ Download: <https://huggingface.co/Comfy-Org/flux2-klein/tree/main/split_files/te
 
 | Workflow | Files | Folder |
 |---|---|---|
-| **Local SD1.5** / **Local SD1.5 I2I** | `v1-5-pruned-emaonly-fp16.safetensors` | `checkpoints/` |
-| **Image Ideogram4 T2I** | `ideogram4_fp8_scaled.safetensors`, `ideogram4_unconditional_fp8_scaled.safetensors`, `qwen3vl_8b_fp8_scaled.safetensors`, `flux2-vae.safetensors` | `diffusion_models/`, `diffusion_models/`, `text_encoders/`, `vae/` |
-| **Qwen Image 2.1 T2I** / **Transparent (RGBA)** / **Multi-Ref Edit** | `qwen_image_2.1_int8_convrot.safetensors`, `qwen3vl_8b_int8_convrot.safetensors`, `qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`, `text_encoders/`, `vae/` |
+| **NanoBanana2** | *(API — Gemini NanoBanana 2; no local checkpoint)* | — |
+| **GPT Image 2.5** | *(API — OpenAI GPT Image; no local checkpoint)* | — |
 
-Qwen Image 2.1 files: <https://huggingface.co/Comfy-Org/Qwen-Image-2.1> (~17 GB for the int8 set; bf16 variants also exist there). Requires ComfyUI v0.37+ for `TextEncodeQwenImage21`.
+Configure the matching API credentials in ComfyUI / the node settings before Run.
 
 ---
 
@@ -85,15 +84,10 @@ Download: <https://huggingface.co/Comfy-Org/MiniMax-Music-3>
 
 | Workflow | Files | Folder |
 |---|---|---|
-| **Hunyuan3D 2.1** (image → mesh) | `hunyuan_3d_v2.1.safetensors` | `checkpoints/` |
-| **MoGe-2 Mesh** (image → geometry) | `moge_2_vitl_normal_fp16.safetensors` | `geometry_estimation/` |
-| **TripoSplat Gaussian** (image → splat) | `triposplat_fp16.safetensors`, `dino_v3_vit_h.safetensors`, `flux2-vae.safetensors`, `triposplat_vae_decoder_fp16.safetensors`, `birefnet.safetensors` | `diffusion_models/`, `clip_vision/`, `vae/`, `vae/`, `background_removal/` |
+| **Tripo** (multiview → mesh) | *(API — Comfy Org Tripo; no local checkpoint)* | — |
+| **Tripo P2** (multiview → low-poly mesh) | *(API — Tripo P2; no local checkpoint)* | — |
 
-Download:
-- Hunyuan3D 2.1: <https://huggingface.co/Comfy-Org/hunyuan3D_2.1_repackaged>
-- MoGe-2: <https://huggingface.co/Comfy-Org/MoGe_safetensors>
-- TripoSplat: <https://huggingface.co/VAST-AI/TripoSplat>
-- BiRefNet (background removal): <https://huggingface.co/Comfy-Org/BiRefNet>
+Configure Tripo / Comfy Org API access in ComfyUI before Run.
 
 ---
 
@@ -122,33 +116,18 @@ Download:
 
 ---
 
-## Image variations (single-workflow N-output)
 
-The "multi-view" (Face / Product / Character / Multi-cam 9) and the "sequence" (Story 4 / Storyboard 25) presets share the same Qwen base — **only the LoRA differs**.
 
-| Group | Files | Folder |
-|---|---|---|
-| **Multi-cam / 3-view set** | `qwen_image_edit_2511_fp8mixed.safetensors`, `Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors`, `qwen-image-edit-2511-multiple-angles-lora.safetensors`, `qwen_2.5_vl_7b_fp8_scaled.safetensors`, `qwen_image_vae.safetensors` | `diffusion_models/`, `loras/`, `loras/`, `text_encoders/`, `vae/` |
-| **Character 3-View (Qwen 2.1)** (no LoRA) | `qwen_image_2.1_int8_convrot.safetensors`, `qwen3vl_8b_int8_convrot.safetensors`, `qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`, `text_encoders/`, `vae/` |
-| **Story 4 / Storyboard 25** | `qwen_image_edit_2509_bf16.safetensors`, `Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors`, `next-scene-qwen-image-lora-2509.safetensors`, `qwen_2.5_vl_7b_fp8_scaled.safetensors`, `qwen_image_vae.safetensors` | `diffusion_models/`, `loras/`, `loras/`, `text_encoders/`, `vae/` |
-| **Multiangle** (3D-camera-driven) | same as the multi-view set above | same |
-
-Download:
-- Qwen Image Edit base: <https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI>
-- Qwen Image base: <https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI>
-- Lightning 4-step LoRA: <https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning>
-- Multiple-Angles LoRA: typically <https://huggingface.co/PVC-Inc/Qwen-Image-Edit-2511-Multiple-Angles-LoRA>
-- Next-Scene LoRA: <https://huggingface.co/lovis93/next-scene-qwen-image-lora-2509>
-
----
-
-## Relight
+## Multiangle
 
 | Workflow | Files | Folder |
 |---|---|---|
-| **Flux2 Klein Relight** | `flux-2-klein-9b-nvfp4.safetensors`, `Sun_direction_LoRA_Flux_2_Klein_9b_v1.safetensors`, `qwen_3_8b_fp8mixed.safetensors`, `flux2-vae.safetensors` | `diffusion_models/`, `loras/`, `text_encoders/`, `vae/` |
+| **Qwen Edit 2511 Multiangle** | qwen_image_edit_2511_fp8mixed.safetensors, Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors, qwen-image-edit-2511-multiple-angles-lora.safetensors, qwen_2.5_vl_7b_fp8_scaled.safetensors, qwen_image_vae.safetensors | diffusion_models/, loras/, loras/, text_encoders/, vae/ |
 
----
+Download:
+- Qwen Image Edit base: <https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI>
+- Lightning 4-step LoRA: <https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning>
+- Multiple-Angles LoRA: <https://huggingface.co/fal/Qwen-Image-Edit-2511-Multiple-Angles-LoRA>
 
 ## Panorama
 

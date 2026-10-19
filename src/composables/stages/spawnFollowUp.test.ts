@@ -27,7 +27,6 @@ import {
   spawnFollowUpStage,
   spawnOrFocusImagesSplit,
   spawnImageGenerateFromSlots,
-  spawnImageVariationsFromSlots,
   spawnImageMergeFromSlots,
   spawnSeededImageLoader,
   spawnModel3DFromCustomSplit,
@@ -279,30 +278,6 @@ describe('spawnOrFocusImagesSplit', () => {
   })
 })
 
-describe('spawnImageVariationsFromSlots', () => {
-  it('wires each selected split socket onto its own Image Variations card', () => {
-    inputsByClass['ComfyTV.ImageVariationsStage'] = ['image']
-    const src = makeNode({
-      outputs: [{ name: '梅花', links: [] }, { name: '鱼', links: [] }],
-    })
-    const nodes = spawnImageVariationsFromSlots(src, [1, 0])
-    expect(nodes).toHaveLength(2)
-    expect(nodes.map((n: any) => n.comfyClass)).toEqual([
-      'ComfyTV.ImageVariationsStage',
-      'ComfyTV.ImageVariationsStage',
-    ])
-    expect(src.connect).toHaveBeenCalledWith(0, nodes[0], 0)
-    expect(src.connect).toHaveBeenCalledWith(1, nodes[1], 0)
-    expect(nodes[1].pos[1]).toBeGreaterThan(nodes[0].pos[1])
-  })
-
-  it('does nothing when nothing is selected', () => {
-    const src = makeNode()
-    expect(spawnImageVariationsFromSlots(src, [])).toEqual([])
-    expect((window as any).LiteGraph.createNode).not.toHaveBeenCalled()
-  })
-})
-
 describe('spawnImageGenerateFromSlots', () => {
   it('wires each selected split socket onto its own ImageStage', () => {
     inputsByClass['ComfyTV.ImageStage'] = ['images.image0']
@@ -507,14 +482,12 @@ describe('spawnFollowUpStage image handlers', () => {
     expect(src.connect).toHaveBeenCalledWith(0, created[0], 0)
   })
 
-  it('variant preset spawns target class and seeds widgets', () => {
+  it('variant preset spawns target class', () => {
     const src = makeNode()
-    spawnFollowUpStage(src, 'image', 'preset:face-3view')
+    spawnFollowUpStage(src, 'image', 'preset:layer-separation')
     const node = created[0]
-    expect(node.comfyClass).toBe('ComfyTV.ImageVariationsStage')
+    expect(node.comfyClass).toBe('ComfyTV.LayerSeparationStage')
     expect(src.connect).toHaveBeenCalledWith(0, node, 0)
-    expect(widgetValue(node, 'workflow')).toBe('Face 3-View')
-    expect(widgetValue(node, 'variant_count')).toBe(3)
   })
 
   it('edit preset spawns the edit target class', () => {
@@ -541,9 +514,9 @@ describe('spawnFollowUpStage image handlers', () => {
   })
 
   it('warns when preset target has no matching slot', () => {
-    inputsByClass['ComfyTV.ImageVariationsStage'] = ['other']
+    inputsByClass['ComfyTV.LayerSeparationStage'] = ['other']
     const src = makeNode()
-    spawnFollowUpStage(src, 'image', 'preset:face-3view')
+    spawnFollowUpStage(src, 'image', 'preset:layer-separation')
     expect(src.connect).not.toHaveBeenCalled()
     expect(console.warn).toHaveBeenCalled()
   })
@@ -666,7 +639,7 @@ describe('relight handler', () => {
     const [relight, img] = created
     expect(relight.comfyClass).toBe('ComfyTV.RelightStage')
     expect(img.comfyClass).toBe('ComfyTV.ImageStage')
-    expect(widgetValue(img, 'workflow')).toBe('Flux2 Klein Relight')
+    expect(widgetValue(img, 'workflow')).toBe('NanoBanana2')
     expect(src.connect).toHaveBeenCalledWith(0, img, 0)
     expect(relight.connect).toHaveBeenCalledWith(0, img, 1)
   })

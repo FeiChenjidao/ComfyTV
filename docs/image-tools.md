@@ -5,7 +5,7 @@
 Once you have an image (from a **Generate → Image** batch, picked in an **Image Picker**, or a **Load Image** node), the picker's **`✏️ Edit`** toolbar and the **ComfyTV / Image** menu give you a set of operations.
 
 - **Instant (browser-side)** — Crop, Rotate, Mirror, Grid Split. Parameter changes update live, output is immediately usable downstream.
-- **Generative** — Image Edit, Inpaint, Erase, Outpaint, Upscale, Multiangle, Relight, Cutout, plus Image Variations (multi-view / story-grid presets).
+- **Generative** — Image Edit, Inpaint, Erase, Outpaint, Upscale, Multiangle, Relight, Cutout.
 
 > To act on a single image, work from an **Image Picker** — it carries the full edit toolbar.
 
@@ -76,31 +76,12 @@ A 3D camera widget: drag the handles (or the scene) to pick a viewpoint — azim
 
 ## Relight
 
-Clicking the **Relight** action spawns a pair: a pure-frontend **Relight** light-source node (a 3D light-ball editor — place directional / point / spot lights around a clay sphere, or click a lighting preset like three-point / Rembrandt / rim) plus an Image Stage preset to the `Flux2 Klein Relight` workflow (Flux-2 Klein 9B + Sun-direction LoRA). The light-ball scene renders in the browser and feeds the workflow as the lighting reference (`images[1]`); the model transfers that lighting onto the subject (`images[0]`) while preserving identity / geometry. Any image (e.g. via Load Image from Asset) can replace the light-ball render as the reference.
+Clicking the **Relight** action spawns a pair: a pure-frontend **Relight** light-source node (a 3D light-ball editor — place directional / point / spot lights around a clay sphere, or click a lighting preset like three-point / Rembrandt / rim) plus an Image Stage. The light-ball scene renders in the browser and feeds the Image Stage as a lighting reference (`images[1]`); pick any image workflow that accepts a second reference (or replace the light-ball render via Load Image from Asset) to transfer that lighting onto the subject (`images[0]`).
 
 ## Cutout
 
 Background removal. Wire an image, click Run, get a PNG with a real alpha channel. Ships with `BiRefNet Cutout` — requires `birefnet.safetensors` in `models/background_removal/` (see [models.md](models.md)).
 
-## Image Variations
-
-Driven by the toolbar presets — click a preset and ComfyTV auto-spawns an Image Variations stage with the right workflow pre-selected; click Run to get a set of related images.
-
-| Preset | Workflow | Output | Backend |
-|---|---|---|---|
-| 🎬 **Multi-cam 9-grid** | `Multi-cam 9` | 9-image set | ✅ Qwen Multiple-Angles LoRA, single workflow with 9 parallel sampler branches |
-| 👤 **Face 3-view** | `Face 3-View` | 3-image set (front / 3/4 / side) | ✅ same |
-| 📦 **Product 3-view** | `Product 3-View` | 3-image set (front / side / back) | ✅ same |
-| 🧍 **Character 3-view** | `Character 3-View` | 3-image set (full-body front / side / back) | ✅ same |
-| 📖 **Story Progression** (4-panel) | `Story 4` | 4-image set | ✅ Qwen Next-Scene LoRA, single workflow with 4 chained samplers |
-| 🎞 **Storyboard** (25-grid) | `Storyboard 25` | 25-image set | ✅ same chain extended to 25 frames |
-| 🎥 **Cinematic Lighting** | (routes to Relight Stage) | single image | ✅ |
-| ⏱️ **Project +3s / +5s** | (routes to Image Edit Stage) | single image | ✅ |
-
-Notes:
-
-- **Multi-view** (Face / Product / Character / Multi-cam 9) — each output is the same subject from a different angle. Write the prompt as the subject description ("a young Asian businesswoman, 30s"); each branch's angle keyword is prefixed automatically.
-- **Sequence** (Story 4 / Storyboard 25) — each frame is generated from the previous one (Next-Scene LoRA). Slower than multi-view.
 
 ---
 

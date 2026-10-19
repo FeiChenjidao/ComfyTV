@@ -1,0 +1,98 @@
+{
+  "_comment": "Shipped preset for Tripo P2 Multiview-to-Model. Chain: LoadImage #55-58 -> TripoPSeriesMultiviewToModelNode #47 -> File3DFirst #62 (GLB then FBX) -> SaveGLB #43. All generation knobs live under the model DynamicCombo (P2).",
+  "label": "Tripo P2",
+  "description": "Tripo P2 Multiview-to-Model (API). Low-poly mesh with clean topology from front + optional left/back/right images. File3DFirst picks GLB or FBX so Stage quad on/off both work. Front required; at least one side view required by the API.",
+  "result": {
+    "type": "ui_save_url",
+    "node": "43"
+  },
+  "inputs": {
+    "47": {
+      "model.auto_size": {
+        "from": "option:auto_size"
+      },
+      "model.face_limit": {
+        "from": "option:face_limit",
+        "cast": "int"
+      },
+      "model.model_seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      },
+      "model.orientation": {
+        "from": "option:orientation"
+      },
+      "model.pbr": {
+        "from": "option:pbr"
+      },
+      "model.quad": {
+        "from": "option:quad",
+        "default": "false",
+        "cast": "bool"
+      },
+      "model.texture": {
+        "from": "option:texture_quality"
+      },
+      "model.texture_alignment": {
+        "from": "option:texture_alignment"
+      },
+      "model.texture_seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      }
+    },
+    "55": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    },
+    "56": {
+      "image": {
+        "from": "upstream_image:annotated[1]"
+      }
+    },
+    "57": {
+      "image": {
+        "from": "upstream_image:annotated[2]"
+      }
+    },
+    "58": {
+      "image": {
+        "from": "upstream_image:annotated[3]"
+      }
+    }
+  },
+  "order": 27,
+  "prune_when_missing": [
+    {
+      "when": "upstream_image:value[1]",
+      "drop_upstream_of": [
+        {
+          "node": "47",
+          "input": "model.image_left"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[2]",
+      "drop_upstream_of": [
+        {
+          "node": "47",
+          "input": "model.image_back"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[3]",
+      "drop_upstream_of": [
+        {
+          "node": "47",
+          "input": "model.image_right"
+        }
+      ]
+    }
+  ]
+}

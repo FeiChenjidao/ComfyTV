@@ -1,0 +1,84 @@
+{
+  "_comment": "Exported preset for the 'NanoBanana2' workflow (kind=image). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "NanoBanana2",
+  "inputs": {
+    "11": {
+      "image": {
+        "from": "upstream_image:annotated[2]"
+      }
+    },
+    "13": {
+      "image": {
+        "from": "upstream_image:annotated[1]"
+      }
+    },
+    "14": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    },
+    "15": {
+      "filename_prefix": {
+        "from": "literal:Nanobanana2",
+        "default": "Nanobanana2"
+      }
+    },
+    "17": {
+      "model.aspect_ratio": {
+        "from": "option:aspect_ratio"
+      },
+      "model.resolution": {
+        "from": "option:resolution"
+      },
+      "prompt": {
+        "from": "main_prompt"
+      },
+      "response_modalities": {
+        "from": "literal:IMAGE",
+        "default": "IMAGE"
+      },
+      "seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      }
+    },
+    "2": {
+      "image": {
+        "from": "upstream_image:annotated[5]"
+      }
+    },
+    "23": {
+      "batch_size": {
+        "from": "option:batch_size",
+        "cast": "int"
+      }
+    },
+    "3": {
+      "image": {
+        "from": "upstream_image:annotated[6]"
+      }
+    },
+    "4": {
+      "image": {
+        "from": "upstream_image:annotated[7]"
+      }
+    },
+    "5": {
+      "image": {
+        "from": "upstream_image:annotated[8]"
+      }
+    },
+    "7": {
+      "image": {
+        "from": "upstream_image:annotated[4]"
+      }
+    },
+    "9": {
+      "image": {
+        "from": "upstream_image:annotated[3]"
+      }
+    }
+  }
+}

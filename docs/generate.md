@@ -20,13 +20,13 @@ Hover a workflow entry in the stage manager to **★ star it as the default** fo
 ![Image stage](images/image-run.png)
 
 - **Prompt**: the main text box. Upstream **Text** nodes get appended; upstream **images** feed the current workflow's `LoadImage` (only the i2i workflow consumes them). `@image_N` tokens reference the wired image slots inline.
-- **workflow** — shipped: **Local SD1.5** (t2i), **Local SD1.5 I2I** (image-to-image), **Image Ideogram4 T2I** — plus anything you link or upload.
-- **resolution / aspect_ratio / batch_size**: target size tier, shape, and how many images per Run.
+- **workflow** — shipped: **NanoBanana2** (Gemini API), **GPT Image 2.5** (OpenAI API) — plus anything you link or upload.
+- **resolution / aspect_ratio / batch_size**: target size tier, shape, and how many images per Run (when the chosen workflow uses them).
 
 **Two outputs**: `images` is the whole batch from this Run; `image` is the single thumbnail you picked on the node (defaults to the first one until you click).
 
-### Image-to-image
-Pick `Local SD1.5 I2I`, wire a reference image into the **images** slot, write the prompt, Run.
+### Image with references
+Wire reference images into the **images** slots, write the prompt, pick **NanoBanana2** or **GPT Image 2.5**, Run.
 
 ---
 
@@ -92,10 +92,9 @@ Text-to-speech. Ships with a **Kokoro TTS** workflow: type the line to speak, pi
 <!-- TODO(screenshot): 3D Model Stage with orbit preview -->
 ![3D model stage](images/model3d-run.png)
 
-Generates a **3D model (GLB)** via a `model`-kind workflow. Three ship today:
+Generates a **3D model (GLB)** via a `model`-kind workflow. Two ship today:
 
-- **Hunyuan3D 2.1** — image → textured mesh.
-- **MoGe-2 Depth Mesh** — image → geometry via monocular depth estimation.
-- **TripoSplat Gaussian** — image → Gaussian splat (loads into Scene3D too).
+- **Tripo** — multiview → mesh (GLB/FBX) via Tripo API.
+- **Tripo P2** — multiview → low-poly mesh (GLB/FBX) via Tripo P2 API.
 
-Model files for all three are listed in [models.md](models.md); you can also link or upload your own `model`-kind workflow. The node embeds an orbit preview; after you orbit, it auto-captures a screenshot into its image output, so downstream image stages can consume the model's look. The GLB itself flows to the 3D nodes — Scene3D, mesh ops, materials; see the Node Reference.
+Both are API-backed (see [models.md](models.md)); you can also link or upload your own `model`-kind workflow. The node embeds an orbit preview; after you orbit, it auto-captures a screenshot into its image output, so downstream image stages can consume the model's look. The GLB itself flows to the 3D nodes — Scene3D, mesh ops, materials; see the Node Reference.

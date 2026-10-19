@@ -1,6 +1,6 @@
 # Ignore every *.json under workflows/ by default so users can drop
 # their own workflows here without git noticing them. Each shipped
-# workflow is opted back in below with an explicit `!` line 閳?keep
+# workflow is opted back in below with an explicit `!` line — keep
 # this list in sync when you add new shipped workflows.
 
 *.json
@@ -22,50 +22,22 @@
 !image-edit/qwen-edit-2511_preset.json
 !image-edit/qwen-image-2.1-edit.json
 !image-edit/qwen-image-2.1-edit_preset.json
-!image/flux2klein-relight.json
-!image/flux2klein-relight_preset.json
-!image/image_ideogram4_t2i.json
-!image/image_ideogram4_t2i_preset.json
-!image/local-sd15-i2i.json
-!image/local-sd15-i2i_preset.json
-!image/local-sd15.json
-!image/local-sd15_preset.json
-!image/pose-transfer-sd15.json
-!image/pose-transfer-sd15_preset.json
-!image/qwen-image-2.1-multi-ref-edit.json
-!image/qwen-image-2.1-multi-ref-edit_preset.json
-!image/qwen-image-2.1-rgba.json
-!image/qwen-image-2.1-rgba_preset.json
-!image/qwen-image-2.1-t2i.json
-!image/qwen-image-2.1-t2i_preset.json
-!image/qwen-product-shot.json
-!image/qwen-product-shot_preset.json
+!image/GPT_Image_2.5.json
+!image/gpt-image-2-5_preset.json
+!image/NanoBanana2.json
+!image/NanoBanana2_preset.json
 !inpaint/flux-fill-inpaint.json
 !inpaint/flux-fill-inpaint_preset.json
 !inpaint/fooocus-sdxl-inpaint.json
 !inpaint/fooocus-sdxl-inpaint_preset.json
 !material-estimate/qwen3vl-estimate.json
 !material-estimate/qwen3vl-estimate_preset.json
-!model/hunyuan3d-21.json
-!model/hunyuan3d-21_preset.json
-!model/moge2-mesh.json
-!model/moge2-mesh_preset.json
 !model/tripo.json
 !model/tripo_preset.json
-!model/triposplat-gaussian.json
-!model/triposplat-gaussian_preset.json
+!model/tripo-p2.json
+!model/tripo-p2_preset.json
 !multiangle/qwen-edit-2511-multiangle.json
 !multiangle/qwen-edit-2511-multiangle_preset.json
-!multiview/qwen-3view-character.json
-!multiview/qwen-3view-character_preset.json
-!multiview/qwen-3view-face.json
-!multiview/qwen-3view-face_preset.json
-!multiview/qwen-3view-product.json
-!multiview/qwen-3view-product_preset.json
-!multiview/qwen-9cam.json
-!multiview/qwen-9cam_preset.json
-!multiview/qwen-image-2.1-3view-character.json
-!multiview/qwen-image-2.1-3view-character_preset.json
 !outpaint/flux-fill-outpaint.json
 !outpaint/flux-fill-outpaint_preset.json
 !outpaint/fooocus-sdxl-outpaint.json
@@ -74,10 +46,6 @@
 !panorama/qwen-edit-2511-img2pano_preset.json
 !panorama/qwen-image-2512-360.json
 !panorama/qwen-image-2512-360_preset.json
-!sequence/qwen-next-scene-25.json
-!sequence/qwen-next-scene-25_preset.json
-!sequence/qwen-next-scene-4.json
-!sequence/qwen-next-scene-4_preset.json
 !shot-images/flux-schnell.json
 !shot-images/flux-schnell_preset.json
 !shot-images/local-z-image-turbo.json

@@ -122,7 +122,6 @@ export function spawnOrFocusImagesSplit(srcNode: any) {
   return spawnConsumingNode(srcNode, 'ComfyTV.ImagesSplitStage', 'images', srcSlot)
 }
 
-export const IMAGE_VARIATIONS_CLASS = 'ComfyTV.ImageVariationsStage'
 export const IMAGE_LOADER_CLASS = 'ComfyTV.ImageLoaderStage'
 export { IMAGE_MERGE_CLASS }
 
@@ -215,27 +214,6 @@ export function spawnModel3DFromCustomSplit(srcNode: any) {
   canvas?.selectNode?.(node)
   useStageStore().notifyDownstream()
   return node
-}
-
-export function spawnImageVariationsFromSlots(srcNode: any, slotIndexes: number[]) {
-  const slots = [...new Set(slotIndexes.filter(i => Number.isInteger(i) && i >= 0))].sort((a, b) => a - b)
-  if (!srcNode || !slots.length) return []
-  const store = useStageStore()
-  const created: any[] = []
-  const baseX = (srcNode.pos?.[0] || 0) + (srcNode.size?.[0] || 280) + 60
-  let y = srcNode.pos?.[1] || 0
-  for (const slot of slots) {
-    const node = createNodeAt(IMAGE_VARIATIONS_CLASS, [baseX, y])
-    if (!node) continue
-    const inSlot = findNamedSlot(node, 'image')
-    if (inSlot >= 0) srcNode.connect(slot, node, inSlot)
-    else console.warn('[ComfyTV/images-split] ImageVariationsStage has no image input')
-    stampLineage(srcNode, node)
-    created.push(node)
-    y += (node.size?.[1] || 260) + 40
-  }
-  store.notifyDownstream()
-  return created
 }
 
 export const IMAGE_GENERATE_CLASS = 'ComfyTV.ImageStage'
@@ -393,7 +371,7 @@ export function spawnConsumingNode(srcNode: any, targetClass: string, inputSlotN
   return newNode
 }
 
-const RELIGHT_WORKFLOW_LABEL = 'Flux2 Klein Relight'
+const RELIGHT_WORKFLOW_LABEL = 'NanoBanana2'
 
 function spawnRelightPair(srcNode: any, srcSlot: number) {
   const store = useStageStore()
