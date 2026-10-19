@@ -228,17 +228,17 @@ class TestApplyPrunes:
             "43": {"class_type": "SaveGLB", "inputs": {"mesh": ["64", 0]}},
         }
 
-    def _tripo_count_cfg(self):
+    def _tripo_side_cfg(self):
         return {
             "result": {"node": "43"},
             "prune_when_missing": [
                 {
-                    "when": "upstream_image:count_lt[2]",
+                    "when": "upstream_image:none[1,2,3]",
                     "drop_nodes": ["47", "56", "57", "58", "62"],
                     "drop_inputs": [{"node": "64", "input": "model_a"}],
                 },
                 {
-                    "when": "upstream_image:count_ge[2]",
+                    "when": "upstream_image:any[1,2,3]",
                     "drop_nodes": ["48", "63"],
                     "drop_inputs": [{"node": "64", "input": "model_b"}],
                 },
@@ -257,7 +257,7 @@ class TestApplyPrunes:
             ],
         }
 
-    def test_count_lt_keeps_single_image_path(self, comfy_nodes):
+    def test_none_sides_keeps_single_image_path(self, comfy_nodes):
         class _Save:
             OUTPUT_NODE = True
         comfy_nodes.NODE_CLASS_MAPPINGS["SaveGLB"] = _Save
@@ -266,14 +266,35 @@ class TestApplyPrunes:
             "images": ["/view?filename=front.png"],
             "videos": [], "audio": [], "texts": [],
         })
-        pruned = lc._apply_prunes(wf, self._tripo_count_cfg(), ctx)
+        pruned = lc._apply_prunes(wf, self._tripo_side_cfg(), ctx)
         assert "47" in pruned and "62" in pruned and "48" not in pruned
         assert set(wf) >= {"48", "55", "63", "64", "43"}
         assert "47" not in wf and "56" not in wf
         assert "model_a" not in wf["64"]["inputs"]
         assert wf["64"]["inputs"]["model_b"] == ["63", 0]
 
-    def test_count_ge_keeps_multiview_path(self, comfy_nodes):
+    def test_front_plus_extra_stays_single_image(self, comfy_nodes):
+        """image0+image4 must not select TripoMultiview (needs a side view)."""
+        class _Save:
+            OUTPUT_NODE = True
+        comfy_nodes.NODE_CLASS_MAPPINGS["SaveGLB"] = _Save
+        wf = self._dual_path_tripo()
+        ctx = self._ctx(upstream={
+            "images": [
+                "/view?filename=front.png",
+                None,
+                None,
+                None,
+                "/view?filename=extra.png",
+            ],
+            "videos": [], "audio": [], "texts": [],
+        })
+        pruned = lc._apply_prunes(wf, self._tripo_side_cfg(), ctx)
+        assert "47" in pruned and "62" in pruned and "48" not in pruned
+        assert "47" not in wf
+        assert "model_a" not in wf["64"]["inputs"]
+
+    def test_any_side_keeps_multiview_path(self, comfy_nodes):
         class _Save:
             OUTPUT_NODE = True
         comfy_nodes.NODE_CLASS_MAPPINGS["SaveGLB"] = _Save
@@ -285,17 +306,37 @@ class TestApplyPrunes:
             ],
             "videos": [], "audio": [], "texts": [],
         })
-        pruned = lc._apply_prunes(wf, self._tripo_count_cfg(), ctx)
+        pruned = lc._apply_prunes(wf, self._tripo_side_cfg(), ctx)
         assert "48" in pruned and "63" in pruned and "47" not in pruned
         assert set(wf) >= {"47", "55", "56", "62", "64", "43"}
         assert "48" not in wf and "63" not in wf
         assert "model_b" not in wf["64"]["inputs"]
         assert wf["64"]["inputs"]["model_a"] == ["62", 0]
-        # only 2 images → back/right loaders pruned via value[2]/value[3]
+        # only left filled → back/right loaders pruned via value[2]/value[3]
         assert "57" not in wf and "58" not in wf
         assert "image_back" not in wf["47"]["inputs"]
         assert "image_right" not in wf["47"]["inputs"]
         assert wf["47"]["inputs"]["image_left"] == ["56", 0]
+
+    def test_sparse_back_only_keeps_multiview(self, comfy_nodes):
+        class _Save:
+            OUTPUT_NODE = True
+        comfy_nodes.NODE_CLASS_MAPPINGS["SaveGLB"] = _Save
+        wf = self._dual_path_tripo()
+        ctx = self._ctx(upstream={
+            "images": [
+                "/view?filename=front.png",
+                None,
+                "/view?filename=back.png",
+                None,
+            ],
+            "videos": [], "audio": [], "texts": [],
+        })
+        pruned = lc._apply_prunes(wf, self._tripo_side_cfg(), ctx)
+        assert "48" in pruned and "47" not in pruned
+        assert "image_left" not in wf["47"]["inputs"]
+        assert wf["47"]["inputs"]["image_back"] == ["57", 0]
+        assert "image_right" not in wf["47"]["inputs"]
 
 
 # ─── _auto_prune_unbound ─────────────────────────────────────────────────────
