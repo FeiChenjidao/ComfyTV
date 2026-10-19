@@ -45,7 +45,7 @@ user/comfytv/workflows/
   split-part/   material-estimate/   speech-to-text/   custom/  ← 自定义节点（自选暴露的输入输出）
 ```
 
-**目录决定 kind。** 把 JSON 拷进去，重启 ComfyUI（或在侧边栏触发 rescan），它就会出现在对应 stage 的下拉框里。自带工作流在启动时会播种到这个目录；随 ComfyTV 发布的条目带 **builtin** 徽章。未改动的自带副本会在启动/rescan 时被更新（插件删掉的也会从本地清掉）；你改过的文件不会被覆盖或删除。
+**目录决定 kind。** 把 JSON 拷进去，重启 ComfyUI（或在侧边栏触发 rescan），它就会出现在对应 stage 的下拉框里。启动/rescan 时会**清空** `user/comfytv/workflows`，再从插件 `workflows/` 整树重拷，并把各 `_preset.json` 重新写入 DB。随 ComfyTV 发布的条目带 **builtin** 徽章。要长期保留的自定义工作流请放到你自己管理的位置（或 rescan 后重新导入）——该目录下的本地分叉重启后不会保留。`user/comfytv` 下的其它数据（`data.db`、skills 等）不动。
 
 kind 全集：`text, image, shot-images, video, audio, speech, storyboard, panorama, timeline, upscale, outpaint, inpaint, erase, image-edit, multiangle, cutout, audio-vocal, audio-bg, model, split-part, material-estimate, speech-to-text, custom`。
 

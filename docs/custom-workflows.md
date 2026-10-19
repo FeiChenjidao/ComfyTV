@@ -45,7 +45,7 @@ user/comfytv/workflows/
   split-part/   material-estimate/   speech-to-text/   custom/  ← Custom Stage (you choose the exposed I/O)
 ```
 
-**The folder decides the kind.** Copy a JSON in and restart ComfyUI (or trigger a rescan from the sidebar) and it shows up in the matching stage's dropdown. The shipped workflows are seeded into this directory on startup; entries that came with ComfyTV carry a **builtin** badge. Untouched shipped copies are updated (or removed, if the plugin dropped them) on startup/rescan; files you've edited are never overwritten or deleted.
+**The folder decides the kind.** Copy a JSON in and restart ComfyUI (or trigger a rescan from the sidebar) and it shows up in the matching stage's dropdown. On startup/rescan ComfyTV **wipes** `user/comfytv/workflows` and re-copies the plugin `workflows/` tree, then re-applies each `_preset.json` into the DB. Entries that came with ComfyTV carry a **builtin** badge. Put lasting custom workflows somewhere you manage yourself (or re-import after rescan) — local forks under that folder do not survive restart. Other data under `user/comfytv` (`data.db`, skills, …) is left alone.
 
 The full list of kinds: `text, image, shot-images, video, audio, speech, storyboard, panorama, timeline, upscale, outpaint, inpaint, erase, image-edit, multiangle, cutout, audio-vocal, audio-bg, model, split-part, material-estimate, speech-to-text, custom`.
 

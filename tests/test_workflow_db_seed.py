@@ -164,30 +164,30 @@ class TestSeed:
         assert wdb._safe_stem("a/b/c.JSON") == "c"
         assert wdb._safe_stem("  spaced name .json") == "spaced-name"
 
-    def test_seed_skips_preset_on_existing_row(self, reset_db, tmp_path, monkeypatch):
-        """The whole point of the once-only preset rule — user edits survive
-        the next seed."""
+    def test_seed_resets_preset_on_existing_row(self, reset_db, tmp_path, monkeypatch):
+        """Full mirror + ledger clear: sidebar edits to shipped rows reset."""
         from pathlib import Path
         wdir = tmp_path / "workflows"
         make_workflow(wdir, "fancy", "image", preset={
             "label": "Fancy",
             "inputs": {"3": {"seed": {"from": "option:seed"}}},
         })
-        monkeypatch.setattr(wdb.seed, "_WORKFLOWS_DIR", Path(wdir))
+        # Treat wdir as both plugin source and user root so wipe+recopy applies.
+        monkeypatch.setattr(wdb.seed, "_LEGACY_WORKFLOWS_DIR", Path(wdir))
+        monkeypatch.setattr(wdb.seed, "_WORKFLOWS_DIR", Path(tmp_path / "user-workflows"))
         wdb.seed_workflows_from_disk(("image",))
 
         cfg1 = wdb.get_workflow_config("image", "Fancy")
         wid = cfg1["id"]
-        # User edits the binding via sidebar — re-seed must not clobber it.
         wdb.upsert_input_binding(
             workflow_id=wid, node_id="3", input_name="seed",
-            from_="main_prompt",  # user changed it
+            from_="main_prompt",
         )
         wdb.seed_workflows_from_disk(("image",))
 
         cfg2 = wdb.get_workflow_config("image", "Fancy")
         seed_b = next(b for b in cfg2["bindings"] if b["node_id"] == "3" and b["input_name"] == "seed")
-        assert seed_b["from"] == "main_prompt"
+        assert seed_b["from"] == "option:seed"
 
     def test_seed_ignores_preset_files_as_workflows(self, reset_db, tmp_path, monkeypatch):
         from pathlib import Path

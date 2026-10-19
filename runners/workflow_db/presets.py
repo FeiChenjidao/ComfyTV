@@ -192,31 +192,27 @@ def _reapply_preset_to_row(s, row: db.Workflow, preset: dict) -> None:
 
 def _refresh_shipped_preset(s, manifest: dict, ledger: dict, root: Path,
                             row: db.Workflow, path: Path) -> bool:
-    """Reconcile DB bindings with the on-disk shipped preset.
+    """Re-apply the on-disk shipped preset onto the DB row.
 
-    Runs on every startup/rescan for pristine plugin copies. Local sidebar
-    edits (row hash ≠ last applied) and user-edited files are left alone.
+    Startup does a full wipe+recopy of user/comfytv/workflows, then this
+    refreshes bindings from `_preset.json`. Sidebar edits to shipped
+    workflows do not survive a restart/rescan.
     """
     preset_path = _preset_file_path(path)
     preset_hash = _file_sha256(preset_path)
     if preset_hash is None:
         return False
-    if not (_file_pristine(manifest, root, path)
-            and _file_pristine(manifest, root, preset_path)):
+    try:
+        rel_key = path.relative_to(root).as_posix()
+    except ValueError:
         return False
-    rel_key = path.relative_to(root).as_posix()
-    entry = ledger.get(rel_key)
+    if rel_key not in manifest:
+        return False
     row_hash = _row_state_hash(s, row)
+    entry = ledger.get(rel_key)
     if (isinstance(entry, dict)
             and entry.get("preset") == preset_hash
             and entry.get("row") == row_hash):
-        return False
-    if isinstance(entry, dict) and entry.get("row") != row_hash:
-        if entry.get("preset") != preset_hash:
-            _log.info(
-                "[ComfyTV/workflow_db] shipped preset changed for %s/%s but "
-                "the row has local edits — kept (use 'Reset to shipped "
-                "preset' to adopt the update)", row.kind, row.label)
         return False
     preset = _read_preset(path)
     if not preset:
@@ -226,6 +222,6 @@ def _refresh_shipped_preset(s, manifest: dict, ledger: dict, root: Path,
         return True
     _reapply_preset_to_row(s, row, preset)
     _record_applied_preset(ledger, rel_key, preset_hash, _row_state_hash(s, row))
-    _log.info("[ComfyTV/workflow_db] re-applied updated shipped preset for %s/%s",
+    _log.info("[ComfyTV/workflow_db] re-applied shipped preset for %s/%s",
               row.kind, row.label)
     return True

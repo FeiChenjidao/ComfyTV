@@ -319,7 +319,7 @@ class TestShippedPresetRefresh:
         cfg2 = wdb.get_workflow_config("video", "My H3")
         assert cfg2["description"] == "v2"
 
-    def test_preset_update_skips_row_with_gui_edits(
+    def test_preset_update_resets_row_with_gui_edits(
             self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
         cfg1 = self._seed_v1(legacy)
@@ -332,11 +332,14 @@ class TestShippedPresetRefresh:
         wdb.seed_workflows_from_disk(("video",))
 
         cfg2 = wdb.get_workflow_config("video", "H3")
-        assert cfg2["description"] == "v1"
-        assert len(cfg2["bindings"]) == 1
-        assert cfg2["bindings"][0]["from"] == "option:seed"
+        assert cfg2["description"] == "v2"
+        keys = {(b["node_id"], b["input_name"], b["from"]) for b in cfg2["bindings"]}
+        assert keys == {
+            ("138", "value", "main_prompt"),
+            ("401", "audio", "upstream_audio:annotated[0]"),
+        }
 
-    def test_preset_update_skips_forked_graph_file(
+    def test_preset_update_overwrites_forked_graph_file(
             self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
         self._seed_v1(legacy)
@@ -348,8 +351,9 @@ class TestShippedPresetRefresh:
         wdb.seed_workflows_from_disk(("video",))
 
         cfg2 = wdb.get_workflow_config("video", "H3")
-        assert cfg2["description"] == "v1"
-        assert len(cfg2["bindings"]) == 1
+        assert cfg2["description"] == "v2"
+        assert len(cfg2["bindings"]) == 2
+        assert '"UserEdit"' not in (user_root / "video" / "wf.json").read_text()
 
     def test_bootstrap_without_ledger_reapplies_pristine_row(
             self, reset_db, tmp_path, monkeypatch):
@@ -385,7 +389,7 @@ class TestShippedPresetRefresh:
         assert cfg2["description"] == "v2"
         assert len(cfg2["bindings"]) == 2
 
-    def test_unchanged_preset_never_touches_row(
+    def test_unchanged_preset_still_resets_sidebar_edits(
             self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
         cfg1 = self._seed_v1(legacy)
@@ -395,4 +399,4 @@ class TestShippedPresetRefresh:
         wdb.seed_workflows_from_disk(("video",))
 
         cfg2 = wdb.get_workflow_config("video", "H3")
-        assert cfg2["bindings"][0]["from"] == "option:seed"
+        assert cfg2["bindings"][0]["from"] == "main_prompt"

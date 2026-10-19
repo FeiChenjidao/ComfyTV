@@ -10,9 +10,9 @@ from ... import db
 from .auto_bind import add_size_node_bindings
 from .labels import _free_label, _is_gui_format, _label_from_stem
 from .presets import (
-    _apply_preset_to_new_row, _file_sha256, _preset_file_path, _read_preset,
-    _read_preset_ledger, _record_applied_preset, _refresh_shipped_preset,
-    _row_state_hash, _write_preset_ledger,
+    _apply_preset_to_new_row, _file_sha256, _preset_file_path, _preset_ledger_path,
+    _read_preset, _read_preset_ledger, _record_applied_preset,
+    _refresh_shipped_preset, _row_state_hash, _write_preset_ledger,
 )
 
 
@@ -60,92 +60,95 @@ def _workflow_rel_key(rel_key: str) -> str:
     return rel_key
 
 
+def _wipe_dir_contents(root: Path) -> None:
+    """Delete everything under root (files + subdirs). Creates root if missing."""
+    if not root.exists():
+        root.mkdir(parents=True, exist_ok=True)
+        return
+    for child in root.iterdir():
+        try:
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+        except OSError as e:
+            _log.warning("[ComfyTV/workflow_db] could not clear %s: %s", child, e)
+
+
 def _sync_legacy_workflows(root: Path) -> tuple[list[str], list[str], list[str]]:
+    """Full-mirror plugin workflows/ into user/comfytv/workflows.
+
+    Wipes the user workflows dir every seed/rescan, then copies the plugin
+    tree fresh. No edit-preservation — stale or forked local copies go away.
+    Does not touch sibling data under user/comfytv (data.db, skills, …).
+    """
     if _LEGACY_WORKFLOWS_DIR is None:
         return [], [], []
     src_root = Path(_LEGACY_WORKFLOWS_DIR)
     if not src_root.is_dir():
         return [], [], []
 
-    manifest = _read_sync_manifest(root)
-    dirty = False
-    copied: list[str] = []
-    updated: list[str] = []
-    removed: list[str] = []
-    src_keys: set[str] = set()
+    old_manifest = _read_sync_manifest(root)
+    old_keys = set(old_manifest.keys())
+
+    src_files: list[tuple[str, Path, str]] = []
     for src in sorted(src_root.rglob("*.json")):
         if not src.is_file():
             continue
         rel = src.relative_to(src_root)
         if any(part.startswith(".") for part in rel.parts):
             continue
-        rel_key = rel.as_posix()
         src_hash = _file_sha256(src)
         if src_hash is None:
             continue
-        src_keys.add(rel_key)
-        dest = root / rel
+        src_files.append((rel.as_posix(), src, src_hash))
+    src_keys = {rel for rel, _, _ in src_files}
 
-        if not dest.exists():
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dest)
-            copied.append(rel_key)
-            manifest[rel_key] = src_hash
-            dirty = True
-            continue
-
-        dest_hash = _file_sha256(dest)
-        if dest_hash == src_hash:
-            if manifest.get(rel_key) != src_hash:
-                manifest[rel_key] = src_hash
-                dirty = True
-            continue
-
-        if manifest.get(rel_key) == dest_hash:
-            shutil.copy2(src, dest)
-            updated.append(rel_key)
-            manifest[rel_key] = src_hash
-            dirty = True
-
-    # Drop pristine user copies of shipped files that no longer exist in the
-    # plugin tree. Edited copies (dest hash ≠ last synced) are kept.
-    for rel_key in sorted(manifest.keys()):
-        if rel_key in src_keys:
-            continue
-        dest = root / Path(rel_key)
-        if dest.exists():
-            dest_hash = _file_sha256(dest)
-            if dest_hash != manifest.get(rel_key):
+    removed = sorted(old_keys - src_keys)
+    # Also treat non-manifest leftovers as removed for logging once wiped.
+    if root.exists():
+        for path in root.rglob("*"):
+            if not path.is_file():
+                continue
+            if path.name.startswith("."):
                 continue
             try:
-                dest.unlink()
-            except OSError as e:
-                _log.warning(
-                    "[ComfyTV/workflow_db] could not remove retired shipped "
-                    "file %s: %s", dest, e)
+                rel_key = path.relative_to(root).as_posix()
+            except ValueError:
                 continue
-            parent = dest.parent
-            if parent != root and parent.is_dir() and not any(parent.iterdir()):
-                try:
-                    parent.rmdir()
-                except OSError:
-                    pass
-        del manifest[rel_key]
-        removed.append(rel_key)
-        dirty = True
+            if rel_key not in src_keys and rel_key not in removed:
+                removed.append(rel_key)
+        removed = sorted(set(removed))
 
-    if dirty and root.exists():
-        _write_sync_manifest(root, manifest)
+    _wipe_dir_contents(root)
+
+    copied: list[str] = []
+    updated: list[str] = []
+    manifest: dict[str, str] = {}
+    for rel_key, src, src_hash in src_files:
+        dest = root / rel_key
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        manifest[rel_key] = src_hash
+        if rel_key in old_keys:
+            updated.append(rel_key)
+        else:
+            copied.append(rel_key)
+
+    _write_sync_manifest(root, manifest)
+    # Force preset re-apply on the next seed pass.
+    try:
+        ledger_path = _preset_ledger_path(root)
+        if ledger_path.exists():
+            ledger_path.unlink()
+    except OSError:
+        pass
+
     if copied or updated or removed:
         _log.warning(
-            "[ComfyTV/workflow_db] %s is a legacy workflows location — "
-            "copied %d new, updated %d unchanged, removed %d retired "
-            "file(s) in %s: %s. "
-            "Put new workflow files under %s instead; this directory is "
-            "mirrored at startup/rescan. Edited local copies are never "
-            "overwritten or deleted.",
-            src_root, len(copied), len(updated), len(removed), root,
-            ", ".join(copied + updated + removed), root,
+            "[ComfyTV/workflow_db] mirrored shipped workflows into %s — "
+            "copied %d new, refreshed %d, removed %d (full wipe+recopy from %s).",
+            root, len(copied), len(updated), len(removed), src_root,
         )
     return copied, updated, removed
 

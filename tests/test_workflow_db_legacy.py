@@ -36,19 +36,23 @@ class TestLegacyMigration:
         assert rows[0]["label"] == "SD 1.5"
         assert str(user_root) in rows[0]["file_path"]
 
-    def test_sync_is_one_way_and_never_overwrites(self, reset_db, tmp_path, monkeypatch):
+    def test_sync_wipes_and_recopies_user_workflows(
+            self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
         (legacy / "image" / "wf.json").write_text(json.dumps({"nodes": []}))
+        (legacy / "image" / "wf_preset.json").write_text(json.dumps({"label": "wf"}))
 
         r1 = wdb.seed_workflows_from_disk(("image",))
-        assert r1["synced"] == ["image/wf.json"]
+        assert set(r1["synced"]) == {"image/wf.json", "image/wf_preset.json"}
 
         edited = json.dumps({"nodes": [{"id": 1, "type": "UserEdit"}]})
         (user_root / "image" / "wf.json").write_text(edited)
+        (user_root / "image" / "orphan.json").write_text(json.dumps({"nodes": []}))
 
         r2 = wdb.seed_workflows_from_disk(("image",))
-        assert r2["synced"] == []
-        assert (user_root / "image" / "wf.json").read_text() == edited
+        assert "image/orphan.json" in r2["removed"]
+        assert not (user_root / "image" / "orphan.json").exists()
+        assert (user_root / "image" / "wf.json").read_text() == json.dumps({"nodes": []})
 
     def test_existing_rows_repointed_with_state_kept(self, reset_db, tmp_path, monkeypatch):
         from ComfyTV import db
@@ -100,14 +104,15 @@ class TestLegacyMigration:
     def test_import_writes_into_user_root(self, reset_db, tmp_path, monkeypatch):
         from pathlib import Path
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
+        monkeypatch.setattr(wdb.seed, "add_size_node_bindings", lambda *a, **k: None)
         res = wdb.import_workflow("image", "fresh.json", json.dumps({"nodes": []}))
         assert Path(res["file_path"]).parent == user_root / "image"
         assert not (legacy / "image" / "fresh.json").exists()
 
     def test_builtin_detected_via_relative_path(self, reset_db, tmp_path, monkeypatch):
-        _, user_root = self._setup_dirs(tmp_path, monkeypatch)
-        (user_root / "image").mkdir(parents=True)
-        (user_root / "image" / "ship.json").write_text(json.dumps({"nodes": []}))
+        legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
+        (legacy / "image" / "ship.json").write_text(json.dumps({"nodes": []}))
+        (legacy / "image" / "ship_preset.json").write_text(json.dumps({"label": "ship"}))
         monkeypatch.setattr(
             wdb.bindings, "_git_tracked_cache",
             (frozenset(), frozenset({"image/ship.json"})),
@@ -116,6 +121,7 @@ class TestLegacyMigration:
         rows = wdb.list_workflows_overview("image")
         assert len(rows) == 1
         assert rows[0]["builtin"] is True
+        assert str(user_root) in rows[0]["file_path"]
 
     def test_shipped_update_propagates_to_untouched_copy(self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
@@ -129,36 +135,38 @@ class TestLegacyMigration:
         (legacy / "image" / "wf.json").write_text(v2)
 
         result = wdb.seed_workflows_from_disk(("image",))
-        assert result["updated"] == ["image/wf.json"]
+        assert "image/wf.json" in result["updated"]
         assert result["synced"] == []
         assert (user_root / "image" / "wf.json").read_text() == v2
         assert wdb.get_workflow_config("image", "wf")["has_api"] is False
 
-    def test_user_edited_copy_blocks_shipped_update(self, reset_db, tmp_path, monkeypatch):
+    def test_full_mirror_overwrites_local_edits(self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
         (legacy / "image" / "wf.json").write_text(json.dumps({"nodes": []}))
+        (legacy / "image" / "wf_preset.json").write_text(json.dumps({"label": "wf"}))
         wdb.seed_workflows_from_disk(("image",))
 
         edited = json.dumps({"nodes": [{"id": 9, "type": "UserEdit"}]})
         (user_root / "image" / "wf.json").write_text(edited)
-        (legacy / "image" / "wf.json").write_text(
-            json.dumps({"nodes": [{"id": 1, "type": "NewShipped"}]}))
+        v2 = json.dumps({"nodes": [{"id": 1, "type": "NewShipped"}]})
+        (legacy / "image" / "wf.json").write_text(v2)
 
         result = wdb.seed_workflows_from_disk(("image",))
-        assert result["updated"] == []
-        assert (user_root / "image" / "wf.json").read_text() == edited
+        assert "image/wf.json" in result["updated"]
+        assert (user_root / "image" / "wf.json").read_text() == v2
 
-    def test_copy_without_manifest_entry_is_never_overwritten(self, reset_db, tmp_path, monkeypatch):
+    def test_pre_existing_user_file_is_replaced_by_shipped(
+            self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
-        (legacy / "image" / "wf.json").write_text(json.dumps({"nodes": []}))
+        shipped = json.dumps({"nodes": [{"id": 1, "type": "Shipped"}]})
+        (legacy / "image" / "wf.json").write_text(shipped)
+        (legacy / "image" / "wf_preset.json").write_text(json.dumps({"label": "wf"}))
         pre_existing = json.dumps({"nodes": [{"id": 5, "type": "Unknown"}]})
         (user_root / "image").mkdir(parents=True)
         (user_root / "image" / "wf.json").write_text(pre_existing)
 
-        result = wdb.seed_workflows_from_disk(("image",))
-        assert result["synced"] == []
-        assert result["updated"] == []
-        assert (user_root / "image" / "wf.json").read_text() == pre_existing
+        wdb.seed_workflows_from_disk(("image",))
+        assert (user_root / "image" / "wf.json").read_text() == shipped
 
     def test_user_dir_move_repoints_rows(self, reset_db, tmp_path, monkeypatch):
         from ComfyTV import db
@@ -167,8 +175,8 @@ class TestLegacyMigration:
         old_user.mkdir(parents=True)
         content = json.dumps({"nodes": []})
         (old_user / "wf.json").write_text(content)
-        (user_root / "image").mkdir(parents=True)
-        (user_root / "image" / "wf.json").write_text(content)
+        (legacy / "image" / "wf.json").write_text(content)
+        (legacy / "image" / "wf_preset.json").write_text(json.dumps({"label": "wf"}))
 
         with db.get_session() as s:
             row = db.Workflow(kind="image", label="wf",
@@ -193,9 +201,8 @@ class TestLegacyMigration:
         old_user.mkdir(parents=True)
         content = json.dumps({"nodes": []})
         (old_user / "sd15.json").write_text(content)
-        (user_root / "image").mkdir(parents=True)
-        (user_root / "image" / "sd15.json").write_text(content)
-        (user_root / "image" / "sd15_preset.json").write_text(
+        (legacy / "image" / "sd15.json").write_text(content)
+        (legacy / "image" / "sd15_preset.json").write_text(
             json.dumps({"label": "SD 1.5"}))
 
         with db.get_session() as s:
@@ -237,7 +244,7 @@ class TestLegacyMigration:
 
     def test_retired_shipped_files_removed_from_user_root(
             self, reset_db, tmp_path, monkeypatch):
-        """Plugin deletes a shipped workflow → pristine user copy + DB row go."""
+        """Plugin deletes a shipped workflow → user copy + DB row go."""
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
         (legacy / "image" / "keep.json").write_text(json.dumps({"nodes": []}))
         (legacy / "image" / "keep_preset.json").write_text(
@@ -254,9 +261,8 @@ class TestLegacyMigration:
         (legacy / "image" / "gone_preset.json").unlink()
         result = wdb.seed_workflows_from_disk(("image",))
 
-        assert sorted(result["removed"]) == [
-            "image/gone.json", "image/gone_preset.json",
-        ]
+        assert "image/gone.json" in result["removed"]
+        assert "image/gone_preset.json" in result["removed"]
         assert not (user_root / "image" / "gone.json").exists()
         assert not (user_root / "image" / "gone_preset.json").exists()
         assert (user_root / "image" / "keep.json").exists()
@@ -264,7 +270,7 @@ class TestLegacyMigration:
         assert labels == {"Keep"}
         assert result["pruned"] == 1
 
-    def test_user_edited_retired_copy_is_kept(
+    def test_retired_edited_copy_is_also_wiped(
             self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
         (legacy / "image" / "fork.json").write_text(json.dumps({"nodes": []}))
@@ -278,6 +284,7 @@ class TestLegacyMigration:
         (legacy / "image" / "fork_preset.json").unlink()
 
         result = wdb.seed_workflows_from_disk(("image",))
-        assert "image/fork.json" not in result["removed"]
-        assert (user_root / "image" / "fork.json").read_text() == edited
-        assert any(r["label"] == "fork" for r in wdb.list_workflows_overview("image"))
+        assert "image/fork.json" in result["removed"]
+        assert not (user_root / "image" / "fork.json").exists()
+        assert not any(
+            r["label"] == "fork" for r in wdb.list_workflows_overview("image"))
