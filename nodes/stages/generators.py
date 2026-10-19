@@ -281,7 +281,6 @@ class Model3DStage(io.ComfyNode):
         text_vals = _autogrow_values(texts)
         # Keep image0…image4 positions (front/left/back/right/extra). Compacting
         # empties remaps sides and can trip Tripo multiview with only front+extra.
-        from ....runners.custom_io import autogrow_by_index
         image_vals = [
             (str(v) if v not in (None, "") else None)
             for v in autogrow_by_index(images, "image", len(FACE_IMAGE_NAMES))
