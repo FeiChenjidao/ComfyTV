@@ -1,7 +1,7 @@
 {
-  "_comment": "Shipped preset for Rodin Gen-2.5 Image-to-3D. Chain: LoadImage #10-14 -> Rodin3D_Gen25_Image #1 -> SaveGLB #3. Up to 5 Stage face images (正/左/背/右/辅); missing sides are pruned.",
+  "_comment": "Shipped preset for Rodin Gen-2.5 Image-to-3D. Chain: LoadImage #10-14 -> Rodin3D_Gen25_Image #1 -> SaveGLB #3. Stage images.image0..image4 map 1:1 onto Rodin images.image0..image4; missing refs are pruned.",
   "label": "Rodin Gen25",
-  "description": "Rodin Gen-2.5 Image-to-3D (API). 1–5 reference images → mesh (glb/fbx/obj/stl). Front required; extra views optional. Stage knobs bind material / mode / polygon_count / geometry_file_format / texture_mode / seed / tapose / hd_texture / texture_delight / addon_highpack.",
+  "description": "Rodin Gen-2.5 Image-to-3D (API). 1–5 reference images → mesh (glb/fbx/obj/stl). image0 required; image1–4 optional. Stage socket names match the Rodin node. Stage knobs bind material / mode / polygon_count / geometry_file_format / texture_mode / seed / tapose / hd_texture / texture_delight / addon_highpack.",
   "result": {
     "type": "ui_save_url",
     "node": "3"

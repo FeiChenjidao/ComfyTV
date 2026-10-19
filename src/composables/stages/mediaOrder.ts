@@ -28,7 +28,7 @@ export const AUTOGROW_KEY_RE: Record<MediaType, RegExp> = {
 
 /** Bare merge-style labels (`image0`) and namespaced ones (`images.image0`). */
 const IMAGE_INDEX_RE = /^(?:images\.)?image(\d+)$/
-/** Model3D TemplateNames faces (`images.正`) — any images.* that isn't images.imageN. */
+/** Legacy Model3D TemplateNames faces (`images.正`) — any images.* that isn't images.imageN. */
 const NAMED_IMAGE_RE = /^images\.(?!image\d+$)[^.]+$/
 
 const AUTOGROW_GROUP: Record<MediaType, string> = { image: 'images', video: 'videos', audio: 'audio' }

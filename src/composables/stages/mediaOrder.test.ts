@@ -105,19 +105,19 @@ describe('liveLinks / nodeAcceptsMedia', () => {
     expect(liveLinks(n, 'image', graph)).toEqual([])
   })
 
-  it('treats Model3D TemplateNames face sockets as strip images', () => {
+  it('treats Model3D images.imageN sockets as strip images', () => {
     const n = node([
-      ['images.正', 11],
-      ['images.左', null],
-      ['images.背', 12],
-      ['images.右', null],
-      ['images.辅', 13],
+      ['images.image0', 11],
+      ['images.image1', null],
+      ['images.image2', 12],
+      ['images.image3', null],
+      ['images.image4', 13],
     ])
     expect(nodeAcceptsMedia(n, 'image')).toBe(true)
     expect(liveLinks(n, 'image', graph)).toEqual([
-      { link: 11, slot: 0, inputName: 'images.正', inputIndex: 0, from: [3, 0] },
-      { link: 12, slot: 1, inputName: 'images.背', inputIndex: 2, from: [4, 1] },
-      { link: 13, slot: 2, inputName: 'images.辅', inputIndex: 4, from: [5, 0] },
+      { link: 11, slot: 0, inputName: 'images.image0', inputIndex: 0, from: [3, 0] },
+      { link: 12, slot: 2, inputName: 'images.image2', inputIndex: 2, from: [4, 1] },
+      { link: 13, slot: 4, inputName: 'images.image4', inputIndex: 4, from: [5, 0] },
     ])
     const r = reconcileTable(n, graph)
     expect(r.table.image.map(e => e.key)).toEqual(['l11', 'l12', 'l13'])
@@ -293,13 +293,13 @@ describe('materializeMedia', () => {
     expect(warnings[0]).toMatch(/extra strip/)
   })
 
-  it('writes Model3D face sockets from the strip in declaration order', () => {
+  it('writes Model3D images.imageN sockets from the strip in declaration order', () => {
     const n = node([
-      ['images.正', 11],
-      ['images.左', null],
-      ['images.背', null],
-      ['images.右', null],
-      ['images.辅', null],
+      ['images.image0', 11],
+      ['images.image1', null],
+      ['images.image2', null],
+      ['images.image3', null],
+      ['images.image4', null],
     ])
     const table = {
       image: [
@@ -310,13 +310,13 @@ describe('materializeMedia', () => {
       video: [],
       audio: [],
     }
-    const inputs: Record<string, unknown> = { 'images.正': ['3', 0], main_prompt: 'x' }
+    const inputs: Record<string, unknown> = { 'images.image0': ['3', 0], main_prompt: 'x' }
     const warnings = materializeMedia(inputs, n, table, urlOf)
     expect(warnings).toEqual([])
     expect(inputs).toEqual({
-      'images.正': ['3', 0],
-      'images.左': '/asset/7',
-      'images.背': '/asset/8',
+      'images.image0': ['3', 0],
+      'images.image1': '/asset/7',
+      'images.image2': '/asset/8',
       main_prompt: 'x',
     })
   })

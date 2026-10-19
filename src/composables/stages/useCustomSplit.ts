@@ -303,7 +303,12 @@ export function findCustomSplitTileSlot(node: any, label: string): number {
 }
 
 export function faceInputSlotNames(face: string): string[] {
-  return [`images.${face}`, face]
+  // Prefer images.imageN (Model3D / Rodin-aligned sockets); keep legacy images.正 names.
+  const idx = (FACE_LABELS as readonly string[]).indexOf(face)
+  const names: string[] = []
+  if (idx >= 0) names.push(`images.image${idx}`)
+  names.push(`images.${face}`, face)
+  return names
 }
 
 export function findModel3DFaceSlot(node: any, face: string): number {

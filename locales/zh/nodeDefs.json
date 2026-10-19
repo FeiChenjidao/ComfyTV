@@ -105,9 +105,6 @@
     "ImageStage": {
       "display_name": "图像阶段"
     },
-    "ImageVariationsStage": {
-      "display_name": "图像变体"
-    },
     "LayerSeparationStage": {
       "display_name": "图层分离"
     },
@@ -1188,28 +1185,6 @@
       }
     }
   },
-  "ComfyTV_ImageVariationsStage": {
-    "display_name": "图像变体",
-    "inputs": {
-      "image": {
-        "name": "图像"
-      },
-      "variant_count": {
-        "name": "变体数量"
-      },
-      "workflow": {
-        "name": "工作流"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "图像组"
-      },
-      "1": {
-        "name": "图像"
-      }
-    }
-  },
   "ComfyTV_LayerSeparationStage": {
     "display_name": "图层分离",
     "inputs": {
@@ -2197,10 +2172,12 @@
       "images": {
         "name": "图像"
       },
-      "images.正": { "name": "正" },
-      "images.左": { "name": "左" },
-      "images.背": { "name": "背" },
-      "images.右": { "name": "右" },
+      "images.image0": { "name": "image0" },
+      "images.image1": { "name": "image1" },
+      "images.image2": { "name": "image2" },
+      "images.image3": { "name": "image3" },
+      "images.image4": { "name": "image4" },
+
       "models": {
         "name": "模型"
       }

@@ -141,7 +141,7 @@
         { "localized_name": "图像", "name": "IMAGE", "type": "IMAGE", "links": [10] },
         { "localized_name": "遮罩", "name": "MASK", "type": "MASK", "links": null }
       ],
-      "title": "正视图",
+      "title": "image0",
       "properties": { "cnr_id": "comfy-core", "ver": "0.36.0", "Node name for S&R": "LoadImage" },
       "widgets_values": ["example.png", "image"],
       "widgets_values_named": { "image": "example.png", "upload": "image" }
@@ -162,7 +162,7 @@
         { "localized_name": "图像", "name": "IMAGE", "type": "IMAGE", "links": [11] },
         { "localized_name": "遮罩", "name": "MASK", "type": "MASK", "links": null }
       ],
-      "title": "左视图",
+      "title": "image1",
       "properties": { "cnr_id": "comfy-core", "ver": "0.36.0", "Node name for S&R": "LoadImage" },
       "widgets_values": ["example.png", "image"],
       "widgets_values_named": { "image": "example.png", "upload": "image" }
@@ -183,7 +183,7 @@
         { "localized_name": "图像", "name": "IMAGE", "type": "IMAGE", "links": [12] },
         { "localized_name": "遮罩", "name": "MASK", "type": "MASK", "links": null }
       ],
-      "title": "后视图",
+      "title": "image2",
       "properties": { "cnr_id": "comfy-core", "ver": "0.36.0", "Node name for S&R": "LoadImage" },
       "widgets_values": ["example.png", "image"],
       "widgets_values_named": { "image": "example.png", "upload": "image" }
@@ -204,7 +204,7 @@
         { "localized_name": "图像", "name": "IMAGE", "type": "IMAGE", "links": [13] },
         { "localized_name": "遮罩", "name": "MASK", "type": "MASK", "links": null }
       ],
-      "title": "右视图",
+      "title": "image3",
       "properties": { "cnr_id": "comfy-core", "ver": "0.36.0", "Node name for S&R": "LoadImage" },
       "widgets_values": ["example.png", "image"],
       "widgets_values_named": { "image": "example.png", "upload": "image" }
@@ -225,7 +225,7 @@
         { "localized_name": "图像", "name": "IMAGE", "type": "IMAGE", "links": [14] },
         { "localized_name": "遮罩", "name": "MASK", "type": "MASK", "links": null }
       ],
-      "title": "辅视图",
+      "title": "image4",
       "properties": { "cnr_id": "comfy-core", "ver": "0.36.0", "Node name for S&R": "LoadImage" },
       "widgets_values": ["example.png", "image"],
       "widgets_values_named": { "image": "example.png", "upload": "image" }

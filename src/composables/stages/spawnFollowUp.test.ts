@@ -357,9 +357,9 @@ describe('spawnImageMergeFromSlots', () => {
 })
 
 describe('spawnModel3DFromCustomSplit', () => {
-  it('spawns Model3D and wires 正左背右 by name', () => {
+  it('spawns Model3D and wires 正左背右 onto images.imageN', () => {
     inputsByClass['ComfyTV.Model3DStage'] = [
-      'images.正', 'images.左', 'images.背', 'images.右',
+      'images.image0', 'images.image1', 'images.image2', 'images.image3',
     ]
     const src = makeNode({
       outputs: [
@@ -381,7 +381,7 @@ describe('spawnModel3DFromCustomSplit', () => {
 
   it('only wires faces that exist on the split node', () => {
     inputsByClass['ComfyTV.Model3DStage'] = [
-      'images.正', 'images.左', 'images.背', 'images.右',
+      'images.image0', 'images.image1', 'images.image2', 'images.image3',
     ]
     const src = makeNode({
       outputs: [

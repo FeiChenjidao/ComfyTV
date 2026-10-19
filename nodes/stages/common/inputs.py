@@ -87,17 +87,19 @@ def _image_template(max_n: int = 12) -> 'io.Autogrow.TemplatePrefix':
     )
 
 
-# Turnaround / multi-view faces for 3D Model Stage (and Custom Split wiring).
-# 辅 = optional 5th ref for Rodin Gen-2.5 (accepts up to 5 images).
-FACE_IMAGE_NAMES = ["正", "左", "背", "右", "辅"]
+# Model3D Stage image sockets — same shape as Rodin Gen-2.5 `images.image0`…`image4`
+# (and any TemplatePrefix workflow). Index mapping for Tripo / Custom Split:
+# image0=front, image1=left, image2=back, image3=right, image4=extra.
+FACE_IMAGE_NAMES = ["image0", "image1", "image2", "image3", "image4"]
 
 
-def _face_image_template() -> 'io.Autogrow.TemplateNames':
-    return io.Autogrow.TemplateNames(
+def _face_image_template() -> 'io.Autogrow.TemplatePrefix':
+    return io.Autogrow.TemplatePrefix(
         COMFYTV_IMAGE.Input("image", optional=True),
-        names=list(FACE_IMAGE_NAMES),
-        # Keep the four turnaround slots always present; 辅 may stay empty.
+        prefix="image",
+        # Four turnaround slots always present; 5th optional (Rodin max / Tripo extra).
         min=4,
+        max=5,
     )
 
 

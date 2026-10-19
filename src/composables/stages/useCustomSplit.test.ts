@@ -247,6 +247,10 @@ describe('split math', () => {
     expect(node.outputs[2]).toMatchObject({ name: '左', type: 'COMFYTV_IMAGE' })
     expect(findCustomSplitTileSlot(node, '正')).toBe(1)
     expect(findModel3DFaceSlot({
+      inputs: [{ name: 'images.image0' }, { name: 'images.image1' }],
+    }, '左')).toBe(1)
+    // Legacy TemplateNames sockets still resolve.
+    expect(findModel3DFaceSlot({
       inputs: [{ name: 'images.正' }, { name: 'images.左' }],
     }, '左')).toBe(1)
   })

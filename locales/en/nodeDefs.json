@@ -105,9 +105,6 @@
     "ImageStage": {
       "display_name": "Image Stage"
     },
-    "ImageVariationsStage": {
-      "display_name": "Image Variations"
-    },
     "LayerSeparationStage": {
       "display_name": "Layer Separation"
     },
@@ -1188,28 +1185,6 @@
       }
     }
   },
-  "ComfyTV_ImageVariationsStage": {
-    "display_name": "Image Variations",
-    "inputs": {
-      "image": {
-        "name": "Image"
-      },
-      "variant_count": {
-        "name": "Variant count"
-      },
-      "workflow": {
-        "name": "Workflow"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "Images"
-      },
-      "1": {
-        "name": "Image"
-      }
-    }
-  },
   "ComfyTV_LayerSeparationStage": {
     "display_name": "Layer Separation",
     "inputs": {
@@ -2181,10 +2156,12 @@
       "images": {
         "name": "Images"
       },
-      "images.正": { "name": "正" },
-      "images.左": { "name": "左" },
-      "images.背": { "name": "背" },
-      "images.右": { "name": "右" },
+      "images.image0": { "name": "image0" },
+      "images.image1": { "name": "image1" },
+      "images.image2": { "name": "image2" },
+      "images.image3": { "name": "image3" },
+      "images.image4": { "name": "image4" },
+
       "models": {
         "name": "Models"
       }
