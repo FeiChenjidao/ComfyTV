@@ -124,7 +124,7 @@
   "order": 27,
   "prune_when_missing": [
     {
-      "when": "upstream_image:count_lt[2]",
+      "when": "upstream_image:none[1,2,3]",
       "drop_nodes": [
         "47",
         "56",
@@ -140,7 +140,7 @@
       ]
     },
     {
-      "when": "upstream_image:count_ge[2]",
+      "when": "upstream_image:any[1,2,3]",
       "drop_nodes": [
         "48",
         "63"

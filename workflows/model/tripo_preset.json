@@ -1,14 +1,14 @@
 {
   "_comment": "Exported preset for the 'Tripo' workflow (kind=model). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
   "label": "Tripo",
-  "description": "Tripo Image / Multiview to Model (API). 1 image → TripoImageToModelNodeV2; 2–4 images (front + sides) → TripoMultiviewToModelNode. Auto-switches by ref count. File3DFirst picks GLB/FBX so Stage quad on/off both work.",
+  "description": "Tripo Image / Multiview to Model (API). Front only → TripoImageToModelNodeV2; front + any of left/back/right → TripoMultiviewToModelNode. image4 (extra) does not force multiview. File3DFirst picks GLB/FBX so Stage quad on/off both work.",
   "result": {
     "type": "ui_save_url",
     "node": "43"
   },
   "prune_when_missing": [
     {
-      "when": "upstream_image:count_lt[2]",
+      "when": "upstream_image:none[1,2,3]",
       "drop_nodes": [
         "47",
         "56",
@@ -24,7 +24,7 @@
       ]
     },
     {
-      "when": "upstream_image:count_ge[2]",
+      "when": "upstream_image:any[1,2,3]",
       "drop_nodes": [
         "48",
         "63"

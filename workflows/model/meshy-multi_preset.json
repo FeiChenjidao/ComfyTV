@@ -2,14 +2,14 @@
   "_comment": "Exported preset for the 'Meshy Multi' workflow (kind=model). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
   "label": "Meshy",
   "order": 35,
-  "description": "Meshy Image / Multi-Image to Model (API). 1 image → MeshyImageToModelNode; 2–4 images → MeshyMultiImageToModelNode. Auto-switches by ref count. File3DFirst picks GLB/FBX.",
+  "description": "Meshy Image / Multi-Image to Model (API). Front only → MeshyImageToModelNode; front + any of left/back/right → MeshyMultiImageToModelNode. image4 (extra) does not force multi. File3DFirst picks GLB/FBX.",
   "result": {
     "type": "ui_save_url",
     "node": "3"
   },
   "prune_when_missing": [
     {
-      "when": "upstream_image:count_lt[2]",
+      "when": "upstream_image:none[1,2,3]",
       "drop_nodes": [
         "1",
         "11",
@@ -25,7 +25,7 @@
       ]
     },
     {
-      "when": "upstream_image:count_ge[2]",
+      "when": "upstream_image:any[1,2,3]",
       "drop_nodes": [
         "2",
         "63"
