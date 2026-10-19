@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 
 from ._common import *  # noqa: F401, F403
+from ...runners.custom_io import autogrow_by_index
 
 _log = logging.getLogger(__name__)
 
@@ -278,6 +279,13 @@ class Model3DStage(io.ComfyNode):
                       append_results=True, custom_params="{}"):
 
         text_vals = _autogrow_values(texts)
+        # Keep image0…image4 positions (front/left/back/right/extra). Compacting
+        # empties remaps sides and can trip Tripo multiview with only front+extra.
+        from ....runners.custom_io import autogrow_by_index
+        image_vals = [
+            (str(v) if v not in (None, "") else None)
+            for v in autogrow_by_index(images, "image", len(FACE_IMAGE_NAMES))
+        ]
         combined_prompt = _combine_prompt(main_prompt, text_vals)
         payload = await invoke_runner(
             kind='model',
@@ -285,7 +293,7 @@ class Model3DStage(io.ComfyNode):
             main_prompt=combined_prompt,
             upstream={
                 'texts':  text_vals,
-                'images': _autogrow_values(images),
+                'images': image_vals,
                 'models': _autogrow_values(models),
             },
             options={

@@ -172,15 +172,27 @@ def _prune_rule_matches(when: str, ctx: RunnerContext, mode: str) -> bool | None
         # count_* rules ignore ``if`` — the comparison already encodes the condition
         return ok
 
+    m_any = _ANY_PAT.match(when)
+    if m_any:
+        kind, idxs = m_any.group(1), _parse_index_list(m_any.group(2))
+        upstream = ctx.upstream.get(_UPSTREAM_BUCKET_BY_KIND[kind]) or []
+        # any[...] ignores ``if`` — presence of any listed slot is the condition
+        return any(_upstream_slot_filled(upstream, i) for i in idxs)
+
+    m_none = _NONE_PAT.match(when)
+    if m_none:
+        kind, idxs = m_none.group(1), _parse_index_list(m_none.group(2))
+        upstream = ctx.upstream.get(_UPSTREAM_BUCKET_BY_KIND[kind]) or []
+        # none[...] ignores ``if`` — all listed slots empty is the condition
+        return all(not _upstream_slot_filled(upstream, i) for i in idxs)
+
     m = _UPSTREAM_PAT.match(when)
     if not m:
         return None
     kind, _suffix, idx_str = m.group(1), m.group(2), m.group(3)
     idx = int(idx_str) if idx_str else 0
     upstream = ctx.upstream.get(_UPSTREAM_BUCKET_BY_KIND[kind]) or []
-    if isinstance(upstream, str):
-        upstream = [upstream]
-    have = idx < len(upstream) and upstream[idx] not in (None, "")
+    have = _upstream_slot_filled(upstream, idx)
     if mode == "missing":
         return not have
     if mode == "present":
@@ -198,6 +210,10 @@ def _apply_prunes(workflow: dict, config: dict, ctx: RunnerContext) -> set[str]:
     Count form (for single↔multi auto-switch):
       - ``upstream_image:count_lt[2]`` — fewer than 2 non-empty images
       - ``upstream_image:count_ge[2]`` — two or more images
+
+    Side-slot form (Tripo/Meshy turnaround — ignore image4 extras):
+      - ``upstream_image:none[1,2,3]`` — no left/back/right → single-image path
+      - ``upstream_image:any[1,2,3]`` — at least one side → multiview path
     """
     pruned: set[str] = set()
     gc_needed = False
