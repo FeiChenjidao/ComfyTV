@@ -126,6 +126,7 @@ class TestLegacyMigration:
     def test_shipped_update_propagates_to_untouched_copy(self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
         (legacy / "image" / "wf.json").write_text(json.dumps({"nodes": []}))
+        (legacy / "image" / "wf_preset.json").write_text(json.dumps({"label": "wf"}))
         wdb.seed_workflows_from_disk(("image",))
         assert wdb.set_api_json(
             "image", "wf", {"3": {"class_type": "K", "inputs": {}}},
