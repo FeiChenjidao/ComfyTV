@@ -23,7 +23,6 @@
 内置生成式工作流在适用处保留官方参数默认值。公共自定义参数：`seed`（未设置时每次 Run 随机）。
 
 - **Tripo**（`tripo.json` + `_preset.json`）— 1 张图 → `TripoImageToModelNodeV2`；2–4 张（正 + 侧）→ `TripoMultiviewToModelNode`（`upstream_image:count_lt/ge[2]` 自动切换）。Stage `images.image0`…`image3` = 正 / 左 / 后 / 右。`File3DFirst` 取 GLB/FBX，Stage `quad` 开/关都可。
-- **Tripo P1**（`tripo-p1.json` + `_preset.json`）— 同样的 1↔2–4 自动切换（`TripoP1ImageToModelNode` / `TripoP1MultiviewToModelNode`，仅 GLB）。
 - **Tripo P2**（`tripo-p2.json` + `_preset.json`）— 同样自动切换（`TripoPSeriesImageToModelNode` / `TripoPSeriesMultiviewToModelNode` / P2）。参数在 `model` DynamicCombo 下；`File3DFirst` 配合 Stage `quad` 取 GLB/FBX。
 - **Rodin Gen25**（`rodin-gen25.json` + `_preset.json`）— 1–5 张图 → **网格**（`Rodin3D_Gen25_Image` / Rodin Gen-2.5 图生 3D）。Stage 槽位 `images.image0`…`image4` 与 Rodin 节点入口同名一一对应；缺的参考图会 prune。绑定 `material` / `mode` / `polygon_count` / `geometry_file_format` / `texture_mode` / `seed` / `tapose` / `hd_texture` / `texture_delight` / `addon_highpack`。
 - **Meshy**（`meshy-multi.json` + `_preset.json`）— 1 张图 → `MeshyImageToModelNode`；2–4 张 → `MeshyMultiImageToModelNode`（同样按数量自动切换）。`File3DFirst` 取 GLB/FBX。绑定 `seed` / `pbr` 等 Meshy 旋钮。

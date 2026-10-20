@@ -54,6 +54,30 @@ class TestLegacyMigration:
         assert not (user_root / "image" / "orphan.json").exists()
         assert (user_root / "image" / "wf.json").read_text() == json.dumps({"nodes": []})
 
+    def test_gitignore_allowlist_skips_plugin_orphans(
+            self, reset_db, tmp_path, monkeypatch):
+        """Ignored leftovers under plugin workflows/ must not re-enter the mirror."""
+        legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
+        (legacy / "image" / "keep.json").write_text(json.dumps({"nodes": []}))
+        (legacy / "image" / "keep_preset.json").write_text(
+            json.dumps({"label": "Keep"}))
+        (legacy / "image" / "retired.json").write_text(json.dumps({"nodes": []}))
+        (legacy / "image" / "retired_preset.json").write_text(
+            json.dumps({"label": "Retired"}))
+        (legacy / ".gitignore").write_text(
+            "*.json\n"
+            "!image/keep.json\n"
+            "!image/keep_preset.json\n",
+            encoding="utf-8",
+        )
+
+        result = wdb.seed_workflows_from_disk(("image",))
+        assert set(result["synced"]) == {"image/keep.json", "image/keep_preset.json"}
+        assert (user_root / "image" / "keep.json").exists()
+        assert not (user_root / "image" / "retired.json").exists()
+        assert not (user_root / "image" / "retired_preset.json").exists()
+        assert {r["label"] for r in wdb.list_workflows_overview("image")} == {"Keep"}
+
     def test_existing_rows_repointed_with_state_kept(self, reset_db, tmp_path, monkeypatch):
         from ComfyTV import db
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)

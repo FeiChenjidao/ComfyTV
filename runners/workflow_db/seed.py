@@ -75,11 +75,58 @@ def _wipe_dir_contents(root: Path) -> None:
             _log.warning("[ComfyTV/workflow_db] could not clear %s: %s", child, e)
 
 
+def _shipped_json_allowlist(src_root: Path) -> Optional[set[str]]:
+    """Parse ``workflows/.gitignore`` ``!path.json`` lines into relative paths.
+
+    Shipped workflows are ignore-by-default + explicit un-ignore. Returning that
+    allowlist stops deleted-but-still-on-disk orphans from re-entering the
+    user mirror on every seed. ``None`` means no allowlist (tests / bare dirs)
+    → fall back to copying every ``*.json``.
+    """
+    gi = src_root / ".gitignore"
+    if not gi.is_file():
+        return None
+    allowed: set[str] = set()
+    try:
+        for line in gi.read_text(encoding="utf-8").splitlines():
+            text = line.strip()
+            if not text or text.startswith("#") or not text.startswith("!"):
+                continue
+            rel = text[1:].lstrip("/").replace("\\", "/")
+            if rel.endswith(".json"):
+                allowed.add(rel)
+    except OSError:
+        return None
+    return allowed or None
+
+
+def _iter_shipped_json(src_root: Path) -> list[tuple[str, Path]]:
+    """JSON files that should be mirrored into user/comfytv/workflows."""
+    allow = _shipped_json_allowlist(src_root)
+    out: list[tuple[str, Path]] = []
+    if allow is not None:
+        for rel in sorted(allow):
+            src = src_root / rel
+            if src.is_file():
+                out.append((rel, src))
+        return out
+    for src in sorted(src_root.rglob("*.json")):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(src_root)
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        out.append((rel.as_posix(), src))
+    return out
+
+
 def _sync_legacy_workflows(root: Path) -> tuple[list[str], list[str], list[str]]:
     """Full-mirror plugin workflows/ into user/comfytv/workflows.
 
     Wipes the user workflows dir every seed/rescan, then copies the plugin
     tree fresh. No edit-preservation — stale or forked local copies go away.
+    Only allowlisted shipped JSON are copied (see workflows/.gitignore);
+    ignored leftovers in the plugin folder are not re-mirrored.
     Does not touch sibling data under user/comfytv (data.db, skills, …).
     """
     if _LEGACY_WORKFLOWS_DIR is None:
@@ -92,16 +139,11 @@ def _sync_legacy_workflows(root: Path) -> tuple[list[str], list[str], list[str]]
     old_keys = set(old_manifest.keys())
 
     src_files: list[tuple[str, Path, str]] = []
-    for src in sorted(src_root.rglob("*.json")):
-        if not src.is_file():
-            continue
-        rel = src.relative_to(src_root)
-        if any(part.startswith(".") for part in rel.parts):
-            continue
+    for rel_key, src in _iter_shipped_json(src_root):
         src_hash = _file_sha256(src)
         if src_hash is None:
             continue
-        src_files.append((rel.as_posix(), src, src_hash))
+        src_files.append((rel_key, src, src_hash))
     src_keys = {rel for rel, _, _ in src_files}
 
     removed = sorted(old_keys - src_keys)
