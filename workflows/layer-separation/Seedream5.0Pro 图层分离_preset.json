@@ -1,0 +1,30 @@
+{
+  "_comment": "Exported preset for the 'Seedream5.0Pro 图层分离' workflow (kind=layer-separation). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "Seedream5.0Pro 图层分离",
+  "result": {
+    "type": "ui_save_layered",
+    "node": "25"
+  },
+  "inputs": {
+    "14": {
+      "crop_layers": {
+        "from": "literal:false",
+        "default": "false",
+        "cast": "bool"
+      },
+      "prompt": {
+        "from": "main_prompt"
+      },
+      "size": {
+        "from": "option:size",
+        "default": "auto"
+      }
+    },
+    "15": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    }
+  }
+}

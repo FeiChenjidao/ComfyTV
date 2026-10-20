@@ -220,10 +220,10 @@ class TestLoaderExecute:
         monkeypatch.setattr(layer_separation, "_stage_emit", fake_emit)
 
         out = asyncio.run(layer_separation.LayerSeparationStage.execute(
-            workflow="Local Compositor Test (No API)",
+            workflow="Seedream5.0Pro 图层分离",
         ))
         asyncio.run(layer_separation.LayerSeparationStage.execute(
-            workflow="Local Compositor Test (No API)",
+            workflow="Seedream5.0Pro 图层分离",
         ))
 
         assert invoke_count == 2
