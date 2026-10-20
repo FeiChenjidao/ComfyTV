@@ -365,7 +365,7 @@
         1024,
         1024,
         "auto",
-        "low",
+        "high",
         1,
         0,
         "randomize"
