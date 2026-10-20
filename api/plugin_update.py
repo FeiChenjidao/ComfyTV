@@ -187,16 +187,16 @@ def check_plugin_update(*, fetch: bool = True, root: Optional[Path] = None) -> d
 
 
 def apply_plugin_update(*, root: Optional[Path] = None) -> dict[str, Any]:
+    """Force plugin files onto the remote tip.
+
+    Always ``git reset --hard`` to origin — local tracked edits and divergent
+    commits are discarded. Untracked files (e.g. secrets token) are left alone.
+    """
     root = root or _plugin_root()
     status = check_plugin_update(fetch=True, root=root)
     if not status.get("ok"):
         return status
     if not status.get("is_repo"):
-        return status
-    if status.get("dirty"):
-        status["ok"] = False
-        status["error"] = "local changes present — commit or stash before updating"
-        status["error_code"] = "dirty"
         return status
     if not status.get("update_available"):
         status["error"] = "already up to date"
@@ -204,14 +204,24 @@ def apply_plugin_update(*, root: Optional[Path] = None) -> dict[str, Any]:
         return status
 
     branch = status.get("branch") or "main"
-    pull_p = _run_git(root, "pull", "--ff-only", "origin", branch)
-    if pull_p.returncode != 0:
-        # Retry against main if current branch tip is missing on origin.
-        if branch not in ("main", "master"):
-            pull_p = _run_git(root, "pull", "--ff-only", "origin", "main")
-    if pull_p.returncode != 0:
+    candidates = [f"origin/{branch}", "origin/main", "origin/master"]
+    remote_ref = ""
+    for cand in candidates:
+        probe = _run_git(root, "rev-parse", "--verify", cand)
+        if probe.returncode == 0:
+            remote_ref = cand
+            break
+    if not remote_ref:
         status["ok"] = False
-        status["error"] = (pull_p.stderr or pull_p.stdout or "git pull failed").strip()
+        status["error"] = "remote tip not found"
+        status["error_code"] = "no_remote_tip"
+        return status
+
+    was_dirty = bool(status.get("dirty"))
+    reset_p = _run_git(root, "reset", "--hard", remote_ref)
+    if reset_p.returncode != 0:
+        status["ok"] = False
+        status["error"] = (reset_p.stderr or reset_p.stdout or "git reset --hard failed").strip()
         status["error_code"] = "pull_failed"
         return status
 
@@ -221,6 +231,7 @@ def apply_plugin_update(*, root: Optional[Path] = None) -> dict[str, Any]:
     refreshed["update_available"] = refreshed.get("behind", 0) > 0
     refreshed["error"] = ""
     refreshed["error_code"] = ""
+    refreshed["forced"] = was_dirty
     return refreshed
 
 

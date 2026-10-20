@@ -43,7 +43,7 @@
   "pluginUpdate": {
     "title": "ComfyTV update available",
     "message": "A newer ComfyTV is on the remote.\n\nCurrent: v{local}\nLatest: v{remote}\nBehind by {n} commit(s).\n\nUpdate now, then restart ComfyUI.",
-    "messageDirty": "A newer ComfyTV is on the remote (v{local} → v{remote}, {n} commit(s)), but this checkout has local changes.\n\nCommit or stash them, then update.",
+    "messageDirty": "A newer ComfyTV is on the remote (v{local} → v{remote}, {n} commit(s)).\n\nThis checkout has local changes. Update now force-overwrites tracked files (untracked files such as the token are kept), then restart ComfyUI.",
     "updateNow": "Update now",
     "updating": "Updating…",
     "later": "Remind later",

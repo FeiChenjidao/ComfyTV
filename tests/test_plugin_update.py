@@ -139,7 +139,7 @@ class TestPluginUpdateCheck:
         assert after["behind"] == 0
         assert "2.0.0" in (local / "pyproject.toml").read_text(encoding="utf-8")
 
-    def test_refuse_dirty(self, twin_repos):
+    def test_force_overwrites_dirty(self, twin_repos):
         mod = _load_mod()
         local, other, _remote = twin_repos
         (other / "pyproject.toml").write_text(
@@ -150,7 +150,15 @@ class TestPluginUpdateCheck:
         _git(other, "commit", "-m", "bump")
         _git(other, "push", "origin", "main")
 
-        (local / "dirty.txt").write_text("x", encoding="utf-8")
+        (local / "pyproject.toml").write_text(
+            '[project]\nname = "ComfyTV"\nversion = "9.9.9-local"\n',
+            encoding="utf-8",
+        )
+        (local / "dirty.txt").write_text("keep-untracked", encoding="utf-8")
         status = mod.apply_plugin_update(root=local)
-        assert status["ok"] is False
-        assert status["error_code"] == "dirty"
+        assert status["ok"] is True
+        assert status["forced"] is True
+        assert status["behind"] == 0
+        assert "1.2.0" in (local / "pyproject.toml").read_text(encoding="utf-8")
+        # Untracked files are not deleted by the force reset.
+        assert (local / "dirty.txt").read_text(encoding="utf-8") == "keep-untracked"

@@ -18,7 +18,7 @@
       <button
         type="button"
         :class="btnPrimary"
-        :disabled="busy || status.dirty"
+        :disabled="busy"
         @click="onUpdate"
       >
         {{ busy ? $t('pluginUpdate.updating') : $t('pluginUpdate.updateNow') }}
@@ -60,12 +60,12 @@ function resolve(action: 'later' | 'dismiss' | 'updated' | 'failed') {
 }
 
 async function onUpdate() {
-  if (busy.value || props.status.dirty) return
+  if (busy.value) return
   busy.value = true
   error.value = ''
   try {
     const res = await applyPluginUpdate()
-    if (!res.ok || res.error_code === 'pull_failed' || res.error_code === 'dirty') {
+    if (!res.ok || res.error_code === 'pull_failed') {
       error.value = res.error || t('pluginUpdate.failed')
       busy.value = false
       return

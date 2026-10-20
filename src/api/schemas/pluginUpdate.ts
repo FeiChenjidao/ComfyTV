@@ -16,6 +16,7 @@ export const PluginUpdateStatusSchema = z.object({
   remote: z.string().optional().default(''),
   remote_url: z.string().optional().default(''),
   restart_required: z.boolean().optional().default(false),
+  forced: z.boolean().optional(),
   error: z.string().optional().default(''),
   error_code: z.string().optional().default(''),
 })
