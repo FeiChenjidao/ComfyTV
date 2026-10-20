@@ -116,7 +116,7 @@ function read(key: string, fallback: string | number): string | number {
 }
 const size = computed(() => String(read('size', 'auto')))
 const background = computed(() => String(read('background', 'auto')))
-const quality = computed(() => String(read('quality', 'auto')))
+const quality = computed(() => String(read('quality', 'high')))
 const width = computed(() => Number(read('custom_width', 1024)) || 1024)
 const height = computed(() => Number(read('custom_height', 1024)) || 1024)
 const batch = computed(() => {

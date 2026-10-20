@@ -59955,7 +59955,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-CJAAyA05.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-BmpwdD-J.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -87152,7 +87152,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-DvuSD_bd.mjs"),
+      loader: () => import("./AgentPanelRoot-BtKED7NS.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -154561,7 +154561,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-C9wjY-nm.mjs");
+    const { STLLoader } = await import("./STLLoader-CI_9CKHT.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -154569,7 +154569,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-DNuKtuwS.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-BFAQC_k2.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -244172,7 +244172,7 @@ const _sfc_main$r = /* @__PURE__ */ defineComponent({
     }
     const size2 = computed(() => String(read2("size", "auto")));
     const background = computed(() => String(read2("background", "auto")));
-    const quality = computed(() => String(read2("quality", "auto")));
+    const quality = computed(() => String(read2("quality", "high")));
     const width = computed(() => Number(read2("custom_width", 1024)) || 1024);
     const height = computed(() => Number(read2("custom_height", 1024)) || 1024);
     const batch2 = computed(() => {
@@ -244418,7 +244418,7 @@ const _sfc_main$r = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const GptImageOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$r, [["__scopeId", "data-v-6ee8c630"]]);
+const GptImageOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$r, [["__scopeId", "data-v-5ac86d2f"]]);
 function commonjsRequire(path) {
   throw new Error('Could not dynamically require "' + path + '". Please configure the dynamicRequireTargets or/and ignoreDynamicRequires option of @rollup/plugin-commonjs appropriately for this require call to work.');
 }
@@ -262114,4 +262114,4 @@ export {
   DropdownMenuRoot_default as y,
   DropdownMenuTrigger_default as z
 };
-//# sourceMappingURL=main-DNzdV7ja.mjs.map
+//# sourceMappingURL=main-BGJra1jd.mjs.map
