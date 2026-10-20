@@ -1,6 +1,8 @@
 {
   "_comment": "Exported preset for the 'Tripo' workflow (kind=model). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
   "label": "Tripo",
+  "order": 10,
+  "is_default": true,
   "description": "Tripo Image / Multiview to Model (API). Front only → TripoImageToModelNodeV2; front + any of left/back/right → TripoMultiviewToModelNode. image4 (extra) does not force multiview. File3DFirst picks GLB/FBX so Stage quad on/off both work.",
   "result": {
     "type": "ui_save_url",

@@ -151,6 +151,28 @@ def _read_preset(file_path: Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
+def _apply_is_default_from_preset(s, row: db.Workflow, preset: dict) -> bool:
+    """Honor shipped ``is_default``; clear other same-kind defaults. Returns True if changed."""
+    if "is_default" not in preset:
+        return False
+    want = bool(preset["is_default"])
+    changed = False
+    if want:
+        for other in s.execute(
+            select(db.Workflow).where(
+                db.Workflow.kind == row.kind,
+                db.Workflow.is_default,
+                db.Workflow.id != row.id,
+            )
+        ).scalars():
+            other.is_default = False
+            changed = True
+    if bool(getattr(row, "is_default", False)) != want:
+        row.is_default = want
+        changed = True
+    return changed
+
+
 def _apply_preset_to_new_row(s, row: db.Workflow, preset: dict) -> None:
     if preset.get("label"):
         _claim_label_or_skip(s, row, str(preset["label"]))
@@ -170,6 +192,7 @@ def _apply_preset_to_new_row(s, row: db.Workflow, preset: dict) -> None:
         row.meta_json = json.dumps(preset["meta"])
     s.flush()
     _add_preset_bindings(s, row, preset)
+    _apply_is_default_from_preset(s, row, preset)
 
 
 def _add_preset_bindings(s, row: db.Workflow, preset: dict) -> None:
@@ -226,19 +249,22 @@ def _refresh_shipped_preset(s, manifest: dict, ledger: dict, root: Path,
         return False
     if rel_key not in manifest:
         return False
+    preset = _read_preset(path)
+    if not preset:
+        return False
     row_hash = _row_state_hash(s, row)
     entry = ledger.get(rel_key)
     if (isinstance(entry, dict)
             and entry.get("preset") == preset_hash
             and entry.get("row") == row_hash):
-        return False
-    preset = _read_preset(path)
-    if not preset:
-        return False
+        # Bindings already match; still re-assert shipped is_default (e.g. Tripo).
+        return _apply_is_default_from_preset(s, row, preset)
     if _preset_state_hash(preset) == row_hash:
         _record_applied_preset(ledger, rel_key, preset_hash, row_hash)
+        _apply_is_default_from_preset(s, row, preset)
         return True
     _reapply_preset_to_row(s, row, preset)
+    _apply_is_default_from_preset(s, row, preset)
     _record_applied_preset(ledger, rel_key, preset_hash, _row_state_hash(s, row))
     _log.info("[ComfyTV/workflow_db] re-applied shipped preset for %s/%s",
               row.kind, row.label)

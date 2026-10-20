@@ -49,6 +49,28 @@ class TestPresetApplication:
         assert len(cfg["bindings"]) == 1
         assert cfg["bindings"][0]["node_id"] == "6"
 
+    def test_is_default_from_preset_clears_siblings(
+            self, reset_db, tmp_path, monkeypatch):
+        from pathlib import Path
+        wdir = tmp_path / "workflows"
+        kdir = wdir / "model"
+        kdir.mkdir(parents=True)
+        (kdir / "other.json").write_text(json.dumps({"nodes": []}))
+        (kdir / "other_preset.json").write_text(json.dumps({"label": "Other"}))
+        (kdir / "tripo.json").write_text(json.dumps({"nodes": []}))
+        (kdir / "tripo_preset.json").write_text(json.dumps({
+            "label": "Tripo", "order": 10, "is_default": True,
+        }))
+        monkeypatch.setattr(wdb.seed, "_WORKFLOWS_DIR", Path(wdir))
+        wdb.seed_workflows_from_disk(("model",))
+        assert wdb.get_default_label("model") == "Tripo"
+        overview = {r["label"]: r["is_default"]
+                    for r in wdb.list_workflows_overview("model")}
+        assert overview == {"Other": False, "Tripo": True}
+        exported = wdb.build_preset("model", "Tripo")
+        assert exported["is_default"] is True
+        assert exported["order"] == 10
+
 
 class TestResolutionSelectorAutoBind:
     _RS = {"type": "ResolutionSelector",
@@ -318,6 +340,26 @@ class TestShippedPresetRefresh:
         assert rows[0]["is_default"] is True
         cfg2 = wdb.get_workflow_config("video", "My H3")
         assert cfg2["description"] == "v2"
+
+    def test_refresh_applies_shipped_is_default(
+            self, reset_db, tmp_path, monkeypatch):
+        """Existing rows pick up ``is_default`` when the shipped preset adds it."""
+        legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
+        self._seed_v1(legacy)
+        assert wdb.get_default_label("video") is None
+
+        preset = dict(self.PRESET_V1)
+        preset["is_default"] = True
+        self._ship(legacy, {"nodes": []}, preset)
+        wdb.seed_workflows_from_disk(("video",))
+        assert wdb.get_default_label("video") == "H3"
+
+        # Ledger match path still re-asserts the flag after a user clears it.
+        cfg = wdb.get_workflow_config("video", "H3")
+        wdb.set_default_workflow(cfg["id"], False)
+        assert wdb.get_default_label("video") is None
+        wdb.seed_workflows_from_disk(("video",))
+        assert wdb.get_default_label("video") == "H3"
 
     def test_preset_update_resets_row_with_gui_edits(
             self, reset_db, tmp_path, monkeypatch):

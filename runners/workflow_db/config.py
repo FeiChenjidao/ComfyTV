@@ -53,6 +53,8 @@ def build_preset(kind: str, label: str) -> Optional[dict]:
         }
         if row.order_ is not None and row.order_ != 100:
             out["order"] = row.order_
+        if getattr(row, "is_default", False):
+            out["is_default"] = True
         if row.description:
             out["description"] = row.description
         if row.result_node:
