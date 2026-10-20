@@ -41,7 +41,25 @@ def _write_preset_ledger(root: Path, ledger: dict) -> None:
 
 
 def _preset_file_path(file_path: Path) -> Path:
-    return file_path.parent / f"{file_path.stem}_preset.json"
+    """Sidecar path for ``foo.json`` → ``foo_preset.json``.
+
+    Also accepts a slug fallback (``GPT_Image_2.5`` → ``gpt-image-2-5_preset.json``)
+    so renamed display stems still resolve after wipe+reseed.
+    """
+    primary = file_path.parent / f"{file_path.stem}_preset.json"
+    if primary.is_file():
+        return primary
+    slug = "".join(
+        ch.lower() if ch.isalnum() else "-"
+        for ch in file_path.stem
+    ).strip("-")
+    while "--" in slug:
+        slug = slug.replace("--", "-")
+    if slug and slug != file_path.stem:
+        alt = file_path.parent / f"{slug}_preset.json"
+        if alt.is_file():
+            return alt
+    return primary
 
 
 def _state_hash(state: dict) -> str:
@@ -122,8 +140,8 @@ def _file_pristine(manifest: dict, root: Path, path: Path) -> bool:
 
 
 def _read_preset(file_path: Path) -> dict:
-    p = file_path.parent / f"{file_path.stem}_preset.json"
-    if not p.exists():
+    p = _preset_file_path(file_path)
+    if not p.is_file():
         return {}
     try:
         data = json.loads(p.read_text(encoding="utf-8"))

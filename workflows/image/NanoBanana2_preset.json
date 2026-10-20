@@ -1,6 +1,10 @@
 {
   "_comment": "Exported preset for the 'NanoBanana2' workflow (kind=image). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
   "label": "NanoBanana2",
+  "result": {
+    "type": "ui_save_batch",
+    "node": "15"
+  },
   "inputs": {
     "11": {
       "image": {

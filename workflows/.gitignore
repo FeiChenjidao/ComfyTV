@@ -23,7 +23,7 @@
 !image-edit/qwen-image-2.1-edit.json
 !image-edit/qwen-image-2.1-edit_preset.json
 !image/GPT_Image_2.5.json
-!image/gpt-image-2-5_preset.json
+!image/GPT_Image_2.5_preset.json
 !image/NanoBanana2.json
 !image/NanoBanana2_preset.json
 !inpaint/flux-fill-inpaint.json

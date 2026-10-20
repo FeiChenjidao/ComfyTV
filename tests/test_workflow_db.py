@@ -78,6 +78,14 @@ class TestReadPreset:
         preset.write_text(json.dumps(["a", "b"]))
         assert wdb._read_preset(wf) == {}
 
+    def test_slug_fallback_when_stem_preset_missing(self, tmp_path):
+        """GPT_Image_2.5.json must still find gpt-image-2-5_preset.json."""
+        wf = tmp_path / "GPT_Image_2.5.json"
+        preset = tmp_path / "gpt-image-2-5_preset.json"
+        wf.write_text("{}")
+        preset.write_text(json.dumps({"label": "GPT_Image_2.5"}))
+        assert wdb._read_preset(wf) == {"label": "GPT_Image_2.5"}
+
 
 # ─── _bindings_to_inputs_dict ────────────────────────────────────────────────
 
