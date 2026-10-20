@@ -20,6 +20,7 @@ import {
   hideNativeWidgets,
   ICON_GRIP,
   RUN_BUTTON_HTML,
+  stopNativeAutoGrow,
 } from '@/v2/shellCommon'
 import { installV2ShellCss } from '@/v2/shellCss'
 import { bindWheelCapture } from '@/v2/wheelCapture'
@@ -125,6 +126,12 @@ function makeGeneratorShell(config: GeneratorConfig) {
     else footer.append(wfAnchor, serverAnchor, run)
     panel.append(refsAnchor, promptAnchor, presetAnchor, controlsAnchor, customAnchor, paramsAnchor, footer)
     card.append(preview, panel)
+
+    // Model3D (and similar) ship dozens of native option widgets; LiteGraph sizes
+    // the node from them before V2 chrome mounts. Hide + pin first so create
+    // height matches other generators instead of locking in that inflated size.
+    stopNativeAutoGrow(node)
+    hideNativeWidgets(node)
 
     node.addDOMWidget('v2_shell', 'v2', card, {
       getMinHeight: () => 420,
@@ -283,7 +290,6 @@ function makeGeneratorShell(config: GeneratorConfig) {
       prevRemoved?.apply(this, args)
     }
 
-    hideNativeWidgets(node)
     return stageApi
   }
 }

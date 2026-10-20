@@ -42,17 +42,29 @@ function comboValues(props: Record<string, unknown> | null | undefined): string[
   return raw.map(String)
 }
 
+function displayableDefault(w: {
+  override_value?: string | null
+  current_value?: unknown
+}): string | undefined {
+  const override = w.override_value
+  if (override != null && String(override) !== '' && override !== 'random_int31') {
+    return String(override)
+  }
+  const cur = w.current_value
+  if (cur == null || cur === '' || cur === 'random_int31') return undefined
+  return String(cur)
+}
+
 function metaFromWidget(key: string, w: {
   widget_type?: string
   widget_props?: Record<string, unknown> | null
   widget_name?: string
   override_value?: string | null
+  current_value?: unknown
 }, parentOptionKey?: string | null): BoundOptionMeta {
   const props = w.widget_props ?? {}
   const type = String(w.widget_type ?? '').toUpperCase()
-  const defaultValue = w.override_value == null || w.override_value === ''
-    ? undefined
-    : String(w.override_value)
+  const defaultValue = displayableDefault(w)
   const advanced = props.advanced === true
   const whenRaw = props.dynamic_when
   const dynamicWhen = Array.isArray(whenRaw) ? whenRaw.map(String) : undefined
@@ -158,9 +170,27 @@ export function useBoundOptionMeta(
           : null
         const meta = metaFromWidget(key, w, parentOption)
         const prev = next.get(key)
-        // Prefer a primary (non-advanced) binding when several widgets share a key.
+        // Prefer non-advanced, then the entry that actually carries a default
+        // (Meshy Multi + Meshy Image both bind the same option:* keys; the
+        // inactive branch often has current_value=null).
+        const richerDefault = (a?: string, b?: string) => {
+          const aOk = a != null && a !== '' && a !== 'random_int31'
+          const bOk = b != null && b !== '' && b !== 'random_int31'
+          return !aOk && bOk
+        }
         if (!prev || (prev.advanced && !meta.advanced)) next.set(key, meta)
-        else if (prev && meta.dynamicWhen?.length) {
+        else if (!prev.advanced && meta.advanced) {
+          if (richerDefault(prev.defaultValue, meta.defaultValue)) {
+            next.set(key, { ...prev, defaultValue: meta.defaultValue })
+          }
+        } else if (richerDefault(prev.defaultValue, meta.defaultValue)) {
+          next.set(key, {
+            ...meta,
+            dynamicWhen: meta.dynamicWhen?.length ? meta.dynamicWhen : prev.dynamicWhen,
+            dynamicParent: meta.dynamicParent ?? prev.dynamicParent,
+            options: meta.options?.length ? meta.options : prev.options,
+          })
+        } else if (prev && meta.dynamicWhen?.length) {
           const mergedWhen = [...new Set([...(prev.dynamicWhen ?? []), ...meta.dynamicWhen])]
           next.set(key, { ...prev, dynamicWhen: mergedWhen, dynamicParent: prev.dynamicParent ?? meta.dynamicParent })
         }

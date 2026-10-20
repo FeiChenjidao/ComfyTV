@@ -6,6 +6,9 @@
     "type": "ui_save_url",
     "node": "43"
   },
+  "meta": {
+    "prompt_required": false
+  },
   "inputs": {
     "47": {
       "model.quad": {

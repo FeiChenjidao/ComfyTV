@@ -311,6 +311,24 @@ describe('defaultsFromExposedWidgets / applyBoundOptionDefaults', () => {
     ])).toEqual({ aspect_ratio: '16:9', seed: '42' })
   })
 
+  it('skips random_int31 and falls back to workflow current_value', () => {
+    expect(defaultsFromExposedWidgets([
+      { stage_binding: 'option:seed', override_value: 'random_int31', current_value: 0 },
+      { stage_binding: 'option:topology', override_value: null, current_value: 'triangle' },
+      { stage_binding: 'option:texture_resolution', override_value: '', current_value: '2k' },
+    ])).toEqual({ seed: '0', topology: 'triangle', texture_resolution: '2k' })
+  })
+
+  it('replaces a stuck random_int31 seed widget in empty mode', () => {
+    const node: any = {
+      widgets: [
+        { name: 'seed', type: 'number', value: 'random_int31', callback: vi.fn() },
+      ],
+    }
+    applyBoundOptionDefaults(node, { seed: '0' }, 'empty')
+    expect(node.widgets[0].value).toBe(0)
+  })
+
   it('writes combo + number defaults onto Stage widgets', () => {
     const node: any = {
       widgets: [

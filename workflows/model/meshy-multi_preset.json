@@ -56,13 +56,18 @@
       ]
     }
   ],
+  "meta": {
+    "prompt_required": false
+  },
   "inputs": {
     "1": {
       "model": {
-        "from": "option:model_version"
+        "from": "option:model_version",
+        "default": "meshy-7.1"
       },
       "pose_mode": {
-        "from": "option:pose_mode"
+        "from": "option:pose_mode",
+        "default": ""
       },
       "seed": {
         "from": "option:seed",
@@ -76,27 +81,34 @@
       },
       "should_remesh.target_polycount": {
         "from": "option:target_polycount",
+        "default": "300000",
         "cast": "int"
       },
       "should_remesh.topology": {
-        "from": "option:topology"
+        "from": "option:topology",
+        "default": "triangle"
       },
       "should_texture": {
         "from": "option:texture",
+        "default": "true",
         "cast": "truefalse"
       },
       "should_texture.enable_pbr": {
         "from": "option:pbr",
+        "default": "true",
         "cast": "bool"
       },
       "should_texture.texture_prompt": {
-        "from": "option:texture_prompt"
+        "from": "option:texture_prompt",
+        "default": ""
       },
       "should_texture.texture_resolution": {
-        "from": "option:texture_resolution"
+        "from": "option:texture_resolution",
+        "default": "2k"
       },
       "symmetry_mode": {
-        "from": "option:symmetry_mode"
+        "from": "option:symmetry_mode",
+        "default": "auto"
       },
       "ultra_mode": {
         "from": "option:ultra_mode",
@@ -127,10 +139,12 @@
     },
     "2": {
       "model": {
-        "from": "option:model_version"
+        "from": "option:model_version",
+        "default": "meshy-7.1"
       },
       "pose_mode": {
-        "from": "option:pose_mode"
+        "from": "option:pose_mode",
+        "default": ""
       },
       "seed": {
         "from": "option:seed",
@@ -144,27 +158,34 @@
       },
       "should_remesh.target_polycount": {
         "from": "option:target_polycount",
+        "default": "300000",
         "cast": "int"
       },
       "should_remesh.topology": {
-        "from": "option:topology"
+        "from": "option:topology",
+        "default": "triangle"
       },
       "should_texture": {
         "from": "option:texture",
+        "default": "true",
         "cast": "truefalse"
       },
       "should_texture.enable_pbr": {
         "from": "option:pbr",
+        "default": "true",
         "cast": "bool"
       },
       "should_texture.texture_prompt": {
-        "from": "option:texture_prompt"
+        "from": "option:texture_prompt",
+        "default": ""
       },
       "should_texture.texture_resolution": {
-        "from": "option:texture_resolution"
+        "from": "option:texture_resolution",
+        "default": "2k"
       },
       "symmetry_mode": {
-        "from": "option:symmetry_mode"
+        "from": "option:symmetry_mode",
+        "default": "auto"
       },
       "ultra_mode": {
         "from": "option:ultra_mode",

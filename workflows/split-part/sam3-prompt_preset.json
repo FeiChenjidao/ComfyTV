@@ -10,6 +10,9 @@
     "node": "9"
   },
 
+  "meta": {
+    "prompt_required": false
+  },
   "inputs": {
     "2": {
       "image": {

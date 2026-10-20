@@ -1,42 +1,72 @@
 <template>
-  <div v-if="primaryNames.length || advancedNames.length" class="v2-tripo">
-    <div v-for="name in primaryCombos" :key="name" class="v2-tripo__row v2-tripo__row--model">
-      <span class="v2-tripo__label">{{ labelOf(name) }}</span>
-      <ComfyTVSelect :model-value="sv(name)" :options="optionsOf(name)" :filterable="false" @update:model-value="v => writeVal(name, v)" />
-    </div>
-    <div v-if="primaryToggles.length" class="v2-tripo__row v2-tripo__row--toggles">
-      <label v-for="name in primaryToggles" :key="name" class="v2-tripo__toggle">
-        <input type="checkbox" :checked="boolVal(name)" @change="e => writeVal(name, (e.target as HTMLInputElement).checked)" />{{ labelOf(name) }}
-      </label>
-    </div>
-    <div v-for="name in primaryNumbers" :key="name" class="v2-tripo__row v2-tripo__row--model">
-      <span class="v2-tripo__label">{{ labelOf(name) }}</span>
-      <input type="number" :value="sv(name)" :min="num(name, 'min')" :max="num(name, 'max')" :step="num(name, 'step') ?? 1" @change="e => writeVal(name, Number((e.target as HTMLInputElement).value))" />
-    </div>
-    <div v-for="name in primaryTexts" :key="name" class="v2-tripo__row v2-tripo__row--model">
-      <span class="v2-tripo__label">{{ labelOf(name) }}</span>
-      <textarea :value="sv(name)" @change="e => writeVal(name, (e.target as HTMLTextAreaElement).value)" />
-    </div>
-    <div v-if="advancedNames.length" class="v2-tripo__row v2-tripo__row--advanced">
-      <ComfyTVPopover v-model:open="open" side="top" width="330px">
-      <template #trigger><button type="button" class="v2-tripo__advanced" @pointerdown.stop>高级参数<svg viewBox="0 0 10 6" fill="none" :class="open && 'v2-tripo__chev--open'"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" /></svg></button></template>
+  <div v-if="allNames.length" class="v2-tripo">
+    <ComfyTVPopover v-model:open="open" side="top" width="340px">
+      <template #trigger>
+        <button type="button" class="v2-tripo__chip" :aria-expanded="open" @pointerdown.stop>
+          <span class="v2-tripo__chip-label">{{ chipLabel }}</span>
+          <svg viewBox="0 0 10 6" fill="none" :class="['v2-tripo__chev', open && 'v2-tripo__chev--open']">
+            <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" />
+          </svg>
+        </button>
+      </template>
       <div class="v2-tripo__pop" @pointerdown.stop>
-        <div v-for="name in advancedNames" :key="name" class="v2-tripo__row">
+        <div v-for="name in allNames" :key="name" class="v2-tripo__row" :data-wide="kind(name) === 'text' ? '1' : ''">
           <span class="v2-tripo__label">{{ labelOf(name) }}</span>
-          <ComfyTVSelect v-if="kind(name) === 'combo'" :model-value="sv(name)" :options="optionsOf(name)" :filterable="false" @update:model-value="v => writeVal(name, v)" />
-          <input v-else-if="kind(name) === 'number'" type="number" :value="sv(name)" :min="num(name, 'min')" :max="num(name, 'max')" :step="num(name, 'step') ?? 1" @change="e => writeVal(name, Number((e.target as HTMLInputElement).value))" />
-          <label v-else-if="kind(name) === 'toggle'" class="v2-tripo__check"><input type="checkbox" :checked="boolVal(name)" @change="e => writeVal(name, (e.target as HTMLInputElement).checked)" /></label>
-          <textarea v-else :value="sv(name)" @change="e => writeVal(name, (e.target as HTMLTextAreaElement).value)" />
+          <ComfyTVSelect
+            v-if="kind(name) === 'combo'"
+            :model-value="sv(name)"
+            :options="optionsOf(name)"
+            :filterable="false"
+            @update:model-value="v => writeVal(name, v)"
+          />
+          <div v-else-if="name === 'seed'" class="v2-tripo__seed">
+            <ComfyTVNumber
+              :model-value="numVal(name)"
+              :min="num(name, 'min') ?? 0"
+              :max="num(name, 'max') ?? 0x7fffffff"
+              :step="num(name, 'step') ?? 1"
+              :precision="0"
+              @update:model-value="v => writeVal(name, v ?? 0)"
+            />
+            <button
+              type="button"
+              class="v2-tripo__seed-rand"
+              title="随机"
+              @pointerdown.stop
+              @click.stop="randomizeSeed(name)"
+            >
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 4.5h3.2c1.2 0 2.2.6 2.8 1.5M13 4.5h-1.8M13 4.5l-1.6-1.6M13 4.5l-1.6 1.6M13 11.5h-3.2c-1.2 0-2.2-.6-2.8-1.5M3 11.5h1.8M3 11.5l1.6-1.6M3 11.5l1.6 1.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <ComfyTVNumber
+            v-else-if="kind(name) === 'number'"
+            :model-value="numVal(name)"
+            :min="num(name, 'min')"
+            :max="num(name, 'max')"
+            :step="num(name, 'step') ?? 1"
+            :precision="0"
+            @update:model-value="v => writeVal(name, v ?? 0)"
+          />
+          <label v-else-if="kind(name) === 'toggle'" class="v2-tripo__check">
+            <input type="checkbox" :checked="boolVal(name)" @change="e => writeVal(name, (e.target as HTMLInputElement).checked)" />
+          </label>
+          <textarea
+            v-else
+            :value="sv(name)"
+            @change="e => writeVal(name, (e.target as HTMLTextAreaElement).value)"
+          />
         </div>
       </div>
-      </ComfyTVPopover>
-    </div>
+    </ComfyTVPopover>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, toRef } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import ComfyTVNumber from '@/components/widgets/ComfyTVNumber.vue'
 import ComfyTVPopover from '@/components/widgets/ComfyTVPopover.vue'
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import { parseParamItems, serializeParamItems } from '@/composables/stages/useCustomParams'
@@ -55,6 +85,11 @@ const ORDER = [
   'seed', 'negative', 'texture_quality', 'geometry_quality', 'face_limit', 'quad',
   'smart_low_poly', 'auto_size', 'orientation', 'texture_alignment',
   'tapose', 'hd_texture', 'texture_delight', 'addon_highpack',
+]
+
+const CHIP_SUMMARY_KEYS = [
+  'model_version', 'mode', 'material', 'texture', 'should_remesh', 'topology',
+  'texture_resolution', 'polygon_count',
 ]
 
 const SKIP_WIDGETS = new Set([
@@ -95,11 +130,6 @@ const names = computed(() => {
   })
 })
 
-/** Partner-schema advanced flag only — no per-workflow hardcoding. */
-function isAdvanced(name: string): boolean {
-  return metaByKey.value.get(name)?.advanced === true
-}
-
 function parentValueMatches(when: string[], raw: unknown): boolean {
   const candidates = new Set<string>([String(raw ?? '')])
   if (raw === true || raw === 1) candidates.add('true')
@@ -118,16 +148,11 @@ function rawOptionValue(name: string): unknown {
   return metaByKey.value.get(name)?.defaultValue
 }
 
-/**
- * DynamicCombo children only show for the active parent branch.
- * Uses child.dynamicWhen when present; otherwise parent.dynamicBranches.
- */
 function isVisibleForParent(name: string): boolean {
   const meta = metaByKey.value.get(name)
   if (meta?.dynamicWhen?.length && meta.dynamicParent) {
     const parentMeta = metaByKey.value.get(meta.dynamicParent)
     const branches = parentMeta?.dynamicBranches
-    // Sole branch (e.g. Tripo P2 model=P2 only) — always show children.
     if (branches && Object.keys(branches).length === 1) return true
     const raw = rawOptionValue(meta.dynamicParent)
     if (raw == null || raw === '') {
@@ -147,24 +172,17 @@ function isVisibleForParent(name: string): boolean {
   return true
 }
 
-/** Partner-schema meta is required for custom_params-only knobs (correct type + branch). */
 function isReady(name: string): boolean {
   if (widgetOf(name)) return true
   return metaByKey.value.has(name)
 }
 
-const primaryNames = computed(() => {
+const allNames = computed(() => {
   void metaByKey.value
   for (const k of Object.keys(values)) void values[k]
-  return names.value.filter(n => isReady(n) && !isAdvanced(n) && isVisibleForParent(n))
-})
-const advancedNames = computed(() => {
-  void metaByKey.value
-  for (const k of Object.keys(values)) void values[k]
-  return names.value.filter(n => isReady(n) && isAdvanced(n) && isVisibleForParent(n))
+  return names.value.filter(n => isReady(n) && isVisibleForParent(n))
 })
 
-/** Prefer partner-node meta (matches built-in node); Stage widget is fallback. */
 function kind(name: string): 'combo' | 'number' | 'toggle' | 'text' {
   void metaByKey.value
   const meta = metaByKey.value.get(name)
@@ -182,23 +200,6 @@ function kind(name: string): 'combo' | 'number' | 'toggle' | 'text' {
   if (meta?.control === 'text') return 'text'
   return 'text'
 }
-
-const primaryCombos = computed(() => {
-  void metaByKey.value
-  return primaryNames.value.filter(n => kind(n) === 'combo')
-})
-const primaryToggles = computed(() => {
-  void metaByKey.value
-  return primaryNames.value.filter(n => kind(n) === 'toggle')
-})
-const primaryNumbers = computed(() => {
-  void metaByKey.value
-  return primaryNames.value.filter(n => kind(n) === 'number')
-})
-const primaryTexts = computed(() => {
-  void metaByKey.value
-  return primaryNames.value.filter(n => kind(n) === 'text')
-})
 
 const LABELS: Record<string, string> = {
   model_version: '模型', mode: '模式', material: '材质',
@@ -226,6 +227,28 @@ function labelOf(name: string): string {
   return name.replace(/_/g, ' ')
 }
 
+const chipLabel = computed(() => {
+  void metaByKey.value
+  for (const k of Object.keys(values)) void values[k]
+  const parts: string[] = []
+  for (const name of CHIP_SUMMARY_KEYS) {
+    if (!allNames.value.includes(name)) continue
+    const k = kind(name)
+    if (k === 'toggle') {
+      if (boolVal(name)) parts.push(labelOf(name))
+      continue
+    }
+    if (k === 'text') continue
+    const v = sv(name)
+    if (!v) continue
+    parts.push(v)
+    if (parts.length >= 3) break
+  }
+  if (parts.length) return parts.join(' · ')
+  const n = allNames.value.length
+  return n ? `参数 · ${n}` : '参数'
+})
+
 function customItems() {
   return parseParamItems(String(values.custom_params ?? '{}'))
 }
@@ -236,8 +259,61 @@ function readRaw(name: string): unknown {
 
 function sv(name: string): string {
   const v = readRaw(name)
-  return v == null ? '' : String(v)
+  if (v == null || v === '' || v === 'random_int31') {
+    const fallback = metaByKey.value.get(name)?.defaultValue
+    if (fallback != null && fallback !== '' && fallback !== 'random_int31') return String(fallback)
+    const opts = optionsOf(name)
+    if (opts.length) return opts[0]!
+    return ''
+  }
+  return String(v)
 }
+
+function numVal(name: string): number | null {
+  const raw = readRaw(name)
+  if (raw == null || raw === '' || raw === 'random_int31') {
+    const fallback = metaByKey.value.get(name)?.defaultValue
+    const n = Number(fallback)
+    return Number.isFinite(n) ? n : null
+  }
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : null
+}
+
+function randomizeSeed(name: string) {
+  writeVal(name, Math.floor(Math.random() * 0x7fffffff))
+}
+
+/** Fill blank combo/seed/number knobs from workflow defaults so the panel is not all "—". Leave free-text empty. */
+watch(
+  [allNames, metaByKey],
+  () => {
+    for (const name of allNames.value) {
+      const k = kind(name)
+      if (k === 'text') continue
+      const raw = rawOptionValue(name)
+      if (raw != null && raw !== '' && raw !== 'random_int31') continue
+      const meta = metaByKey.value.get(name)
+      let next: unknown = meta?.defaultValue
+      if (next == null || next === '' || next === 'random_int31') {
+        if (k === 'combo') next = optionsOf(name)[0]
+        else if (name === 'seed') next = 0
+        else next = undefined
+      }
+      if (next == null || next === '') continue
+      if (k === 'number' || name === 'seed') {
+        const n = Number(next)
+        if (!Number.isFinite(n)) continue
+        writeVal(name, n)
+      } else if (k === 'toggle') {
+        writeVal(name, next === true || next === 'true' || next === 1 || next === '1')
+      } else {
+        writeVal(name, String(next))
+      }
+    }
+  },
+  { flush: 'post' },
+)
 
 function optionsOf(name: string): string[] {
   void metaByKey.value
@@ -274,26 +350,47 @@ function writeVal(name: string, value: unknown) {
   else items.push({ key: name, value: stored })
   write('custom_params', serializeParamItems(items))
 }
+
 </script>
 
 <style scoped>
-.v2-tripo { display:flex; flex-direction:column; align-items:stretch; gap:6px; min-width:0; width:100%; }
-.v2-tripo__row { display:flex; align-items:center; gap:8px; min-width:0; }
-.v2-tripo__row--model .v2-tripo__label { width:52px; flex:none; }
-.v2-tripo__row--model :deep(button) { flex:1; }
-.v2-tripo__row--model input[type=number],
-.v2-tripo__row--model textarea { flex:1; }
-.v2-tripo__row--advanced { justify-content:flex-start; }
-.v2-tripo__toggle { display:inline-flex; align-items:center; gap:4px; color:var(--v2-text-mid); font:500 11px/1 system-ui,sans-serif; white-space:nowrap; }
-.v2-tripo__toggle input,.v2-tripo__check input { accent-color:var(--v2-accent-text); }
-.v2-tripo__advanced { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 8px; border:1px solid var(--v2-chip-border); border-radius:8px; background:transparent; color:var(--v2-text-mid); font:500 11px/1 system-ui,sans-serif; cursor:pointer; }
-.v2-tripo__advanced:hover { background:var(--v2-hover-bg); color:var(--v2-text-strong); }
-.v2-tripo__advanced svg { width:8px; height:5px; transition:transform .15s ease; }
+.v2-tripo { display:flex; align-items:center; min-width:0; width:100%; }
+.v2-tripo__chip {
+  display:inline-flex; align-items:center; gap:6px; max-width:100%;
+  height:26px; padding:0 8px; border:1px solid var(--v2-chip-border); border-radius:8px;
+  background:transparent; color:var(--v2-text-mid); font:500 11px/1 system-ui,sans-serif; cursor:pointer;
+}
+.v2-tripo__chip:hover { background:var(--v2-hover-bg); color:var(--v2-text-strong); }
+.v2-tripo__chip-label {
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+}
+.v2-tripo__chev { width:8px; height:5px; flex:none; transition:transform .15s ease; }
 .v2-tripo__chev--open { transform:rotate(180deg); }
-.v2-tripo__pop { display:grid; gap:8px; max-height:420px; overflow-y:auto; padding:12px; border:1px solid var(--v2-slab-border,#2c2c34); border-radius:8px; background:var(--v2-slab-bg,#1c1c22); color:var(--v2-text-mid); font:500 11px/1.2 system-ui,sans-serif; }
-.v2-tripo__pop .v2-tripo__row { display:grid; grid-template-columns:108px minmax(0,1fr); align-items:center; gap:8px; }
+.v2-tripo__pop {
+  display:grid; gap:8px; max-height:420px; overflow-y:auto; padding:12px;
+  border:1px solid var(--v2-slab-border,#2c2c34); border-radius:8px;
+  background:var(--v2-slab-bg,#1c1c22); color:var(--v2-text-mid);
+  font:500 11px/1.2 system-ui,sans-serif;
+}
+.v2-tripo__row {
+  display:grid; grid-template-columns:108px minmax(0,1fr); align-items:center; gap:8px; min-width:0;
+}
+.v2-tripo__row[data-wide='1'] { align-items:start; }
 .v2-tripo__label { color:var(--v2-text-muted); }
-.v2-tripo__row textarea,.v2-tripo__row input[type=number] { width:100%; min-height:26px; box-sizing:border-box; padding:5px 7px; border:1px solid var(--v2-chip-border); border-radius:6px; background:transparent; color:var(--v2-text-strong); font:500 11px/1.2 system-ui,sans-serif; }
+.v2-tripo__seed { display:flex; align-items:center; gap:6px; min-width:0; }
+.v2-tripo__seed :deep(.ctv-num-root) { flex:1; min-width:0; }
+.v2-tripo__seed-rand {
+  flex:none; width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center;
+  border:none; border-radius:8px; background:var(--p-primary-color, #3b82f6); color:#fff; cursor:pointer;
+}
+.v2-tripo__seed-rand:hover { filter:brightness(1.08); }
+.v2-tripo__seed-rand svg { width:14px; height:14px; }
+.v2-tripo__row textarea,.v2-tripo__row input[type=number] {
+  width:100%; min-height:26px; box-sizing:border-box; padding:5px 7px;
+  border:1px solid var(--v2-chip-border); border-radius:6px; background:transparent;
+  color:var(--v2-text-strong); font:500 11px/1.2 system-ui,sans-serif;
+}
 .v2-tripo__row textarea { min-height:52px; resize:vertical; }
 .v2-tripo__check { display:flex; justify-content:flex-end; }
+.v2-tripo__check input { accent-color:var(--v2-accent-text); }
 </style>

@@ -175,8 +175,10 @@ export function setNativeWidgetsForAppMode(node: ComfyNode, enabled: boolean) {
 
 export function ensureMinSize(node: ComfyNode, minW: number, minH: number) {
   if ((node as any).__comfytvFromSave) return
-  const [w0, h0] = node.size
-  node.setSize([Math.max(w0, minW), Math.max(h0, minH)])
+  // New nodes may already be tall from many native widgets that V2 hides
+  // immediately — use the shell default height instead of locking that in.
+  const [w0] = node.size
+  node.setSize([Math.max(w0 || 0, minW), minH])
 }
 
 export function createNodeScope(node: ComfyNode): EffectScope {

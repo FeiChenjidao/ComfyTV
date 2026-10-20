@@ -29,12 +29,13 @@ describe('MediaPreviewV2', () => {
     expect(video.muted).toBe(false)
   })
 
-  it('shows a model history strip and emits picks', async () => {
+  it('shows model history as prev/next pager at the top', async () => {
     const onPickIndex = vi.fn()
     const poolJson = JSON.stringify({
       images: [
         { index: '1', image_url: '/view?filename=a.glb' },
         { index: '2', image_url: '/view?filename=b.glb' },
+        { index: '3', image_url: '/view?filename=c.glb' },
       ],
     })
     const wrapper = mountPreview(
@@ -51,10 +52,12 @@ describe('MediaPreviewV2', () => {
         Teleport: true,
       },
     )
-    const chips = wrapper.findAll('.v2-mp__histchip')
-    expect(chips).toHaveLength(2)
-    expect(wrapper.find('.v2-mp__histn').text()).toBe('1/2')
-    await chips[1].trigger('click')
+    expect(wrapper.find('.v2-mp__hist').exists()).toBe(true)
+    expect(wrapper.find('.v2-mp__histn').text()).toBe('1/3')
+    const navs = wrapper.findAll('.v2-mp__histnav')
+    expect(navs).toHaveLength(2)
+    expect((navs[0].element as HTMLButtonElement).disabled).toBe(true)
+    await navs[1].trigger('click')
     expect(onPickIndex).toHaveBeenCalledWith(2)
   })
 })

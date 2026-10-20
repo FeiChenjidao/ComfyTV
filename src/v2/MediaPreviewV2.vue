@@ -53,15 +53,24 @@
         </div>
         <div v-if="poolCount > 1" class="v2-mp__hist" @pointerdown.stop>
           <button
-            v-for="(_, i) in poolItems"
-            :key="i"
             type="button"
-            class="v2-mp__histchip"
-            :data-current="i + 1 === safePicked ? '1' : undefined"
-            :title="t('v2.batchPos', { i: i + 1, n: poolCount })"
-            @click.stop="emitPick(i + 1)"
-          >{{ i + 1 }}</button>
+            class="v2-mp__histnav"
+            :disabled="safePicked <= 1"
+            :title="t('v2.batchPos', { i: Math.max(1, safePicked - 1), n: poolCount })"
+            @click.stop="stepHist(-1)"
+          >
+            <i class="pi pi-chevron-left" />
+          </button>
           <span class="v2-mp__histn">{{ safePicked }}/{{ poolCount }}</span>
+          <button
+            type="button"
+            class="v2-mp__histnav"
+            :disabled="safePicked >= poolCount"
+            :title="t('v2.batchPos', { i: Math.min(poolCount, safePicked + 1), n: poolCount })"
+            @click.stop="stepHist(1)"
+          >
+            <i class="pi pi-chevron-right" />
+          </button>
         </div>
       </div>
       <Teleport to="body">
@@ -273,6 +282,11 @@ function emitPick(idx: number) {
   props.onPickIndex?.(idx)
 }
 
+function stepHist(delta: number) {
+  const next = Math.min(poolCount.value, Math.max(1, safePicked.value + delta))
+  if (next !== safePicked.value) emitPick(next)
+}
+
 const hasContent = computed(() =>
   props.kind === 'text' ? !!String(props.text ?? '').trim()
   : props.kind === 'model' ? !!(props.url || poolCount.value)
@@ -339,7 +353,7 @@ const hasContent = computed(() =>
   cursor: grab;
 }
 .v2-mp__model:active { cursor: grabbing; }
-.v2-mp__model :deep(> *:not(.ctv-hover-reveal)) {
+.v2-mp__model :deep(> *:not(.ctv-hover-reveal):not(.v2-mp__hist)) {
   flex: 1;
   min-height: 0;
   width: 100%;
@@ -383,39 +397,42 @@ const hasContent = computed(() =>
 }
 .v2-mp__hist {
   position: absolute;
+  top: 8px;
   left: 8px;
-  right: 8px;
-  bottom: 8px;
   z-index: 5;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
+  gap: 2px;
+  padding: 2px 4px;
   border-radius: 8px;
   background: rgba(23, 23, 27, 0.78);
   pointer-events: auto;
+  /* Leave room for export/tag at top-right */
+  max-width: calc(100% - 64px);
 }
-.v2-mp__histchip {
-  min-width: 22px;
+.v2-mp__histnav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
   height: 22px;
-  padding: 0 6px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0;
+  border: none;
   border-radius: 6px;
   background: transparent;
   color: #d4d4d8;
-  font: 600 10px/1 system-ui, sans-serif;
+  font-size: 11px;
   cursor: pointer;
 }
-.v2-mp__histchip:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
-.v2-mp__histchip[data-current='1'] {
-  background: rgba(139, 92, 246, 0.35);
-  border-color: rgba(167, 139, 250, 0.7);
-  color: #ede9fe;
-}
+.v2-mp__histnav:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.v2-mp__histnav:disabled { opacity: 0.35; cursor: default; }
 .v2-mp__histn {
-  margin-left: auto;
-  color: #a1a1aa;
+  min-width: 2.6em;
+  padding: 0 4px;
+  text-align: center;
+  color: #e4e4e7;
   font: 600 10px/1 system-ui, sans-serif;
+  white-space: nowrap;
+  user-select: none;
 }
 </style>

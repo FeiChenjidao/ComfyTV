@@ -45,6 +45,9 @@
       ]
     }
   ],
+  "meta": {
+    "prompt_required": false
+  },
   "inputs": {
     "1": {
       "TAPose": {

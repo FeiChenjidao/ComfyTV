@@ -92,6 +92,14 @@ type ExposedLike = {
   widget_type?: string
   widget_props?: Record<string, unknown> | null
   override_value?: string | null
+  current_value?: unknown
+}
+
+/** Binding defaults that must not be written into Stage widgets (resolved at Run). */
+const SENTINEL_DEFAULTS = new Set(['random_int31'])
+
+function isSentinelDefault(raw: unknown): boolean {
+  return typeof raw === 'string' && SENTINEL_DEFAULTS.has(raw)
 }
 
 export type ApplyDefaultsMode = 'all' | 'empty' | false
@@ -112,15 +120,22 @@ export function defaultsFromExposedWidgets(widgets: ExposedLike[]): Record<strin
     if (typeof binding !== 'string' || !binding.startsWith('option:')) continue
     const key = binding.slice('option:'.length)
     if (!key) continue
-    const raw = w.override_value
-    if (raw == null || raw === '') continue
-    out[key] = String(raw)
+    const override = w.override_value
+    if (override != null && String(override) !== '' && !isSentinelDefault(override)) {
+      out[key] = String(override)
+      continue
+    }
+    // Prefer the workflow's own saved value over leaving the V2 panel blank
+    // (e.g. Meshy topology=triangle). Skip Run-time sentinels like random_int31.
+    const cur = w.current_value
+    if (cur == null || cur === '' || isSentinelDefault(cur)) continue
+    out[key] = String(cur)
   }
   return out
 }
 
 function isUnsetValue(value: unknown): boolean {
-  return value == null || value === ''
+  return value == null || value === '' || isSentinelDefault(value)
 }
 
 function coerceWidgetDefault(w: { type?: unknown }, raw: string): unknown {

@@ -7,6 +7,9 @@
 
   "result": { "type": "graph_output_first", "node": "7" },
 
+  "meta": {
+    "prompt_required": false
+  },
   "inputs": {
     "2": {
       "image": {

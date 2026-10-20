@@ -69,15 +69,28 @@ function toast(severity: 'success' | 'warn' | 'error', summary: string, detail =
   ;(app as any)?.extensionManager?.toast?.add?.({ severity, summary, detail, life: 5000 })
 }
 
-async function ensureGitTokenConfigured(): Promise<boolean> {
-  try {
-    const st = await fetchNativeWorkflowGitToken()
-    if (st.configured) return true
-  } catch {
-    /* fall through to dialog */
+function isGitAuthFailure(res: Pick<NativeWorkflowGitStatus, 'error' | 'error_code' | 'fetch_error'>): boolean {
+  if (res.error_code === 'auth_failed') return true
+  const text = `${res.error || ''} ${res.fetch_error || ''}`.toLowerCase()
+  return (
+    text.includes('authentication failed') ||
+    text.includes('invalid username or token') ||
+    text.includes('password authentication is not supported') ||
+    text.includes('token invalid or expired')
+  )
+}
+
+async function ensureGitTokenConfigured(force = false): Promise<boolean> {
+  if (!force) {
+    try {
+      const st = await fetchNativeWorkflowGitToken()
+      if (st.configured) return true
+    } catch {
+      /* fall through to dialog */
+    }
   }
   tokenInput.value = ''
-  tokenError.value = ''
+  tokenError.value = force ? t('v2.bottomBar.gitAuthFailed') : ''
   tokenDialogOpen.value = true
   return await new Promise<boolean>((resolve) => {
     tokenDialogResolve = resolve
@@ -120,6 +133,7 @@ const gitHint = computed(() => {
   if (!g) return gitChecking.value ? t('v2.bottomBar.gitChecking') : ''
   if (!g.has_git) return t('v2.bottomBar.gitNoGit')
   if (!g.is_repo) return t('v2.bottomBar.gitNoRepo')
+  if (isGitAuthFailure(g)) return t('v2.bottomBar.gitAuthFailed')
   if (g.error && !g.ok) return g.error
   if (g.behind > 0) return t('v2.bottomBar.gitBehind', { n: g.behind })
   if (g.dirty) return t('v2.bottomBar.gitDirty')
@@ -129,6 +143,7 @@ const gitHint = computed(() => {
 const gitHintTone = computed(() => {
   const g = gitStatus.value
   if (!g?.is_repo || !g.has_git) return 'warn'
+  if (g && isGitAuthFailure(g)) return 'warn'
   if (g.behind > 0 || g.dirty) return 'accent'
   return 'muted'
 })
@@ -287,6 +302,10 @@ async function refreshGitStatusInBackground() {
     // 2) Then silent fetch for 可更新 / behind
     const remote = await fetchNativeWorkflowGitStatus(true).catch(() => null)
     if (remote) gitStatus.value = remote
+    if (remote && isGitAuthFailure(remote) && !tokenDialogOpen.value) {
+      void ensureGitTokenConfigured(true)
+      return
+    }
 
     // Cloud templates behind → overwrite locally without asking
     if (
@@ -329,7 +348,8 @@ async function onGitSetup() {
     const res = await setupNativeWorkflowGit()
     gitStatus.value = res
     if (!res.ok || !res.is_repo) {
-      toast('error', t('v2.bottomBar.gitError'), res.error || '')
+      toast('error', t('v2.bottomBar.gitError'), gitErrorDetail(res))
+      await promptTokenIfAuthFailed(res)
       return
     }
     gitFlash.value = t('v2.bottomBar.gitConnectOk')
@@ -344,6 +364,7 @@ async function onGitSetup() {
 
 function gitErrorDetail(res: NativeWorkflowGitStatus): string {
   const code = res.error_code || ''
+  if (code === 'auth_failed' || isGitAuthFailure(res)) return t('v2.bottomBar.gitAuthFailed')
   if (code === 'need_update') return t('v2.bottomBar.gitNeedUpdate')
   if (code === 'need_update_after_commit') return t('v2.bottomBar.gitNeedUpdateAfterCommit')
   if (code === 'pull_conflict') return t('v2.bottomBar.gitPullConflict')
@@ -351,6 +372,11 @@ function gitErrorDetail(res: NativeWorkflowGitStatus): string {
   const dups = (res.duplicates || []).join(', ')
   if (dups) return `${t('v2.bottomBar.gitDuplicate')}: ${dups}`
   return res.error || ''
+}
+
+async function promptTokenIfAuthFailed(res: NativeWorkflowGitStatus): Promise<void> {
+  if (!isGitAuthFailure(res)) return
+  await ensureGitTokenConfigured(true)
 }
 
 async function onGitUpdate() {
@@ -365,6 +391,7 @@ async function onGitUpdate() {
     gitStatus.value = res
     if (!res.ok) {
       toast('error', t('v2.bottomBar.gitError'), gitErrorDetail(res))
+      await promptTokenIfAuthFailed(res)
       return
     }
     gitFlash.value = t('v2.bottomBar.gitPullOk')
@@ -426,6 +453,7 @@ async function onGitCommitConfirm() {
     gitStatus.value = res
     if (!res.ok) {
       toast('error', t('v2.bottomBar.gitError'), gitErrorDetail(res))
+      await promptTokenIfAuthFailed(res)
       return
     }
     gitFlash.value = t('v2.bottomBar.gitPushOk')

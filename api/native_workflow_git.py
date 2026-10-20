@@ -57,11 +57,14 @@ def _run_git(root: Path, *args: str, check: bool = False) -> subprocess.Complete
     if not git:
         raise RuntimeError("git executable not found on PATH")
     # Never pop interactive Git Credential Manager / login dialogs from UI threads.
+    # Also clear credential.helper so Windows GCM cannot override a PAT already
+    # embedded in the remote URL (that override shows up as GitHub's
+    # "Invalid username or token" / "Password authentication is not supported").
     env = os.environ.copy()
     env["GIT_TERMINAL_PROMPT"] = "0"
     env["GCM_INTERACTIVE"] = "never"
     return subprocess.run(
-        [git, *args],
+        [git, "-c", "credential.helper=", *args],
         cwd=str(root),
         capture_output=True,
         text=True,
@@ -512,6 +515,38 @@ def _is_non_ff_push_error(detail: str) -> bool:
     )
 
 
+def _is_auth_error(detail: str) -> bool:
+    text = (detail or "").lower()
+    return any(
+        s in text
+        for s in (
+            "authentication failed",
+            "invalid username or token",
+            "password authentication is not supported",
+            "bad credentials",
+            "could not read username",
+            "support for password authentication was removed",
+        )
+    )
+
+
+_AUTH_FAIL_MSG = (
+    "GitHub token invalid or expired for this ComfyUI user — "
+    "open the token dialog and paste a valid PAT "
+    "(Contents: Read and write on the team workflows repo)"
+)
+
+
+def _apply_git_fail(status: dict[str, Any], detail: str, *, fallback: str) -> None:
+    """Set error / error_code on a status payload from raw git stderr."""
+    text = (detail or "").strip() or fallback
+    if _is_auth_error(text):
+        status["error_code"] = "auth_failed"
+        status["error"] = _AUTH_FAIL_MSG
+    else:
+        status["error"] = text
+
+
 def _push_current_branch(root: Path, remote: str, branch: str) -> subprocess.CompletedProcess[str]:
     with _authed_origin(root):
         p = _run_git(root, "push", remote, branch)
@@ -583,6 +618,8 @@ def collect_status(
                         detail = detail.replace(tok, "***")
                     # Soft-fail — still return local status so the panel stays usable.
                     payload["fetch_error"] = detail or "git fetch failed"
+                    if _is_auth_error(payload["fetch_error"]):
+                        payload["error_code"] = "auth_failed"
             except Exception as e:
                 payload["fetch_error"] = str(e) or type(e).__name__
 
@@ -796,14 +833,15 @@ def push_file(
 
         remote = status.get("remote") or "origin"
         branch = status.get("branch") or "main"
-        p = _run_git(root, "push", remote, branch)
-        if p.returncode != 0:
-            p = _run_git(root, "push")
+        p = _push_current_branch(root, remote, branch)
         if p.returncode != 0:
             detail = (p.stderr or p.stdout or "").strip()[:500]
+            tok = _read_token(root)
+            if tok:
+                detail = detail.replace(tok, "***")
             status = collect_status(root, fetch_remote=False)
             status["ok"] = False
-            status["error"] = detail or "git push failed"
+            _apply_git_fail(status, detail, fallback="git push failed")
             return status
         status = collect_status(root, fetch_remote=False)
         status["pushed"] = True
@@ -945,50 +983,55 @@ def _overwrite_templates_from_tip(root: Path, remote: str, branch: str) -> list[
     return done
 
 
-def _working_tree_dirty(root: Path) -> bool:
-    """True when there are staged or unstaged changes (untracked ignored)."""
-    r = _run_git(root, "status", "--porcelain", "-uno")
-    return bool((r.stdout or "").strip())
+def _snapshot_local_only_workflows(
+    root: Path, remote: str, branch: str
+) -> dict[str, bytes]:
+    """Working-tree bytes for workflow JSON present locally but not on remote tip.
 
-
-def _stash_for_pull(root: Path) -> bool:
-    """Stash tracked + untracked (except ignored) so pull --rebase can run.
-
-    Local-only workflows are restored with stash pop after pull.
+    Hard-reset drops local-only commits; we restore these files afterwards so
+    「仅本地」workflows survive Update templates.
     """
-    # Avoid pushing an empty stash
-    por = _run_git(root, "-c", "core.quotepath=false", "status", "--porcelain", "-u")
-    if not (por.stdout or "").strip():
-        return False
-    r = _run_git(
-        root,
-        "stash",
-        "push",
-        "-u",
-        "-m",
-        "comfytv-auto-before-pull",
-    )
-    return r.returncode == 0
+    remote_paths = _remote_tree_paths(root, remote, branch)
+    ls = _run_git(root, "-c", "core.quotepath=false", "ls-tree", "-r", "--name-only", "HEAD")
+    snap: dict[str, bytes] = {}
+    if ls.returncode != 0:
+        return snap
+    for ln in (ls.stdout or "").splitlines():
+        rel = ln.strip().replace("\\", "/")
+        if not rel or not _is_workflow_rel(rel) or rel in remote_paths:
+            continue
+        path = root / rel
+        if not path.is_file():
+            continue
+        try:
+            snap[rel] = path.read_bytes()
+        except OSError:
+            pass
+    return snap
 
 
-def _stash_pop_safe(root: Path) -> list[str]:
-    """Pop auto-stash; on conflict keep stash and return warning strings."""
-    warnings: list[str] = []
-    listed = _run_git(root, "stash", "list")
-    if "comfytv-auto-before-pull" not in (listed.stdout or ""):
-        return warnings
-    r = _run_git(root, "stash", "pop")
-    if r.returncode != 0:
-        detail = (r.stderr or r.stdout or "").strip()[:240]
-        warnings.append(
-            "local edits were stashed as comfytv-auto-before-pull; "
-            f"stash pop had issues: {detail or 'conflict'}"
-        )
-    return warnings
+def _restore_local_only_workflows(root: Path, snap: dict[str, bytes]) -> None:
+    for rel, data in snap.items():
+        path = root / rel
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        except OSError as e:
+            _log.warning("could not restore local-only %s: %s", rel, e)
+
+
+def _abort_rebase_if_any(root: Path) -> None:
+    if (root / ".git" / "rebase-merge").exists() or (root / ".git" / "rebase-apply").exists():
+        _run_git(root, "rebase", "--abort")
 
 
 def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dict[str, Any]:
-    """Pull team templates: overwrite cloud workflows locally; keep local-only files."""
+    """Pull team templates: force-overwrite from remote; keep local-only files.
+
+    Always ``git reset --hard`` to upstream (no stash / rebase). Template edits and
+    diverged local commits are discarded. Untracked local-only workflows stay;
+    tracked local-only workflows are snapshotted and restored after the reset.
+    """
     root = _workflows_root(root, user_id)
     status = collect_status(root, fetch_remote=True, user_id=user_id)
     if not status.get("is_repo"):
@@ -998,41 +1041,16 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
         )
         return status
     assert root is not None
-    stashed = False
     try:
         remote = status.get("remote") or "origin"
         branch = status.get("branch") or "main"
+        _abort_rebase_if_any(root)
         # Avoid "untracked … would be overwritten by checkout" (common colleague case).
         local_backups = quarantine_untracked_collisions(root, remote, branch)
-        # pull --rebase refuses dirty trees — stash local work first (incl. untracked).
-        if _working_tree_dirty(root) or _untracked_paths(root):
-            stashed = _stash_for_pull(root)
+        local_only = _snapshot_local_only_workflows(root, remote, branch)
         with _authed_origin(root):
             upstream = _upstream_ref(root) or f"{remote}/{branch}"
-            ahead_now, behind_now = _ahead_behind(root, upstream)
-            r: subprocess.CompletedProcess[str]
-            if behind_now > 0 and ahead_now == 0:
-                # Align HEAD to remote; untracked local workflows kept if not stashed,
-                # or restored via stash pop below.
-                r = _run_git(root, "reset", "--hard", upstream)
-            else:
-                r = _run_git(root, "pull", "--ff-only", remote, branch)
-                if r.returncode != 0:
-                    r = _run_git(root, "pull", "--ff-only")
-                # After a rejected push, local has commits remote doesn't — rebase onto remote.
-                if r.returncode != 0:
-                    # Rebase needs a clean tree; stash again if something re-dirtied.
-                    if _working_tree_dirty(root) and not stashed:
-                        stashed = _stash_for_pull(root)
-                    r = _run_git(root, "pull", "--rebase", remote, branch)
-                if r.returncode != 0:
-                    detail_l = (r.stderr or r.stdout or "").lower()
-                    if "unstaged" in detail_l or "uncommitted" in detail_l:
-                        if _stash_for_pull(root):
-                            stashed = True
-                        r = _run_git(root, "pull", "--rebase", remote, branch)
-                    if r.returncode != 0:
-                        r = _run_git(root, "pull", "--rebase")
+            r = _run_git(root, "reset", "--hard", upstream)
             # One more chance: parse overwrite error and quarantine those names.
             if r.returncode != 0:
                 detail = (r.stderr or r.stdout or "")
@@ -1047,37 +1065,29 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
                             except OSError:
                                 pass
                     if extra:
-                        r = _run_git(root, "pull", "--ff-only", remote, branch)
-                        if r.returncode != 0:
-                            r = _run_git(root, "pull", "--rebase", remote, branch)
+                        r = _run_git(root, "reset", "--hard", upstream)
         if r.returncode != 0:
             detail = (r.stderr or r.stdout or "").strip()[:500]
-            # Leave a half-finished rebase in a recoverable state
-            if (root / ".git" / "rebase-merge").exists() or (root / ".git" / "rebase-apply").exists():
-                _run_git(root, "rebase", "--abort")
-            if stashed:
-                _stash_pop_safe(root)
+            _abort_rebase_if_any(root)
             status = collect_status(root, fetch_remote=False)
             status["ok"] = False
             status["error_code"] = "pull_conflict"
-            status["error"] = detail or "git pull failed"
+            status["error"] = detail or "git reset --hard failed"
             status["local_backups"] = local_backups
             return status
-        # Templates: force-overwrite from tip after HEAD moved (云端有更新直接覆盖).
+        _restore_local_only_workflows(root, local_only)
+        # Belt-and-suspenders: re-checkout every remote workflow JSON from tip.
         overwritten = _overwrite_templates_from_tip(root, remote, branch)
-        stash_warnings = _stash_pop_safe(root) if stashed else []
         restored = native_workflow_assets.restore_assets(root)
         status = collect_status(root, fetch_remote=False)
         status["pulled"] = True
         status["assets_restored"] = restored.restored
         status["assets_skipped"] = restored.skipped
-        status["assets_warnings"] = (restored.warnings + stash_warnings)[:40]
+        status["assets_warnings"] = restored.warnings[:40]
         status["local_backups"] = local_backups
         status["templates_overwritten"] = overwritten
         return status
     except Exception as e:
-        if stashed:
-            _stash_pop_safe(root)
         status = collect_status(root, fetch_remote=False)
         status["ok"] = False
         status["error"] = str(e) or type(e).__name__
@@ -1150,7 +1160,7 @@ def setup_repo(
                 detail = detail.replace(token, "***")
             status = collect_status(root, fetch_remote=False)
             status["ok"] = False
-            status["error"] = detail or "git clone failed"
+            _apply_git_fail(status, detail, fallback="git clone failed")
             status["default_remote"] = clean
             return status
 
@@ -1308,7 +1318,7 @@ def push_paths(
                             "remote has new commits — click Update first, then Commit again"
                         )
                     else:
-                        status["error"] = detail or "git push failed"
+                        _apply_git_fail(status, detail, fallback="git push failed")
                     return status
                 status = collect_status(root, fetch_remote=False)
                 status["pushed"] = True
@@ -1348,7 +1358,7 @@ def push_paths(
                     "click Update, then Commit again to finish push"
                 )
             else:
-                status["error"] = detail or "git push failed"
+                _apply_git_fail(status, detail, fallback="git push failed")
             return status
 
         status = collect_status(root, fetch_remote=False)

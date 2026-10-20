@@ -292,8 +292,8 @@ class TestNativeWorkflowGit:
         assert (root / "高清毛发工作流.json").read_text(encoding="utf-8") == '{"nodes":["remote"]}'
         assert (root / "高清毛发工作流.json.local-backup").read_text(encoding="utf-8") == '{"nodes":["local"]}'
 
-    def test_pull_with_unstaged_local_edit(self, tmp_path):
-        """Unstaged local-only edits must not block pull --rebase."""
+    def test_pull_force_overwrites_templates_keeps_local_only(self, tmp_path):
+        """Update always hard-resets to remote; local-only workflows survive."""
         mod = _load_mod()
         root = _init_repo(tmp_path)
         remote = tmp_path / "remote.git"
@@ -305,28 +305,32 @@ class TestNativeWorkflowGit:
         ).stdout.strip()
         _git(root, "push", "-u", "origin", branch)
 
-        # Local commit so we are ahead (forces rebase path when remote also moves)
+        # Local-only commit (ahead) + dirty template edit — must not rebase/conflict.
         (root / "mine.json").write_text('{"nodes":["mine"]}', encoding="utf-8")
         _git(root, "add", "-A")
         _git(root, "commit", "-m", "local ahead")
+        (root / "a.json").write_text('{"nodes":["dirty-template"]}', encoding="utf-8")
+        (root / "mine.json").write_text('{"nodes":["dirty"]}', encoding="utf-8")
 
         other = tmp_path / "other"
         _git(tmp_path, "clone", str(remote), str(other))
         _git(other, "config", "user.email", "test@example.com")
         _git(other, "config", "user.name", "Test")
+        (other / "a.json").write_text('{"nodes":["remote-a"]}', encoding="utf-8")
         (other / "remote-new.json").write_text('{"nodes":["r"]}', encoding="utf-8")
         _git(other, "add", "-A")
         _git(other, "commit", "-m", "remote ahead")
         _git(other, "push")
 
-        # Dirty working tree (the error the user hit)
-        (root / "mine.json").write_text('{"nodes":["dirty"]}', encoding="utf-8")
         out = mod.pull_repo(root=root)
         assert out["ok"] is True, out.get("error")
         assert out.get("pulled") is True
         assert (root / "remote-new.json").is_file()
-        # Local dirty edit restored via stash pop
+        # Template force-overwritten from remote (no stash pop restoring dirty edit)
+        assert (root / "a.json").read_text(encoding="utf-8") == '{"nodes":["remote-a"]}'
+        # Local-only workflow kept (including dirty working-tree bytes)
         assert (root / "mine.json").read_text(encoding="utf-8") == '{"nodes":["dirty"]}'
+        assert out.get("ahead", 0) == 0
 
     def test_ensure_workflow_credentials_seeds_from_plugin(self, tmp_path, monkeypatch):
         mod = _load_mod()

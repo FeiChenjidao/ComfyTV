@@ -5,6 +5,9 @@
 
   "result": { "type": "ui_save_url", "node": "9" },
 
+  "meta": {
+    "prompt_required": false
+  },
   "inputs": {
     "11": {
       "image": {

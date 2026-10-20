@@ -162,7 +162,8 @@
       "gitTokenSave": "Save & continue",
       "gitTokenSaving": "Saving…",
       "gitTokenRequired": "Token is required",
-      "gitTokenSaveFailed": "Failed to save token"
+      "gitTokenSaveFailed": "Failed to save token",
+      "gitAuthFailed": "This ComfyUI user’s GitHub token is invalid or expired. Paste a valid PAT (Contents: Read and write on the team repo). Each multi-user account stores its own token."
     },
     "stageHint": "Connect references, press ↑ to generate",
     "apiCostHint": "Estimated workflow API cost",

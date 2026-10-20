@@ -162,7 +162,8 @@
       "gitTokenSave": "保存并继续",
       "gitTokenSaving": "保存中…",
       "gitTokenRequired": "请先填写 Token",
-      "gitTokenSaveFailed": "Token 保存失败"
+      "gitTokenSaveFailed": "Token 保存失败",
+      "gitAuthFailed": "当前账号的 GitHub Token 无效或已过期。请重新粘贴有效的 PAT（团队仓 Contents 读写权限）。每个 ComfyUI 多用户账号各自存一份 Token。"
     },
     "stageHint": "连入参考，点 ↑ 生成",
     "apiCostHint": "估算工作流 API 费用",
