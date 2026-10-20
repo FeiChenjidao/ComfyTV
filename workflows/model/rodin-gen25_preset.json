@@ -2,7 +2,7 @@
   "_comment": "Exported preset for the 'Rodin Gen25' workflow (kind=model). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
   "label": "Rodin Gen25",
   "order": 30,
-  "description": "Rodin Gen-2.5 Image-to-3D (API). 1–5 reference images → mesh (glb/fbx/obj/stl). image0 required; image1–4 optional. Stage socket names match the Rodin node. Mode DynamicCombo children (tier / polygon_count / creative / mesh_faces / mesh_mode / is_micro) are bound so the control panel follows the built-in node. Advanced: TAPose / hd_texture / texture_delight / use_original_alpha / addon_highpack / bbox_* / height_cm.",
+  "description": "Rodin Gen-2.5 Image-to-3D (API). 1–5 reference images → GLB mesh (pinned; SaveGLB passthrough cannot feed FBX into ComfyTV mesh/OBJ tools). image0 required; image1–4 optional. Stage socket names match the Rodin node. Mode DynamicCombo children (tier / polygon_count / creative / mesh_faces / mesh_mode / is_micro) are bound so the control panel follows the built-in node. Advanced: TAPose / hd_texture / texture_delight / use_original_alpha / addon_highpack / bbox_* / height_cm.",
   "result": {
     "type": "ui_save_url",
     "node": "3"
@@ -71,7 +71,7 @@
         "cast": "int"
       },
       "geometry_file_format": {
-        "from": "option:geometry_file_format"
+        "from": "literal:glb"
       },
       "hd_texture": {
         "from": "option:hd_texture",

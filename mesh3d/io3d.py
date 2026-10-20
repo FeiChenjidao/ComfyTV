@@ -318,7 +318,10 @@ def load_mesh_bytes(data: bytes, fmt: str = ""):
     """Parse a GLB/glTF/OBJ/STL byte blob into a single-item MESH batch (scene-graph transforms baked in)."""
     fmt = (fmt or "").lstrip(".").lower()
     if fmt == "fbx":
-        raise ValueError("load_mesh: FBX is not supported; re-export the model as GLB")
+        raise ValueError(
+            "load_mesh: FBX is not supported; re-run the stage with GLB "
+            "(SaveGLB does not convert FBX)"
+        )
     if fmt in ("glb", "gltf") or data[:4] == b'glTF':
         v, f, uv, colors, normals, texture_pil, mr_pil, nm_pil, em_pil = _parse_gltf(data)
     elif fmt == "obj":
