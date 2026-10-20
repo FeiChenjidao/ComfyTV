@@ -42,6 +42,7 @@ import type { ComfyExtension, ComfyNodeDef } from '@comfyorg/comfyui-frontend-ty
 import { applyHiddenWidgetFlags, getWidget } from '@/utils/widget'
 import { checkThemeTokens } from '@/utils/devTokenCheck'
 import { attachComfyOrgAuth } from '@/utils/comfyOrgAuth'
+import { installAutoBridge } from '@/composables/stages/autoBridge'
 import { installGlobalRunBridge } from '@/utils/globalRunBridge'
 import { installCanvasMirror } from '@/composables/stages/useCanvasMirror'
 import { installCollabPresence } from '@/collab/useCollabPresence'
@@ -258,6 +259,8 @@ const extension: ComfyExtension = {
       t: (key, params) => i18n.global.t(key, params ?? {}),
       attachAuth: attachComfyOrgAuth,
     })
+
+    installAutoBridge(a)
 
     installCanvasMirror(a, {
       resolveApp: () => a,

@@ -12,6 +12,10 @@ Any ComfyUI plugin that outputs `IMAGE` / `VIDEO` / `AUDIO` (mesh2motion, IPAdap
 
 The bridge is itself a **ComfyTV stage** with its own Run button. Click Run, the upstream runs once, the URL is stored as the snapshot; downstream ComfyTV stages then use that snapshot on subsequent Runs instead of re-running.
 
+## Auto-insert
+
+With **Auto-insert Bridge on connect** enabled (ComfyTV settings, on by default), dragging a link between a native `IMAGE` / `VIDEO` / `AUDIO` / `STRING` / `MASK` socket and the matching `COMFYTV_*` socket inserts the correct Bridge node in between — both directions. Into-bridges still need Run to write the snapshot.
+
 ## Into-bridges
 
 `ComfyTV/Bridge` contains 5 into-bridge nodes that take a native or third-party plugin's output and pull it into ComfyTV:

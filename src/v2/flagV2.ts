@@ -1,5 +1,6 @@
 import { fetchSettings } from '@/api'
 import { applyCanvasDropSetting } from '@/composables/sidebar/assetCanvasDrop'
+import { applyAutoBridgeSetting } from '@/composables/stages/autoBridge'
 import { applyAutoPickerSetting } from '@/composables/stages/autoPicker'
 import { applyLodSettings } from '@/v2/lodV2'
 import { applyPanelOnSelectSetting } from '@/v2/panelOnSelect'
@@ -22,6 +23,7 @@ export async function hydrateV2Flag(): Promise<void> {
     enabled = row?.value === true
     applyLodSettings(rows)
     applyAutoPickerSetting(rows)
+    applyAutoBridgeSetting(rows)
     applyCanvasDropSetting(rows)
     applyPanelOnSelectSetting(rows)
     try {

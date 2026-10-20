@@ -59955,7 +59955,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-BmpwdD-J.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-CDZmc9sg.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -62860,7 +62860,7 @@ const stage$1 = { "run": "Run", "rerun": "Re-run", "running": "Running…", "can
 const error$1 = { "dismiss": "Dismiss", "cancelled": "Cancelled", "upstreamNotReady": "Upstream not ready", "upstreamNotReadyDetail": "Upstream not ready: {list}. Run those stage(s) first so they produce a snapshot, then Run this stage again.", "droppedFromQueue": "Removed from the queue before it ran — the queue was cleared or the prompt was deleted.", "workerDied": "Backend stopped without sending a result. The prompt worker likely died (CUDA OOM during cleanup is the usual cause). Restart ComfyUI to recover." };
 const eagle$1 = { "title": "Eagle Library", "refresh": "Refresh", "search": "Search name or tags…", "loading": "Loading…", "empty": "No items", "loadMore": "Load more", "disabledHint": "Eagle integration is disabled. Turn on “Enable Eagle integration” in Settings and pin the ComfyTV .library path.", "pendingBanner": "{n} item(s) queued for Eagle (waiting for the pinned library to open)", "flushNow": "Send now", "flushing": "Sending…", "mode": { "api": "Online", "disk": "Read-only", "offline": "Offline", "disabled": "Disabled" }, "hint": { "disk": "Eagle is closed or has another library open: reading the library from disk (read-only). Sends are queued and flushed automatically once the pinned library opens.", "offline": "Eagle unreachable: the app is not running and the pinned library path does not exist. Check the library path in Settings." }, "folder": { "all": "All folders" }, "ai": { "label": "AI", "tooltip": "AI semantic search (needs Eagle's AI Search plugin): search by meaning, not by name" }, "similar": { "action": "Find similar", "banner": "Items similar to “{name}”", "clear": "Clear", "failed": "Similar search failed" }, "import": { "action": "Import into Assets", "done": "Imported “{name}”", "existed": "“{name}” is already in Assets", "failed": "Import failed" }, "send": { "action": "Send to Eagle", "sent": "Sent to Eagle: {name}", "queued": "Eagle not ready — queued ({n} pending)", "failed": "Send failed" }, "flush": { "done": "Flushed {n} item(s) to Eagle", "failed": "{n} item(s) failed to flush" } };
 const sidebar$1 = { "tab": { "workflow": "Workflow", "assets": "Assets", "eagle": "Eagle", "entries": "Entries", "params": "Stages", "presets": "Presets", "resources": "Resources", "servers": "Servers", "collab": "Collab", "settings": "Settings" } };
-const settings$1 = { "title": "Settings", "hint": "Defaults come from comfytv.properties in the ComfyTV directory. Values saved here are stored in the database and take precedence.", "loading": "Loading…", "save": "Save", "saving": "Saving…", "search": "Search settings…", "noMatch": "No settings match", "experimental": "Experimental", "reset": "Reset to default", "on": "On", "off": "Off", "status": { "checking": "Checking…", "online": "Connected", "offline": "Offline" }, "blender": { "section": "Blender bridge" }, "general": { "section": "General" }, "backup": { "section": "Database backup", "now": "Back up now", "running": "Backing up…", "ok": "Backup written to {path}", "failed": "Backup failed: {error}" }, "teamGit": { "section": "Team workflows Git", "desc": "Used to sync cloud templates and push local workflows. Paste the PAT from your admin; it stays on this machine only — do not commit it to GitHub.", "configured": "Configured ({hint})", "missing": "No token configured", "placeholder": "Paste GitHub PAT (github_pat_… / ghp_…)", "save": "Save token", "saveOk": "Saved locally", "saveFailed": "Save failed" }, "fields": { "enable-v2": { "label": "Enable ComfyTV V2 nodes", "desc": "EXPERIMENTAL — expect rough edges. Renders migrated stages with the new content-first V2 shells. Requires ComfyUI's own Node 2.0 (Vue nodes) setting to be enabled first. Refresh the page after changing." }, "v2-lod-scale": { "label": "Poster mode below zoom", "desc": "Below this canvas zoom, V2 cards collapse to a thumbnail with a play/open button; panels come back once you zoom in past it again.", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "Poster backdrop", "desc": "What fills the card around a letterboxed thumbnail: the checkerboard used by image previews, or a dimmed copy of the same picture stretched to fill.", "options": { "checker": "Checkerboard", "image": "Same picture, dimmed" } }, "auto-picker": { "label": "Auto-attach picker on run", "desc": "When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically." }, "v2-panel-on-select": { "label": "Show control panel only when selected", "desc": "On by default. Unselected V2 nodes show the preview only; select a node to reveal prompts, params, and the run bar (LibTV-style)." }, "enable-db-backup": { "label": "Automatic backup on startup", "desc": "Back up the ComfyTV data directory (database + workflows) every time the server starts, before any migration runs." }, "db-backup-max-count": { "label": "Max backups to keep", "desc": "When the number of snapshots exceeds this, the oldest ones are deleted." }, "db-backup-path": { "label": "Backup location", "desc": "Leave empty to use the db-backup folder inside the ComfyTV directory. Snapshots are timestamped folders like 20260805-093000/comfytv.", "placeholder": "e.g. D:\\backups\\comfytv" }, "enable-mcp": { "label": "Enable MCP server", "desc": "Expose the ComfyTV MCP endpoint (/comfytv/mcp) so agents can read and drive the canvas. Off by default." }, "enable-bot": { "label": "Enable ComfyTV Bot", "desc": "Show the embedded bot sidebar and its chat API. Requires the MCP server to be enabled." }, "bot-model-claude-code": { "label": "Claude Code model", "desc": "Model passed to claude --model for bot turns. Accepts an alias (sonnet, opus, haiku) or a full model id. Blank = the CLI's own default.", "placeholder": "CLI default" }, "bot-model-codex": { "label": "Codex model", "desc": "Model passed to codex -m for bot turns. Blank = the CLI's own default.", "placeholder": "CLI default" }, "bot-model-qwen-code": { "label": "Qwen Code model", "desc": "Model passed to qwen -m for bot turns. Blank = the model selected in qwen's own settings.", "placeholder": "CLI default" }, "bot-model-local-llm": { "label": "Local LLM model", "desc": "Model id on the local endpoint. Blank = the first model the endpoint reports.", "placeholder": "first available" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM model", "desc": "EXPERIMENTAL — a toy provider, not meant for real use; pick Local LLM or one of the CLI providers instead. Text-encoder checkpoint from models/text_encoders used for bot turns (Qwen3 or Gemma family). Blank = the first generation-capable checkpoint found. Runs inside ComfyUI itself — no external server needed.", "placeholder": "first available" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM thinking", "desc": "EXPERIMENTAL — only affects the toy ComfyUI LLM provider. Let Qwen3 models reason in a hidden <think> block before answering. Noticeably smarter tool use, at the cost of extra generation time per turn." }, "bot-local-llm-url": { "label": "Local LLM endpoint", "desc": "OpenAI-compatible base URL of a local model server (LM Studio, llama.cpp llama-server, vLLM, Ollama…). The Local LLM provider stays unavailable until this is set. Keyless local endpoints only — no API keys are ever stored.", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "Mount comfy-mcp", "desc": "Also mount the official comfy-mcp server (read-only tool set: node catalog, workflow validation, model/template search) in bot sessions. Claude Code and Qwen Code only — Codex and Local LLM stay comfytv-only." }, "bot-comfy-mcp-command": { "label": "comfy-mcp command", "desc": "Command that launches the comfy-mcp stdio server. Blank = find comfy-mcp on PATH.", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "Always allow bot runs", "desc": "Run stages immediately without an approval card (the default). Disable this to let chats switched to Ask mode pause for your approval before each run." }, "enable-skills": { "label": "Enable Agent Skills", "desc": "Serve installed skills to agents over MCP (skill tool + prompts) and to the embedded bot." }, "enable-collab": { "label": "Enable collaboration", "desc": "EXPERIMENTAL — do not rely on this in production. Real-time multi-user presence and co-editing over the local network. When off, no collaboration code runs at all (no session, no websocket, no UI). Reload open pages after changing this." }, "enable-eagle": { "label": "Enable Eagle integration", "desc": "Connect the local Eagle (eagle.cool) library to ComfyTV: an Eagle panel appears in the sidebar and assets can be sent to Eagle. Requires the Eagle desktop app." }, "eagle-api-url": { "label": "Eagle API URL", "desc": "Address of Eagle's local API, default port 41595. Local access only, no token needed.", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "Pinned library path", "desc": "The .library directory dedicated to ComfyTV. Sends only happen while Eagle has this library open (queued otherwise); browsing falls back to reading the directory from disk. Empty = follow whatever library Eagle has open (not recommended).", "placeholder": "e.g. Y:\\Eagle\\ComfyTV.library" }, "eagle-send-folder": { "label": "Send target folder", "desc": "Eagle folder that manually sent items are filed into; created automatically if missing. Empty = library root. Auto-archive uses per-project folders instead." }, "eagle-auto-send": { "label": "Auto-archive outputs to Eagle", "desc": "Automatically archive every stage output (image/video/audio) into Eagle: filed into a per-project folder, annotation carries the full generation params (prompt/model/…), tagged with the project name. Uses the queue — piles up while Eagle is closed, never blocks generation." }, "blender-bridge-url": { "label": "Blender bridge URL", "desc": "EXPERIMENTAL — expect rough edges. Address of the blender-web bridge that the Blender Scene / Camera / Animation stages talk to. Start it with blender-for-comfytv.bat; the stages stay unavailable until it responds. Default port 7684, local only.", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent & MCP" }, "eagle": { "section": "Eagle Integration" }, "collab": { "section": "Collaboration" } };
+const settings$1 = { "title": "Settings", "hint": "Defaults come from comfytv.properties in the ComfyTV directory. Values saved here are stored in the database and take precedence.", "loading": "Loading…", "save": "Save", "saving": "Saving…", "search": "Search settings…", "noMatch": "No settings match", "experimental": "Experimental", "reset": "Reset to default", "on": "On", "off": "Off", "status": { "checking": "Checking…", "online": "Connected", "offline": "Offline" }, "blender": { "section": "Blender bridge" }, "general": { "section": "General" }, "backup": { "section": "Database backup", "now": "Back up now", "running": "Backing up…", "ok": "Backup written to {path}", "failed": "Backup failed: {error}" }, "teamGit": { "section": "Team workflows Git", "desc": "Used to sync cloud templates and push local workflows. Paste the PAT from your admin; it stays on this machine only — do not commit it to GitHub.", "configured": "Configured ({hint})", "missing": "No token configured", "placeholder": "Paste GitHub PAT (github_pat_… / ghp_…)", "save": "Save token", "saveOk": "Saved locally", "saveFailed": "Save failed" }, "fields": { "enable-v2": { "label": "Enable ComfyTV V2 nodes", "desc": "EXPERIMENTAL — expect rough edges. Renders migrated stages with the new content-first V2 shells. Requires ComfyUI's own Node 2.0 (Vue nodes) setting to be enabled first. Refresh the page after changing." }, "v2-lod-scale": { "label": "Poster mode below zoom", "desc": "Below this canvas zoom, V2 cards collapse to a thumbnail with a play/open button; panels come back once you zoom in past it again.", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "Poster backdrop", "desc": "What fills the card around a letterboxed thumbnail: the checkerboard used by image previews, or a dimmed copy of the same picture stretched to fill.", "options": { "checker": "Checkerboard", "image": "Same picture, dimmed" } }, "auto-picker": { "label": "Auto-attach picker on run", "desc": "When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically." }, "auto-bridge": { "label": "Auto-insert Bridge on connect", "desc": "When connecting a native IMAGE/VIDEO/AUDIO/STRING/MASK socket to a ComfyTV socket (or the reverse), insert the matching Bridge node automatically. Into-bridges still need Run to snapshot." }, "v2-panel-on-select": { "label": "Show control panel only when selected", "desc": "On by default. Unselected V2 nodes show the preview only; select a node to reveal prompts, params, and the run bar (LibTV-style)." }, "enable-db-backup": { "label": "Automatic backup on startup", "desc": "Back up the ComfyTV data directory (database + workflows) every time the server starts, before any migration runs." }, "db-backup-max-count": { "label": "Max backups to keep", "desc": "When the number of snapshots exceeds this, the oldest ones are deleted." }, "db-backup-path": { "label": "Backup location", "desc": "Leave empty to use the db-backup folder inside the ComfyTV directory. Snapshots are timestamped folders like 20260805-093000/comfytv.", "placeholder": "e.g. D:\\backups\\comfytv" }, "enable-mcp": { "label": "Enable MCP server", "desc": "Expose the ComfyTV MCP endpoint (/comfytv/mcp) so agents can read and drive the canvas. Off by default." }, "enable-bot": { "label": "Enable ComfyTV Bot", "desc": "Show the embedded bot sidebar and its chat API. Requires the MCP server to be enabled." }, "bot-model-claude-code": { "label": "Claude Code model", "desc": "Model passed to claude --model for bot turns. Accepts an alias (sonnet, opus, haiku) or a full model id. Blank = the CLI's own default.", "placeholder": "CLI default" }, "bot-model-codex": { "label": "Codex model", "desc": "Model passed to codex -m for bot turns. Blank = the CLI's own default.", "placeholder": "CLI default" }, "bot-model-qwen-code": { "label": "Qwen Code model", "desc": "Model passed to qwen -m for bot turns. Blank = the model selected in qwen's own settings.", "placeholder": "CLI default" }, "bot-model-local-llm": { "label": "Local LLM model", "desc": "Model id on the local endpoint. Blank = the first model the endpoint reports.", "placeholder": "first available" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM model", "desc": "EXPERIMENTAL — a toy provider, not meant for real use; pick Local LLM or one of the CLI providers instead. Text-encoder checkpoint from models/text_encoders used for bot turns (Qwen3 or Gemma family). Blank = the first generation-capable checkpoint found. Runs inside ComfyUI itself — no external server needed.", "placeholder": "first available" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM thinking", "desc": "EXPERIMENTAL — only affects the toy ComfyUI LLM provider. Let Qwen3 models reason in a hidden <think> block before answering. Noticeably smarter tool use, at the cost of extra generation time per turn." }, "bot-local-llm-url": { "label": "Local LLM endpoint", "desc": "OpenAI-compatible base URL of a local model server (LM Studio, llama.cpp llama-server, vLLM, Ollama…). The Local LLM provider stays unavailable until this is set. Keyless local endpoints only — no API keys are ever stored.", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "Mount comfy-mcp", "desc": "Also mount the official comfy-mcp server (read-only tool set: node catalog, workflow validation, model/template search) in bot sessions. Claude Code and Qwen Code only — Codex and Local LLM stay comfytv-only." }, "bot-comfy-mcp-command": { "label": "comfy-mcp command", "desc": "Command that launches the comfy-mcp stdio server. Blank = find comfy-mcp on PATH.", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "Always allow bot runs", "desc": "Run stages immediately without an approval card (the default). Disable this to let chats switched to Ask mode pause for your approval before each run." }, "enable-skills": { "label": "Enable Agent Skills", "desc": "Serve installed skills to agents over MCP (skill tool + prompts) and to the embedded bot." }, "enable-collab": { "label": "Enable collaboration", "desc": "EXPERIMENTAL — do not rely on this in production. Real-time multi-user presence and co-editing over the local network. When off, no collaboration code runs at all (no session, no websocket, no UI). Reload open pages after changing this." }, "enable-eagle": { "label": "Enable Eagle integration", "desc": "Connect the local Eagle (eagle.cool) library to ComfyTV: an Eagle panel appears in the sidebar and assets can be sent to Eagle. Requires the Eagle desktop app." }, "eagle-api-url": { "label": "Eagle API URL", "desc": "Address of Eagle's local API, default port 41595. Local access only, no token needed.", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "Pinned library path", "desc": "The .library directory dedicated to ComfyTV. Sends only happen while Eagle has this library open (queued otherwise); browsing falls back to reading the directory from disk. Empty = follow whatever library Eagle has open (not recommended).", "placeholder": "e.g. Y:\\Eagle\\ComfyTV.library" }, "eagle-send-folder": { "label": "Send target folder", "desc": "Eagle folder that manually sent items are filed into; created automatically if missing. Empty = library root. Auto-archive uses per-project folders instead." }, "eagle-auto-send": { "label": "Auto-archive outputs to Eagle", "desc": "Automatically archive every stage output (image/video/audio) into Eagle: filed into a per-project folder, annotation carries the full generation params (prompt/model/…), tagged with the project name. Uses the queue — piles up while Eagle is closed, never blocks generation." }, "blender-bridge-url": { "label": "Blender bridge URL", "desc": "EXPERIMENTAL — expect rough edges. Address of the blender-web bridge that the Blender Scene / Camera / Animation stages talk to. Start it with blender-for-comfytv.bat; the stages stay unavailable until it responds. Default port 7684, local only.", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent & MCP" }, "eagle": { "section": "Eagle Integration" }, "collab": { "section": "Collaboration" } };
 const servers$1 = { "title": "ComfyUI Servers", "add": "Add", "addTooltip": "Register another ComfyUI instance on your network so stages can run on it", "empty": "No remote servers configured. Stages run on this machine. Add a server to unlock the per-stage server dropdown and run stages on several machines in parallel.", "edit": "Edit", "delete": "Delete", "deleteConfirm": 'Delete server "{label}"? Stages currently pointed at it will fall back to running locally.', "enable": "Enable", "disable": "Disable", "local": "Local (this machine)", "runOn": "Run on", "form": { "label": "Name", "labelPlaceholder": "e.g. GPU rig upstairs", "host": "Host / IP", "port": "Port", "create": "Add server", "save": "Save", "cancel": "Cancel", "saveFailed": "Save failed — is the name already in use?" }, "test": { "action": "Test connection", "testing": "Testing…", "ok": "Connected", "failed": "Connection failed" }, "job": { "started": "Running on {label}", "failed": "Remote run failed", "cancelled": "Remote run cancelled", "fallbackLocal": "Selected server is gone or disabled — this stage will run locally." }, "status": { "online": "Online", "offline": "Offline", "unknown": "Checking…", "idle": "Idle", "queueShort": "Q {n}", "queueDetail": "{running} running, {pending} pending", "fromComfyTV": "{n} from ComfyTV" }, "caps": { "badge": "ComfyTV v{version}", "comfyOnly": "ComfyUI only — ComfyTV not installed", "missingNodes": "{n} nodes missing", "missingTitle": "Nodes missing on this remote — upgrade its ComfyTV:" }, "preflight": { "blockedTitle": "Remote run blocked", "warnTitle": "Remote resource check", "runAnyway": "Run anyway", "noComfyTV": `Remote "{label}" doesn't have ComfyTV installed — install ComfyTV there or run locally.`, "missingNode": 'Remote "{label}" is missing node {node} — upgrade its ComfyTV.', "missingResource": 'Remote "{label}" is missing resource {file} — run anyway?', "resourceMismatch": 'Resource {file} has different content on remote "{label}" — run anyway?' } };
 const stageManager$1 = { "title": "Stage Manager", "refresh": "Refresh list", "import": "Import", "rescan": "Rescan", "rescanTooltip": "Scan the workflow library on disk (comfytv/workflows/ in the ComfyUI user directory) for new, changed, or removed files — no backend restart needed", "rescanFound": "Found {n} new workflow(s)", "rescanNone": "No new workflows found", "rescanNoneDetail": "Make sure the file is a .json inside comfytv/workflows/<kind>/ in the ComfyUI user directory (preset and .api.json sidecars don't count).", "rescanFailed": "Rescan failed", "setDefault": "Set as default", "unsetDefault": "Unset default", "defaultSet": "{label} is now the default workflow for this stage", "defaultCleared": "{label} is no longer the default — the first listed workflow is used", "defaultFailed": "Could not change the default workflow", "hide": "Hide from stage node", "unhide": "Show on stage node", "hiddenSet": "{label} is now hidden from the workflow dropdown on stage nodes", "hiddenCleared": "{label} is shown in the workflow dropdown again", "hiddenFailed": "Could not change workflow visibility", "section": { "workflows": "Workflows", "params": "Parameters" }, "emptyWorkflows": "No workflows registered for this stage yet — import one here, or drop a .json into comfytv/workflows/<kind>/ in the ComfyUI user directory and hit Rescan.", "hint": "Workflows listed here are picked from the workflow dropdown on the matching stage node on the canvas.", "badge": { "linked": "linked", "linkedHint": "Linked from ComfyUI's native workflow folder (not managed by ComfyTV)", "fileMissing": "file missing", "notGui": "not GUI format", "notGuiHint": "Missing a top-level nodes array — open it in ComfyUI and re-save normally, not with Save (API Format)", "noApi": "API not generated", "noApiHint": "The API prompt is generated automatically the first time this workflow runs — normal for a freshly imported workflow.", "new": "new", "newHint": "Discovered in the most recent scan (startup or rescan)", "builtin": "built-in", "builtinHint": "Ships with ComfyTV (tracked in git). Workflows without this badge were imported or dropped in by a user.", "default": "default", "defaultHint": "Newly added stage nodes of this kind start with this workflow selected. If it is deleted or unlinked, the first listed workflow is used instead.", "hidden": "hidden", "hiddenHint": "Not offered in the workflow dropdown on stage nodes. Nodes that already selected it keep working." } };
 const assets$1 = { "title": "Asset Library", "empty": "No assets yet — add images, video, or audio to reuse them across projects.", "emptyCategory": "No assets in this category yet.", "add": "Add media", "addTooltip": "Upload images, video, or audio into the library (or drag & drop them onto this panel)", "uploading": "Uploading {done}/{total}…", "uploadFailed": "Upload failed: {detail}", "dropHint": "Drop files to add them to the library", "search": "Search assets", "noResults": "No assets match your search.", "scanFolder": "Scan media folder", "scanFolderHint": "Drop large files into this folder — they are adopted on scan without uploading", "view": { "settings": "Display settings", "list": "List view", "grid": "Grid view" }, "media": { "all": "All types", "image": "Images", "video": "Video", "audio": "Audio", "model": "3D models", "text": "Text" }, "category": { "all": "All", "none": "Uncategorized", "new": "New category", "newPrompt": "New category name:", "rename": "Rename category", "renamePrompt": "Category name:", "delete": "Delete category", "deleteConfirm": "Delete this category? It is removed from all assets; the assets and files on disk stay." }, "card": { "rename": "Rename", "renamePrompt": "Asset name:", "delete": "Remove from library", "deleteConfirm": "Remove this asset from the library? The file on disk stays.", "tags": "Edit tags", "loadNode": "Add as node to canvas", "makeProxy": "Generate preview proxy", "more": "More options", "playPreview": "Play", "pausePreview": "Pause", "fileMissing": "File missing", "fileMissingHint": "The file on disk was deleted; the library entry remains — re-import it or remove the asset" }, "tagPopover": { "empty": "No categories yet.", "create": "New category" }, "select": { "enter": "Select assets (Ctrl+click also works)", "exit": "Exit selection", "all": "Select all shown", "missing": "Select only the shown assets whose file is missing ({count})", "count": "{count} selected", "tags": "Edit tags of selected", "loadNodes": "Add selected as nodes to canvas", "remove": "Remove selected from library", "removeConfirm": "Remove {count} assets from the library? The files on disk stay." } };
@@ -63066,7 +63066,7 @@ const stage = { "run": "运行", "rerun": "重新运行", "running": "运行中�
 const error = { "dismiss": "清除", "cancelled": "已取消", "upstreamNotReady": "上游未就绪", "upstreamNotReadyDetail": "上游未就绪:{list}。请先运行这些阶段生成快照,然后再运行此阶段。", "refMissing": "参考素材已失效", "refMissingDetail": "{list} 对应的资产已从资产库移除，或文件已丢失。从参考区移除后重新添加，再运行。", "droppedFromQueue": "尚未运行就被移出队列 — 队列被清空或该任务被删除。", "workerDied": "后端未返回结果就停止了。prompt worker 可能已崩溃(通常是清理阶段 CUDA OOM)。重启 ComfyUI 后恢复。" };
 const eagle = { "title": "Eagle 素材库", "refresh": "刷新", "search": "搜索名称或标签…", "loading": "加载中…", "empty": "没有条目", "loadMore": "加载更多", "disabledHint": "Eagle 集成未启用。到「设置」页打开「启用 Eagle 集成」,并钉死 ComfyTV 专用的 .library 路径。", "pendingBanner": "有 {n} 条待发送到 Eagle(等待打开钉死的库)", "flushNow": "立即补发", "flushing": "补发中…", "mode": { "api": "在线", "disk": "只读", "offline": "离线", "disabled": "未启用" }, "hint": { "disk": "Eagle 未运行或打开了别的库:正在直接读取磁盘上的库(只读)。发送会排队,等库打开后自动补发。", "offline": "找不到 Eagle:应用未运行,钉死的库路径也不可达。检查设置里的库路径。" }, "folder": { "all": "全部文件夹" }, "ai": { "label": "AI", "tooltip": "AI 语义搜索(需要 Eagle 的 AI Search 插件):按含义搜图而非按名称" }, "similar": { "action": "找相似", "banner": "与「{name}」相似的条目", "clear": "清除", "failed": "相似搜索失败" }, "import": { "action": "导入到资产库", "done": "已导入「{name}」", "existed": "「{name}」已在资产库", "failed": "导入失败" }, "send": { "action": "发送到 Eagle", "sent": "已发送到 Eagle:{name}", "queued": "Eagle 未就绪,已排队({n} 条待发)", "failed": "发送失败" }, "flush": { "done": "已补发 {n} 条到 Eagle", "failed": "{n} 条补发失败" } };
 const sidebar = { "tab": { "workflow": "工作流", "assets": "资产库", "eagle": "Eagle", "entries": "条目", "params": "阶段管理", "presets": "预设", "resources": "资源", "servers": "服务器", "collab": "协作", "settings": "设置" } };
-const settings = { "title": "设置", "hint": "默认值来自 ComfyTV 目录下的 comfytv.properties。此处保存的值写入数据库,并优先生效。", "modelRoutes": { "desktop-account": "桌面账号", "api-key": "API Key" }, "loading": "加载中…", "save": "保存", "saving": "保存中…", "search": "搜索设置…", "noMatch": "没有匹配的设置项", "experimental": "实验性", "reset": "恢复默认", "on": "开", "off": "关", "status": { "checking": "检测中…", "online": "已连接", "offline": "未连接" }, "blender": { "section": "Blender 桥接" }, "general": { "section": "通用" }, "backup": { "section": "数据库备份", "now": "立即备份", "running": "备份中…", "ok": "备份已写入 {path}", "failed": "备份失败:{error}" }, "teamGit": { "section": "团队工作流 Git", "desc": "用于同步云端模板与提交本地工作流。Token 只存本机，请向管理员索取后粘贴；不要提交到 GitHub。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 GitHub PAT（github_pat_… / ghp_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败" }, "fields": { "enable-v2": { "label": "启用 ComfyTV V2 节点", "desc": "实验性功能，可能存在不稳定行为。已迁移的阶段节点以内容导向的 V2 外壳渲染。必须先在 ComfyUI 本体设置中开启 Nodes 2.0（Vue 节点模式）。修改后需刷新页面。" }, "v2-lod-scale": { "label": "海报图模式阈值", "desc": "画布缩放低于此值时，V2 卡片收起为缩略图并显示播放/放大按钮；放大越过阈值后面板恢复。", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "海报图底", "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。", "options": { "checker": "棋盘格", "image": "同图压暗铺满" } }, "auto-picker": { "label": "运行时自动接挑选节点", "desc": "图像阶段或视频阶段运行时，如果输出端还没有连线，自动在后面接一个图片 / 视频选择器。" }, "drop-files-as-loaders": { "label": "拖入媒体文件生成资产加载节点", "desc": "图片、视频、音频拖到画布空白处时，导入资产库并生成 ComfyTV 资产加载节点，而不是交给 ComfyUI 加载（PNG 里保存的工作流不会再被打开）。拖到节点上的和其他类型的文件仍由 ComfyUI 处理。" }, "v2-panel-on-select": { "label": "仅选中时显示控制面板", "desc": "默认开启。未选中时 V2 节点只保留预览区；选中后再展开下方参数、提示词与运行条（与 LibTV 画布一致）。" }, "enable-db-backup": { "label": "启动时自动备份", "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。" }, "db-backup-max-count": { "label": "最大备份数量", "desc": "快照数量超过该值时,自动删除最旧的备份。" }, "db-backup-path": { "label": "备份位置", "desc": "留空则使用 ComfyTV 目录下的 db-backup 文件夹。快照以时间戳命名,如 20260805-093000/comfytv。", "placeholder": "如 D:\\backups\\comfytv" }, "enable-mcp": { "label": "启用 MCP 服务", "desc": "开放 ComfyTV 的 MCP 端点(/comfytv/mcp),允许 agent 读取并操作画布。默认关闭。" }, "enable-bot": { "label": "启用 ComfyTV Bot", "desc": "显示内嵌 Bot 侧边栏及其聊天接口。前置条件:先启用 MCP 服务。" }, "bot-model-claude-code": { "label": "Claude Code 模型", "desc": "Bot 回合传给 claude --model 的模型,支持别名(sonnet、opus、haiku)或完整模型 id。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-codex": { "label": "Codex 模型", "desc": "Bot 回合传给 codex -m 的模型。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-qwen-code": { "label": "Qwen Code 模型", "desc": "Bot 回合传给 qwen -m 的模型。留空 = 用 qwen 自己设置里选的模型。", "placeholder": "CLI 默认" }, "bot-model-local-llm": { "label": "Local LLM 模型", "desc": "本地端点上的模型 id。留空 = 用端点报告的第一个模型。", "placeholder": "自动取第一个" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM 模型", "desc": "实验性 — 玩具性质的 provider,一般情况不要用,请改用 Local LLM 或 CLI 类 provider。Bot 回合使用的 models/text_encoders 里的文本编码器权重(Qwen3 或 Gemma 系)。留空 = 自动取第一个可生成的权重。推理跑在 ComfyUI 本体内 — 无需外部服务。", "placeholder": "自动取第一个" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM 思考模式", "desc": "实验性 — 只对玩具性质的 ComfyUI LLM provider 生效。让 Qwen3 系模型先在隐藏的 <think> 块里推理再回答。工具调用明显更聪明,代价是每轮多花一些生成时间。" }, "bot-local-llm-url": { "label": "Local LLM 端点", "desc": "本地模型服务的 OpenAI 兼容 base URL(LM Studio、llama.cpp 的 llama-server、vLLM、Ollama 等)。不填时 Local LLM provider 不可用。仅限免 key 的本地端点 — 永远不存 API key。", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "挂载 comfy-mcp", "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex、DeepSeek Harness、Local LLM 与 ComfyUI LLM 保持只挂 comfytv。" }, "bot-comfy-mcp-command": { "label": "comfy-mcp 命令", "desc": "启动 comfy-mcp stdio 服务的命令。留空 = 在 PATH 上找 comfy-mcp。", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "总是允许 bot 运行", "desc": "不弹运行审批卡,bot 直接执行(默认行为)。关闭后,切到询问模式的会话才会在每次运行前等你批准。" }, "bot-model-deepseek-harness": { "label": "DeepSeek Harness 模型", "desc": "模型同时决定计费方式：桌面账号或 API Key。留空 = 桌面账号下的第一个模型，不会自动改用 API Key。", "placeholder": "桌面账号默认" }, "enable-skills": { "label": "启用 Agent Skills", "desc": "把已安装的技能通过 MCP(skill 工具 + prompts)提供给外部 agent 和内嵌 bot。" }, "enable-collab": { "label": "启用多人协作", "desc": "实验性功能——请勿在生产环境依赖。局域网内的实时多人 presence 与共同编辑。关闭时协作代码完全不运行（无会话、无 WebSocket、无 UI）。修改后需刷新已打开的页面。" }, "enable-eagle": { "label": "启用 Eagle 集成", "desc": "把本机的 Eagle(eagle.cool)素材库接入 ComfyTV:侧边栏出现 Eagle 面板,资产可发送到 Eagle。需要 Eagle 桌面应用。" }, "eagle-api-url": { "label": "Eagle API 地址", "desc": "Eagle 本地 API 的地址,默认端口 41595。仅本机访问,不需要 token。", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "钉死的资源库路径", "desc": "ComfyTV 专用的 .library 目录。发送只在 Eagle 打开该库时进行(否则排队),浏览在 Eagle 关闭或切到别的库时直接读磁盘。留空 = 跟随 Eagle 当前打开的库(不推荐)。", "placeholder": "如 Y:\\Eagle资源库\\ComfyTV资源库.library" }, "eagle-send-folder": { "label": "发送目标文件夹", "desc": "手动发送到 Eagle 时归入的文件夹名,不存在会自动创建。留空 = 库根目录。自动沉淀按项目名分文件夹,不走此设置。" }, "eagle-auto-send": { "label": "产出自动沉淀到 Eagle", "desc": "每个阶段节点的产出(图片/视频/音频)自动归档进 Eagle:按项目名分文件夹,annotation 带完整生成参数(prompt/模型等),tag 带项目名。走排队机制,Eagle 没开时攒着,不阻塞生成。" }, "blender-bridge-url": { "label": "Blender 桥接地址", "desc": "实验性 — 会有毛边。Blender Scene / Camera / Animation 这几个阶段节点连接的 blender-web 桥接服务地址。用 blender-for-comfytv.bat 启动;桥接没响应时这些阶段节点不可用。默认端口 7684,仅限本机。", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent 与 MCP" }, "eagle": { "section": "Eagle 集成" }, "collab": { "section": "多人协作" } };
+const settings = { "title": "设置", "hint": "默认值来自 ComfyTV 目录下的 comfytv.properties。此处保存的值写入数据库,并优先生效。", "modelRoutes": { "desktop-account": "桌面账号", "api-key": "API Key" }, "loading": "加载中…", "save": "保存", "saving": "保存中…", "search": "搜索设置…", "noMatch": "没有匹配的设置项", "experimental": "实验性", "reset": "恢复默认", "on": "开", "off": "关", "status": { "checking": "检测中…", "online": "已连接", "offline": "未连接" }, "blender": { "section": "Blender 桥接" }, "general": { "section": "通用" }, "backup": { "section": "数据库备份", "now": "立即备份", "running": "备份中…", "ok": "备份已写入 {path}", "failed": "备份失败:{error}" }, "teamGit": { "section": "团队工作流 Git", "desc": "用于同步云端模板与提交本地工作流。Token 只存本机，请向管理员索取后粘贴；不要提交到 GitHub。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 GitHub PAT（github_pat_… / ghp_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败" }, "fields": { "enable-v2": { "label": "启用 ComfyTV V2 节点", "desc": "实验性功能，可能存在不稳定行为。已迁移的阶段节点以内容导向的 V2 外壳渲染。必须先在 ComfyUI 本体设置中开启 Nodes 2.0（Vue 节点模式）。修改后需刷新页面。" }, "v2-lod-scale": { "label": "海报图模式阈值", "desc": "画布缩放低于此值时，V2 卡片收起为缩略图并显示播放/放大按钮；放大越过阈值后面板恢复。", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "海报图底", "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。", "options": { "checker": "棋盘格", "image": "同图压暗铺满" } }, "auto-picker": { "label": "运行时自动接挑选节点", "desc": "图像阶段或视频阶段运行时，如果输出端还没有连线，自动在后面接一个图片 / 视频选择器。" }, "auto-bridge": { "label": "连线时自动插入桥接节点", "desc": "把原生 IMAGE / VIDEO / AUDIO / STRING / MASK 与 ComfyTV 类型互连时，自动插入对应的桥接节点。入桥仍需点运行才会写入快照。" }, "drop-files-as-loaders": { "label": "拖入媒体文件生成资产加载节点", "desc": "图片、视频、音频拖到画布空白处时，导入资产库并生成 ComfyTV 资产加载节点，而不是交给 ComfyUI 加载（PNG 里保存的工作流不会再被打开）。拖到节点上的和其他类型的文件仍由 ComfyUI 处理。" }, "v2-panel-on-select": { "label": "仅选中时显示控制面板", "desc": "默认开启。未选中时 V2 节点只保留预览区；选中后再展开下方参数、提示词与运行条（与 LibTV 画布一致）。" }, "enable-db-backup": { "label": "启动时自动备份", "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。" }, "db-backup-max-count": { "label": "最大备份数量", "desc": "快照数量超过该值时,自动删除最旧的备份。" }, "db-backup-path": { "label": "备份位置", "desc": "留空则使用 ComfyTV 目录下的 db-backup 文件夹。快照以时间戳命名,如 20260805-093000/comfytv。", "placeholder": "如 D:\\backups\\comfytv" }, "enable-mcp": { "label": "启用 MCP 服务", "desc": "开放 ComfyTV 的 MCP 端点(/comfytv/mcp),允许 agent 读取并操作画布。默认关闭。" }, "enable-bot": { "label": "启用 ComfyTV Bot", "desc": "显示内嵌 Bot 侧边栏及其聊天接口。前置条件:先启用 MCP 服务。" }, "bot-model-claude-code": { "label": "Claude Code 模型", "desc": "Bot 回合传给 claude --model 的模型,支持别名(sonnet、opus、haiku)或完整模型 id。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-codex": { "label": "Codex 模型", "desc": "Bot 回合传给 codex -m 的模型。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-qwen-code": { "label": "Qwen Code 模型", "desc": "Bot 回合传给 qwen -m 的模型。留空 = 用 qwen 自己设置里选的模型。", "placeholder": "CLI 默认" }, "bot-model-local-llm": { "label": "Local LLM 模型", "desc": "本地端点上的模型 id。留空 = 用端点报告的第一个模型。", "placeholder": "自动取第一个" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM 模型", "desc": "实验性 — 玩具性质的 provider,一般情况不要用,请改用 Local LLM 或 CLI 类 provider。Bot 回合使用的 models/text_encoders 里的文本编码器权重(Qwen3 或 Gemma 系)。留空 = 自动取第一个可生成的权重。推理跑在 ComfyUI 本体内 — 无需外部服务。", "placeholder": "自动取第一个" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM 思考模式", "desc": "实验性 — 只对玩具性质的 ComfyUI LLM provider 生效。让 Qwen3 系模型先在隐藏的 <think> 块里推理再回答。工具调用明显更聪明,代价是每轮多花一些生成时间。" }, "bot-local-llm-url": { "label": "Local LLM 端点", "desc": "本地模型服务的 OpenAI 兼容 base URL(LM Studio、llama.cpp 的 llama-server、vLLM、Ollama 等)。不填时 Local LLM provider 不可用。仅限免 key 的本地端点 — 永远不存 API key。", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "挂载 comfy-mcp", "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex、DeepSeek Harness、Local LLM 与 ComfyUI LLM 保持只挂 comfytv。" }, "bot-comfy-mcp-command": { "label": "comfy-mcp 命令", "desc": "启动 comfy-mcp stdio 服务的命令。留空 = 在 PATH 上找 comfy-mcp。", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "总是允许 bot 运行", "desc": "不弹运行审批卡,bot 直接执行(默认行为)。关闭后,切到询问模式的会话才会在每次运行前等你批准。" }, "bot-model-deepseek-harness": { "label": "DeepSeek Harness 模型", "desc": "模型同时决定计费方式：桌面账号或 API Key。留空 = 桌面账号下的第一个模型，不会自动改用 API Key。", "placeholder": "桌面账号默认" }, "enable-skills": { "label": "启用 Agent Skills", "desc": "把已安装的技能通过 MCP(skill 工具 + prompts)提供给外部 agent 和内嵌 bot。" }, "enable-collab": { "label": "启用多人协作", "desc": "实验性功能——请勿在生产环境依赖。局域网内的实时多人 presence 与共同编辑。关闭时协作代码完全不运行（无会话、无 WebSocket、无 UI）。修改后需刷新已打开的页面。" }, "enable-eagle": { "label": "启用 Eagle 集成", "desc": "把本机的 Eagle(eagle.cool)素材库接入 ComfyTV:侧边栏出现 Eagle 面板,资产可发送到 Eagle。需要 Eagle 桌面应用。" }, "eagle-api-url": { "label": "Eagle API 地址", "desc": "Eagle 本地 API 的地址,默认端口 41595。仅本机访问,不需要 token。", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "钉死的资源库路径", "desc": "ComfyTV 专用的 .library 目录。发送只在 Eagle 打开该库时进行(否则排队),浏览在 Eagle 关闭或切到别的库时直接读磁盘。留空 = 跟随 Eagle 当前打开的库(不推荐)。", "placeholder": "如 Y:\\Eagle资源库\\ComfyTV资源库.library" }, "eagle-send-folder": { "label": "发送目标文件夹", "desc": "手动发送到 Eagle 时归入的文件夹名,不存在会自动创建。留空 = 库根目录。自动沉淀按项目名分文件夹,不走此设置。" }, "eagle-auto-send": { "label": "产出自动沉淀到 Eagle", "desc": "每个阶段节点的产出(图片/视频/音频)自动归档进 Eagle:按项目名分文件夹,annotation 带完整生成参数(prompt/模型等),tag 带项目名。走排队机制,Eagle 没开时攒着,不阻塞生成。" }, "blender-bridge-url": { "label": "Blender 桥接地址", "desc": "实验性 — 会有毛边。Blender Scene / Camera / Animation 这几个阶段节点连接的 blender-web 桥接服务地址。用 blender-for-comfytv.bat 启动;桥接没响应时这些阶段节点不可用。默认端口 7684,仅限本机。", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent 与 MCP" }, "eagle": { "section": "Eagle 集成" }, "collab": { "section": "多人协作" } };
 const servers = { "title": "ComfyUI 服务器", "add": "添加", "addTooltip": "登记局域网内的其他 ComfyUI 实例,让 stage 可以在它上面运行", "empty": "还没有配置远程服务器,所有 stage 都在本机运行。添加服务器后,每个 stage 会出现服务器下拉框,可多机并行运行。", "edit": "编辑", "delete": "删除", "deleteConfirm": "删除服务器「{label}」?指向它的 stage 会回退到本机运行。", "enable": "启用", "disable": "停用", "local": "本机 (Local)", "runOn": "运行于", "form": { "label": "名称", "labelPlaceholder": "例如:楼上那台 4090", "host": "主机 / IP", "port": "端口", "create": "添加服务器", "save": "保存", "cancel": "取消", "saveFailed": "保存失败——名称是不是重复了?" }, "test": { "action": "测试连接", "testing": "测试中…", "ok": "连接成功", "failed": "连接失败" }, "job": { "started": "正在 {label} 上运行", "failed": "远程运行失败", "cancelled": "远程运行已取消", "fallbackLocal": "所选服务器已删除或停用——这个 stage 将在本机运行。" }, "status": { "online": "在线", "offline": "离线", "unknown": "检测中…", "idle": "空闲", "queueShort": "队列 {n}", "queueDetail": "{running} 运行中,{pending} 排队", "fromComfyTV": "其中 {n} 来自 ComfyTV" }, "caps": { "badge": "ComfyTV v{version}", "comfyOnly": "仅 ComfyUI（未装 ComfyTV）", "missingNodes": "缺 {n} 个节点", "missingTitle": "远端缺少的节点——请升级远端 ComfyTV：" }, "preflight": { "blockedTitle": "远程运行被拦截", "warnTitle": "远端资源检查", "runAnyway": "仍要运行", "noComfyTV": "远端「{label}」未安装 ComfyTV——请先在远端安装，或改为本机运行。", "missingNode": "远端「{label}」缺少节点 {node}——请升级远端 ComfyTV。", "missingResource": "远端「{label}」缺少资源 {file}，仍要运行吗？", "resourceMismatch": "资源 {file} 在远端「{label}」上内容不一致，仍要运行吗？" } };
 const stageManager = { "title": "阶段管理", "refresh": "刷新列表", "import": "导入", "rescan": "重新扫描", "rescanTooltip": "扫描磁盘上的工作流库（ComfyUI user 目录下的 comfytv/workflows/），发现新增、变更或删除的文件 —— 无需重启后端", "rescanFound": "发现 {n} 个新工作流", "rescanNone": "没有发现新工作流", "rescanNoneDetail": "请确认文件是 .json 且放在 ComfyUI user 目录下的 comfytv/workflows/对应类别目录中（preset 和 .api.json 附属文件不算）。", "rescanFailed": "重新扫描失败", "setDefault": "设为默认", "unsetDefault": "取消默认", "defaultSet": "{label} 已设为该阶段的默认工作流", "defaultCleared": "{label} 已取消默认 —— 将使用列表中的第一个工作流", "defaultFailed": "修改默认工作流失败", "hide": "从阶段节点隐藏", "unhide": "在阶段节点显示", "hiddenSet": "{label} 已从阶段节点的 workflow 下拉框隐藏", "hiddenCleared": "{label} 已重新显示在 workflow 下拉框中", "hiddenFailed": "修改工作流可见性失败", "section": { "workflows": "工作流", "params": "参数" }, "emptyWorkflows": "该阶段下还没有已注册的工作流 —— 点「导入」上传，或把 .json 放入 ComfyUI user 目录下的 comfytv/workflows/对应类别目录后点「重新扫描」。", "hint": "这里列出的工作流，在画布上对应阶段节点的 workflow 下拉框中选用。", "badge": { "linked": "外链", "linkedHint": "链接自 ComfyUI 原生工作流目录（不由 ComfyTV 管理）", "fileMissing": "文件丢失", "notGui": "非 GUI 格式", "notGuiHint": "缺少顶层 nodes 数组 —— 在 ComfyUI 中打开后用普通「保存」重新导出，不要用「保存（API 格式）」", "noApi": "API 未生成", "noApiHint": "首次运行该工作流时会自动生成 API prompt，新导入的工作流出现此标记属于正常。", "new": "新", "newHint": "最近一次扫描（启动或重新扫描）新发现的工作流", "builtin": "内置", "builtinHint": "ComfyTV 自带的工作流（git 跟踪）。没有此标记的是用户导入或手动放入的。", "default": "默认", "defaultHint": "新添加的该类阶段节点会预选此工作流。若它被删除或取消链接，则回退到列表中的第一个。", "hidden": "已隐藏", "hiddenHint": "不出现在阶段节点的 workflow 下拉框中。已选中它的节点不受影响，仍可正常运行。" } };
 const assets = { "title": "资产库", "empty": "还没有资产 —— 添加图片、视频或音频后可跨项目复用。", "emptyCategory": "这个分类下还没有资产。", "add": "添加素材", "addTooltip": "上传图片、视频或音频到资产库（也可以直接拖拽文件到这个面板）", "uploading": "上传中 {done}/{total}…", "uploadFailed": "上传失败: {detail}", "dropHint": "松开把文件添加到资产库", "search": "搜索资产", "noResults": "没有匹配的资产。", "scanFolder": "扫描素材文件夹", "scanFolderHint": "大文件直接放进这个文件夹,扫描时自动收录,无需上传", "view": { "settings": "显示设置", "list": "列表视图", "grid": "网格视图" }, "media": { "all": "全部类型", "image": "图片", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本" }, "category": { "all": "全部", "none": "未分类", "new": "新建分类", "newPrompt": "新分类名称：", "rename": "重命名分类", "renamePrompt": "分类名称：", "delete": "删除分类", "deleteConfirm": "删除这个分类？它会从所有资产上移除；资产和磁盘上的文件保留。" }, "card": { "rename": "重命名", "renamePrompt": "资产名称：", "delete": "从资产库移除", "deleteConfirm": "把这个资产从资产库移除？磁盘上的文件保留。", "tags": "编辑标签", "loadNode": "作为节点添加到画布", "makeProxy": "生成预览代理", "more": "更多操作", "playPreview": "试听", "pausePreview": "暂停", "fileMissing": "文件缺失", "fileMissingHint": "本地文件已被删除，资产条目仍保留；可重新导入或从资产库移除" }, "tagPopover": { "empty": "还没有分类。", "create": "新建分类" }, "select": { "enter": "多选资产（Ctrl+点击也可以）", "exit": "退出多选", "all": "全选当前显示", "missing": "只勾选当前显示中文件缺失的（{count} 个）", "count": "已选 {count} 个", "tags": "编辑所选的标签", "loadNodes": "把所选作为节点添加到画布", "remove": "从资产库移除所选", "removeConfirm": "把这 {count} 个资产从资产库移除？磁盘上的文件保留。" } };
@@ -80315,14 +80315,165 @@ function fetchBlenderCameras() {
 function addModelToScene(payloadUrl) {
   return apiSend("/comfytv/blender/scene/add", "POST", AnySchema, { payload_url: payloadUrl });
 }
-let enabled$1 = false;
-function isAutoPickerEnabled() {
-  return enabled$1;
-}
-function applyAutoPickerSetting(rows) {
-  const row = rows.find((r2) => r2.key === "auto-picker");
-  if (row) enabled$1 = row.value !== false;
-}
+const cat$3 = "imageVariant";
+const IMAGE_VARIANT_PRESETS = [
+  { id: "layer-separation", icon: "pi pi-clone", category: cat$3, targetClass: "ComfyTV.LayerSeparationStage", inputSocket: "image" },
+  {
+    id: "cinematic-light",
+    icon: "pi pi-video",
+    category: cat$3,
+    targetClass: "ComfyTV.ImageEditStage",
+    inputAutogrowGroup: "images",
+    widgets: {
+      main_prompt: "cinematic key light, dramatic mood, color graded look; relight the image, preserving identity, geometry, and details"
+    }
+  },
+  {
+    id: "frame-3s",
+    icon: "pi pi-clock",
+    category: cat$3,
+    targetClass: "ComfyTV.ImageEditStage",
+    inputAutogrowGroup: "images",
+    widgets: {
+      main_prompt: "show the scene 3 seconds later, preserving character, environment, and style; continue the action naturally"
+    }
+  },
+  {
+    id: "frame-5s",
+    icon: "pi pi-clock",
+    category: cat$3,
+    targetClass: "ComfyTV.ImageEditStage",
+    inputAutogrowGroup: "images",
+    widgets: {
+      main_prompt: "show the scene 5 seconds later, preserving character, environment, and style; continue the action naturally"
+    }
+  }
+];
+const cat$2 = "imageEdit";
+const IMAGE_EDIT_PRESETS = [
+  { id: "hd", icon: "pi pi-sparkles", category: cat$2, targetClass: "ComfyTV.UpscaleStage", inputSocket: "image" },
+  { id: "outpaint", icon: "pi pi-window-maximize", category: cat$2, targetClass: "ComfyTV.OutpaintStage", inputSocket: "image" },
+  { id: "inpaint", icon: "pi pi-pencil", category: cat$2, targetClass: "ComfyTV.InpaintStage", inputSocket: "image" },
+  { id: "erase", icon: "pi pi-eraser", category: cat$2, targetClass: "ComfyTV.EraseStage", inputSocket: "image" },
+  { id: "cutout", icon: "lucide:scissors", category: cat$2, targetClass: "ComfyTV.CutoutStage", inputSocket: "image" },
+  { id: "crop", icon: "lucide:crop", category: cat$2, targetClass: "ComfyTV.CropStage", inputSocket: "image" },
+  { id: "rotate", icon: "pi pi-refresh", category: cat$2, targetClass: "ComfyTV.RotateStage", inputSocket: "image" },
+  { id: "mirror", icon: "pi pi-arrow-right-arrow-left", category: cat$2, targetClass: "ComfyTV.MirrorStage", inputSocket: "image" },
+  { id: "colorGrade", icon: "pi pi-palette", category: cat$2, targetClass: "ComfyTV.ColorGradeStage", inputSocket: "image" },
+  { id: "grid", icon: "pi pi-th-large", category: cat$2, targetClass: "ComfyTV.GridSplitStage", inputSocket: "image" },
+  { id: "custom-split", icon: "pi pi-pause", category: cat$2, targetClass: "ComfyTV.CustomSplitStage", inputSocket: "image" },
+  { id: "ken-burns", icon: "pi pi-camera", category: cat$2, targetClass: "ComfyTV.KenBurnsStage", inputSocket: "image" }
+];
+const cat$1 = "videoChange";
+const VIDEO_CHANGE_PRESETS = [
+  { id: "clip", icon: "lucide:scissors", category: cat$1, targetClass: "ComfyTV.VideoClipStage", inputSocket: "video" },
+  { id: "split", icon: "pi pi-pause", category: cat$1, targetClass: "ComfyTV.VideoSplitStage", inputSocket: "video" },
+  { id: "speed", icon: "pi pi-forward", category: cat$1, targetClass: "ComfyTV.VideoSpeedStage", inputSocket: "video" },
+  { id: "rotate", icon: "pi pi-refresh", category: cat$1, targetClass: "ComfyTV.VideoRotateStage", inputSocket: "video" },
+  { id: "crop", icon: "lucide:crop", category: cat$1, targetClass: "ComfyTV.VideoCropStage", inputSocket: "video" },
+  { id: "resize", icon: "pi pi-arrows-h", category: cat$1, targetClass: "ComfyTV.VideoResizeStage", inputSocket: "video" },
+  { id: "volume", icon: "pi pi-volume-up", category: cat$1, targetClass: "ComfyTV.VideoVolumeStage", inputSocket: "video" },
+  { id: "mux-audio", icon: "pi pi-headphones", category: cat$1, targetClass: "ComfyTV.VideoMuxAudioStage", inputSocket: "video" },
+  { id: "concat", icon: "pi pi-link", category: cat$1, targetClass: "ComfyTV.VideoConcatStage", inputAutogrowGroup: "videos" },
+  { id: "extract-frame", icon: "pi pi-image", category: cat$1, targetClass: "ComfyTV.VideoExtractFrameStage", inputSocket: "video" },
+  { id: "frames", icon: "pi pi-images", category: cat$1, targetClass: "ComfyTV.VideoFramesStage", inputSocket: "video" },
+  {
+    id: "demux",
+    icon: "pi pi-share-alt",
+    category: cat$1,
+    multiTargetClasses: [
+      "ComfyTV.AudioVideoDemuxAudioStage",
+      "ComfyTV.AudioVideoDemuxVideoStage"
+    ],
+    inputSocket: "video"
+  },
+  { id: "color", icon: "pi pi-palette", category: cat$1, targetClass: "ComfyTV.VideoColorStage", inputSocket: "video" },
+  { id: "curves", icon: "pi pi-chart-line", category: cat$1, targetClass: "ComfyTV.VideoCurvesStage", inputSocket: "video" },
+  { id: "lut", icon: "pi pi-sliders-h", category: cat$1, targetClass: "ComfyTV.VideoLUTStage", inputSocket: "video" },
+  { id: "blur-sharpen", icon: "pi pi-circle", category: cat$1, targetClass: "ComfyTV.VideoBlurSharpenStage", inputSocket: "video" },
+  { id: "denoise", icon: "pi pi-eraser", category: cat$1, targetClass: "ComfyTV.VideoDenoiseStage", inputSocket: "video" },
+  { id: "chroma-key", icon: "pi pi-filter", category: cat$1, targetClass: "ComfyTV.VideoChromaKeyStage", inputSocket: "video" },
+  { id: "transition", icon: "pi pi-arrow-right-arrow-left", category: cat$1, targetClass: "ComfyTV.VideoTransitionStage", inputSocket: "video_a" },
+  { id: "stabilize", icon: "pi pi-wave-pulse", category: cat$1, targetClass: "ComfyTV.VideoStabilizeStage", inputSocket: "video" },
+  { id: "scene-detect", icon: "pi pi-th-large", category: cat$1, targetClass: "ComfyTV.SceneDetectStage", inputSocket: "video" },
+  { id: "interpolate", icon: "pi pi-fast-forward", category: cat$1, targetClass: "ComfyTV.VideoInterpolateStage", inputSocket: "video" },
+  { id: "stylize", icon: "pi pi-sparkles", category: cat$1, targetClass: "ComfyTV.VideoStylizeStage", inputSocket: "video" },
+  { id: "scopes", icon: "pi pi-chart-bar", category: cat$1, targetClass: "ComfyTV.VideoScopesStage", inputSocket: "video" },
+  { id: "transform", icon: "pi pi-arrows-alt", category: cat$1, targetClass: "ComfyTV.VideoTransformStage", inputSocket: "video" },
+  { id: "composite", icon: "pi pi-clone", category: cat$1, targetClass: "ComfyTV.VideoCompositeStage", inputSocket: "background" },
+  { id: "corner-pin", icon: "pi pi-expand", category: cat$1, targetClass: "ComfyTV.CornerPinStage", inputSocket: "video" },
+  { id: "roto-mask", icon: "pi pi-pencil", category: cat$1, targetClass: "ComfyTV.RotoMaskStage", inputSocket: "video" },
+  { id: "motion-track", icon: "pi pi-map-marker", category: cat$1, targetClass: "ComfyTV.MotionTrackStage", inputSocket: "video" },
+  { id: "title", icon: "pi pi-align-center", category: cat$1, targetClass: "ComfyTV.TitleStage", inputSocket: "video" },
+  { id: "subtitles", icon: "pi pi-comment", category: cat$1, targetClass: "ComfyTV.SubtitleStage", inputSocket: "video" },
+  { id: "time-remap", icon: "pi pi-history", category: cat$1, targetClass: "ComfyTV.TimeRemapStage", inputSocket: "video" },
+  { id: "sequence", icon: "pi pi-list", category: cat$1, targetClass: "ComfyTV.SequenceStage", inputAutogrowGroup: "videos" },
+  { id: "stabilize-pro", icon: "pi pi-shield", category: cat$1, targetClass: "ComfyTV.VideoStabilizeV2Stage", inputSocket: "video" },
+  { id: "paint", icon: "pi pi-pencil", category: cat$1, targetClass: "ComfyTV.PaintStrokeStage", inputSocket: "video" },
+  { id: "uv-remap", icon: "pi pi-table", category: cat$1, targetClass: "ComfyTV.STMapStage", inputSocket: "video" },
+  { id: "mask-propagate", icon: "pi pi-forward", category: cat$1, targetClass: "ComfyTV.MaskPropagateStage", inputSocket: "video" },
+  { id: "speech-to-text", icon: "pi pi-microphone", category: cat$1, targetClass: "ComfyTV.SubtitleGenStage", inputSocket: "video" },
+  { id: "hue-correct", icon: "pi pi-sliders-v", category: cat$1, targetClass: "ComfyTV.HueCorrectStage", inputSocket: "video" },
+  { id: "glow", icon: "pi pi-sun", category: cat$1, targetClass: "ComfyTV.GlowStage", inputSocket: "video" },
+  { id: "god-rays", icon: "pi pi-bolt", category: cat$1, targetClass: "ComfyTV.GodRaysStage", inputSocket: "video" },
+  { id: "pik-keyer", icon: "pi pi-eraser", category: cat$1, targetClass: "ComfyTV.PIKStage", inputSocket: "video" },
+  { id: "keyer", icon: "pi pi-filter", category: cat$1, targetClass: "ComfyTV.KeyerStage", inputSocket: "video" },
+  { id: "despill", icon: "pi pi-eraser", category: cat$1, targetClass: "ComfyTV.DespillStage", inputSocket: "video" },
+  { id: "color-suppress", icon: "pi pi-filter-slash", category: cat$1, targetClass: "ComfyTV.ColorSuppressStage", inputSocket: "video" },
+  { id: "key-mix", icon: "pi pi-clone", category: cat$1, targetClass: "ComfyTV.KeyMixStage", inputSocket: "video_a" },
+  { id: "matte-monitor", icon: "pi pi-eye", category: cat$1, targetClass: "ComfyTV.MatteMonitorStage", inputSocket: "video" },
+  { id: "matte-morph", icon: "pi pi-circle", category: cat$1, targetClass: "ComfyTV.MatteMorphStage", inputSocket: "video" },
+  { id: "frame-blend", icon: "pi pi-images", category: cat$1, targetClass: "ComfyTV.FrameBlendStage", inputSocket: "video" },
+  { id: "selective-color", icon: "pi pi-palette", category: cat$1, targetClass: "ComfyTV.SelectiveColorStage", inputSocket: "video" },
+  { id: "chroma-shift", icon: "pi pi-arrows-h", category: cat$1, targetClass: "ComfyTV.ChromaShiftStage", inputSocket: "video" },
+  { id: "pseudocolor", icon: "pi pi-sun", category: cat$1, targetClass: "ComfyTV.PseudocolorStage", inputSocket: "video" },
+  { id: "posterize", icon: "pi pi-th-large", category: cat$1, targetClass: "ComfyTV.PosterizeStage", inputSocket: "video" },
+  { id: "gray-world", icon: "pi pi-circle-off", category: cat$1, targetClass: "ComfyTV.GrayWorldStage", inputSocket: "video" },
+  { id: "cdl", icon: "pi pi-sliders-v", category: cat$1, targetClass: "ComfyTV.CDLStage", inputSocket: "video" },
+  { id: "histogram-eq", icon: "pi pi-chart-bar", category: cat$1, targetClass: "ComfyTV.HistogramEqStage", inputSocket: "video" },
+  { id: "video-360", icon: "pi pi-globe", category: cat$1, targetClass: "ComfyTV.Video360Stage", inputSocket: "video" },
+  { id: "shape-mask", icon: "pi pi-stop", category: cat$1, targetClass: "ComfyTV.ShapeMaskStage", inputSocket: "video" },
+  { id: "lens-distort", icon: "pi pi-expand", category: cat$1, targetClass: "ComfyTV.LensDistortStage", inputSocket: "video" },
+  { id: "chroma-ab", icon: "pi pi-arrows-alt", category: cat$1, targetClass: "ComfyTV.ChromaticAberrationStage", inputSocket: "video" },
+  { id: "lens-flare", icon: "pi pi-sun", category: cat$1, targetClass: "ComfyTV.LensFlareStage", inputSocket: "video" },
+  { id: "particles", icon: "pi pi-sparkles", category: cat$1, targetClass: "ComfyTV.ParticlesStage", inputSocket: "video" },
+  { id: "z-defocus", icon: "pi pi-bullseye", category: cat$1, targetClass: "ComfyTV.ZDefocusStage", inputSocket: "video" },
+  { id: "face-blur", icon: "pi pi-user-minus", category: cat$1, targetClass: "ComfyTV.FaceBlurStage", inputSocket: "video" },
+  { id: "spot-remover", icon: "pi pi-eraser", category: cat$1, targetClass: "ComfyTV.SpotRemoverStage", inputSocket: "video" },
+  { id: "old-film", icon: "pi pi-video", category: cat$1, targetClass: "ComfyTV.OldFilmStage", inputSocket: "video" },
+  { id: "annotate", icon: "pi pi-pencil", category: cat$1, targetClass: "ComfyTV.AnnotateStage", inputSocket: "video" },
+  { id: "audio-reactive", icon: "pi pi-wave-pulse", category: cat$1, targetClass: "ComfyTV.AudioReactiveStage", inputSocket: "video" },
+  { id: "audio-meter", icon: "pi pi-chart-bar", category: cat$1, targetClass: "ComfyTV.AudioMeterStage", inputSocket: "video" },
+  { id: "fx-chain", icon: "pi pi-sitemap", category: cat$1, targetClass: "ComfyTV.FXChainStage", inputSocket: "video" }
+];
+const cat = "audioChange";
+const AUDIO_CHANGE_PRESETS = [
+  { id: "clip", icon: "lucide:scissors", category: cat, targetClass: "ComfyTV.AudioClipStage", inputSocket: "audio" },
+  { id: "split", icon: "pi pi-pause", category: cat, targetClass: "ComfyTV.AudioSplitStage", inputSocket: "audio" },
+  { id: "dynamics", icon: "pi pi-compress", category: cat, targetClass: "ComfyTV.AudioDynamicsStage", inputSocket: "audio" },
+  { id: "loudness", icon: "pi pi-volume-up", category: cat, targetClass: "ComfyTV.AudioLoudnessStage", inputSocket: "audio" },
+  { id: "duck", icon: "pi pi-sort-amount-down", category: cat, targetClass: "ComfyTV.AudioDuckStage", inputSocket: "audio" },
+  { id: "eq", icon: "pi pi-sliders-v", category: cat, targetClass: "ComfyTV.AudioEQStage", inputSocket: "audio" },
+  { id: "saturate", icon: "pi pi-sun", category: cat, targetClass: "ComfyTV.AudioSaturateStage", inputSocket: "audio" },
+  { id: "modulation", icon: "pi pi-wave-pulse", category: cat, targetClass: "ComfyTV.AudioModulationStage", inputSocket: "audio" },
+  { id: "echo", icon: "pi pi-replay", category: cat, targetClass: "ComfyTV.AudioEchoStage", inputSocket: "audio" },
+  { id: "stereo", icon: "pi pi-arrows-h", category: cat, targetClass: "ComfyTV.AudioStereoStage", inputSocket: "audio" },
+  { id: "time-pitch", icon: "pi pi-clock", category: cat, targetClass: "ComfyTV.AudioTimePitchStage", inputSocket: "audio" },
+  { id: "denoise", icon: "pi pi-eraser", category: cat, targetClass: "ComfyTV.AudioDenoiseStage", inputSocket: "audio" },
+  { id: "noise-reduction", icon: "pi pi-filter", category: cat, targetClass: "ComfyTV.AudioNoiseReductionStage", inputSocket: "audio" },
+  { id: "repair", icon: "pi pi-wrench", category: cat, targetClass: "ComfyTV.AudioRepairStage", inputSocket: "audio" },
+  { id: "convolve", icon: "pi pi-building", category: cat, targetClass: "ComfyTV.AudioConvolveStage", inputSocket: "audio" },
+  { id: "deconvolve", icon: "pi pi-undo", category: cat, targetClass: "ComfyTV.AudioDeconvolveStage", inputSocket: "audio" },
+  { id: "muse-reverb", icon: "pi pi-cloud", category: cat, targetClass: "ComfyTV.MuseReverbStage", inputSocket: "audio" },
+  { id: "mix", icon: "pi pi-bars", category: cat, targetClass: "ComfyTV.AudioMixStage", inputSocket: "audio_a" },
+  { id: "crossfade", icon: "pi pi-arrow-right-arrow-left", category: cat, targetClass: "ComfyTV.AudioCrossfadeStage", inputSocket: "audio_a" },
+  { id: "stem-split", icon: "pi pi-share-alt", category: cat, targetClass: "ComfyTV.AudioStemSplitStage", inputSocket: "audio" },
+  { id: "analyze", icon: "pi pi-search", category: cat, targetClass: "ComfyTV.AudioAnalyzeStage", inputSocket: "audio" },
+  { id: "mir", icon: "pi pi-chart-scatter", category: cat, targetClass: "ComfyTV.AudioMIRStage", inputSocket: "audio" },
+  { id: "visualize", icon: "pi pi-chart-bar", category: cat, targetClass: "ComfyTV.AudioVisualizeStage", inputSocket: "audio" },
+  { id: "segment-export", icon: "pi pi-list", category: cat, targetClass: "ComfyTV.AudioSegmentExportStage", inputSocket: "audio" },
+  { id: "reactive", icon: "pi pi-bolt", category: cat, targetClass: "ComfyTV.AudioReactiveStage", inputSocket: "audio" }
+];
 function mediaItems(state2, source) {
   const raw = source === "pool" ? state2.pool : state2.output;
   const str2 = String(raw ?? "");
@@ -80366,6 +80517,2631 @@ function lodPosterUrl(state2, source, opts) {
   const group = slotContent(state2, "images");
   if (!group) return "";
   return ((_b2 = mediaItems({ output: group, pool: null }, "batch")[0]) == null ? void 0 : _b2.url) ?? "";
+}
+const OUTPUT_SLOTS = ["image", "images", "video", "audio", "text", "model"];
+const SLOT_GROUPS = {
+  image: ["images", "image"],
+  video: ["videos", "video"],
+  audio: ["audio", "audio"],
+  model: ["models", "model"],
+  text: ["texts", "text"]
+};
+const UPLOAD_KIND = [
+  ["image_upload", "image"],
+  ["video_upload", "video"],
+  ["audio_upload", "audio"],
+  ["file_upload", "model"]
+];
+const DATA_KIND = {
+  IMAGE: "image",
+  VIDEO: "video",
+  AUDIO: "audio",
+  STRING: "text",
+  MESH: "model",
+  SPLAT: "model"
+};
+const FRAME_ENCODERS = /* @__PURE__ */ new Set(["SaveWEBM", "VHS_VideoCombine"]);
+const OUTPUT_NODE_KIND = {
+  SaveImage: "image",
+  PreviewImage: "image",
+  SaveAnimatedWEBP: "image",
+  SaveAnimatedPNG: "image",
+  SaveVideo: "video",
+  SaveWEBM: "video",
+  VHS_VideoCombine: "video",
+  SaveAudio: "audio",
+  SaveAudioMP3: "audio",
+  SaveAudioOpus: "audio",
+  SaveAudioAdvanced: "audio",
+  SaveGLB: "model",
+  PreviewAny: "text",
+  ShowText: "text",
+  SaveText: "text",
+  DisplayAny: "text"
+};
+function dataKind(type) {
+  for (const t2 of String(type ?? "").split(",")) {
+    const k2 = DATA_KIND[t2] ?? (t2.startsWith("FILE_3D") ? "model" : null);
+    if (k2) return k2;
+  }
+  return null;
+}
+function inputKey(node, input) {
+  return "cio_" + `${node}_${input}`.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+}
+function classifyWidget(w) {
+  const props = w.widget_props ?? {};
+  for (const [flag, kind] of UPLOAD_KIND) if (props[flag]) return kind;
+  switch (String(w.widget_type).toUpperCase()) {
+    case "STRING":
+      return "text";
+    case "INT":
+    case "FLOAT":
+    case "BOOLEAN":
+    case "COMBO":
+      return "param";
+    default:
+      return null;
+  }
+}
+function outputKindOf(n) {
+  if (n.out_type === "STRING") return "text";
+  if (!n.is_output) return null;
+  const legacy = OUTPUT_NODE_KIND[n.type];
+  if (legacy) return legacy;
+  if (FRAME_ENCODERS.has(n.type)) return "video";
+  return dataKind(n.in_type);
+}
+function emptyCustomIo() {
+  return { inputs: [], outputs: [] };
+}
+function parseCustomIo(meta) {
+  const raw = meta == null ? void 0 : meta.custom_io;
+  const out = emptyCustomIo();
+  if (!raw || typeof raw !== "object") return out;
+  for (const it2 of Array.isArray(raw.inputs) ? raw.inputs : []) {
+    if (!(it2 == null ? void 0 : it2.node) || !(it2 == null ? void 0 : it2.input) || !(it2 == null ? void 0 : it2.kind)) continue;
+    out.inputs.push({
+      node: String(it2.node),
+      input: String(it2.input),
+      kind: it2.kind,
+      label: String(it2.label ?? it2.input),
+      key: it2.key ? String(it2.key) : inputKey(String(it2.node), String(it2.input)),
+      slot: typeof it2.slot === "number" ? it2.slot : void 0,
+      required: it2.required == null ? void 0 : Boolean(it2.required),
+      ptype: it2.ptype ? String(it2.ptype).toUpperCase() : void 0,
+      props: it2.props && typeof it2.props === "object" ? it2.props : {},
+      default: it2.default,
+      prompt: it2.kind === "text" ? Boolean(it2.prompt) : void 0,
+      random: it2.kind === "param" ? Boolean(it2.random) : void 0
+    });
+  }
+  for (const it2 of Array.isArray(raw.outputs) ? raw.outputs : []) {
+    if (!(it2 == null ? void 0 : it2.node) || !(it2 == null ? void 0 : it2.kind)) continue;
+    out.outputs.push({ node: String(it2.node), kind: it2.kind, label: String(it2.label ?? it2.kind) });
+  }
+  return assignSlots(out);
+}
+function assignSlots(io2) {
+  const counters = {};
+  for (const it2 of io2.inputs) {
+    if (it2.kind === "param") {
+      it2.slot = void 0;
+      continue;
+    }
+    it2.slot = counters[it2.kind] ?? 0;
+    counters[it2.kind] = it2.slot + 1;
+    it2.key = inputKey(it2.node, it2.input);
+  }
+  for (const it2 of io2.inputs) if (it2.kind === "param") it2.key = inputKey(it2.node, it2.input);
+  return io2;
+}
+function slotName(kind, idx) {
+  const [group, prefix] = SLOT_GROUPS[kind];
+  return `${group}.${prefix}${idx}`;
+}
+function inputBySlot(io2, slot) {
+  return io2.inputs.find((it2) => it2.kind !== "param" && slotName(it2.kind, it2.slot ?? 0) === slot);
+}
+function primaryOutput(io2) {
+  return io2.outputs[0];
+}
+function previewKindOf(kind) {
+  if (!kind) return "image";
+  return kind === "images" ? "image" : kind;
+}
+function applySlotLabels(node, io2) {
+  for (const inp of node.inputs ?? []) {
+    const hit = inputBySlot(io2, inp.name);
+    inp.label = hit ? hit.label : void 0;
+  }
+  for (const out of node.outputs ?? []) {
+    const hit = io2.outputs.find((o) => o.kind === out.name);
+    out.label = hit ? hit.label : void 0;
+  }
+}
+function isMediaKind(kind) {
+  return kind === "image" || kind === "video" || kind === "audio" || kind === "model";
+}
+function defaultInputLabel(io2, w, kind, kindName2) {
+  if (w.node_title && w.node_title !== w.node_type) return w.node_title;
+  if (isMediaKind(kind)) {
+    const n = io2.inputs.filter((it2) => it2.kind === kind).length + 1;
+    return `${kindName2 ?? kind} ${n}`;
+  }
+  return `${w.node_title}.${w.widget_name}`;
+}
+function toggleInput(io2, w, kind, label) {
+  const idx = io2.inputs.findIndex((it2) => it2.node === w.node_id && it2.input === w.widget_name);
+  const inputs = [...io2.inputs];
+  if (idx >= 0) inputs.splice(idx, 1);
+  else inputs.push({
+    node: w.node_id,
+    input: w.widget_name,
+    kind,
+    label: label ?? defaultInputLabel(io2, w, kind),
+    required: kind === "param" || kind === "text" ? void 0 : true,
+    ptype: kind === "param" || kind === "text" ? String(w.widget_type).toUpperCase() : void 0,
+    props: kind === "param" ? pickProps(w.widget_props) : {},
+    default: kind === "param" || kind === "text" ? w.current_value : void 0
+  });
+  return assignSlots({ inputs, outputs: io2.outputs });
+}
+function pickProps(props) {
+  const out = {};
+  for (const k2 of ["min", "max", "step", "values", "multiline", "round"]) {
+    if (props && props[k2] !== void 0) out[k2] = props[k2];
+  }
+  return out;
+}
+function toggleOutput(io2, n, kind) {
+  const id = String(n.id);
+  const idx = io2.outputs.findIndex((o) => o.node === id);
+  const outputs = [...io2.outputs];
+  if (idx >= 0) outputs.splice(idx, 1);
+  else {
+    const taken = (k2) => outputs.some((o) => o.kind === k2);
+    const sibling = { image: "images", images: "image" };
+    const alt = sibling[kind];
+    if (taken(kind) && alt && !taken(alt)) kind = alt;
+    const dup = outputs.findIndex((o) => o.kind === kind);
+    if (dup >= 0) outputs.splice(dup, 1);
+    outputs.push({ node: id, kind, label: n.title && n.title !== n.type ? n.title : n.type });
+  }
+  return { inputs: io2.inputs, outputs };
+}
+function hasPromptInput(io2) {
+  return io2.inputs.some((it2) => it2.kind === "text" && it2.prompt);
+}
+function exposedRefTypes(io2) {
+  const out = [];
+  for (const k2 of ["image", "video", "audio"]) {
+    if (io2.inputs.some((it2) => it2.kind === k2)) out.push(k2);
+  }
+  return out;
+}
+function moveItem(arr, from2, to) {
+  if (from2 === to || from2 < 0 || to < 0 || from2 >= arr.length || to >= arr.length) return arr;
+  const out = [...arr];
+  const [it2] = out.splice(from2, 1);
+  out.splice(to, 0, it2);
+  return out;
+}
+function isInputExposed(io2, w) {
+  return io2.inputs.some((it2) => it2.node === w.node_id && it2.input === w.widget_name);
+}
+function isOutputExposed(io2, n) {
+  return io2.outputs.some((o) => o.node === String(n.id));
+}
+function parseMultiOutputs(raw) {
+  let data = raw;
+  if (typeof raw === "string") {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+  const out = {};
+  if (!data || typeof data !== "object") return out;
+  for (const k2 of OUTPUT_SLOTS) {
+    const v = data[k2];
+    if (typeof v === "string" && v) out[k2] = v;
+  }
+  return out;
+}
+const POOL_PICKER_KINDS = ["image-picker", "audio-picker", "video-picker"];
+function isPoolPickerKind(kind) {
+  return POOL_PICKER_KINDS.includes(kind);
+}
+const FX_PASSTHROUGH_CLASSES = /* @__PURE__ */ new Set([
+  "ComfyTV.VideoColorStage",
+  "ComfyTV.VideoCurvesStage",
+  "ComfyTV.VideoLUTStage",
+  "ComfyTV.SelectiveColorStage",
+  "ComfyTV.ChromaShiftStage",
+  "ComfyTV.PseudocolorStage",
+  "ComfyTV.PosterizeStage",
+  "ComfyTV.GrayWorldStage",
+  "ComfyTV.CDLStage",
+  "ComfyTV.HistogramEqStage",
+  "ComfyTV.Video360Stage",
+  "ComfyTV.ShapeMaskStage",
+  "ComfyTV.LensDistortStage",
+  "ComfyTV.ChromaticAberrationStage",
+  "ComfyTV.LensFlareStage",
+  "ComfyTV.ParticlesStage",
+  "ComfyTV.VideoBlurSharpenStage",
+  "ComfyTV.VideoDenoiseStage",
+  "ComfyTV.VideoDeinterlaceStage",
+  "ComfyTV.VideoStylizeStage",
+  "ComfyTV.HueCorrectStage",
+  "ComfyTV.DespillStage",
+  "ComfyTV.ColorSuppressStage",
+  "ComfyTV.KeyerStage",
+  "ComfyTV.PIKStage",
+  "ComfyTV.MatteMorphStage",
+  "ComfyTV.GlowStage",
+  "ComfyTV.GodRaysStage",
+  "ComfyTV.OldFilmStage",
+  "ComfyTV.VideoTransformStage",
+  "ComfyTV.FeedbackFXStage",
+  "ComfyTV.StrobeStage",
+  "ComfyTV.ArtFXStage",
+  "ComfyTV.GlitchFXStage",
+  "ComfyTV.KaleidoscopeStage",
+  "ComfyTV.WaveWarpStage",
+  "ComfyTV.WaterStage",
+  "ComfyTV.LightGraffitiStage",
+  "ComfyTV.Select0rStage",
+  "ComfyTV.Card3DStage",
+  "ComfyTV.RegrainStage"
+]);
+const FX_SIDE_SLOTS = {
+  "ComfyTV.KeyerStage": ["in_mask", "out_mask", "bg_video"],
+  "ComfyTV.PIKStage": [
+    "clean_plate_video",
+    "clean_plate",
+    "in_mask",
+    "out_mask",
+    "bg_video"
+  ],
+  "ComfyTV.VideoTransformStage": ["track"],
+  "ComfyTV.ShapeMaskStage": ["shape_image"],
+  "ComfyTV.ParticlesStage": ["mask_video", "mask_image"]
+};
+function isChainableFx(node) {
+  const n = node;
+  const cls = String((n == null ? void 0 : n.comfyClass) ?? (n == null ? void 0 : n.type) ?? "");
+  if (!FX_PASSTHROUGH_CLASSES.has(cls)) return false;
+  const sides2 = FX_SIDE_SLOTS[cls];
+  if (!sides2) return true;
+  return !((n == null ? void 0 : n.inputs) ?? []).some((i) => sides2.includes(String(i == null ? void 0 : i.name)) && (i == null ? void 0 : i.link) != null);
+}
+const KIND_TO_TYPE = {
+  text: "COMFYTV_TEXT",
+  image: "COMFYTV_IMAGE",
+  video: "COMFYTV_VIDEO",
+  audio: "COMFYTV_AUDIO",
+  panorama: "COMFYTV_PANORAMA",
+  storyboard: "COMFYTV_STORYBOARD",
+  "image-batch": "COMFYTV_IMAGES",
+  "image-picker": "COMFYTV_IMAGE",
+  "audio-picker": "COMFYTV_AUDIO",
+  "video-picker": "COMFYTV_VIDEO",
+  timeline: "COMFYTV_TIMELINE",
+  model: "COMFYTV_MODEL",
+  material: "COMFYTV_MATERIAL",
+  custom: "COMFYTV_IMAGE"
+};
+const useStageStore = /* @__PURE__ */ defineStore("comfytv-stage", () => {
+  const stages = /* @__PURE__ */ new WeakMap();
+  const nodeOf = /* @__PURE__ */ new WeakMap();
+  const refreshers = /* @__PURE__ */ new WeakMap();
+  const stateTick = /* @__PURE__ */ ref(0);
+  function registerStage(node, kind, variant = "generator") {
+    const state2 = /* @__PURE__ */ reactive({
+      kind,
+      variant,
+      outputType: KIND_TO_TYPE[kind],
+      output: null,
+      outputs: [null],
+      running: false,
+      inputs: [],
+      mainPrompt: ""
+    });
+    stages.set(node, state2);
+    nodeOf.set(state2, node);
+    return state2;
+  }
+  function unregisterStage(node) {
+    stages.delete(node);
+    refreshers.delete(node);
+  }
+  function setRefresher(node, fn3) {
+    refreshers.set(node, fn3);
+  }
+  function notifyConsumers(state2) {
+    const node = nodeOf.get(state2);
+    const graph = node == null ? void 0 : node.graph;
+    if (!graph) {
+      bumpStateTick();
+      return;
+    }
+    const seen = /* @__PURE__ */ new Set();
+    const visit = (n, depth) => {
+      var _a2, _b2, _c, _d;
+      for (const out of n.outputs ?? []) {
+        for (const linkId of (out == null ? void 0 : out.links) ?? []) {
+          const link2 = typeof ((_a2 = graph.links) == null ? void 0 : _a2.get) === "function" ? graph.links.get(linkId) : (_b2 = graph.links) == null ? void 0 : _b2[linkId];
+          const target = link2 ? (_c = graph.getNodeById) == null ? void 0 : _c.call(graph, link2.target_id) : null;
+          if (!target || seen.has(target)) continue;
+          seen.add(target);
+          (_d = refreshers.get(target)) == null ? void 0 : _d();
+          if (depth < 16 && isChainableFx(target)) visit(target, depth + 1);
+        }
+      }
+    };
+    visit(node, 0);
+  }
+  function getStage(node) {
+    return stages.get(node);
+  }
+  function bumpStateTick() {
+    stateTick.value++;
+  }
+  function notifyDownstream() {
+    bumpStateTick();
+  }
+  function resolveUpstreamValue(app2, linkId, depth = 0) {
+    var _a2, _b2, _c, _d, _e2, _f;
+    if (linkId == null || depth > 16) return null;
+    const linksMap = (_a2 = app2 == null ? void 0 : app2.graph) == null ? void 0 : _a2.links;
+    const link2 = linksMap && typeof linksMap.get === "function" ? linksMap.get(linkId) : (linksMap == null ? void 0 : linksMap[linkId]) ?? ((_c = (_b2 = app2 == null ? void 0 : app2.graph) == null ? void 0 : _b2.getLink) == null ? void 0 : _c.call(_b2, linkId));
+    const srcNode = link2 ? (_e2 = (_d = app2 == null ? void 0 : app2.graph) == null ? void 0 : _d.getNodeById) == null ? void 0 : _e2.call(_d, link2.origin_id) : null;
+    const srcState = srcNode ? stages.get(srcNode) : null;
+    const srcSlotRaw = Number((link2 == null ? void 0 : link2.origin_slot) ?? (link2 == null ? void 0 : link2.originSlot));
+    const srcSlot = Number.isFinite(srcSlotRaw) && srcSlotRaw >= 0 ? srcSlotRaw : 0;
+    if (srcNode && srcSlot === 0 && isChainableFx(srcNode)) {
+      const vin = (srcNode.inputs || []).find((i) => (i == null ? void 0 : i.name) === "video");
+      if ((vin == null ? void 0 : vin.link) != null) return resolveUpstreamValue(app2, vin.link, depth + 1);
+      return null;
+    }
+    if (srcState) {
+      const slotted = (_f = srcState.outputs) == null ? void 0 : _f[srcSlot];
+      if (slotted != null && String(slotted).length > 0) return String(slotted);
+      if (srcSlot === 0 && srcState.output) return String(srcState.output);
+    }
+    return null;
+  }
+  function refreshStageInputs(node, state2, app2) {
+    const out = [];
+    const inputs = node.inputs || [];
+    for (const inp of inputs) {
+      const slot = inp.name;
+      const type = inp.type || "COMFYTV_TEXT";
+      if (inp.link == null) {
+        out.push({ slot, type, source: "empty", content: null });
+        continue;
+      }
+      const upstream = resolveUpstreamValue(app2, inp.link);
+      if (upstream != null) {
+        out.push({ slot, type, source: "upstream", content: upstream });
+      } else {
+        out.push({ slot, type, source: "upstream-pending", content: null });
+      }
+    }
+    state2.inputs = out;
+  }
+  function applyExecutedPayload(state2, msg) {
+    const payload = Array.isArray(msg == null ? void 0 : msg.output) ? msg.output[0] : msg == null ? void 0 : msg.output;
+    const picked = Array.isArray(msg == null ? void 0 : msg.picked) ? msg.picked[0] : msg == null ? void 0 : msg.picked;
+    const pickedIdxRaw = Array.isArray(msg == null ? void 0 : msg.picked_index) ? msg.picked_index[0] : msg == null ? void 0 : msg.picked_index;
+    const outId = Array.isArray(msg == null ? void 0 : msg.output_id) ? msg.output_id[0] : msg == null ? void 0 : msg.output_id;
+    const durationRaw = Array.isArray(msg == null ? void 0 : msg.duration_ms) ? msg.duration_ms[0] : msg == null ? void 0 : msg.duration_ms;
+    state2.running = false;
+    state2.progress = null;
+    state2.error = null;
+    if (payload == null) return;
+    const s = typeof payload === "string" ? payload : String(payload);
+    state2.output = s;
+    while (state2.outputs.length < 1) state2.outputs.push(null);
+    state2.outputs[0] = s;
+    if (state2.outputType === "COMFYTV_VIDEO" && !isPoolPickerKind(state2.kind) && state2.variant !== "loader" && !state2.inputs.some((i) => i.content === s)) {
+      void autoProxyOutput(s);
+    }
+    const fallbackPickedIndex = pickedIdxRaw != null && pickedIdxRaw !== "" && Number.isFinite(Number(pickedIdxRaw)) && Number(pickedIdxRaw) >= 1 ? Number(pickedIdxRaw) : state2.pickedIndex ?? 1;
+    const pickedValue = picked !== void 0 && picked !== null && picked !== "" ? picked : state2.kind === "image-batch" ? computePickedFromBatch(toImagePoolJson(s), fallbackPickedIndex) : null;
+    if (pickedValue !== void 0 && pickedValue !== null && pickedValue !== "") {
+      const p2 = typeof pickedValue === "string" ? pickedValue : String(pickedValue);
+      while (state2.outputs.length < 2) state2.outputs.push(null);
+      state2.outputs[1] = p2;
+    }
+    if (pickedIdxRaw != null && pickedIdxRaw !== "") {
+      const idx = Number(pickedIdxRaw);
+      if (Number.isFinite(idx) && idx >= 1) state2.pickedIndex = idx;
+    }
+    const customRaw = Array.isArray(msg == null ? void 0 : msg.custom_outputs) ? msg.custom_outputs[0] : msg == null ? void 0 : msg.custom_outputs;
+    if (customRaw != null) applyCustomOutputs(state2, customRaw);
+    const directorClips = Array.isArray(msg == null ? void 0 : msg.director_clips) ? msg.director_clips[0] : msg == null ? void 0 : msg.director_clips;
+    if (directorClips != null) state2.directorClips = String(directorClips);
+    state2.outputId = outId != null && outId !== "" ? Number(outId) : null;
+    state2.durationMs = durationRaw != null && durationRaw !== "" && Number.isFinite(Number(durationRaw)) ? Number(durationRaw) : null;
+    notifyConsumers(state2);
+  }
+  function applyCustomOutputs(state2, raw) {
+    const multi = parseMultiOutputs(raw);
+    OUTPUT_SLOTS.forEach((k2, i) => {
+      while (state2.outputs.length <= i) state2.outputs.push(null);
+      state2.outputs[i] = multi[k2] ?? null;
+    });
+  }
+  function setPickerPool(node, state2, poolJson) {
+    var _a2;
+    if (state2.pool === poolJson) return;
+    state2.pool = poolJson;
+    const w = (_a2 = node == null ? void 0 : node.widgets) == null ? void 0 : _a2.find((x) => x.name === "pool");
+    if (w) w.value = poolJson;
+    notifyConsumers(state2);
+  }
+  function clearPickerPool(node, state2) {
+    var _a2;
+    setPickerPool(node, state2, "");
+    state2.pickedIndex = 1;
+    const idx = (_a2 = node == null ? void 0 : node.widgets) == null ? void 0 : _a2.find((x) => x.name === "selected_index");
+    if (idx) idx.value = 1;
+    setOutputSlot(state2, 0, null);
+  }
+  function setOutputSlot(state2, slot, value) {
+    while (state2.outputs.length <= slot) state2.outputs.push(null);
+    if (state2.outputs[slot] === value) return;
+    state2.outputs[slot] = value;
+    if (slot === 0) state2.output = value;
+    notifyConsumers(state2);
+  }
+  function setOutputSlots(state2, values) {
+    let changed = false;
+    while (state2.outputs.length < values.length) {
+      state2.outputs.push(null);
+      changed = true;
+    }
+    for (let i = 0; i < values.length; i++) {
+      if (state2.outputs[i] !== values[i]) {
+        state2.outputs[i] = values[i];
+        changed = true;
+      }
+    }
+    if (values.length > 0 && state2.output !== values[0]) {
+      state2.output = values[0];
+      changed = true;
+    }
+    if (changed) notifyConsumers(state2);
+  }
+  function applyExecutionError(state2, error2) {
+    state2.running = false;
+    state2.progress = null;
+    state2.error = error2;
+  }
+  function clearError(state2) {
+    state2.error = null;
+  }
+  return {
+    stateTick,
+    registerStage,
+    unregisterStage,
+    getStage,
+    bumpStateTick,
+    notifyDownstream,
+    notifyConsumers,
+    setRefresher,
+    refreshStageInputs,
+    resolveUpstreamValue,
+    applyExecutedPayload,
+    applyCustomOutputs,
+    applyExecutionError,
+    clearError,
+    setOutputSlot,
+    setOutputSlots,
+    setPickerPool,
+    clearPickerPool
+  };
+});
+function toImagePoolJson(content) {
+  const empty2 = JSON.stringify({ images: [] });
+  if (!content) return empty2;
+  const s = String(content).trim();
+  if (!s) return empty2;
+  let parsed;
+  try {
+    parsed = JSON.parse(s);
+  } catch {
+    return JSON.stringify({ images: [{ index: "1", image_url: s }] });
+  }
+  return parsed && Array.isArray(parsed.images) ? s : empty2;
+}
+function computePickedImageUrl(state2) {
+  var _a2;
+  const source = state2.pool ? state2.pool : (_a2 = state2.inputs.find((i) => i.slot === "batch")) == null ? void 0 : _a2.content;
+  if (!source) return null;
+  return computePickedFromBatch(toImagePoolJson(source), state2.pickedIndex ?? 1);
+}
+function imagePoolCount(json) {
+  if (!json) return 0;
+  try {
+    const p2 = JSON.parse(String(json));
+    return Array.isArray(p2 == null ? void 0 : p2.images) ? p2.images.length : 0;
+  } catch {
+    return 0;
+  }
+}
+function mergeImagePool(existingPoolJson, incomingJson) {
+  const parse2 = (s) => {
+    if (!s) return [];
+    try {
+      const p2 = JSON.parse(String(s));
+      return Array.isArray(p2 == null ? void 0 : p2.images) ? p2.images : [];
+    } catch {
+      return [];
+    }
+  };
+  const existing = parse2(existingPoolJson);
+  const seen = new Set(existing.map((im) => String(im.image_url ?? "")));
+  const fresh = [];
+  for (const im of parse2(incomingJson)) {
+    const url = String(im.image_url ?? "");
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    fresh.push({ ...im });
+  }
+  const merged = [...fresh, ...existing];
+  merged.forEach((im, i) => {
+    im.index = String(i + 1);
+  });
+  return JSON.stringify({ images: merged });
+}
+function nextPickerPool(currentPoolJson, incomingJson, append3) {
+  return append3 ? mergeImagePool(currentPoolJson, incomingJson) : incomingJson;
+}
+function removeImageFromPool(poolJson, imageUrl) {
+  let images = [];
+  try {
+    const p2 = JSON.parse(String(poolJson ?? ""));
+    if (Array.isArray(p2 == null ? void 0 : p2.images)) images = p2.images;
+  } catch {
+    images = [];
+  }
+  const filtered = images.filter((im) => String(im.image_url ?? "") !== String(imageUrl));
+  filtered.forEach((im, i) => {
+    im.index = String(i + 1);
+  });
+  return JSON.stringify({ images: filtered });
+}
+function batchImageUrls(batch2) {
+  if (!batch2) return [];
+  try {
+    const parsed = JSON.parse(String(batch2));
+    const items = Array.isArray(parsed == null ? void 0 : parsed.images) ? parsed.images : [];
+    return items.map((im) => String((im == null ? void 0 : im.image_url) ?? "")).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+function computePickedFromBatch(batch2, wantIdx) {
+  if (!batch2) return null;
+  try {
+    const parsed = JSON.parse(String(batch2));
+    const images = Array.isArray(parsed == null ? void 0 : parsed.clips) ? parsed.clips : Array.isArray(parsed == null ? void 0 : parsed.images) ? parsed.images : [];
+    const match = images.find((im) => Number(im.index) === wantIdx) ?? images[wantIdx - 1];
+    return (match == null ? void 0 : match.image_url) ?? null;
+  } catch {
+    return null;
+  }
+}
+const IMAGES_SPLIT_MAX = 32;
+const IMAGES_SPLIT_CLASS = "ComfyTV.ImagesSplitStage";
+const IMAGES_SPLIT_TYPE = "COMFYTV_IMAGE";
+function parseImageGroupItems(raw) {
+  const json = toImagePoolJson(raw);
+  let images = [];
+  try {
+    const parsed = JSON.parse(json);
+    images = Array.isArray(parsed == null ? void 0 : parsed.images) ? parsed.images : [];
+  } catch {
+    images = [];
+  }
+  const out = [];
+  for (let i = 0; i < images.length; i++) {
+    const im = images[i] ?? {};
+    const url = String(im.image_url ?? im.url ?? "").trim();
+    if (!url) continue;
+    const label = String(im.label ?? im.name ?? "").trim() || `Layer ${out.length + 1}`;
+    out.push({
+      index: String(im.index ?? out.length + 1),
+      label,
+      image_url: url
+    });
+  }
+  return out;
+}
+function uniqueOutputName$1(label, used, fallback) {
+  const base2 = label.trim() || fallback;
+  let name = base2;
+  let n = 2;
+  while (used.has(name)) name = `${base2} (${n++})`;
+  used.add(name);
+  return name;
+}
+function outputHasLinks$1(slot) {
+  const links = slot == null ? void 0 : slot.links;
+  return Array.isArray(links) && links.length > 0;
+}
+function linkedOutputCount(outputs) {
+  if (!Array.isArray(outputs)) return 0;
+  let n = 0;
+  for (let i = 0; i < outputs.length; i++) {
+    if (outputHasLinks$1(outputs[i])) n = i + 1;
+  }
+  return n;
+}
+function syncImagesSplitOutputs(node, items) {
+  var _a2, _b2;
+  if (!node) return;
+  if (!Array.isArray(node.outputs)) node.outputs = [];
+  const linked = linkedOutputCount(node.outputs);
+  const n = Math.max(1, Math.min(IMAGES_SPLIT_MAX, Math.max(items.length, linked)));
+  while (node.outputs.length > n) {
+    const last = node.outputs[node.outputs.length - 1];
+    if (outputHasLinks$1(last)) break;
+    if (typeof node.removeOutput === "function") node.removeOutput(node.outputs.length - 1);
+    else node.outputs.pop();
+  }
+  const used = /* @__PURE__ */ new Set();
+  for (let i = 0; i < n; i++) {
+    const name = `image${i + 1}`;
+    const display = uniqueOutputName$1(((_a2 = items[i]) == null ? void 0 : _a2.label) || "", used, name);
+    if (i >= node.outputs.length) {
+      if (typeof node.addOutput === "function") {
+        node.addOutput(name, IMAGES_SPLIT_TYPE, { label: display, localized_name: display });
+      } else {
+        node.outputs.push({
+          name,
+          type: IMAGES_SPLIT_TYPE,
+          label: display,
+          localized_name: display,
+          links: []
+        });
+      }
+      continue;
+    }
+    const slot = node.outputs[i];
+    slot.name = name;
+    slot.label = display;
+    slot.localized_name = display;
+    if (slot.type == null || slot.type === "") slot.type = IMAGES_SPLIT_TYPE;
+  }
+  (_b2 = node.setDirtyCanvas) == null ? void 0 : _b2.call(node, true, true);
+  compactImagesSplitNode(node, n);
+}
+function splitImageGroup(raw) {
+  const parsed = parseImageGroupItems(raw);
+  return {
+    items: parsed.slice(0, IMAGES_SPLIT_MAX),
+    truncated: parsed.length > IMAGES_SPLIT_MAX
+  };
+}
+function syncImagesSplitStage(node, raw, writeSlots) {
+  const { items, truncated } = splitImageGroup(raw);
+  syncImagesSplitOutputs(node, items);
+  writeSlots(Array.from({ length: IMAGES_SPLIT_MAX }, (_, i) => {
+    var _a2;
+    return ((_a2 = items[i]) == null ? void 0 : _a2.image_url) ?? null;
+  }));
+  return { items, truncated };
+}
+function imagesSplitUrlAt(state2, slot) {
+  var _a2, _b2, _c, _d;
+  const slotted = (_a2 = state2 == null ? void 0 : state2.outputs) == null ? void 0 : _a2[slot];
+  if (slotted != null && String(slotted).length > 0) return String(slotted);
+  const raw = (_c = (_b2 = state2 == null ? void 0 : state2.inputs) == null ? void 0 : _b2.find((i) => i.slot === "images")) == null ? void 0 : _c.content;
+  return ((_d = parseImageGroupItems(raw)[slot]) == null ? void 0 : _d.image_url) ?? null;
+}
+const IMAGES_SPLIT_MIN_W = 360;
+const IMAGES_SPLIT_MIN_H = 680;
+const IMAGES_SPLIT_MAX_H = 800;
+const IMAGES_SPLIT_STRETCH_H = 840;
+function compactImagesSplitNode(node, itemCount) {
+  var _a2, _b2, _c;
+  if (typeof (node == null ? void 0 : node.setSize) !== "function") return;
+  const w = Math.max(Number((_a2 = node.size) == null ? void 0 : _a2[0]) || IMAGES_SPLIT_MIN_W, IMAGES_SPLIT_MIN_W);
+  const h2 = Number((_b2 = node.size) == null ? void 0 : _b2[1]) || 0;
+  const rows = Math.min(Math.max(itemCount, 1), 2);
+  const want = Math.max(IMAGES_SPLIT_MIN_H, Math.min(IMAGES_SPLIT_MAX_H, 160 + rows * 280));
+  if (h2 < want - 8 || h2 > IMAGES_SPLIT_STRETCH_H) {
+    node.setSize([w, want]);
+    (_c = node.setDirtyCanvas) == null ? void 0 : _c.call(node, true, true);
+  }
+}
+function rangeSelectIndexes(order2, from2, to) {
+  const a2 = order2.indexOf(from2);
+  const b = order2.indexOf(to);
+  if (a2 < 0) return b < 0 ? [] : [to];
+  if (b < 0) return [from2];
+  const lo = Math.min(a2, b);
+  const hi = Math.max(a2, b);
+  return order2.slice(lo, hi + 1);
+}
+function layerImageSize(im) {
+  return {
+    w: Math.max(1, Math.round(Number(im.naturalWidth ?? im.width) || 1)),
+    h: Math.max(1, Math.round(Number(im.naturalHeight ?? im.height) || 1))
+  };
+}
+function compositeLayerImages(images) {
+  const out = document.createElement("canvas");
+  if (!images.length) {
+    out.width = 1;
+    out.height = 1;
+    return out;
+  }
+  let w = 1;
+  let h2 = 1;
+  for (const im of images) {
+    const s = layerImageSize(im);
+    if (s.w > w) w = s.w;
+    if (s.h > h2) h2 = s.h;
+  }
+  out.width = w;
+  out.height = h2;
+  const ctx = out.getContext("2d");
+  if (!ctx) return out;
+  for (const im of images) ctx.drawImage(im, 0, 0);
+  return out;
+}
+const IMAGE_MERGE_CLASS = "ComfyTV.ImageMergeStage";
+const IMAGE_MERGE_MAX = 32;
+const MERGE_IMAGE_TYPE = "COMFYTV_IMAGE";
+const MERGE_MODES = ["layers", "row"];
+function parseMergeMode(raw) {
+  return raw === "row" ? "row" : "layers";
+}
+function parseMergeAspect(raw) {
+  return raw === "1:1" ? "1:1" : "native";
+}
+function parseAutogrowImageIndex(slot) {
+  const s = String(slot || "");
+  const m = /^(?:images\.)?image(\d+)$/.exec(s);
+  return m ? Number(m[1]) : null;
+}
+function mergeImageSlotNames(index2) {
+  return [`images.image${index2}`, `image${index2}`];
+}
+function findMergeImageSlot(node, index2) {
+  const inputs = node == null ? void 0 : node.inputs;
+  if (!Array.isArray(inputs)) return -1;
+  for (const name of mergeImageSlotNames(index2)) {
+    const i = inputs.findIndex((inp) => String((inp == null ? void 0 : inp.name) || "") === name);
+    if (i >= 0) return i;
+  }
+  return -1;
+}
+function lookupGraphLink$1(graph, id) {
+  var _a2;
+  const links = graph == null ? void 0 : graph.links;
+  if (!links) return ((_a2 = graph == null ? void 0 : graph.getLink) == null ? void 0 : _a2.call(graph, id)) ?? null;
+  if (typeof links.get === "function") return links.get(id) ?? null;
+  return links[id] ?? null;
+}
+function ensureMergeImageSockets(node, graph) {
+  const inputs = node == null ? void 0 : node.inputs;
+  if (!Array.isArray(inputs)) return;
+  const g2 = graph ?? (node == null ? void 0 : node.graph);
+  for (const inp of inputs) {
+    const name = String((inp == null ? void 0 : inp.name) || "");
+    if (name === "images") continue;
+    if (parseAutogrowImageIndex(name) == null) continue;
+    inp.type = MERGE_IMAGE_TYPE;
+    if (inp.link == null || !g2) continue;
+    const link2 = lookupGraphLink$1(g2, inp.link);
+    if (link2) link2.type = MERGE_IMAGE_TYPE;
+  }
+}
+function ensureMergeInputCount(node, count2) {
+  if (!node || count2 <= 0) return;
+  if (!Array.isArray(node.inputs)) node.inputs = [];
+  const n = Math.min(Math.max(1, count2), IMAGE_MERGE_MAX);
+  for (let i = 0; i < n; i++) {
+    if (findMergeImageSlot(node, i) >= 0) continue;
+    const name = `images.image${i}`;
+    if (typeof node.addInput === "function") node.addInput(name, MERGE_IMAGE_TYPE);
+    else node.inputs.push({ name, type: MERGE_IMAGE_TYPE, link: null });
+  }
+  if (n < IMAGE_MERGE_MAX && findMergeImageSlot(node, n) < 0) {
+    const spare = `images.image${n}`;
+    if (typeof node.addInput === "function") node.addInput(spare, MERGE_IMAGE_TYPE);
+    else node.inputs.push({ name: spare, type: MERGE_IMAGE_TYPE, link: null });
+  }
+  ensureMergeImageSockets(node);
+}
+function linkedMergeImageMax(node, saved) {
+  var _a2, _b2;
+  let linkedMax = -1;
+  for (const s of saved ?? []) {
+    const idx = parseAutogrowImageIndex(String((s == null ? void 0 : s.name) || ""));
+    if (idx != null && (s == null ? void 0 : s.link) != null) linkedMax = Math.max(linkedMax, idx);
+  }
+  for (const inp of (node == null ? void 0 : node.inputs) ?? []) {
+    const idx = parseAutogrowImageIndex(String((inp == null ? void 0 : inp.name) || ""));
+    if (idx != null && (inp == null ? void 0 : inp.link) != null) linkedMax = Math.max(linkedMax, idx);
+  }
+  const links = (_a2 = node == null ? void 0 : node.graph) == null ? void 0 : _a2.links;
+  if (links) {
+    const all = typeof links.values === "function" ? [...links.values()] : Object.values(links);
+    for (const link2 of all) {
+      if (!link2 || link2.target_id !== (node == null ? void 0 : node.id)) continue;
+      const slot = Number(link2.target_slot);
+      if (!Number.isInteger(slot) || slot < 0) continue;
+      const inp = (_b2 = node.inputs) == null ? void 0 : _b2[slot];
+      const idx = parseAutogrowImageIndex(String((inp == null ? void 0 : inp.name) || ""));
+      if (idx != null) linkedMax = Math.max(linkedMax, idx);
+    }
+  }
+  return linkedMax;
+}
+function pruneMergeEmptyInputs(node, keepCount) {
+  if (!node || !Array.isArray(node.inputs)) return;
+  const keep = Math.min(Math.max(1, keepCount), IMAGE_MERGE_MAX);
+  const maxKeepIdx = keep < IMAGE_MERGE_MAX ? keep : keep - 1;
+  for (let i = node.inputs.length - 1; i >= 0; i--) {
+    const inp = node.inputs[i];
+    const idx = parseAutogrowImageIndex(String((inp == null ? void 0 : inp.name) || ""));
+    if (idx == null || idx <= maxKeepIdx) continue;
+    if ((inp == null ? void 0 : inp.link) != null) continue;
+    if (typeof node.removeInput === "function") node.removeInput(i);
+    else node.inputs.splice(i, 1);
+  }
+}
+function restoreMergeInputsFromSaved(node, info) {
+  if (!node) return;
+  if (!Array.isArray(node.inputs)) node.inputs = [];
+  const saved = Array.isArray(info == null ? void 0 : info.inputs) ? info.inputs : [];
+  const linkedMax = linkedMergeImageMax(node, saved);
+  const need = Math.max(linkedMax + 1, 1);
+  ensureMergeInputCount(node, need);
+  for (const s of saved) {
+    const name = String((s == null ? void 0 : s.name) || "");
+    const idx = parseAutogrowImageIndex(name);
+    if (idx == null) continue;
+    const linkId = s == null ? void 0 : s.link;
+    if (linkId == null) continue;
+    const slot = findMergeImageSlot(node, idx);
+    if (slot < 0) continue;
+    const inp = node.inputs[slot];
+    if (!inp) continue;
+    inp.link = linkId;
+    const link2 = lookupGraphLink$1(node.graph, linkId);
+    if (link2) {
+      link2.target_id = node.id;
+      link2.target_slot = slot;
+      link2.type = MERGE_IMAGE_TYPE;
+    }
+  }
+  const g2 = node.graph;
+  const links = g2 == null ? void 0 : g2.links;
+  if (links) {
+    const all = typeof links.values === "function" ? [...links.values()] : Object.values(links);
+    for (const link2 of all) {
+      if (!link2 || link2.target_id !== node.id) continue;
+      const slot = Number(link2.target_slot);
+      if (!Number.isInteger(slot) || slot < 0) continue;
+      const inp = node.inputs[slot];
+      if (!inp) continue;
+      const idx = parseAutogrowImageIndex(String(inp.name || ""));
+      if (idx == null) continue;
+      inp.link = link2.id ?? link2;
+      link2.type = MERGE_IMAGE_TYPE;
+    }
+  }
+  pruneMergeEmptyInputs(node, need);
+  ensureMergeImageSockets(node, g2);
+}
+function countLinkedMergeSlots(inputs) {
+  const seen = /* @__PURE__ */ new Set();
+  for (const inp of inputs ?? []) {
+    const idx = parseAutogrowImageIndex(String(inp.slot || inp.name || ""));
+    if (idx == null) continue;
+    const linked = inp.link != null || inp.source != null && inp.source !== "empty";
+    if (!linked) continue;
+    seen.add(idx);
+  }
+  return seen.size;
+}
+function collectMergeUrlsFromSources(opts) {
+  var _a2;
+  const byIndex = /* @__PURE__ */ new Map();
+  const put = (slot, raw) => {
+    const idx = parseAutogrowImageIndex(slot);
+    if (idx == null) return;
+    const url = previewUrlFromPayload(raw) ?? (raw && !String(raw).startsWith("{") ? String(raw) : null);
+    if (!url) return;
+    if (!byIndex.has(idx)) byIndex.set(idx, url);
+  };
+  for (const inp of opts.inputs ?? []) put(String(inp.slot || ""), inp.content);
+  for (const inp of opts.nodeInputs ?? []) {
+    const name = String(inp.name || "");
+    const idx = parseAutogrowImageIndex(name);
+    if (idx == null || inp.link == null || byIndex.has(idx)) continue;
+    put(name, ((_a2 = opts.resolveLink) == null ? void 0 : _a2.call(opts, inp.link)) ?? null);
+  }
+  return [...byIndex.entries()].sort((a2, b) => a2[0] - b[0]).map(([, url]) => url).slice(0, IMAGE_MERGE_MAX);
+}
+function uniqueSlotIndexes(indexes) {
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const i of indexes) {
+    if (!Number.isInteger(i) || i < 0 || seen.has(i)) continue;
+    seen.add(i);
+    out.push(i);
+  }
+  return out;
+}
+function layoutImagesRow(images, gap = 0) {
+  const out = document.createElement("canvas");
+  if (!images.length) {
+    out.width = 1;
+    out.height = 1;
+    return out;
+  }
+  const sizes = images.map(layerImageSize);
+  const w = sizes.reduce((sum, s) => sum + s.w, 0) + gap * Math.max(0, images.length - 1);
+  const h2 = Math.max(...sizes.map((s) => s.h));
+  out.width = Math.max(1, w);
+  out.height = Math.max(1, h2);
+  const ctx = out.getContext("2d");
+  if (!ctx) return out;
+  let x = 0;
+  for (let i = 0; i < images.length; i++) {
+    ctx.drawImage(images[i], x, 0);
+    x += sizes[i].w + gap;
+  }
+  return out;
+}
+function containFitSquare(im, size2) {
+  const side = Math.max(1, Math.round(size2));
+  const out = document.createElement("canvas");
+  out.width = side;
+  out.height = side;
+  const ctx = out.getContext("2d");
+  if (!ctx) return out;
+  const { w, h: h2 } = layerImageSize(im);
+  const scale = Math.min(side / w, side / h2);
+  const dw = w * scale;
+  const dh = h2 * scale;
+  ctx.drawImage(im, (side - dw) / 2, (side - dh) / 2, dw, dh);
+  return out;
+}
+function padCanvasToSquare(src) {
+  const w = Math.max(1, src.width | 0);
+  const h2 = Math.max(1, src.height | 0);
+  const side = Math.max(1, Math.max(w, h2));
+  if (w === side && h2 === side) return src;
+  const out = document.createElement("canvas");
+  out.width = side;
+  out.height = side;
+  const ctx = out.getContext("2d");
+  if (!ctx) return out;
+  ctx.drawImage(src, Math.floor((side - w) / 2), Math.floor((side - h2) / 2));
+  return out;
+}
+function squareCellSize(images) {
+  let side = 1;
+  for (const im of images) {
+    const { w, h: h2 } = layerImageSize(im);
+    side = Math.max(side, Math.max(w, h2));
+  }
+  return side;
+}
+function layoutImagesRowSquare(images, gap = 0) {
+  if (!images.length) return layoutImagesRow(images, gap);
+  const cell = squareCellSize(images);
+  const squares = images.map((im) => containFitSquare(im, cell));
+  try {
+    return layoutImagesRow(squares, gap);
+  } finally {
+    for (const c2 of squares) {
+      c2.width = 0;
+      c2.height = 0;
+    }
+  }
+}
+function mergeImages(images, mode, aspect2 = "native") {
+  const m = parseMergeMode(mode);
+  const a2 = parseMergeAspect(aspect2);
+  if (m === "row") {
+    return a2 === "1:1" ? layoutImagesRowSquare(images) : layoutImagesRow(images);
+  }
+  const stacked = compositeLayerImages(images);
+  if (a2 !== "1:1") return stacked;
+  const squared = padCanvasToSquare(stacked);
+  if (squared !== stacked) {
+    stacked.width = 0;
+    stacked.height = 0;
+  }
+  return squared;
+}
+function slotIndexesInDocumentOrder(items, indexes) {
+  const want = new Set(indexes);
+  return items.map((_, i) => i).filter((i) => want.has(i));
+}
+const imageMerge = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  IMAGE_MERGE_CLASS,
+  IMAGE_MERGE_MAX,
+  MERGE_IMAGE_TYPE,
+  MERGE_MODES,
+  collectMergeUrlsFromSources,
+  containFitSquare,
+  countLinkedMergeSlots,
+  ensureMergeImageSockets,
+  ensureMergeInputCount,
+  findMergeImageSlot,
+  layoutImagesRow,
+  linkedMergeImageMax,
+  mergeImageSlotNames,
+  mergeImages,
+  padCanvasToSquare,
+  parseAutogrowImageIndex,
+  parseMergeAspect,
+  parseMergeMode,
+  pruneMergeEmptyInputs,
+  restoreMergeInputsFromSaved,
+  slotIndexesInDocumentOrder,
+  uniqueSlotIndexes
+}, Symbol.toStringTag, { value: "Module" }));
+function computeFit$1(boxW, boxH, mediaW, mediaH) {
+  if (!boxW || !boxH || !mediaW || !mediaH) return { scale: 1, offX: 0, offY: 0 };
+  const scale = Math.min(boxW / mediaW, boxH / mediaH);
+  return {
+    scale,
+    offX: (boxW - mediaW * scale) / 2,
+    offY: (boxH - mediaH * scale) / 2
+  };
+}
+function clientToMedia(clientX, clientY, rect, fit, mediaW, mediaH) {
+  return [
+    Math.min(mediaW, Math.max(0, (clientX - rect.left - fit.offX) / fit.scale)),
+    Math.min(mediaH, Math.max(0, (clientY - rect.top - fit.offY) / fit.scale))
+  ];
+}
+function mediaToBox(x, y, fit) {
+  return [x * fit.scale + fit.offX, y * fit.scale + fit.offY];
+}
+function useVideoViewport(opts) {
+  const { videoEl, overlayEl } = opts;
+  const vw = /* @__PURE__ */ ref(0);
+  const vh = /* @__PURE__ */ ref(0);
+  const duration2 = /* @__PURE__ */ ref(0);
+  const currentTime = /* @__PURE__ */ ref(0);
+  let observer2 = null;
+  function observe(el2) {
+    observer2 == null ? void 0 : observer2.disconnect();
+    observer2 = null;
+    if (!el2 || !opts.onResize || typeof ResizeObserver === "undefined") return;
+    observer2 = new ResizeObserver(() => {
+      var _a2;
+      return (_a2 = opts.onResize) == null ? void 0 : _a2.call(opts);
+    });
+    observer2.observe(el2);
+  }
+  watch(overlayEl, observe, { immediate: true });
+  onBeforeUnmount(() => {
+    observer2 == null ? void 0 : observer2.disconnect();
+    observer2 = null;
+  });
+  function onLoadedMetadata() {
+    const v = videoEl.value;
+    if (!v) return;
+    vw.value = v.videoWidth;
+    vh.value = v.videoHeight;
+    duration2.value = Number.isFinite(v.duration) ? v.duration : 0;
+  }
+  function onTimeUpdate() {
+    var _a2;
+    currentTime.value = ((_a2 = videoEl.value) == null ? void 0 : _a2.currentTime) ?? 0;
+  }
+  function fit() {
+    const box = overlayEl.value;
+    if (!box) return { scale: 1, offX: 0, offY: 0 };
+    return computeFit$1(box.clientWidth, box.clientHeight, vw.value, vh.value);
+  }
+  function toVideo(e) {
+    const box = overlayEl.value;
+    if (!box) return [0, 0];
+    const rect = box.getBoundingClientRect();
+    const zoom = rect.width > 0 && box.clientWidth > 0 ? rect.width / box.clientWidth : 1;
+    return clientToMedia(
+      rect.left + (e.clientX - rect.left) / zoom,
+      rect.top + (e.clientY - rect.top) / zoom,
+      rect,
+      fit(),
+      vw.value,
+      vh.value
+    );
+  }
+  function syncCanvasSize() {
+    const c2 = overlayEl.value;
+    const ctx = c2 == null ? void 0 : c2.getContext("2d");
+    if (!c2 || !ctx) return null;
+    if (c2.width !== c2.clientWidth || c2.height !== c2.clientHeight) {
+      c2.width = c2.clientWidth;
+      c2.height = c2.clientHeight;
+    }
+    ctx.clearRect(0, 0, c2.width, c2.height);
+    return ctx;
+  }
+  function togglePlay() {
+    const v = videoEl.value;
+    if (!v) return;
+    if (v.paused) void v.play();
+    else v.pause();
+  }
+  return {
+    vw,
+    vh,
+    duration: duration2,
+    currentTime,
+    onLoadedMetadata,
+    onTimeUpdate,
+    fit,
+    toVideo,
+    syncCanvasSize,
+    togglePlay
+  };
+}
+const SCHEDULE_DELAY_MS$4 = 250;
+const MIN_GRID = 1;
+const MAX_GRID = 10;
+const MIN_BORDER = 0;
+const MIN_DIVIDER_PX = 2;
+function displayedImageRect(natW, natH, contW, contH) {
+  if (natW <= 0 || natH <= 0 || contW <= 0 || contH <= 0) return null;
+  const fit = computeFit$1(contW, contH, natW, natH);
+  return {
+    w: natW * fit.scale,
+    h: natH * fit.scale,
+    ox: fit.offX,
+    oy: fit.offY,
+    scale: fit.scale
+  };
+}
+function dividerCenters(n, natSize, border, outer) {
+  const o = outer ? 1 : 0;
+  const cell = (natSize - (n - 1 + 2 * o) * border) / n;
+  const centers = [];
+  if (o && border > 0) centers.push(border / 2);
+  for (let k2 = 1; k2 < n; k2++) centers.push(o * border + k2 * cell + (k2 - 0.5) * border);
+  if (o && border > 0) centers.push(natSize - border / 2);
+  return centers;
+}
+function dividerBands(axis, d, natSize, count2, border, outer) {
+  const b = Math.max(0, border);
+  const thick = Math.max(MIN_DIVIDER_PX, b * d.scale);
+  return dividerCenters(count2, natSize, b, outer).map((centerNat) => axis === "v" ? {
+    left: `${d.ox + centerNat * d.scale - thick / 2}px`,
+    top: `${d.oy}px`,
+    width: `${thick}px`,
+    height: `${d.h}px`
+  } : {
+    left: `${d.ox}px`,
+    top: `${d.oy + centerNat * d.scale - thick / 2}px`,
+    width: `${d.w}px`,
+    height: `${thick}px`
+  });
+}
+function useGridSplit(node, state2) {
+  var _a2;
+  const store2 = useStageStore();
+  const sourceImageUrl = computed(() => {
+    const inp = state2.inputs.find((i) => i.slot === "image");
+    return inp && inp.source === "upstream" && inp.content ? inp.content : null;
+  });
+  const rows = /* @__PURE__ */ ref(readWidgetNum(node, "rows", 2));
+  const cols = /* @__PURE__ */ ref(readWidgetNum(node, "cols", 2));
+  const border = /* @__PURE__ */ ref(Math.max(MIN_BORDER, readWidgetNum(node, "border", 0)));
+  const outerBorder = /* @__PURE__ */ ref(!!((_a2 = getWidget(node, "outer_border")) == null ? void 0 : _a2.value));
+  function setGrid(r2, c2) {
+    rows.value = Math.max(MIN_GRID, Math.min(MAX_GRID, r2));
+    cols.value = Math.max(MIN_GRID, Math.min(MAX_GRID, c2));
+  }
+  function setBorder(v) {
+    border.value = Math.max(MIN_BORDER, Math.round(Number.isFinite(v) ? v : 0));
+  }
+  function setOuterBorder(v) {
+    outerBorder.value = !!v;
+  }
+  function wireWidget(name, apply2) {
+    const w = getWidget(node, name);
+    if (!w) return;
+    const orig = w.callback;
+    w.callback = (v) => {
+      orig == null ? void 0 : orig.call(w, v);
+      apply2(Number(v));
+    };
+  }
+  wireWidget("rows", (v) => {
+    if (v !== rows.value) rows.value = v;
+  });
+  wireWidget("cols", (v) => {
+    if (v !== cols.value) cols.value = v;
+  });
+  wireWidget("border", (v) => {
+    if (v !== border.value) border.value = Math.max(MIN_BORDER, v);
+  });
+  {
+    const w = getWidget(node, "outer_border");
+    if (w) {
+      const orig = w.callback;
+      w.callback = (v) => {
+        orig == null ? void 0 : orig.call(w, v);
+        outerBorder.value = !!v;
+      };
+    }
+  }
+  if (node) {
+    const orig = node.onConfigure;
+    node.onConfigure = function(info) {
+      var _a3;
+      orig == null ? void 0 : orig.call(this, info);
+      const r2 = readWidgetNum(node, "rows", rows.value);
+      const c2 = readWidgetNum(node, "cols", cols.value);
+      const b = readWidgetNum(node, "border", border.value);
+      const o = !!((_a3 = getWidget(node, "outer_border")) == null ? void 0 : _a3.value);
+      if (r2 !== rows.value) rows.value = r2;
+      if (c2 !== cols.value) cols.value = c2;
+      if (b !== border.value) border.value = Math.max(MIN_BORDER, b);
+      if (o !== outerBorder.value) outerBorder.value = o;
+    };
+  }
+  const splitting = /* @__PURE__ */ ref(false);
+  let timer = null;
+  let seq2 = 0;
+  let cachedImg = null;
+  let cachedUrl = null;
+  function getSourceImage(url) {
+    if (cachedImg && cachedUrl === url && cachedImg.complete) {
+      return Promise.resolve(cachedImg);
+    }
+    return new Promise((resolve2, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        cachedImg = img;
+        cachedUrl = url;
+        resolve2(img);
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+  function schedule() {
+    if (!sourceImageUrl.value) return;
+    if (timer != null) window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      timer = null;
+      void run3();
+    }, SCHEDULE_DELAY_MS$4);
+  }
+  async function run3() {
+    const url = sourceImageUrl.value;
+    const r2 = rows.value, c2 = cols.value;
+    if (!url || r2 < 1 || c2 < 1) return;
+    const mySeq = ++seq2;
+    splitting.value = true;
+    try {
+      const img = await getSourceImage(url);
+      if (mySeq !== seq2) return;
+      const b = Math.max(0, Math.round(border.value));
+      const o = outerBorder.value ? 1 : 0;
+      const cellW = Math.floor((img.naturalWidth - (c2 - 1 + 2 * o) * b) / c2);
+      const cellH = Math.floor((img.naturalHeight - (r2 - 1 + 2 * o) * b) / r2);
+      if (cellW < 1 || cellH < 1) return;
+      const items = [];
+      let n = 0;
+      const nodeId = String((node == null ? void 0 : node.id) ?? "unknown");
+      for (let row = 0; row < r2; row++) {
+        for (let col = 0; col < c2; col++) {
+          if (mySeq !== seq2) return;
+          n++;
+          const canvas = document.createElement("canvas");
+          canvas.width = cellW;
+          canvas.height = cellH;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("2d context unavailable");
+          ctx.drawImage(img, o * b + col * (cellW + b), o * b + row * (cellH + b), cellW, cellH, 0, 0, cellW, cellH);
+          const imageUrl = await uploadCanvas(canvas, {
+            subfolder: "comfytv/gridsplit",
+            filename: `comfytv-grid-${nodeId}-${Date.now()}-${n}.png`
+          });
+          if (mySeq !== seq2) return;
+          items.push({
+            index: String(n),
+            label: `R${row + 1}C${col + 1}`,
+            image_url: imageUrl
+          });
+        }
+      }
+      if (mySeq !== seq2) return;
+      store2.applyExecutedPayload(state2, { output: [JSON.stringify({ images: items })] });
+    } catch (e) {
+      console.error("[ComfyTV/gridsplit] split failed", e);
+    } finally {
+      if (mySeq === seq2) splitting.value = false;
+    }
+  }
+  watch([rows, cols, border, outerBorder], ([r2, c2, b, o]) => {
+    writeWidget(node, "rows", r2);
+    writeWidget(node, "cols", c2);
+    writeWidget(node, "border", b);
+    writeWidget(node, "outer_border", o);
+    schedule();
+  });
+  watch(sourceImageUrl, () => schedule(), { immediate: true });
+  return {
+    sourceImageUrl,
+    rows,
+    cols,
+    setGrid,
+    border,
+    setBorder,
+    outerBorder,
+    setOuterBorder,
+    splitting
+  };
+}
+const SPLIT_LINE_PX = 2;
+const SPLIT_HIT_PX = 10;
+const SCHEDULE_DELAY_MS$3 = 250;
+const MIN_SPLIT_GAP = 0.01;
+const MAX_SPLITS = 9;
+const DEFAULT_V_SPLITS = [0.5];
+const DEFAULT_H_SPLITS = [];
+const FACE_LABELS = ["正", "左", "背", "右"];
+const CUSTOM_SPLIT_IMAGE_TYPE = "COMFYTV_IMAGE";
+const CUSTOM_SPLIT_IMAGES_TYPE = "COMFYTV_IMAGES";
+const CUSTOM_SPLIT_MAX_TILES = 32;
+const MODEL3D_CLASS = "ComfyTV.Model3DStage";
+function sortedUnique(splits) {
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const n of [...splits].sort((a2, b) => a2 - b)) {
+    const t2 = Math.round(n * 1e6) / 1e6;
+    if (!Number.isFinite(t2) || t2 <= 0 || t2 >= 1) continue;
+    if (seen.has(t2)) continue;
+    seen.add(t2);
+    out.push(t2);
+    if (out.length >= MAX_SPLITS) break;
+  }
+  return out;
+}
+function parseSplits(raw, fallback = []) {
+  if (raw == null || String(raw).trim() === "") return [...fallback];
+  try {
+    const v = JSON.parse(String(raw));
+    if (!Array.isArray(v)) return [...fallback];
+    return sortedUnique(v.map(Number));
+  } catch {
+    return [...fallback];
+  }
+}
+function serializeSplits(splits) {
+  return JSON.stringify(sortedUnique(splits));
+}
+function edgesFromSplits(splits) {
+  return [0, ...sortedUnique(splits), 1];
+}
+function clampSplit(value, prev, next) {
+  const lo = prev + MIN_SPLIT_GAP;
+  const hi = next - MIN_SPLIT_GAP;
+  if (hi < lo) return (prev + next) / 2;
+  return Math.min(hi, Math.max(lo, value));
+}
+function setSplitAt(splits, index2, value) {
+  const cur = sortedUnique(splits);
+  if (index2 < 0 || index2 >= cur.length) return cur;
+  const prev = index2 === 0 ? 0 : cur[index2 - 1];
+  const next = index2 === cur.length - 1 ? 1 : cur[index2 + 1];
+  const nextArr = [...cur];
+  nextArr[index2] = clampSplit(value, prev, next);
+  return sortedUnique(nextArr);
+}
+function removeSplitAt(splits, index2) {
+  const cur = sortedUnique(splits);
+  if (index2 < 0 || index2 >= cur.length) return cur;
+  return cur.filter((_, i) => i !== index2);
+}
+function insertInLargestGap(splits) {
+  const cur = sortedUnique(splits);
+  if (cur.length >= MAX_SPLITS) return null;
+  const e = edgesFromSplits(cur);
+  let bestI = 0;
+  let bestGap = -1;
+  for (let i = 0; i < e.length - 1; i++) {
+    const g2 = e[i + 1] - e[i];
+    if (g2 > bestGap) {
+      bestGap = g2;
+      bestI = i;
+    }
+  }
+  if (bestGap < MIN_SPLIT_GAP * 2) return null;
+  const mid = (e[bestI] + e[bestI + 1]) / 2;
+  return sortedUnique([...cur, mid]);
+}
+function cellsFromSplits(vSplits, hSplits, natW, natH) {
+  const xs = edgesFromSplits(vSplits).map((t2) => Math.round(t2 * natW));
+  const ys = edgesFromSplits(hSplits).map((t2) => Math.round(t2 * natH));
+  xs[xs.length - 1] = natW;
+  ys[ys.length - 1] = natH;
+  const cells = [];
+  let n = 0;
+  for (let r2 = 0; r2 < ys.length - 1; r2++) {
+    for (let c2 = 0; c2 < xs.length - 1; c2++) {
+      n++;
+      const x = xs[c2];
+      const y = ys[r2];
+      const w = Math.max(1, xs[c2 + 1] - x);
+      const h2 = Math.max(1, ys[r2 + 1] - y);
+      cells.push({ x, y, w, h: h2, row: r2, col: c2, index: n, label: `R${r2 + 1}C${c2 + 1}` });
+    }
+  }
+  return cells;
+}
+function isFaceLabel(value) {
+  return FACE_LABELS.includes(value);
+}
+function resizeCellLabels(labels, count2) {
+  const n = Math.max(0, count2);
+  const next = labels.slice(0, n).map((v) => isFaceLabel(v) ? v : "");
+  while (next.length < n) next.push("");
+  return next;
+}
+function parseCellLabels(raw, count2) {
+  if (raw == null || String(raw).trim() === "") return resizeCellLabels([], count2);
+  try {
+    const v = JSON.parse(String(raw));
+    if (!Array.isArray(v)) return resizeCellLabels([], count2);
+    return resizeCellLabels(v.map((x) => String(x ?? "")), count2);
+  } catch {
+    return resizeCellLabels([], count2);
+  }
+}
+function serializeCellLabels(labels) {
+  return JSON.stringify(labels.map((v) => isFaceLabel(v) ? v : ""));
+}
+function assignFaceLabel(labels, index2, name) {
+  const next = [...labels];
+  if (index2 < 0 || index2 >= next.length) return next;
+  const face = isFaceLabel(name) ? name : "";
+  if (face) {
+    for (let i = 0; i < next.length; i++) {
+      if (i !== index2 && next[i] === face) next[i] = "";
+    }
+  }
+  next[index2] = face;
+  return next;
+}
+function ensureFaceLabels(labels, count2) {
+  const next = resizeCellLabels(labels, count2);
+  if (next.some(isFaceLabel)) return next;
+  for (let i = 0; i < Math.min(count2, FACE_LABELS.length); i++) {
+    next[i] = FACE_LABELS[i];
+  }
+  return next;
+}
+function faceRank(label) {
+  const i = FACE_LABELS.indexOf(label);
+  return i >= 0 ? i : FACE_LABELS.length;
+}
+function orderByFaceLabels(items, getLabel2) {
+  return items.map((item, i) => ({ item, i, rank: faceRank(getLabel2(item)) })).sort((a2, b) => a2.rank - b.rank || a2.i - b.i).map((row) => row.item);
+}
+function uniqueOutputName(label, used, fallback) {
+  const base2 = label.trim() || fallback;
+  let name = base2;
+  let n = 2;
+  while (used.has(name)) name = `${base2} (${n++})`;
+  used.add(name);
+  return name;
+}
+function syncCustomSplitOutputs(node, items) {
+  var _a2, _b2, _c;
+  if (!node) return;
+  if (!Array.isArray(node.outputs)) node.outputs = [];
+  if (!node.outputs[0]) {
+    if (typeof node.addOutput === "function") {
+      node.addOutput("images", CUSTOM_SPLIT_IMAGES_TYPE, {
+        label: "images",
+        localized_name: "images"
+      });
+    } else {
+      node.outputs.push({
+        name: "images",
+        type: CUSTOM_SPLIT_IMAGES_TYPE,
+        label: "images",
+        localized_name: "images",
+        links: []
+      });
+    }
+  } else {
+    const batch2 = node.outputs[0];
+    batch2.name = "images";
+    batch2.label = "images";
+    batch2.localized_name = "images";
+    batch2.type = CUSTOM_SPLIT_IMAGES_TYPE;
+  }
+  const tileOutputs = Array.isArray(node.outputs) ? node.outputs.slice(1) : [];
+  let linkedTiles = 0;
+  for (let i = 0; i < tileOutputs.length; i++) {
+    const links = (_a2 = tileOutputs[i]) == null ? void 0 : _a2.links;
+    if (Array.isArray(links) && links.length > 0) linkedTiles = i + 1;
+  }
+  const n = Math.max(0, Math.min(CUSTOM_SPLIT_MAX_TILES, Math.max(items.length, linkedTiles)));
+  while (node.outputs.length > n + 1) {
+    const last = node.outputs[node.outputs.length - 1];
+    const links = last == null ? void 0 : last.links;
+    if (Array.isArray(links) && links.length > 0) break;
+    if (typeof node.removeOutput === "function") node.removeOutput(node.outputs.length - 1);
+    else node.outputs.pop();
+  }
+  const used = /* @__PURE__ */ new Set(["images", "image"]);
+  for (let i = 0; i < n; i++) {
+    const fallback = `image${i + 1}`;
+    const label = uniqueOutputName(((_b2 = items[i]) == null ? void 0 : _b2.label) || "", used, fallback);
+    const slot = i + 1;
+    if (slot >= node.outputs.length) {
+      if (typeof node.addOutput === "function") {
+        node.addOutput(label, CUSTOM_SPLIT_IMAGE_TYPE, { label, localized_name: label });
+      } else {
+        node.outputs.push({
+          name: label,
+          type: CUSTOM_SPLIT_IMAGE_TYPE,
+          label,
+          localized_name: label,
+          links: []
+        });
+      }
+      continue;
+    }
+    const out = node.outputs[slot];
+    out.name = label;
+    out.label = label;
+    out.localized_name = label;
+    out.type = CUSTOM_SPLIT_IMAGE_TYPE;
+  }
+  (_c = node.setDirtyCanvas) == null ? void 0 : _c.call(node, true, true);
+}
+function findCustomSplitTileSlot(node, label) {
+  var _a2;
+  const outs = node == null ? void 0 : node.outputs;
+  if (!Array.isArray(outs)) return -1;
+  for (let i = 1; i < outs.length; i++) {
+    if (String(((_a2 = outs[i]) == null ? void 0 : _a2.name) || "") === label) return i;
+  }
+  return -1;
+}
+function faceInputSlotNames(face) {
+  const idx = FACE_LABELS.indexOf(face);
+  const names = [];
+  if (idx >= 0) names.push(`images.image${idx}`);
+  names.push(`images.${face}`, face);
+  return names;
+}
+function findModel3DFaceSlot(node, face) {
+  const inputs = node == null ? void 0 : node.inputs;
+  if (!Array.isArray(inputs)) return -1;
+  for (const name of faceInputSlotNames(face)) {
+    const i = inputs.findIndex((inp) => String((inp == null ? void 0 : inp.name) || "") === name);
+    if (i >= 0) return i;
+  }
+  return -1;
+}
+function cellOverlayStyle(cell, d, natW, natH) {
+  if (!(natW > 0) || !(natH > 0)) {
+    return { left: "0px", top: "0px", width: "0px", height: "0px" };
+  }
+  return {
+    left: `${d.ox + cell.x / natW * d.w}px`,
+    top: `${d.oy + cell.y / natH * d.h}px`,
+    width: `${cell.w / natW * d.w}px`,
+    height: `${cell.h / natH * d.h}px`
+  };
+}
+function splitBandStyle(axis, d, t2, thick = MIN_DIVIDER_PX) {
+  const w = Math.max(MIN_DIVIDER_PX, thick);
+  if (axis === "v") {
+    return {
+      left: `${d.ox + t2 * d.w - w / 2}px`,
+      top: `${d.oy}px`,
+      width: `${w}px`,
+      height: `${d.h}px`
+    };
+  }
+  return {
+    left: `${d.ox}px`,
+    top: `${d.oy + t2 * d.h - w / 2}px`,
+    width: `${d.w}px`,
+    height: `${w}px`
+  };
+}
+function imageScreenRect(img, container, d) {
+  if (img) {
+    const r2 = img.getBoundingClientRect();
+    if (r2.width > 0 && r2.height > 0) {
+      return { left: r2.left, top: r2.top, width: r2.width, height: r2.height };
+    }
+  }
+  if (!container || !d || d.w <= 0 || d.h <= 0) return null;
+  const cr2 = container.getBoundingClientRect();
+  const lw = container.clientWidth;
+  const lh = container.clientHeight;
+  if (lw <= 0 || lh <= 0 || cr2.width <= 0 || cr2.height <= 0) return null;
+  const sx = cr2.width / lw;
+  const sy = cr2.height / lh;
+  return {
+    left: cr2.left + d.ox * sx,
+    top: cr2.top + d.oy * sy,
+    width: d.w * sx,
+    height: d.h * sy
+  };
+}
+function splitDelta(drag, clientX, clientY) {
+  if (!(drag.span > 0)) return drag.startT;
+  const client = drag.axis === "v" ? clientX : clientY;
+  return drag.startT + (client - drag.startClient) / drag.span;
+}
+function sameSplits(a2, b) {
+  if (a2.length !== b.length) return false;
+  for (let i = 0; i < a2.length; i++) if (a2[i] !== b[i]) return false;
+  return true;
+}
+function useCustomSplit(node, state2) {
+  const store2 = useStageStore();
+  const sourceImageUrl = computed(() => {
+    const inp = state2.inputs.find((i) => i.slot === "image");
+    return inp && inp.source === "upstream" && inp.content ? inp.content : null;
+  });
+  const vSplits = /* @__PURE__ */ ref(parseSplits(readWidgetStr(node, "v_splits", ""), DEFAULT_V_SPLITS));
+  const hSplits = /* @__PURE__ */ ref(parseSplits(readWidgetStr(node, "h_splits", ""), DEFAULT_H_SPLITS));
+  const selected = /* @__PURE__ */ ref(null);
+  const annotating = /* @__PURE__ */ ref(false);
+  const selectedFace = /* @__PURE__ */ ref(FACE_LABELS[0]);
+  const cellCount = computed(() => (vSplits.value.length + 1) * (hSplits.value.length + 1));
+  const cellLabels = /* @__PURE__ */ ref(parseCellLabels(
+    readWidgetStr(node, "cell_labels", ""),
+    cellCount.value
+  ));
+  const canAddV = computed(() => vSplits.value.length < MAX_SPLITS);
+  const canAddH = computed(() => hSplits.value.length < MAX_SPLITS);
+  function syncLabels(count2) {
+    const next = resizeCellLabels(cellLabels.value, count2);
+    if (next.length === cellLabels.value.length && next.every((v, i) => v === cellLabels.value[i])) return;
+    cellLabels.value = next;
+  }
+  function applyV(next) {
+    var _a2;
+    if (!next) return;
+    if (sameSplits(next, vSplits.value)) return;
+    vSplits.value = next;
+    if (((_a2 = selected.value) == null ? void 0 : _a2.axis) === "v" && selected.value.index >= next.length) {
+      selected.value = next.length ? { axis: "v", index: next.length - 1 } : null;
+    }
+  }
+  function applyH(next) {
+    var _a2;
+    if (!next) return;
+    if (sameSplits(next, hSplits.value)) return;
+    hSplits.value = next;
+    if (((_a2 = selected.value) == null ? void 0 : _a2.axis) === "h" && selected.value.index >= next.length) {
+      selected.value = next.length ? { axis: "h", index: next.length - 1 } : null;
+    }
+  }
+  function addV() {
+    applyV(insertInLargestGap(vSplits.value));
+  }
+  function addH() {
+    applyH(insertInLargestGap(hSplits.value));
+  }
+  function selectSplit(axis, index2) {
+    selected.value = { axis, index: index2 };
+  }
+  function setSplit(axis, index2, value) {
+    if (axis === "v") applyV(setSplitAt(vSplits.value, index2, value));
+    else applyH(setSplitAt(hSplits.value, index2, value));
+  }
+  function removeSelected() {
+    const sel2 = selected.value;
+    if (!sel2) return;
+    if (sel2.axis === "v") applyV(removeSplitAt(vSplits.value, sel2.index));
+    else applyH(removeSplitAt(hSplits.value, sel2.index));
+    selected.value = null;
+  }
+  function toggleAnnotating() {
+    annotating.value = !annotating.value;
+  }
+  function stampCell(index2) {
+    if (!annotating.value) return;
+    const cur = cellLabels.value[index2] || "";
+    const name = cur === selectedFace.value ? "" : selectedFace.value;
+    cellLabels.value = assignFaceLabel(cellLabels.value, index2, name);
+  }
+  function applyAutoFaceLabels() {
+    const next = ensureFaceLabels(cellLabels.value, cellCount.value);
+    if (next.length !== cellLabels.value.length || next.some((v, i) => v !== cellLabels.value[i])) {
+      cellLabels.value = next;
+    }
+    return next;
+  }
+  async function generateMultiViewModel() {
+    applyAutoFaceLabels();
+    if (timer != null) {
+      window.clearTimeout(timer);
+      timer = null;
+    }
+    await run3();
+    const { spawnModel3DFromCustomSplit: spawnModel3DFromCustomSplit2 } = await Promise.resolve().then(() => spawnFollowUp);
+    return spawnModel3DFromCustomSplit2(node);
+  }
+  let lineDrag = null;
+  function beginLineDrag(axis, index2, clientX, clientY, image) {
+    const splits = axis === "v" ? vSplits.value : hSplits.value;
+    const startT = splits[index2];
+    const span = axis === "v" ? image.width : image.height;
+    if (startT == null || !(span > 0)) return;
+    selectSplit(axis, index2);
+    lineDrag = {
+      axis,
+      index: index2,
+      startT,
+      startClient: axis === "v" ? clientX : clientY,
+      span
+    };
+  }
+  function moveLineDrag(clientX, clientY) {
+    if (!lineDrag) return;
+    setSplit(lineDrag.axis, lineDrag.index, splitDelta(lineDrag, clientX, clientY));
+  }
+  function endLineDrag() {
+    lineDrag = null;
+  }
+  function readFromWidgets() {
+    const v = parseSplits(readWidgetStr(node, "v_splits", ""), DEFAULT_V_SPLITS);
+    const h2 = parseSplits(readWidgetStr(node, "h_splits", ""), DEFAULT_H_SPLITS);
+    if (!sameSplits(v, vSplits.value)) vSplits.value = v;
+    if (!sameSplits(h2, hSplits.value)) hSplits.value = h2;
+    const labels = parseCellLabels(
+      readWidgetStr(node, "cell_labels", ""),
+      (vSplits.value.length + 1) * (hSplits.value.length + 1)
+    );
+    if (labels.length !== cellLabels.value.length || labels.some((x, i) => x !== cellLabels.value[i])) {
+      cellLabels.value = labels;
+    }
+  }
+  {
+    const wv = getWidget(node, "v_splits");
+    if (wv) {
+      const orig = wv.callback;
+      wv.callback = (val) => {
+        orig == null ? void 0 : orig.call(wv, val);
+        const next = parseSplits(String(val ?? ""), DEFAULT_V_SPLITS);
+        if (!sameSplits(next, vSplits.value)) vSplits.value = next;
+      };
+    }
+    const wh = getWidget(node, "h_splits");
+    if (wh) {
+      const orig = wh.callback;
+      wh.callback = (val) => {
+        orig == null ? void 0 : orig.call(wh, val);
+        const next = parseSplits(String(val ?? ""), DEFAULT_H_SPLITS);
+        if (!sameSplits(next, hSplits.value)) hSplits.value = next;
+      };
+    }
+    const wl = getWidget(node, "cell_labels");
+    if (wl) {
+      const orig = wl.callback;
+      wl.callback = (val) => {
+        orig == null ? void 0 : orig.call(wl, val);
+        const next = parseCellLabels(
+          String(val ?? ""),
+          (vSplits.value.length + 1) * (hSplits.value.length + 1)
+        );
+        if (next.length !== cellLabels.value.length || next.some((x, i) => x !== cellLabels.value[i])) {
+          cellLabels.value = next;
+        }
+      };
+    }
+  }
+  if (node) {
+    const orig = node.onConfigure;
+    node.onConfigure = function(info) {
+      orig == null ? void 0 : orig.call(this, info);
+      readFromWidgets();
+    };
+  }
+  const splitting = /* @__PURE__ */ ref(false);
+  let timer = null;
+  let seq2 = 0;
+  let cachedImg = null;
+  let cachedUrl = null;
+  function getSourceImage(url) {
+    if (cachedImg && cachedUrl === url && cachedImg.complete) {
+      return Promise.resolve(cachedImg);
+    }
+    return new Promise((resolve2, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        cachedImg = img;
+        cachedUrl = url;
+        resolve2(img);
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+  function schedule() {
+    if (!sourceImageUrl.value) return;
+    if (timer != null) window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      timer = null;
+      void run3();
+    }, SCHEDULE_DELAY_MS$3);
+  }
+  async function run3() {
+    const url = sourceImageUrl.value;
+    if (!url) return;
+    const mySeq = ++seq2;
+    splitting.value = true;
+    try {
+      const img = await getSourceImage(url);
+      if (mySeq !== seq2) return;
+      const cells = cellsFromSplits(
+        vSplits.value,
+        hSplits.value,
+        img.naturalWidth,
+        img.naturalHeight
+      );
+      if (!cells.length) return;
+      syncLabels(cells.length);
+      const prepared = cells.map((cell, i) => ({
+        cell,
+        label: cellLabels.value[i] || cell.label
+      }));
+      const ordered = orderByFaceLabels(prepared, (row) => row.label);
+      const items = [];
+      const nodeId = String((node == null ? void 0 : node.id) ?? "unknown");
+      for (let i = 0; i < ordered.length; i++) {
+        const { cell, label } = ordered[i];
+        if (mySeq !== seq2) return;
+        const canvas = document.createElement("canvas");
+        canvas.width = cell.w;
+        canvas.height = cell.h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("2d context unavailable");
+        ctx.drawImage(img, cell.x, cell.y, cell.w, cell.h, 0, 0, cell.w, cell.h);
+        const imageUrl = await uploadCanvas(canvas, {
+          subfolder: "comfytv/customsplit",
+          filename: `comfytv-customsplit-${nodeId}-${Date.now()}-${i + 1}.png`
+        });
+        if (mySeq !== seq2) return;
+        items.push({
+          index: String(i + 1),
+          label,
+          image_url: imageUrl
+        });
+      }
+      if (mySeq !== seq2) return;
+      const batch2 = JSON.stringify({ images: items });
+      store2.applyExecutedPayload(state2, { output: [batch2] });
+      store2.setOutputSlots(state2, [
+        batch2,
+        ...items.map((im) => im.image_url)
+      ]);
+      syncCustomSplitOutputs(node, items);
+    } catch (e) {
+      console.error("[ComfyTV/customsplit] split failed", e);
+    } finally {
+      if (mySeq === seq2) splitting.value = false;
+    }
+  }
+  watch([vSplits, hSplits], () => {
+    writeWidget(node, "v_splits", serializeSplits(vSplits.value));
+    writeWidget(node, "h_splits", serializeSplits(hSplits.value));
+    syncLabels(cellCount.value);
+    schedule();
+  }, { deep: true });
+  watch(cellLabels, () => {
+    writeWidget(node, "cell_labels", serializeCellLabels(cellLabels.value));
+    schedule();
+  }, { deep: true });
+  watch(sourceImageUrl, () => schedule(), { immediate: true });
+  return {
+    sourceImageUrl,
+    vSplits,
+    hSplits,
+    selected,
+    selectSplit,
+    setSplit,
+    addV,
+    addH,
+    removeSelected,
+    beginLineDrag,
+    moveLineDrag,
+    endLineDrag,
+    canAddV,
+    canAddH,
+    cellCount,
+    splitting,
+    FACE_LABELS,
+    cellLabels,
+    annotating,
+    selectedFace,
+    toggleAnnotating,
+    stampCell,
+    applyAutoFaceLabels,
+    generateMultiViewModel
+  };
+}
+const STAGE_CLASS_BY_KIND = {
+  text: "ComfyTV.TextStage",
+  image: "ComfyTV.ImageStage",
+  video: "ComfyTV.VideoStage",
+  audio: "ComfyTV.AudioStage",
+  panorama: "ComfyTV.PanoramaStage",
+  storyboard: "ComfyTV.StoryboardStage",
+  "image-batch": "ComfyTV.ShotImagesStage",
+  "image-picker": "ComfyTV.ImagePickerStage",
+  "audio-picker": "ComfyTV.AudioPickerStage",
+  "video-picker": "ComfyTV.VideoPickerStage",
+  timeline: "ComfyTV.DirectorTimelineStage",
+  model: "ComfyTV.Model3DStage",
+  material: "ComfyTV.MaterialStage",
+  custom: "ComfyTV.CustomStage"
+};
+const TARGET_GROUP_BY_KIND = {
+  text: "texts",
+  image: "images",
+  video: "videos",
+  audio: "videos",
+  panorama: "images",
+  storyboard: "texts",
+  "image-batch": "images",
+  "image-picker": "images",
+  "audio-picker": "videos",
+  "video-picker": "videos",
+  timeline: "images",
+  model: "models",
+  material: "images",
+  custom: "images"
+};
+function findFirstAutogrowSlot(node, groupPrefix) {
+  if (!node.inputs) return -1;
+  for (let i = 0; i < node.inputs.length; i++) {
+    const n = String(node.inputs[i].name || "");
+    if (n.startsWith(groupPrefix + ".")) return i;
+  }
+  return -1;
+}
+function findNamedSlot(node, name) {
+  if (!node.inputs) return -1;
+  for (let i = 0; i < node.inputs.length; i++) {
+    if (String(node.inputs[i].name || "") === name) return i;
+  }
+  return -1;
+}
+function findNamedOutputSlot(node, name) {
+  var _a2;
+  const outs = node == null ? void 0 : node.outputs;
+  if (!outs) return -1;
+  for (let i = 0; i < outs.length; i++) {
+    if (String(((_a2 = outs[i]) == null ? void 0 : _a2.name) || "") === name) return i;
+  }
+  return -1;
+}
+function lookupGraphLink(graph, id) {
+  var _a2;
+  const links = graph == null ? void 0 : graph.links;
+  if (!links) return ((_a2 = graph == null ? void 0 : graph.getLink) == null ? void 0 : _a2.call(graph, id)) ?? null;
+  if (typeof links.get === "function") return links.get(id) ?? null;
+  return links[id] ?? null;
+}
+function findDownstreamOfClass(srcNode, originSlot, cls) {
+  var _a2, _b2, _c;
+  const graph = (srcNode == null ? void 0 : srcNode.graph) ?? (app$1 == null ? void 0 : app$1.graph);
+  const links = ((_b2 = (_a2 = srcNode == null ? void 0 : srcNode.outputs) == null ? void 0 : _a2[originSlot]) == null ? void 0 : _b2.links) ?? [];
+  if (!graph || !links.length) return null;
+  for (const lid of links) {
+    const link2 = lookupGraphLink(graph, lid);
+    if (!link2) continue;
+    const tid = link2.target_id ?? link2.targetId;
+    const t2 = (_c = graph.getNodeById) == null ? void 0 : _c.call(graph, tid);
+    if ((t2 == null ? void 0 : t2.comfyClass) === cls) return t2;
+  }
+  return null;
+}
+function spawnOrFocusImagesSplit(srcNode) {
+  var _a2, _b2;
+  let srcSlot = findNamedOutputSlot(srcNode, "images");
+  if (srcSlot < 0) srcSlot = 1;
+  const existing = findDownstreamOfClass(srcNode, srcSlot, "ComfyTV.ImagesSplitStage");
+  if (existing) {
+    const canvas = app$1 == null ? void 0 : app$1.canvas;
+    (_a2 = canvas == null ? void 0 : canvas.centerOnNode) == null ? void 0 : _a2.call(canvas, existing);
+    (_b2 = canvas == null ? void 0 : canvas.selectNode) == null ? void 0 : _b2.call(canvas, existing);
+    return existing;
+  }
+  return spawnConsumingNode(srcNode, "ComfyTV.ImagesSplitStage", "images", srcSlot);
+}
+const IMAGE_LOADER_CLASS$1 = "ComfyTV.ImageLoaderStage";
+function connectSrcSlotsToAutogrow(srcNode, srcSlots, dstNode, _type = "image") {
+  ensureMergeImageSockets(dstNode);
+  const wire = (i, attempt) => {
+    var _a2;
+    if (i >= srcSlots.length) {
+      ensureMergeImageSockets(dstNode);
+      return;
+    }
+    ensureMergeImageSockets(dstNode);
+    const inSlot = findMergeImageSlot(dstNode, i);
+    if (inSlot >= 0) {
+      const inp = (_a2 = dstNode.inputs) == null ? void 0 : _a2[inSlot];
+      if (inp) inp.type = MERGE_IMAGE_TYPE;
+      srcNode.connect(srcSlots[i], dstNode, inSlot);
+      ensureMergeImageSockets(dstNode);
+      wire(i + 1, 0);
+      return;
+    }
+    if (attempt < 20) setTimeout(() => wire(i, attempt + 1), 40);
+    else console.warn("[ComfyTV/merge] missing image slot", i);
+  };
+  wire(0, 0);
+}
+function spawnImageMergeFromSlots(srcNode, slotIndexes, mode = "layers", aspect2 = "native") {
+  var _a2, _b2;
+  const slots = uniqueSlotIndexes(slotIndexes);
+  if (!srcNode || !slots.length) return null;
+  const node = createNodeAt(IMAGE_MERGE_CLASS, posRightOf(srcNode));
+  if (!node) return null;
+  setWidget(node, "merge_mode", parseMergeMode(mode));
+  setWidget(node, "aspect_ratio", parseMergeAspect(aspect2));
+  stampLineage(srcNode, node);
+  connectSrcSlotsToAutogrow(srcNode, slots, node, "image");
+  const canvas = app$1 == null ? void 0 : app$1.canvas;
+  (_a2 = canvas == null ? void 0 : canvas.centerOnNode) == null ? void 0 : _a2.call(canvas, node);
+  (_b2 = canvas == null ? void 0 : canvas.selectNode) == null ? void 0 : _b2.call(canvas, node);
+  useStageStore().notifyDownstream();
+  return node;
+}
+function spawnModel3DFromCustomSplit(srcNode) {
+  var _a2, _b2;
+  if (!srcNode) return null;
+  let existing = null;
+  for (const face of FACE_LABELS) {
+    const srcSlot = findCustomSplitTileSlot(srcNode, face);
+    if (srcSlot < 0) continue;
+    existing = findDownstreamOfClass(srcNode, srcSlot, MODEL3D_CLASS);
+    if (existing) break;
+  }
+  const node = existing || createNodeAt(MODEL3D_CLASS, posRightOf(srcNode));
+  if (!node) return null;
+  if (!existing) stampLineage(srcNode, node);
+  const wireFace = (face, attempt) => {
+    var _a3;
+    const srcSlot = findCustomSplitTileSlot(srcNode, face);
+    if (srcSlot < 0) return;
+    const inSlot = findModel3DFaceSlot(node, face);
+    if (inSlot >= 0) {
+      const inp = (_a3 = node.inputs) == null ? void 0 : _a3[inSlot];
+      if (inp) inp.type = CUSTOM_SPLIT_IMAGE_TYPE;
+      srcNode.connect(srcSlot, node, inSlot);
+      return;
+    }
+    if (attempt < 25) setTimeout(() => wireFace(face, attempt + 1), 40);
+    else console.warn("[ComfyTV/customsplit] Model3D missing face slot", face);
+  };
+  const faces = (srcNode.outputs ?? []).slice(1).map((o) => String((o == null ? void 0 : o.name) || "")).filter((n) => isFaceLabel(n));
+  const toWire = faces.length ? faces : [...FACE_LABELS];
+  for (const face of toWire) wireFace(face, 0);
+  const canvas = app$1 == null ? void 0 : app$1.canvas;
+  (_a2 = canvas == null ? void 0 : canvas.centerOnNode) == null ? void 0 : _a2.call(canvas, node);
+  (_b2 = canvas == null ? void 0 : canvas.selectNode) == null ? void 0 : _b2.call(canvas, node);
+  useStageStore().notifyDownstream();
+  return node;
+}
+const IMAGE_GENERATE_CLASS = "ComfyTV.ImageStage";
+function spawnImageGenerateFromSlots(srcNode, slotIndexes) {
+  var _a2, _b2, _c, _d, _e2, _f;
+  const slots = [...new Set(slotIndexes.filter((i) => Number.isInteger(i) && i >= 0))].sort((a2, b) => a2 - b);
+  if (!srcNode || !slots.length) return [];
+  const store2 = useStageStore();
+  const created = [];
+  const baseX = (((_a2 = srcNode.pos) == null ? void 0 : _a2[0]) || 0) + (((_b2 = srcNode.size) == null ? void 0 : _b2[0]) || 280) + 60;
+  let y = ((_c = srcNode.pos) == null ? void 0 : _c[1]) || 0;
+  for (const slot of slots) {
+    const node = createNodeAt(IMAGE_GENERATE_CLASS, [baseX, y]);
+    if (!node) continue;
+    const inSlot = findFirstAutogrowSlot(node, "images");
+    if (inSlot >= 0) srcNode.connect(slot, node, inSlot);
+    else console.warn("[ComfyTV/images-split] ImageStage has no images autogrow slot");
+    stampLineage(srcNode, node);
+    created.push(node);
+    y += (((_d = node.size) == null ? void 0 : _d[1]) || 260) + 40;
+  }
+  const canvas = app$1 == null ? void 0 : app$1.canvas;
+  if (created[0]) {
+    (_e2 = canvas == null ? void 0 : canvas.centerOnNode) == null ? void 0 : _e2.call(canvas, created[0]);
+    (_f = canvas == null ? void 0 : canvas.selectNode) == null ? void 0 : _f.call(canvas, created[0]);
+  }
+  store2.notifyDownstream();
+  return created;
+}
+function outputHasLinks(node, idx) {
+  var _a2;
+  const out = (_a2 = node == null ? void 0 : node.outputs) == null ? void 0 : _a2[idx];
+  return !!((out == null ? void 0 : out.links) && out.links.length > 0);
+}
+function createNodeAt(targetClass, pos) {
+  var _a2, _b2, _c;
+  const win = window;
+  if (!((_a2 = win.LiteGraph) == null ? void 0 : _a2.createNode)) {
+    console.error("[ComfyTV/action] LiteGraph.createNode not available");
+    return null;
+  }
+  const node = win.LiteGraph.createNode(targetClass);
+  if (!node) {
+    console.error("[ComfyTV/action] createNode returned null for", targetClass);
+    return null;
+  }
+  const graph = app$1 == null ? void 0 : app$1.graph;
+  graph == null ? void 0 : graph.add(node);
+  node.pos = findFreePos(graph, pos, [((_b2 = node.size) == null ? void 0 : _b2[0]) || 280, ((_c = node.size) == null ? void 0 : _c[1]) || 260], node);
+  return node;
+}
+function posRightOf(srcNode, dx = 60) {
+  var _a2, _b2, _c;
+  return [
+    (((_a2 = srcNode.pos) == null ? void 0 : _a2[0]) || 0) + (((_b2 = srcNode.size) == null ? void 0 : _b2[0]) || 280) + dx,
+    ((_c = srcNode.pos) == null ? void 0 : _c[1]) || 0
+  ];
+}
+function setWidget(node, name, value) {
+  var _a2;
+  const w = (_a2 = node.widgets) == null ? void 0 : _a2.find((wi) => wi.name === name);
+  if (w) w.value = value;
+}
+function stampLineage(srcNode, newNode) {
+  const store2 = useStageStore();
+  const srcState = store2.getStage(srcNode);
+  const parentId = srcState == null ? void 0 : srcState.outputId;
+  if (parentId != null && parentId > 0) {
+    setWidget(newNode, "parent_output_id", parentId);
+  }
+}
+function wireAndSeed(srcNode, newNode, preset2, srcSlot = 0) {
+  var _a2;
+  const store2 = useStageStore();
+  let slot = -1;
+  if (preset2.inputSocket) {
+    slot = findNamedSlot(newNode, preset2.inputSocket);
+  } else if (preset2.inputAutogrowGroup) {
+    slot = findFirstAutogrowSlot(newNode, preset2.inputAutogrowGroup);
+  }
+  if (slot < 0) {
+    console.warn(
+      "[ComfyTV/preset]",
+      preset2.id,
+      "no target slot on",
+      newNode.comfyClass,
+      "inputs=",
+      (_a2 = newNode.inputs) == null ? void 0 : _a2.map((i) => i.name)
+    );
+  } else {
+    srcNode.connect(srcSlot, newNode, slot);
+  }
+  if (preset2.widgets) {
+    for (const [name, value] of Object.entries(preset2.widgets)) {
+      setWidget(newNode, name, value);
+    }
+    if ("main_prompt" in preset2.widgets) {
+      const state2 = store2.getStage(newNode);
+      if (state2) state2.mainPrompt = String(preset2.widgets.main_prompt ?? "");
+    }
+  }
+  stampLineage(srcNode, newNode);
+}
+function spawnImagePreset(srcNode, preset2, srcSlot = 0) {
+  var _a2, _b2, _c;
+  const store2 = useStageStore();
+  if (preset2.multiTargetClasses && preset2.multiTargetClasses.length) {
+    const baseX = (((_a2 = srcNode.pos) == null ? void 0 : _a2[0]) || 0) + (((_b2 = srcNode.size) == null ? void 0 : _b2[0]) || 280) + 60;
+    const baseY = ((_c = srcNode.pos) == null ? void 0 : _c[1]) || 0;
+    const rowGap = 60;
+    let rowY = baseY;
+    preset2.multiTargetClasses.forEach((cls, i) => {
+      var _a3;
+      const newNode2 = createNodeAt(cls, [baseX, rowY]);
+      if (!newNode2) return;
+      wireAndSeed(srcNode, newNode2, preset2, srcSlot);
+      rowY += (((_a3 = newNode2.size) == null ? void 0 : _a3[1]) || 260) + rowGap;
+    });
+    store2.notifyDownstream();
+    return;
+  }
+  const targetClass = preset2.targetClass ?? STAGE_CLASS_BY_KIND.image;
+  const newNode = createNodeAt(targetClass, posRightOf(srcNode));
+  if (!newNode) return;
+  wireAndSeed(srcNode, newNode, preset2, srcSlot);
+  store2.notifyDownstream();
+}
+function spawnConsumingNode(srcNode, targetClass, inputSlotName, srcSlot = 0) {
+  var _a2;
+  const newNode = createNodeAt(targetClass, posRightOf(srcNode));
+  if (!newNode) return null;
+  const slot = findNamedSlot(newNode, inputSlotName);
+  if (slot < 0) {
+    console.warn(
+      "[ComfyTV/action] target",
+      targetClass,
+      "has no",
+      inputSlotName,
+      "slot",
+      "inputs=",
+      (_a2 = newNode.inputs) == null ? void 0 : _a2.map((i) => i.name)
+    );
+    return newNode;
+  }
+  srcNode.connect(srcSlot, newNode, slot);
+  stampLineage(srcNode, newNode);
+  return newNode;
+}
+const RELIGHT_WORKFLOW_LABEL = "NanoBanana2";
+function spawnRelightPair(srcNode, srcSlot) {
+  const store2 = useStageStore();
+  const relight2 = createNodeAt("ComfyTV.RelightStage", posRightOf(srcNode));
+  if (!relight2) return;
+  const img = createNodeAt("ComfyTV.ImageStage", posRightOf(relight2));
+  if (!img) return;
+  setWidget(img, "workflow", RELIGHT_WORKFLOW_LABEL);
+  const s0 = findFirstAutogrowSlot(img, "images");
+  if (s0 >= 0) {
+    srcNode.connect(srcSlot, img, s0);
+  } else {
+    console.warn("[ComfyTV/relight] new ImageStage has no images autogrow slot");
+  }
+  const wireSecond = (attempt = 0) => {
+    const s1 = findNamedSlot(img, "images.image1");
+    if (s1 >= 0) {
+      relight2.connect(0, img, s1);
+      store2.notifyDownstream();
+      return;
+    }
+    if (attempt < 10) setTimeout(() => wireSecond(attempt + 1), 50);
+    else console.warn("[ComfyTV/relight] images.image1 never appeared on new ImageStage");
+  };
+  wireSecond();
+  stampLineage(srcNode, img);
+  store2.notifyDownstream();
+}
+function spawnExtendVideo(srcNode) {
+  const store2 = useStageStore();
+  const extract = createNodeAt("ComfyTV.VideoExtractFrameStage", posRightOf(srcNode));
+  if (!extract) return;
+  const extractInSlot = findNamedSlot(extract, "video");
+  if (extractInSlot >= 0) srcNode.connect(0, extract, extractInSlot);
+  stampLineage(srcNode, extract);
+  const newVideo = createNodeAt("ComfyTV.VideoStage", posRightOf(extract));
+  if (!newVideo) return;
+  const imageSlot = findFirstAutogrowSlot(newVideo, "images");
+  if (imageSlot >= 0) extract.connect(0, newVideo, imageSlot);
+  stampLineage(srcNode, newVideo);
+  store2.notifyDownstream();
+}
+function spawnPanoramaView(srcNode, mode) {
+  if (mode === "current") {
+    spawnConsumingNode(srcNode, "ComfyTV.PanoramaCurrentViewStage", "panorama");
+    return;
+  }
+  const node = spawnConsumingNode(srcNode, "ComfyTV.PanoramaMultiViewStage", "panorama");
+  if (!node) return;
+  setWidget(node, "view_count", mode === "four" ? 4 : 12);
+}
+async function spawnAssetImageLoader(srcNode, url, label, mediaType = "image") {
+  var _a2;
+  const assetStore2 = useAssetStore();
+  await assetStore2.hydrate();
+  let asset = assetStore2.byPayloadUrl(url) ?? null;
+  if (!asset) {
+    asset = await assetStore2.create({
+      name: ((_a2 = extractFilenameFromUrl(url)) == null ? void 0 : _a2.replace(/\.[^.]+$/, "")) || label || mediaType,
+      payload_url: url,
+      media_type: mediaType,
+      category_ids: []
+    });
+  }
+  if (!asset) {
+    console.error("[ComfyTV/action] load-asset: could not add", mediaType, "to library", url);
+    return;
+  }
+  const newNode = createAssetLoaderNode(asset, posRightOf(srcNode));
+  if (!newNode) return;
+  useStageStore().notifyDownstream();
+}
+const GENERATE_IMAGE_PRESET = {
+  id: "generate",
+  targetClass: "ComfyTV.ImageStage",
+  inputAutogrowGroup: "images"
+};
+function makeImageActionHandlers(srcSlot) {
+  const outputSlot = (src) => {
+    const named = findNamedOutputSlot(src, "image");
+    return named >= 0 ? named : srcSlot;
+  };
+  return {
+    "generate": (src) => spawnImagePreset(src, GENERATE_IMAGE_PRESET, outputSlot(src)),
+    "panorama": (src) => spawnConsumingNode(src, "ComfyTV.PanoramaStage", "image", outputSlot(src)),
+    "multiangle": (src) => spawnConsumingNode(src, "ComfyTV.MultiangleStage", "image", outputSlot(src)),
+    "relight": (src) => spawnRelightPair(src, outputSlot(src)),
+    "material": (src) => spawnConsumingNode(src, "ComfyTV.MaterialStage", "image", outputSlot(src)),
+    ...Object.fromEntries(
+      IMAGE_VARIANT_PRESETS.map((p2) => [
+        `preset:${p2.id}`,
+        (src) => spawnImagePreset(src, p2, outputSlot(src))
+      ])
+    ),
+    ...Object.fromEntries(
+      IMAGE_EDIT_PRESETS.map((p2) => [
+        `edit:${p2.id}`,
+        (src) => spawnImagePreset(src, p2, outputSlot(src))
+      ])
+    )
+  };
+}
+const imageActionHandlers = makeImageActionHandlers(0);
+const imageBatchActionHandlers = makeImageActionHandlers(1);
+const PRODUCT_SHOT_PRESET = {
+  id: "product-shot",
+  targetClass: "ComfyTV.ImageEditStage",
+  inputAutogrowGroup: "images",
+  widgets: {
+    workflow: "Qwen Edit 2511",
+    main_prompt: "Turn this 3D viewport render into a professional product photograph on a clean light-gray studio backdrop with soft diffused lighting and a subtle ground reflection. Keep the subject's colors, materials and pose exactly as they are."
+  }
+};
+const videoActionHandlers = {
+  "extend": (src) => spawnExtendVideo(src),
+  ...Object.fromEntries(
+    VIDEO_CHANGE_PRESETS.map((p2) => [
+      `change:${p2.id}`,
+      (src) => spawnImagePreset(src, p2)
+    ])
+  )
+};
+const audioActionHandlers = Object.fromEntries(
+  AUDIO_CHANGE_PRESETS.map((p2) => [
+    `change:${p2.id}`,
+    (src) => spawnImagePreset(src, p2)
+  ])
+);
+const SPAWN_HANDLERS = {
+  image: imageActionHandlers,
+  "image-picker": imageActionHandlers,
+  "image-batch": imageBatchActionHandlers,
+  model: {
+    "product-shot": (src) => spawnImagePreset(src, PRODUCT_SHOT_PRESET, 1)
+  },
+  video: videoActionHandlers,
+  "video-picker": videoActionHandlers,
+  audio: audioActionHandlers,
+  "audio-picker": audioActionHandlers,
+  panorama: {
+    "view-current": (src) => spawnPanoramaView(src, "current"),
+    "view-four": (src) => spawnPanoramaView(src, "four"),
+    "view-twelve": (src) => spawnPanoramaView(src, "twelve")
+  }
+};
+function spawnFollowUpStage(srcNode, srcKind, actionId, context2) {
+  var _a2, _b2;
+  const handler = (_a2 = SPAWN_HANDLERS[srcKind]) == null ? void 0 : _a2[actionId];
+  if (handler) {
+    handler(srcNode, context2);
+    return;
+  }
+  const targetClass = STAGE_CLASS_BY_KIND[srcKind];
+  const targetGroup = TARGET_GROUP_BY_KIND[srcKind];
+  const newNode = createNodeAt(targetClass, posRightOf(srcNode));
+  if (!newNode) return;
+  const targetSlot = findFirstAutogrowSlot(newNode, targetGroup);
+  if (targetSlot < 0) {
+    console.warn(
+      "[ComfyTV/action] no autogrow slot for",
+      targetGroup,
+      "on new",
+      targetClass,
+      "inputs=",
+      (_b2 = newNode.inputs) == null ? void 0 : _b2.map((i) => i.name)
+    );
+    return;
+  }
+  srcNode.connect(0, newNode, targetSlot);
+  stampLineage(srcNode, newNode);
+}
+const spawnFollowUp = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  IMAGE_GENERATE_CLASS,
+  IMAGE_LOADER_CLASS: IMAGE_LOADER_CLASS$1,
+  IMAGE_MERGE_CLASS,
+  connectSrcSlotsToAutogrow,
+  createNodeAt,
+  findDownstreamOfClass,
+  findFirstAutogrowSlot,
+  findNamedOutputSlot,
+  findNamedSlot,
+  outputHasLinks,
+  setWidget,
+  spawnAssetImageLoader,
+  spawnConsumingNode,
+  spawnFollowUpStage,
+  spawnImageGenerateFromSlots,
+  spawnImageMergeFromSlots,
+  spawnModel3DFromCustomSplit,
+  spawnOrFocusImagesSplit
+}, Symbol.toStringTag, { value: "Module" }));
+const BRIDGE_SPECS = [
+  { fromType: "STRING", toType: "COMFYTV_TEXT", nodeClass: "ComfyTV.BridgeToText", inSlotName: "text", outSlotIndex: 0 },
+  { fromType: "IMAGE", toType: "COMFYTV_IMAGE", nodeClass: "ComfyTV.BridgeToImage", inSlotName: "image", outSlotIndex: 0 },
+  { fromType: "IMAGE", toType: "COMFYTV_IMAGES", nodeClass: "ComfyTV.BridgeToImages", inSlotName: "images", outSlotIndex: 0 },
+  { fromType: "VIDEO", toType: "COMFYTV_VIDEO", nodeClass: "ComfyTV.BridgeToVideo", inSlotName: "video", outSlotIndex: 0 },
+  { fromType: "AUDIO", toType: "COMFYTV_AUDIO", nodeClass: "ComfyTV.BridgeToAudio", inSlotName: "audio", outSlotIndex: 0 },
+  { fromType: "COMFYTV_TEXT", toType: "STRING", nodeClass: "ComfyTV.BridgeFromText", inSlotName: "text", outSlotIndex: 0 },
+  { fromType: "COMFYTV_IMAGE", toType: "IMAGE", nodeClass: "ComfyTV.BridgeFromImage", inSlotName: "image", outSlotIndex: 0 },
+  { fromType: "COMFYTV_IMAGE", toType: "MASK", nodeClass: "ComfyTV.BridgeFromMask", inSlotName: "image", outSlotIndex: 0 },
+  { fromType: "COMFYTV_VIDEO", toType: "VIDEO", nodeClass: "ComfyTV.BridgeFromVideo", inSlotName: "video", outSlotIndex: 0 },
+  { fromType: "COMFYTV_AUDIO", toType: "AUDIO", nodeClass: "ComfyTV.BridgeFromAudio", inSlotName: "audio", outSlotIndex: 0 }
+];
+const BY_PAIR = new Map(BRIDGE_SPECS.map((s) => [`${s.fromType}|${s.toType}`, s]));
+let enabled$2 = true;
+let inserting = false;
+function isAutoBridgeEnabled() {
+  return enabled$2;
+}
+function applyAutoBridgeSetting(rows) {
+  const row = rows.find((r2) => r2.key === "auto-bridge");
+  if (row) enabled$2 = row.value !== false;
+}
+function typeParts(type) {
+  if (type == null || type === "" || type === "*" || type === 0) return [];
+  const s = String(type);
+  if (!s.includes(",")) return [s];
+  return s.split(",").map((p2) => p2.trim()).filter(Boolean);
+}
+function lookupBridge(fromType, toType) {
+  for (const a2 of typeParts(fromType)) {
+    for (const b of typeParts(toType)) {
+      const hit = BY_PAIR.get(`${a2}|${b}`);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+function isBridgeNode(node) {
+  const n = node;
+  const cls = String((n == null ? void 0 : n.comfyClass) || (n == null ? void 0 : n.type) || "");
+  return cls.startsWith("ComfyTV.Bridge");
+}
+function midPos(srcNode, dstNode) {
+  var _a2, _b2, _c, _d, _e2;
+  const sx = ((_a2 = srcNode.pos) == null ? void 0 : _a2[0]) ?? 0;
+  const sy = ((_b2 = srcNode.pos) == null ? void 0 : _b2[1]) ?? 0;
+  const sw = ((_c = srcNode.size) == null ? void 0 : _c[0]) ?? 280;
+  const dx = ((_d = dstNode.pos) == null ? void 0 : _d[0]) ?? sx + sw + 80;
+  const dy = ((_e2 = dstNode.pos) == null ? void 0 : _e2[1]) ?? sy;
+  return [(sx + sw + dx) / 2 - 140, (sy + dy) / 2];
+}
+function insertBridgeAndConnect(srcNode, output, dstNode, input, spec, afterReroute, origConnectSlots) {
+  var _a2, _b2, _c, _d, _e2, _f, _g, _h;
+  const outIdx = ((_a2 = srcNode.outputs) == null ? void 0 : _a2.indexOf(output)) ?? -1;
+  const inIdx = ((_b2 = dstNode.inputs) == null ? void 0 : _b2.indexOf(input)) ?? -1;
+  if (outIdx < 0 || inIdx < 0) return null;
+  const bridge = createNodeAt(spec.nodeClass, midPos(srcNode, dstNode));
+  if (!bridge) return null;
+  const bridgeInIdx = findNamedSlot(bridge, spec.inSlotName);
+  const bridgeInSlot = bridgeInIdx >= 0 ? (_c = bridge.inputs) == null ? void 0 : _c[bridgeInIdx] : null;
+  const bridgeOutSlot = (_d = bridge.outputs) == null ? void 0 : _d[spec.outSlotIndex];
+  if (!bridgeInSlot || !bridgeOutSlot) {
+    console.warn(
+      "[ComfyTV/auto-bridge] missing slots on",
+      spec.nodeClass,
+      "in=",
+      spec.inSlotName,
+      "outIdx=",
+      spec.outSlotIndex
+    );
+    (_f = (_e2 = bridge.graph) == null ? void 0 : _e2.remove) == null ? void 0 : _f.call(_e2, bridge);
+    return null;
+  }
+  inserting = true;
+  try {
+    const link1 = origConnectSlots.call(srcNode, output, bridge, bridgeInSlot, afterReroute);
+    if (!link1) {
+      (_h = (_g = bridge.graph) == null ? void 0 : _g.remove) == null ? void 0 : _h.call(_g, bridge);
+      return null;
+    }
+    const link2 = origConnectSlots.call(bridge, bridgeOutSlot, dstNode, input, void 0);
+    return link2 ?? link1;
+  } finally {
+    inserting = false;
+  }
+}
+function tryInstallPatches() {
+  var _a2;
+  const LG = window.LiteGraph;
+  if (!(LG == null ? void 0 : LG.isValidConnection)) return false;
+  const NodeProto = (_a2 = LG.LGraphNode) == null ? void 0 : _a2.prototype;
+  if (!(NodeProto == null ? void 0 : NodeProto.connectSlots)) return false;
+  if (LG.__comfytvAutoBridgeInstalled) return true;
+  LG.__comfytvAutoBridgeInstalled = true;
+  const origIsValid = LG.isValidConnection.bind(LG);
+  LG.isValidConnection = function(type_a, type_b) {
+    if (origIsValid(type_a, type_b)) return true;
+    if (!isAutoBridgeEnabled()) return false;
+    return lookupBridge(type_a, type_b) != null;
+  };
+  const origConnectSlots = NodeProto.connectSlots;
+  NodeProto.connectSlots = function(output, inputNode, input, afterReroute) {
+    var _a3;
+    if (inserting || !isAutoBridgeEnabled()) {
+      return origConnectSlots.call(this, output, inputNode, input, afterReroute);
+    }
+    if (isBridgeNode(this) || isBridgeNode(inputNode)) {
+      return origConnectSlots.call(this, output, inputNode, input, afterReroute);
+    }
+    if (origIsValid(output == null ? void 0 : output.type, input == null ? void 0 : input.type)) {
+      return origConnectSlots.call(this, output, inputNode, input, afterReroute);
+    }
+    const spec = lookupBridge(output == null ? void 0 : output.type, input == null ? void 0 : input.type);
+    if (!spec) {
+      (_a3 = this.setDirtyCanvas) == null ? void 0 : _a3.call(this, false, true);
+      return null;
+    }
+    return insertBridgeAndConnect(
+      this,
+      output,
+      inputNode,
+      input,
+      spec,
+      afterReroute,
+      origConnectSlots
+    );
+  };
+  return true;
+}
+function installAutoBridge(_app) {
+  if (tryInstallPatches()) return;
+  let tries = 0;
+  const tick = () => {
+    if (tryInstallPatches()) return;
+    if (++tries > 120) {
+      console.warn("[ComfyTV/auto-bridge] LiteGraph.LGraphNode.connectSlots not available");
+      return;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+let enabled$1 = false;
+function isAutoPickerEnabled() {
+  return enabled$1;
+}
+function applyAutoPickerSetting(rows) {
+  const row = rows.find((r2) => r2.key === "auto-picker");
+  if (row) enabled$1 = row.value !== false;
 }
 const LOD_ATTR = "data-v2-lod";
 const FAR_HYSTERESIS = 0.08;
@@ -87152,7 +89928,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-BtKED7NS.mjs"),
+      loader: () => import("./AgentPanelRoot-YJQBjDtj.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -88090,6 +90866,7 @@ function useSettingsPanel(isActive2, textOf = () => "") {
       syncValues();
       applyLodSettings(rows.value);
       applyAutoPickerSetting(rows.value);
+      applyAutoBridgeSetting(rows.value);
       applyCanvasDropSetting(rows.value);
       applyPanelOnSelectSetting(rows.value);
       if (Object.keys(changed).some((k2) => AGENT_TOGGLE_KEYS.has(k2) || k2.startsWith("bot-"))) {
@@ -92228,2640 +95005,6 @@ const _sfc_main$4v = /* @__PURE__ */ defineComponent({
   }
 });
 const ComfyTVSidebar = /* @__PURE__ */ _export_sfc(_sfc_main$4v, [["__scopeId", "data-v-eff997d9"]]);
-const cat$3 = "imageVariant";
-const IMAGE_VARIANT_PRESETS = [
-  { id: "layer-separation", icon: "pi pi-clone", category: cat$3, targetClass: "ComfyTV.LayerSeparationStage", inputSocket: "image" },
-  {
-    id: "cinematic-light",
-    icon: "pi pi-video",
-    category: cat$3,
-    targetClass: "ComfyTV.ImageEditStage",
-    inputAutogrowGroup: "images",
-    widgets: {
-      main_prompt: "cinematic key light, dramatic mood, color graded look; relight the image, preserving identity, geometry, and details"
-    }
-  },
-  {
-    id: "frame-3s",
-    icon: "pi pi-clock",
-    category: cat$3,
-    targetClass: "ComfyTV.ImageEditStage",
-    inputAutogrowGroup: "images",
-    widgets: {
-      main_prompt: "show the scene 3 seconds later, preserving character, environment, and style; continue the action naturally"
-    }
-  },
-  {
-    id: "frame-5s",
-    icon: "pi pi-clock",
-    category: cat$3,
-    targetClass: "ComfyTV.ImageEditStage",
-    inputAutogrowGroup: "images",
-    widgets: {
-      main_prompt: "show the scene 5 seconds later, preserving character, environment, and style; continue the action naturally"
-    }
-  }
-];
-const cat$2 = "imageEdit";
-const IMAGE_EDIT_PRESETS = [
-  { id: "hd", icon: "pi pi-sparkles", category: cat$2, targetClass: "ComfyTV.UpscaleStage", inputSocket: "image" },
-  { id: "outpaint", icon: "pi pi-window-maximize", category: cat$2, targetClass: "ComfyTV.OutpaintStage", inputSocket: "image" },
-  { id: "inpaint", icon: "pi pi-pencil", category: cat$2, targetClass: "ComfyTV.InpaintStage", inputSocket: "image" },
-  { id: "erase", icon: "pi pi-eraser", category: cat$2, targetClass: "ComfyTV.EraseStage", inputSocket: "image" },
-  { id: "cutout", icon: "lucide:scissors", category: cat$2, targetClass: "ComfyTV.CutoutStage", inputSocket: "image" },
-  { id: "crop", icon: "lucide:crop", category: cat$2, targetClass: "ComfyTV.CropStage", inputSocket: "image" },
-  { id: "rotate", icon: "pi pi-refresh", category: cat$2, targetClass: "ComfyTV.RotateStage", inputSocket: "image" },
-  { id: "mirror", icon: "pi pi-arrow-right-arrow-left", category: cat$2, targetClass: "ComfyTV.MirrorStage", inputSocket: "image" },
-  { id: "colorGrade", icon: "pi pi-palette", category: cat$2, targetClass: "ComfyTV.ColorGradeStage", inputSocket: "image" },
-  { id: "grid", icon: "pi pi-th-large", category: cat$2, targetClass: "ComfyTV.GridSplitStage", inputSocket: "image" },
-  { id: "custom-split", icon: "pi pi-pause", category: cat$2, targetClass: "ComfyTV.CustomSplitStage", inputSocket: "image" },
-  { id: "ken-burns", icon: "pi pi-camera", category: cat$2, targetClass: "ComfyTV.KenBurnsStage", inputSocket: "image" }
-];
-const cat$1 = "videoChange";
-const VIDEO_CHANGE_PRESETS = [
-  { id: "clip", icon: "lucide:scissors", category: cat$1, targetClass: "ComfyTV.VideoClipStage", inputSocket: "video" },
-  { id: "split", icon: "pi pi-pause", category: cat$1, targetClass: "ComfyTV.VideoSplitStage", inputSocket: "video" },
-  { id: "speed", icon: "pi pi-forward", category: cat$1, targetClass: "ComfyTV.VideoSpeedStage", inputSocket: "video" },
-  { id: "rotate", icon: "pi pi-refresh", category: cat$1, targetClass: "ComfyTV.VideoRotateStage", inputSocket: "video" },
-  { id: "crop", icon: "lucide:crop", category: cat$1, targetClass: "ComfyTV.VideoCropStage", inputSocket: "video" },
-  { id: "resize", icon: "pi pi-arrows-h", category: cat$1, targetClass: "ComfyTV.VideoResizeStage", inputSocket: "video" },
-  { id: "volume", icon: "pi pi-volume-up", category: cat$1, targetClass: "ComfyTV.VideoVolumeStage", inputSocket: "video" },
-  { id: "mux-audio", icon: "pi pi-headphones", category: cat$1, targetClass: "ComfyTV.VideoMuxAudioStage", inputSocket: "video" },
-  { id: "concat", icon: "pi pi-link", category: cat$1, targetClass: "ComfyTV.VideoConcatStage", inputAutogrowGroup: "videos" },
-  { id: "extract-frame", icon: "pi pi-image", category: cat$1, targetClass: "ComfyTV.VideoExtractFrameStage", inputSocket: "video" },
-  { id: "frames", icon: "pi pi-images", category: cat$1, targetClass: "ComfyTV.VideoFramesStage", inputSocket: "video" },
-  {
-    id: "demux",
-    icon: "pi pi-share-alt",
-    category: cat$1,
-    multiTargetClasses: [
-      "ComfyTV.AudioVideoDemuxAudioStage",
-      "ComfyTV.AudioVideoDemuxVideoStage"
-    ],
-    inputSocket: "video"
-  },
-  { id: "color", icon: "pi pi-palette", category: cat$1, targetClass: "ComfyTV.VideoColorStage", inputSocket: "video" },
-  { id: "curves", icon: "pi pi-chart-line", category: cat$1, targetClass: "ComfyTV.VideoCurvesStage", inputSocket: "video" },
-  { id: "lut", icon: "pi pi-sliders-h", category: cat$1, targetClass: "ComfyTV.VideoLUTStage", inputSocket: "video" },
-  { id: "blur-sharpen", icon: "pi pi-circle", category: cat$1, targetClass: "ComfyTV.VideoBlurSharpenStage", inputSocket: "video" },
-  { id: "denoise", icon: "pi pi-eraser", category: cat$1, targetClass: "ComfyTV.VideoDenoiseStage", inputSocket: "video" },
-  { id: "chroma-key", icon: "pi pi-filter", category: cat$1, targetClass: "ComfyTV.VideoChromaKeyStage", inputSocket: "video" },
-  { id: "transition", icon: "pi pi-arrow-right-arrow-left", category: cat$1, targetClass: "ComfyTV.VideoTransitionStage", inputSocket: "video_a" },
-  { id: "stabilize", icon: "pi pi-wave-pulse", category: cat$1, targetClass: "ComfyTV.VideoStabilizeStage", inputSocket: "video" },
-  { id: "scene-detect", icon: "pi pi-th-large", category: cat$1, targetClass: "ComfyTV.SceneDetectStage", inputSocket: "video" },
-  { id: "interpolate", icon: "pi pi-fast-forward", category: cat$1, targetClass: "ComfyTV.VideoInterpolateStage", inputSocket: "video" },
-  { id: "stylize", icon: "pi pi-sparkles", category: cat$1, targetClass: "ComfyTV.VideoStylizeStage", inputSocket: "video" },
-  { id: "scopes", icon: "pi pi-chart-bar", category: cat$1, targetClass: "ComfyTV.VideoScopesStage", inputSocket: "video" },
-  { id: "transform", icon: "pi pi-arrows-alt", category: cat$1, targetClass: "ComfyTV.VideoTransformStage", inputSocket: "video" },
-  { id: "composite", icon: "pi pi-clone", category: cat$1, targetClass: "ComfyTV.VideoCompositeStage", inputSocket: "background" },
-  { id: "corner-pin", icon: "pi pi-expand", category: cat$1, targetClass: "ComfyTV.CornerPinStage", inputSocket: "video" },
-  { id: "roto-mask", icon: "pi pi-pencil", category: cat$1, targetClass: "ComfyTV.RotoMaskStage", inputSocket: "video" },
-  { id: "motion-track", icon: "pi pi-map-marker", category: cat$1, targetClass: "ComfyTV.MotionTrackStage", inputSocket: "video" },
-  { id: "title", icon: "pi pi-align-center", category: cat$1, targetClass: "ComfyTV.TitleStage", inputSocket: "video" },
-  { id: "subtitles", icon: "pi pi-comment", category: cat$1, targetClass: "ComfyTV.SubtitleStage", inputSocket: "video" },
-  { id: "time-remap", icon: "pi pi-history", category: cat$1, targetClass: "ComfyTV.TimeRemapStage", inputSocket: "video" },
-  { id: "sequence", icon: "pi pi-list", category: cat$1, targetClass: "ComfyTV.SequenceStage", inputAutogrowGroup: "videos" },
-  { id: "stabilize-pro", icon: "pi pi-shield", category: cat$1, targetClass: "ComfyTV.VideoStabilizeV2Stage", inputSocket: "video" },
-  { id: "paint", icon: "pi pi-pencil", category: cat$1, targetClass: "ComfyTV.PaintStrokeStage", inputSocket: "video" },
-  { id: "uv-remap", icon: "pi pi-table", category: cat$1, targetClass: "ComfyTV.STMapStage", inputSocket: "video" },
-  { id: "mask-propagate", icon: "pi pi-forward", category: cat$1, targetClass: "ComfyTV.MaskPropagateStage", inputSocket: "video" },
-  { id: "speech-to-text", icon: "pi pi-microphone", category: cat$1, targetClass: "ComfyTV.SubtitleGenStage", inputSocket: "video" },
-  { id: "hue-correct", icon: "pi pi-sliders-v", category: cat$1, targetClass: "ComfyTV.HueCorrectStage", inputSocket: "video" },
-  { id: "glow", icon: "pi pi-sun", category: cat$1, targetClass: "ComfyTV.GlowStage", inputSocket: "video" },
-  { id: "god-rays", icon: "pi pi-bolt", category: cat$1, targetClass: "ComfyTV.GodRaysStage", inputSocket: "video" },
-  { id: "pik-keyer", icon: "pi pi-eraser", category: cat$1, targetClass: "ComfyTV.PIKStage", inputSocket: "video" },
-  { id: "keyer", icon: "pi pi-filter", category: cat$1, targetClass: "ComfyTV.KeyerStage", inputSocket: "video" },
-  { id: "despill", icon: "pi pi-eraser", category: cat$1, targetClass: "ComfyTV.DespillStage", inputSocket: "video" },
-  { id: "color-suppress", icon: "pi pi-filter-slash", category: cat$1, targetClass: "ComfyTV.ColorSuppressStage", inputSocket: "video" },
-  { id: "key-mix", icon: "pi pi-clone", category: cat$1, targetClass: "ComfyTV.KeyMixStage", inputSocket: "video_a" },
-  { id: "matte-monitor", icon: "pi pi-eye", category: cat$1, targetClass: "ComfyTV.MatteMonitorStage", inputSocket: "video" },
-  { id: "matte-morph", icon: "pi pi-circle", category: cat$1, targetClass: "ComfyTV.MatteMorphStage", inputSocket: "video" },
-  { id: "frame-blend", icon: "pi pi-images", category: cat$1, targetClass: "ComfyTV.FrameBlendStage", inputSocket: "video" },
-  { id: "selective-color", icon: "pi pi-palette", category: cat$1, targetClass: "ComfyTV.SelectiveColorStage", inputSocket: "video" },
-  { id: "chroma-shift", icon: "pi pi-arrows-h", category: cat$1, targetClass: "ComfyTV.ChromaShiftStage", inputSocket: "video" },
-  { id: "pseudocolor", icon: "pi pi-sun", category: cat$1, targetClass: "ComfyTV.PseudocolorStage", inputSocket: "video" },
-  { id: "posterize", icon: "pi pi-th-large", category: cat$1, targetClass: "ComfyTV.PosterizeStage", inputSocket: "video" },
-  { id: "gray-world", icon: "pi pi-circle-off", category: cat$1, targetClass: "ComfyTV.GrayWorldStage", inputSocket: "video" },
-  { id: "cdl", icon: "pi pi-sliders-v", category: cat$1, targetClass: "ComfyTV.CDLStage", inputSocket: "video" },
-  { id: "histogram-eq", icon: "pi pi-chart-bar", category: cat$1, targetClass: "ComfyTV.HistogramEqStage", inputSocket: "video" },
-  { id: "video-360", icon: "pi pi-globe", category: cat$1, targetClass: "ComfyTV.Video360Stage", inputSocket: "video" },
-  { id: "shape-mask", icon: "pi pi-stop", category: cat$1, targetClass: "ComfyTV.ShapeMaskStage", inputSocket: "video" },
-  { id: "lens-distort", icon: "pi pi-expand", category: cat$1, targetClass: "ComfyTV.LensDistortStage", inputSocket: "video" },
-  { id: "chroma-ab", icon: "pi pi-arrows-alt", category: cat$1, targetClass: "ComfyTV.ChromaticAberrationStage", inputSocket: "video" },
-  { id: "lens-flare", icon: "pi pi-sun", category: cat$1, targetClass: "ComfyTV.LensFlareStage", inputSocket: "video" },
-  { id: "particles", icon: "pi pi-sparkles", category: cat$1, targetClass: "ComfyTV.ParticlesStage", inputSocket: "video" },
-  { id: "z-defocus", icon: "pi pi-bullseye", category: cat$1, targetClass: "ComfyTV.ZDefocusStage", inputSocket: "video" },
-  { id: "face-blur", icon: "pi pi-user-minus", category: cat$1, targetClass: "ComfyTV.FaceBlurStage", inputSocket: "video" },
-  { id: "spot-remover", icon: "pi pi-eraser", category: cat$1, targetClass: "ComfyTV.SpotRemoverStage", inputSocket: "video" },
-  { id: "old-film", icon: "pi pi-video", category: cat$1, targetClass: "ComfyTV.OldFilmStage", inputSocket: "video" },
-  { id: "annotate", icon: "pi pi-pencil", category: cat$1, targetClass: "ComfyTV.AnnotateStage", inputSocket: "video" },
-  { id: "audio-reactive", icon: "pi pi-wave-pulse", category: cat$1, targetClass: "ComfyTV.AudioReactiveStage", inputSocket: "video" },
-  { id: "audio-meter", icon: "pi pi-chart-bar", category: cat$1, targetClass: "ComfyTV.AudioMeterStage", inputSocket: "video" },
-  { id: "fx-chain", icon: "pi pi-sitemap", category: cat$1, targetClass: "ComfyTV.FXChainStage", inputSocket: "video" }
-];
-const cat = "audioChange";
-const AUDIO_CHANGE_PRESETS = [
-  { id: "clip", icon: "lucide:scissors", category: cat, targetClass: "ComfyTV.AudioClipStage", inputSocket: "audio" },
-  { id: "split", icon: "pi pi-pause", category: cat, targetClass: "ComfyTV.AudioSplitStage", inputSocket: "audio" },
-  { id: "dynamics", icon: "pi pi-compress", category: cat, targetClass: "ComfyTV.AudioDynamicsStage", inputSocket: "audio" },
-  { id: "loudness", icon: "pi pi-volume-up", category: cat, targetClass: "ComfyTV.AudioLoudnessStage", inputSocket: "audio" },
-  { id: "duck", icon: "pi pi-sort-amount-down", category: cat, targetClass: "ComfyTV.AudioDuckStage", inputSocket: "audio" },
-  { id: "eq", icon: "pi pi-sliders-v", category: cat, targetClass: "ComfyTV.AudioEQStage", inputSocket: "audio" },
-  { id: "saturate", icon: "pi pi-sun", category: cat, targetClass: "ComfyTV.AudioSaturateStage", inputSocket: "audio" },
-  { id: "modulation", icon: "pi pi-wave-pulse", category: cat, targetClass: "ComfyTV.AudioModulationStage", inputSocket: "audio" },
-  { id: "echo", icon: "pi pi-replay", category: cat, targetClass: "ComfyTV.AudioEchoStage", inputSocket: "audio" },
-  { id: "stereo", icon: "pi pi-arrows-h", category: cat, targetClass: "ComfyTV.AudioStereoStage", inputSocket: "audio" },
-  { id: "time-pitch", icon: "pi pi-clock", category: cat, targetClass: "ComfyTV.AudioTimePitchStage", inputSocket: "audio" },
-  { id: "denoise", icon: "pi pi-eraser", category: cat, targetClass: "ComfyTV.AudioDenoiseStage", inputSocket: "audio" },
-  { id: "noise-reduction", icon: "pi pi-filter", category: cat, targetClass: "ComfyTV.AudioNoiseReductionStage", inputSocket: "audio" },
-  { id: "repair", icon: "pi pi-wrench", category: cat, targetClass: "ComfyTV.AudioRepairStage", inputSocket: "audio" },
-  { id: "convolve", icon: "pi pi-building", category: cat, targetClass: "ComfyTV.AudioConvolveStage", inputSocket: "audio" },
-  { id: "deconvolve", icon: "pi pi-undo", category: cat, targetClass: "ComfyTV.AudioDeconvolveStage", inputSocket: "audio" },
-  { id: "muse-reverb", icon: "pi pi-cloud", category: cat, targetClass: "ComfyTV.MuseReverbStage", inputSocket: "audio" },
-  { id: "mix", icon: "pi pi-bars", category: cat, targetClass: "ComfyTV.AudioMixStage", inputSocket: "audio_a" },
-  { id: "crossfade", icon: "pi pi-arrow-right-arrow-left", category: cat, targetClass: "ComfyTV.AudioCrossfadeStage", inputSocket: "audio_a" },
-  { id: "stem-split", icon: "pi pi-share-alt", category: cat, targetClass: "ComfyTV.AudioStemSplitStage", inputSocket: "audio" },
-  { id: "analyze", icon: "pi pi-search", category: cat, targetClass: "ComfyTV.AudioAnalyzeStage", inputSocket: "audio" },
-  { id: "mir", icon: "pi pi-chart-scatter", category: cat, targetClass: "ComfyTV.AudioMIRStage", inputSocket: "audio" },
-  { id: "visualize", icon: "pi pi-chart-bar", category: cat, targetClass: "ComfyTV.AudioVisualizeStage", inputSocket: "audio" },
-  { id: "segment-export", icon: "pi pi-list", category: cat, targetClass: "ComfyTV.AudioSegmentExportStage", inputSocket: "audio" },
-  { id: "reactive", icon: "pi pi-bolt", category: cat, targetClass: "ComfyTV.AudioReactiveStage", inputSocket: "audio" }
-];
-const OUTPUT_SLOTS = ["image", "images", "video", "audio", "text", "model"];
-const SLOT_GROUPS = {
-  image: ["images", "image"],
-  video: ["videos", "video"],
-  audio: ["audio", "audio"],
-  model: ["models", "model"],
-  text: ["texts", "text"]
-};
-const UPLOAD_KIND = [
-  ["image_upload", "image"],
-  ["video_upload", "video"],
-  ["audio_upload", "audio"],
-  ["file_upload", "model"]
-];
-const DATA_KIND = {
-  IMAGE: "image",
-  VIDEO: "video",
-  AUDIO: "audio",
-  STRING: "text",
-  MESH: "model",
-  SPLAT: "model"
-};
-const FRAME_ENCODERS = /* @__PURE__ */ new Set(["SaveWEBM", "VHS_VideoCombine"]);
-const OUTPUT_NODE_KIND = {
-  SaveImage: "image",
-  PreviewImage: "image",
-  SaveAnimatedWEBP: "image",
-  SaveAnimatedPNG: "image",
-  SaveVideo: "video",
-  SaveWEBM: "video",
-  VHS_VideoCombine: "video",
-  SaveAudio: "audio",
-  SaveAudioMP3: "audio",
-  SaveAudioOpus: "audio",
-  SaveAudioAdvanced: "audio",
-  SaveGLB: "model",
-  PreviewAny: "text",
-  ShowText: "text",
-  SaveText: "text",
-  DisplayAny: "text"
-};
-function dataKind(type) {
-  for (const t2 of String(type ?? "").split(",")) {
-    const k2 = DATA_KIND[t2] ?? (t2.startsWith("FILE_3D") ? "model" : null);
-    if (k2) return k2;
-  }
-  return null;
-}
-function inputKey(node, input) {
-  return "cio_" + `${node}_${input}`.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
-}
-function classifyWidget(w) {
-  const props = w.widget_props ?? {};
-  for (const [flag, kind] of UPLOAD_KIND) if (props[flag]) return kind;
-  switch (String(w.widget_type).toUpperCase()) {
-    case "STRING":
-      return "text";
-    case "INT":
-    case "FLOAT":
-    case "BOOLEAN":
-    case "COMBO":
-      return "param";
-    default:
-      return null;
-  }
-}
-function outputKindOf(n) {
-  if (n.out_type === "STRING") return "text";
-  if (!n.is_output) return null;
-  const legacy = OUTPUT_NODE_KIND[n.type];
-  if (legacy) return legacy;
-  if (FRAME_ENCODERS.has(n.type)) return "video";
-  return dataKind(n.in_type);
-}
-function emptyCustomIo() {
-  return { inputs: [], outputs: [] };
-}
-function parseCustomIo(meta) {
-  const raw = meta == null ? void 0 : meta.custom_io;
-  const out = emptyCustomIo();
-  if (!raw || typeof raw !== "object") return out;
-  for (const it2 of Array.isArray(raw.inputs) ? raw.inputs : []) {
-    if (!(it2 == null ? void 0 : it2.node) || !(it2 == null ? void 0 : it2.input) || !(it2 == null ? void 0 : it2.kind)) continue;
-    out.inputs.push({
-      node: String(it2.node),
-      input: String(it2.input),
-      kind: it2.kind,
-      label: String(it2.label ?? it2.input),
-      key: it2.key ? String(it2.key) : inputKey(String(it2.node), String(it2.input)),
-      slot: typeof it2.slot === "number" ? it2.slot : void 0,
-      required: it2.required == null ? void 0 : Boolean(it2.required),
-      ptype: it2.ptype ? String(it2.ptype).toUpperCase() : void 0,
-      props: it2.props && typeof it2.props === "object" ? it2.props : {},
-      default: it2.default,
-      prompt: it2.kind === "text" ? Boolean(it2.prompt) : void 0,
-      random: it2.kind === "param" ? Boolean(it2.random) : void 0
-    });
-  }
-  for (const it2 of Array.isArray(raw.outputs) ? raw.outputs : []) {
-    if (!(it2 == null ? void 0 : it2.node) || !(it2 == null ? void 0 : it2.kind)) continue;
-    out.outputs.push({ node: String(it2.node), kind: it2.kind, label: String(it2.label ?? it2.kind) });
-  }
-  return assignSlots(out);
-}
-function assignSlots(io2) {
-  const counters = {};
-  for (const it2 of io2.inputs) {
-    if (it2.kind === "param") {
-      it2.slot = void 0;
-      continue;
-    }
-    it2.slot = counters[it2.kind] ?? 0;
-    counters[it2.kind] = it2.slot + 1;
-    it2.key = inputKey(it2.node, it2.input);
-  }
-  for (const it2 of io2.inputs) if (it2.kind === "param") it2.key = inputKey(it2.node, it2.input);
-  return io2;
-}
-function slotName(kind, idx) {
-  const [group, prefix] = SLOT_GROUPS[kind];
-  return `${group}.${prefix}${idx}`;
-}
-function inputBySlot(io2, slot) {
-  return io2.inputs.find((it2) => it2.kind !== "param" && slotName(it2.kind, it2.slot ?? 0) === slot);
-}
-function primaryOutput(io2) {
-  return io2.outputs[0];
-}
-function previewKindOf(kind) {
-  if (!kind) return "image";
-  return kind === "images" ? "image" : kind;
-}
-function applySlotLabels(node, io2) {
-  for (const inp of node.inputs ?? []) {
-    const hit = inputBySlot(io2, inp.name);
-    inp.label = hit ? hit.label : void 0;
-  }
-  for (const out of node.outputs ?? []) {
-    const hit = io2.outputs.find((o) => o.kind === out.name);
-    out.label = hit ? hit.label : void 0;
-  }
-}
-function isMediaKind(kind) {
-  return kind === "image" || kind === "video" || kind === "audio" || kind === "model";
-}
-function defaultInputLabel(io2, w, kind, kindName2) {
-  if (w.node_title && w.node_title !== w.node_type) return w.node_title;
-  if (isMediaKind(kind)) {
-    const n = io2.inputs.filter((it2) => it2.kind === kind).length + 1;
-    return `${kindName2 ?? kind} ${n}`;
-  }
-  return `${w.node_title}.${w.widget_name}`;
-}
-function toggleInput(io2, w, kind, label) {
-  const idx = io2.inputs.findIndex((it2) => it2.node === w.node_id && it2.input === w.widget_name);
-  const inputs = [...io2.inputs];
-  if (idx >= 0) inputs.splice(idx, 1);
-  else inputs.push({
-    node: w.node_id,
-    input: w.widget_name,
-    kind,
-    label: label ?? defaultInputLabel(io2, w, kind),
-    required: kind === "param" || kind === "text" ? void 0 : true,
-    ptype: kind === "param" || kind === "text" ? String(w.widget_type).toUpperCase() : void 0,
-    props: kind === "param" ? pickProps(w.widget_props) : {},
-    default: kind === "param" || kind === "text" ? w.current_value : void 0
-  });
-  return assignSlots({ inputs, outputs: io2.outputs });
-}
-function pickProps(props) {
-  const out = {};
-  for (const k2 of ["min", "max", "step", "values", "multiline", "round"]) {
-    if (props && props[k2] !== void 0) out[k2] = props[k2];
-  }
-  return out;
-}
-function toggleOutput(io2, n, kind) {
-  const id = String(n.id);
-  const idx = io2.outputs.findIndex((o) => o.node === id);
-  const outputs = [...io2.outputs];
-  if (idx >= 0) outputs.splice(idx, 1);
-  else {
-    const taken = (k2) => outputs.some((o) => o.kind === k2);
-    const sibling = { image: "images", images: "image" };
-    const alt = sibling[kind];
-    if (taken(kind) && alt && !taken(alt)) kind = alt;
-    const dup = outputs.findIndex((o) => o.kind === kind);
-    if (dup >= 0) outputs.splice(dup, 1);
-    outputs.push({ node: id, kind, label: n.title && n.title !== n.type ? n.title : n.type });
-  }
-  return { inputs: io2.inputs, outputs };
-}
-function hasPromptInput(io2) {
-  return io2.inputs.some((it2) => it2.kind === "text" && it2.prompt);
-}
-function exposedRefTypes(io2) {
-  const out = [];
-  for (const k2 of ["image", "video", "audio"]) {
-    if (io2.inputs.some((it2) => it2.kind === k2)) out.push(k2);
-  }
-  return out;
-}
-function moveItem(arr, from2, to) {
-  if (from2 === to || from2 < 0 || to < 0 || from2 >= arr.length || to >= arr.length) return arr;
-  const out = [...arr];
-  const [it2] = out.splice(from2, 1);
-  out.splice(to, 0, it2);
-  return out;
-}
-function isInputExposed(io2, w) {
-  return io2.inputs.some((it2) => it2.node === w.node_id && it2.input === w.widget_name);
-}
-function isOutputExposed(io2, n) {
-  return io2.outputs.some((o) => o.node === String(n.id));
-}
-function parseMultiOutputs(raw) {
-  let data = raw;
-  if (typeof raw === "string") {
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      return {};
-    }
-  }
-  const out = {};
-  if (!data || typeof data !== "object") return out;
-  for (const k2 of OUTPUT_SLOTS) {
-    const v = data[k2];
-    if (typeof v === "string" && v) out[k2] = v;
-  }
-  return out;
-}
-const POOL_PICKER_KINDS = ["image-picker", "audio-picker", "video-picker"];
-function isPoolPickerKind(kind) {
-  return POOL_PICKER_KINDS.includes(kind);
-}
-const FX_PASSTHROUGH_CLASSES = /* @__PURE__ */ new Set([
-  "ComfyTV.VideoColorStage",
-  "ComfyTV.VideoCurvesStage",
-  "ComfyTV.VideoLUTStage",
-  "ComfyTV.SelectiveColorStage",
-  "ComfyTV.ChromaShiftStage",
-  "ComfyTV.PseudocolorStage",
-  "ComfyTV.PosterizeStage",
-  "ComfyTV.GrayWorldStage",
-  "ComfyTV.CDLStage",
-  "ComfyTV.HistogramEqStage",
-  "ComfyTV.Video360Stage",
-  "ComfyTV.ShapeMaskStage",
-  "ComfyTV.LensDistortStage",
-  "ComfyTV.ChromaticAberrationStage",
-  "ComfyTV.LensFlareStage",
-  "ComfyTV.ParticlesStage",
-  "ComfyTV.VideoBlurSharpenStage",
-  "ComfyTV.VideoDenoiseStage",
-  "ComfyTV.VideoDeinterlaceStage",
-  "ComfyTV.VideoStylizeStage",
-  "ComfyTV.HueCorrectStage",
-  "ComfyTV.DespillStage",
-  "ComfyTV.ColorSuppressStage",
-  "ComfyTV.KeyerStage",
-  "ComfyTV.PIKStage",
-  "ComfyTV.MatteMorphStage",
-  "ComfyTV.GlowStage",
-  "ComfyTV.GodRaysStage",
-  "ComfyTV.OldFilmStage",
-  "ComfyTV.VideoTransformStage",
-  "ComfyTV.FeedbackFXStage",
-  "ComfyTV.StrobeStage",
-  "ComfyTV.ArtFXStage",
-  "ComfyTV.GlitchFXStage",
-  "ComfyTV.KaleidoscopeStage",
-  "ComfyTV.WaveWarpStage",
-  "ComfyTV.WaterStage",
-  "ComfyTV.LightGraffitiStage",
-  "ComfyTV.Select0rStage",
-  "ComfyTV.Card3DStage",
-  "ComfyTV.RegrainStage"
-]);
-const FX_SIDE_SLOTS = {
-  "ComfyTV.KeyerStage": ["in_mask", "out_mask", "bg_video"],
-  "ComfyTV.PIKStage": [
-    "clean_plate_video",
-    "clean_plate",
-    "in_mask",
-    "out_mask",
-    "bg_video"
-  ],
-  "ComfyTV.VideoTransformStage": ["track"],
-  "ComfyTV.ShapeMaskStage": ["shape_image"],
-  "ComfyTV.ParticlesStage": ["mask_video", "mask_image"]
-};
-function isChainableFx(node) {
-  const n = node;
-  const cls = String((n == null ? void 0 : n.comfyClass) ?? (n == null ? void 0 : n.type) ?? "");
-  if (!FX_PASSTHROUGH_CLASSES.has(cls)) return false;
-  const sides2 = FX_SIDE_SLOTS[cls];
-  if (!sides2) return true;
-  return !((n == null ? void 0 : n.inputs) ?? []).some((i) => sides2.includes(String(i == null ? void 0 : i.name)) && (i == null ? void 0 : i.link) != null);
-}
-const KIND_TO_TYPE = {
-  text: "COMFYTV_TEXT",
-  image: "COMFYTV_IMAGE",
-  video: "COMFYTV_VIDEO",
-  audio: "COMFYTV_AUDIO",
-  panorama: "COMFYTV_PANORAMA",
-  storyboard: "COMFYTV_STORYBOARD",
-  "image-batch": "COMFYTV_IMAGES",
-  "image-picker": "COMFYTV_IMAGE",
-  "audio-picker": "COMFYTV_AUDIO",
-  "video-picker": "COMFYTV_VIDEO",
-  timeline: "COMFYTV_TIMELINE",
-  model: "COMFYTV_MODEL",
-  material: "COMFYTV_MATERIAL",
-  custom: "COMFYTV_IMAGE"
-};
-const useStageStore = /* @__PURE__ */ defineStore("comfytv-stage", () => {
-  const stages = /* @__PURE__ */ new WeakMap();
-  const nodeOf = /* @__PURE__ */ new WeakMap();
-  const refreshers = /* @__PURE__ */ new WeakMap();
-  const stateTick = /* @__PURE__ */ ref(0);
-  function registerStage(node, kind, variant = "generator") {
-    const state2 = /* @__PURE__ */ reactive({
-      kind,
-      variant,
-      outputType: KIND_TO_TYPE[kind],
-      output: null,
-      outputs: [null],
-      running: false,
-      inputs: [],
-      mainPrompt: ""
-    });
-    stages.set(node, state2);
-    nodeOf.set(state2, node);
-    return state2;
-  }
-  function unregisterStage(node) {
-    stages.delete(node);
-    refreshers.delete(node);
-  }
-  function setRefresher(node, fn3) {
-    refreshers.set(node, fn3);
-  }
-  function notifyConsumers(state2) {
-    const node = nodeOf.get(state2);
-    const graph = node == null ? void 0 : node.graph;
-    if (!graph) {
-      bumpStateTick();
-      return;
-    }
-    const seen = /* @__PURE__ */ new Set();
-    const visit = (n, depth) => {
-      var _a2, _b2, _c, _d;
-      for (const out of n.outputs ?? []) {
-        for (const linkId of (out == null ? void 0 : out.links) ?? []) {
-          const link2 = typeof ((_a2 = graph.links) == null ? void 0 : _a2.get) === "function" ? graph.links.get(linkId) : (_b2 = graph.links) == null ? void 0 : _b2[linkId];
-          const target = link2 ? (_c = graph.getNodeById) == null ? void 0 : _c.call(graph, link2.target_id) : null;
-          if (!target || seen.has(target)) continue;
-          seen.add(target);
-          (_d = refreshers.get(target)) == null ? void 0 : _d();
-          if (depth < 16 && isChainableFx(target)) visit(target, depth + 1);
-        }
-      }
-    };
-    visit(node, 0);
-  }
-  function getStage(node) {
-    return stages.get(node);
-  }
-  function bumpStateTick() {
-    stateTick.value++;
-  }
-  function notifyDownstream() {
-    bumpStateTick();
-  }
-  function resolveUpstreamValue(app2, linkId, depth = 0) {
-    var _a2, _b2, _c, _d, _e2, _f;
-    if (linkId == null || depth > 16) return null;
-    const linksMap = (_a2 = app2 == null ? void 0 : app2.graph) == null ? void 0 : _a2.links;
-    const link2 = linksMap && typeof linksMap.get === "function" ? linksMap.get(linkId) : (linksMap == null ? void 0 : linksMap[linkId]) ?? ((_c = (_b2 = app2 == null ? void 0 : app2.graph) == null ? void 0 : _b2.getLink) == null ? void 0 : _c.call(_b2, linkId));
-    const srcNode = link2 ? (_e2 = (_d = app2 == null ? void 0 : app2.graph) == null ? void 0 : _d.getNodeById) == null ? void 0 : _e2.call(_d, link2.origin_id) : null;
-    const srcState = srcNode ? stages.get(srcNode) : null;
-    const srcSlotRaw = Number((link2 == null ? void 0 : link2.origin_slot) ?? (link2 == null ? void 0 : link2.originSlot));
-    const srcSlot = Number.isFinite(srcSlotRaw) && srcSlotRaw >= 0 ? srcSlotRaw : 0;
-    if (srcNode && srcSlot === 0 && isChainableFx(srcNode)) {
-      const vin = (srcNode.inputs || []).find((i) => (i == null ? void 0 : i.name) === "video");
-      if ((vin == null ? void 0 : vin.link) != null) return resolveUpstreamValue(app2, vin.link, depth + 1);
-      return null;
-    }
-    if (srcState) {
-      const slotted = (_f = srcState.outputs) == null ? void 0 : _f[srcSlot];
-      if (slotted != null && String(slotted).length > 0) return String(slotted);
-      if (srcSlot === 0 && srcState.output) return String(srcState.output);
-    }
-    return null;
-  }
-  function refreshStageInputs(node, state2, app2) {
-    const out = [];
-    const inputs = node.inputs || [];
-    for (const inp of inputs) {
-      const slot = inp.name;
-      const type = inp.type || "COMFYTV_TEXT";
-      if (inp.link == null) {
-        out.push({ slot, type, source: "empty", content: null });
-        continue;
-      }
-      const upstream = resolveUpstreamValue(app2, inp.link);
-      if (upstream != null) {
-        out.push({ slot, type, source: "upstream", content: upstream });
-      } else {
-        out.push({ slot, type, source: "upstream-pending", content: null });
-      }
-    }
-    state2.inputs = out;
-  }
-  function applyExecutedPayload(state2, msg) {
-    const payload = Array.isArray(msg == null ? void 0 : msg.output) ? msg.output[0] : msg == null ? void 0 : msg.output;
-    const picked = Array.isArray(msg == null ? void 0 : msg.picked) ? msg.picked[0] : msg == null ? void 0 : msg.picked;
-    const pickedIdxRaw = Array.isArray(msg == null ? void 0 : msg.picked_index) ? msg.picked_index[0] : msg == null ? void 0 : msg.picked_index;
-    const outId = Array.isArray(msg == null ? void 0 : msg.output_id) ? msg.output_id[0] : msg == null ? void 0 : msg.output_id;
-    const durationRaw = Array.isArray(msg == null ? void 0 : msg.duration_ms) ? msg.duration_ms[0] : msg == null ? void 0 : msg.duration_ms;
-    state2.running = false;
-    state2.progress = null;
-    state2.error = null;
-    if (payload == null) return;
-    const s = typeof payload === "string" ? payload : String(payload);
-    state2.output = s;
-    while (state2.outputs.length < 1) state2.outputs.push(null);
-    state2.outputs[0] = s;
-    if (state2.outputType === "COMFYTV_VIDEO" && !isPoolPickerKind(state2.kind) && state2.variant !== "loader" && !state2.inputs.some((i) => i.content === s)) {
-      void autoProxyOutput(s);
-    }
-    const fallbackPickedIndex = pickedIdxRaw != null && pickedIdxRaw !== "" && Number.isFinite(Number(pickedIdxRaw)) && Number(pickedIdxRaw) >= 1 ? Number(pickedIdxRaw) : state2.pickedIndex ?? 1;
-    const pickedValue = picked !== void 0 && picked !== null && picked !== "" ? picked : state2.kind === "image-batch" ? computePickedFromBatch(toImagePoolJson(s), fallbackPickedIndex) : null;
-    if (pickedValue !== void 0 && pickedValue !== null && pickedValue !== "") {
-      const p2 = typeof pickedValue === "string" ? pickedValue : String(pickedValue);
-      while (state2.outputs.length < 2) state2.outputs.push(null);
-      state2.outputs[1] = p2;
-    }
-    if (pickedIdxRaw != null && pickedIdxRaw !== "") {
-      const idx = Number(pickedIdxRaw);
-      if (Number.isFinite(idx) && idx >= 1) state2.pickedIndex = idx;
-    }
-    const customRaw = Array.isArray(msg == null ? void 0 : msg.custom_outputs) ? msg.custom_outputs[0] : msg == null ? void 0 : msg.custom_outputs;
-    if (customRaw != null) applyCustomOutputs(state2, customRaw);
-    const directorClips = Array.isArray(msg == null ? void 0 : msg.director_clips) ? msg.director_clips[0] : msg == null ? void 0 : msg.director_clips;
-    if (directorClips != null) state2.directorClips = String(directorClips);
-    state2.outputId = outId != null && outId !== "" ? Number(outId) : null;
-    state2.durationMs = durationRaw != null && durationRaw !== "" && Number.isFinite(Number(durationRaw)) ? Number(durationRaw) : null;
-    notifyConsumers(state2);
-  }
-  function applyCustomOutputs(state2, raw) {
-    const multi = parseMultiOutputs(raw);
-    OUTPUT_SLOTS.forEach((k2, i) => {
-      while (state2.outputs.length <= i) state2.outputs.push(null);
-      state2.outputs[i] = multi[k2] ?? null;
-    });
-  }
-  function setPickerPool(node, state2, poolJson) {
-    var _a2;
-    if (state2.pool === poolJson) return;
-    state2.pool = poolJson;
-    const w = (_a2 = node == null ? void 0 : node.widgets) == null ? void 0 : _a2.find((x) => x.name === "pool");
-    if (w) w.value = poolJson;
-    notifyConsumers(state2);
-  }
-  function clearPickerPool(node, state2) {
-    var _a2;
-    setPickerPool(node, state2, "");
-    state2.pickedIndex = 1;
-    const idx = (_a2 = node == null ? void 0 : node.widgets) == null ? void 0 : _a2.find((x) => x.name === "selected_index");
-    if (idx) idx.value = 1;
-    setOutputSlot(state2, 0, null);
-  }
-  function setOutputSlot(state2, slot, value) {
-    while (state2.outputs.length <= slot) state2.outputs.push(null);
-    if (state2.outputs[slot] === value) return;
-    state2.outputs[slot] = value;
-    if (slot === 0) state2.output = value;
-    notifyConsumers(state2);
-  }
-  function setOutputSlots(state2, values) {
-    let changed = false;
-    while (state2.outputs.length < values.length) {
-      state2.outputs.push(null);
-      changed = true;
-    }
-    for (let i = 0; i < values.length; i++) {
-      if (state2.outputs[i] !== values[i]) {
-        state2.outputs[i] = values[i];
-        changed = true;
-      }
-    }
-    if (values.length > 0 && state2.output !== values[0]) {
-      state2.output = values[0];
-      changed = true;
-    }
-    if (changed) notifyConsumers(state2);
-  }
-  function applyExecutionError(state2, error2) {
-    state2.running = false;
-    state2.progress = null;
-    state2.error = error2;
-  }
-  function clearError(state2) {
-    state2.error = null;
-  }
-  return {
-    stateTick,
-    registerStage,
-    unregisterStage,
-    getStage,
-    bumpStateTick,
-    notifyDownstream,
-    notifyConsumers,
-    setRefresher,
-    refreshStageInputs,
-    resolveUpstreamValue,
-    applyExecutedPayload,
-    applyCustomOutputs,
-    applyExecutionError,
-    clearError,
-    setOutputSlot,
-    setOutputSlots,
-    setPickerPool,
-    clearPickerPool
-  };
-});
-function toImagePoolJson(content) {
-  const empty2 = JSON.stringify({ images: [] });
-  if (!content) return empty2;
-  const s = String(content).trim();
-  if (!s) return empty2;
-  let parsed;
-  try {
-    parsed = JSON.parse(s);
-  } catch {
-    return JSON.stringify({ images: [{ index: "1", image_url: s }] });
-  }
-  return parsed && Array.isArray(parsed.images) ? s : empty2;
-}
-function computePickedImageUrl(state2) {
-  var _a2;
-  const source = state2.pool ? state2.pool : (_a2 = state2.inputs.find((i) => i.slot === "batch")) == null ? void 0 : _a2.content;
-  if (!source) return null;
-  return computePickedFromBatch(toImagePoolJson(source), state2.pickedIndex ?? 1);
-}
-function imagePoolCount(json) {
-  if (!json) return 0;
-  try {
-    const p2 = JSON.parse(String(json));
-    return Array.isArray(p2 == null ? void 0 : p2.images) ? p2.images.length : 0;
-  } catch {
-    return 0;
-  }
-}
-function mergeImagePool(existingPoolJson, incomingJson) {
-  const parse2 = (s) => {
-    if (!s) return [];
-    try {
-      const p2 = JSON.parse(String(s));
-      return Array.isArray(p2 == null ? void 0 : p2.images) ? p2.images : [];
-    } catch {
-      return [];
-    }
-  };
-  const existing = parse2(existingPoolJson);
-  const seen = new Set(existing.map((im) => String(im.image_url ?? "")));
-  const fresh = [];
-  for (const im of parse2(incomingJson)) {
-    const url = String(im.image_url ?? "");
-    if (!url || seen.has(url)) continue;
-    seen.add(url);
-    fresh.push({ ...im });
-  }
-  const merged = [...fresh, ...existing];
-  merged.forEach((im, i) => {
-    im.index = String(i + 1);
-  });
-  return JSON.stringify({ images: merged });
-}
-function nextPickerPool(currentPoolJson, incomingJson, append3) {
-  return append3 ? mergeImagePool(currentPoolJson, incomingJson) : incomingJson;
-}
-function removeImageFromPool(poolJson, imageUrl) {
-  let images = [];
-  try {
-    const p2 = JSON.parse(String(poolJson ?? ""));
-    if (Array.isArray(p2 == null ? void 0 : p2.images)) images = p2.images;
-  } catch {
-    images = [];
-  }
-  const filtered = images.filter((im) => String(im.image_url ?? "") !== String(imageUrl));
-  filtered.forEach((im, i) => {
-    im.index = String(i + 1);
-  });
-  return JSON.stringify({ images: filtered });
-}
-function batchImageUrls(batch2) {
-  if (!batch2) return [];
-  try {
-    const parsed = JSON.parse(String(batch2));
-    const items = Array.isArray(parsed == null ? void 0 : parsed.images) ? parsed.images : [];
-    return items.map((im) => String((im == null ? void 0 : im.image_url) ?? "")).filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-function computePickedFromBatch(batch2, wantIdx) {
-  if (!batch2) return null;
-  try {
-    const parsed = JSON.parse(String(batch2));
-    const images = Array.isArray(parsed == null ? void 0 : parsed.clips) ? parsed.clips : Array.isArray(parsed == null ? void 0 : parsed.images) ? parsed.images : [];
-    const match = images.find((im) => Number(im.index) === wantIdx) ?? images[wantIdx - 1];
-    return (match == null ? void 0 : match.image_url) ?? null;
-  } catch {
-    return null;
-  }
-}
-const IMAGES_SPLIT_MAX = 32;
-const IMAGES_SPLIT_CLASS = "ComfyTV.ImagesSplitStage";
-const IMAGES_SPLIT_TYPE = "COMFYTV_IMAGE";
-function parseImageGroupItems(raw) {
-  const json = toImagePoolJson(raw);
-  let images = [];
-  try {
-    const parsed = JSON.parse(json);
-    images = Array.isArray(parsed == null ? void 0 : parsed.images) ? parsed.images : [];
-  } catch {
-    images = [];
-  }
-  const out = [];
-  for (let i = 0; i < images.length; i++) {
-    const im = images[i] ?? {};
-    const url = String(im.image_url ?? im.url ?? "").trim();
-    if (!url) continue;
-    const label = String(im.label ?? im.name ?? "").trim() || `Layer ${out.length + 1}`;
-    out.push({
-      index: String(im.index ?? out.length + 1),
-      label,
-      image_url: url
-    });
-  }
-  return out;
-}
-function uniqueOutputName$1(label, used, fallback) {
-  const base2 = label.trim() || fallback;
-  let name = base2;
-  let n = 2;
-  while (used.has(name)) name = `${base2} (${n++})`;
-  used.add(name);
-  return name;
-}
-function outputHasLinks$1(slot) {
-  const links = slot == null ? void 0 : slot.links;
-  return Array.isArray(links) && links.length > 0;
-}
-function linkedOutputCount(outputs) {
-  if (!Array.isArray(outputs)) return 0;
-  let n = 0;
-  for (let i = 0; i < outputs.length; i++) {
-    if (outputHasLinks$1(outputs[i])) n = i + 1;
-  }
-  return n;
-}
-function syncImagesSplitOutputs(node, items) {
-  var _a2, _b2;
-  if (!node) return;
-  if (!Array.isArray(node.outputs)) node.outputs = [];
-  const linked = linkedOutputCount(node.outputs);
-  const n = Math.max(1, Math.min(IMAGES_SPLIT_MAX, Math.max(items.length, linked)));
-  while (node.outputs.length > n) {
-    const last = node.outputs[node.outputs.length - 1];
-    if (outputHasLinks$1(last)) break;
-    if (typeof node.removeOutput === "function") node.removeOutput(node.outputs.length - 1);
-    else node.outputs.pop();
-  }
-  const used = /* @__PURE__ */ new Set();
-  for (let i = 0; i < n; i++) {
-    const name = `image${i + 1}`;
-    const display = uniqueOutputName$1(((_a2 = items[i]) == null ? void 0 : _a2.label) || "", used, name);
-    if (i >= node.outputs.length) {
-      if (typeof node.addOutput === "function") {
-        node.addOutput(name, IMAGES_SPLIT_TYPE, { label: display, localized_name: display });
-      } else {
-        node.outputs.push({
-          name,
-          type: IMAGES_SPLIT_TYPE,
-          label: display,
-          localized_name: display,
-          links: []
-        });
-      }
-      continue;
-    }
-    const slot = node.outputs[i];
-    slot.name = name;
-    slot.label = display;
-    slot.localized_name = display;
-    if (slot.type == null || slot.type === "") slot.type = IMAGES_SPLIT_TYPE;
-  }
-  (_b2 = node.setDirtyCanvas) == null ? void 0 : _b2.call(node, true, true);
-  compactImagesSplitNode(node, n);
-}
-function splitImageGroup(raw) {
-  const parsed = parseImageGroupItems(raw);
-  return {
-    items: parsed.slice(0, IMAGES_SPLIT_MAX),
-    truncated: parsed.length > IMAGES_SPLIT_MAX
-  };
-}
-function syncImagesSplitStage(node, raw, writeSlots) {
-  const { items, truncated } = splitImageGroup(raw);
-  syncImagesSplitOutputs(node, items);
-  writeSlots(Array.from({ length: IMAGES_SPLIT_MAX }, (_, i) => {
-    var _a2;
-    return ((_a2 = items[i]) == null ? void 0 : _a2.image_url) ?? null;
-  }));
-  return { items, truncated };
-}
-function imagesSplitUrlAt(state2, slot) {
-  var _a2, _b2, _c, _d;
-  const slotted = (_a2 = state2 == null ? void 0 : state2.outputs) == null ? void 0 : _a2[slot];
-  if (slotted != null && String(slotted).length > 0) return String(slotted);
-  const raw = (_c = (_b2 = state2 == null ? void 0 : state2.inputs) == null ? void 0 : _b2.find((i) => i.slot === "images")) == null ? void 0 : _c.content;
-  return ((_d = parseImageGroupItems(raw)[slot]) == null ? void 0 : _d.image_url) ?? null;
-}
-const IMAGES_SPLIT_MIN_W = 360;
-const IMAGES_SPLIT_MIN_H = 680;
-const IMAGES_SPLIT_MAX_H = 800;
-const IMAGES_SPLIT_STRETCH_H = 840;
-function compactImagesSplitNode(node, itemCount) {
-  var _a2, _b2, _c;
-  if (typeof (node == null ? void 0 : node.setSize) !== "function") return;
-  const w = Math.max(Number((_a2 = node.size) == null ? void 0 : _a2[0]) || IMAGES_SPLIT_MIN_W, IMAGES_SPLIT_MIN_W);
-  const h2 = Number((_b2 = node.size) == null ? void 0 : _b2[1]) || 0;
-  const rows = Math.min(Math.max(itemCount, 1), 2);
-  const want = Math.max(IMAGES_SPLIT_MIN_H, Math.min(IMAGES_SPLIT_MAX_H, 160 + rows * 280));
-  if (h2 < want - 8 || h2 > IMAGES_SPLIT_STRETCH_H) {
-    node.setSize([w, want]);
-    (_c = node.setDirtyCanvas) == null ? void 0 : _c.call(node, true, true);
-  }
-}
-function rangeSelectIndexes(order2, from2, to) {
-  const a2 = order2.indexOf(from2);
-  const b = order2.indexOf(to);
-  if (a2 < 0) return b < 0 ? [] : [to];
-  if (b < 0) return [from2];
-  const lo = Math.min(a2, b);
-  const hi = Math.max(a2, b);
-  return order2.slice(lo, hi + 1);
-}
-function layerImageSize(im) {
-  return {
-    w: Math.max(1, Math.round(Number(im.naturalWidth ?? im.width) || 1)),
-    h: Math.max(1, Math.round(Number(im.naturalHeight ?? im.height) || 1))
-  };
-}
-function compositeLayerImages(images) {
-  const out = document.createElement("canvas");
-  if (!images.length) {
-    out.width = 1;
-    out.height = 1;
-    return out;
-  }
-  let w = 1;
-  let h2 = 1;
-  for (const im of images) {
-    const s = layerImageSize(im);
-    if (s.w > w) w = s.w;
-    if (s.h > h2) h2 = s.h;
-  }
-  out.width = w;
-  out.height = h2;
-  const ctx = out.getContext("2d");
-  if (!ctx) return out;
-  for (const im of images) ctx.drawImage(im, 0, 0);
-  return out;
-}
-const IMAGE_MERGE_CLASS = "ComfyTV.ImageMergeStage";
-const IMAGE_MERGE_MAX = 32;
-const MERGE_IMAGE_TYPE = "COMFYTV_IMAGE";
-const MERGE_MODES = ["layers", "row"];
-function parseMergeMode(raw) {
-  return raw === "row" ? "row" : "layers";
-}
-function parseMergeAspect(raw) {
-  return raw === "1:1" ? "1:1" : "native";
-}
-function parseAutogrowImageIndex(slot) {
-  const s = String(slot || "");
-  const m = /^(?:images\.)?image(\d+)$/.exec(s);
-  return m ? Number(m[1]) : null;
-}
-function mergeImageSlotNames(index2) {
-  return [`images.image${index2}`, `image${index2}`];
-}
-function findMergeImageSlot(node, index2) {
-  const inputs = node == null ? void 0 : node.inputs;
-  if (!Array.isArray(inputs)) return -1;
-  for (const name of mergeImageSlotNames(index2)) {
-    const i = inputs.findIndex((inp) => String((inp == null ? void 0 : inp.name) || "") === name);
-    if (i >= 0) return i;
-  }
-  return -1;
-}
-function lookupGraphLink$1(graph, id) {
-  var _a2;
-  const links = graph == null ? void 0 : graph.links;
-  if (!links) return ((_a2 = graph == null ? void 0 : graph.getLink) == null ? void 0 : _a2.call(graph, id)) ?? null;
-  if (typeof links.get === "function") return links.get(id) ?? null;
-  return links[id] ?? null;
-}
-function ensureMergeImageSockets(node, graph) {
-  const inputs = node == null ? void 0 : node.inputs;
-  if (!Array.isArray(inputs)) return;
-  const g2 = graph ?? (node == null ? void 0 : node.graph);
-  for (const inp of inputs) {
-    const name = String((inp == null ? void 0 : inp.name) || "");
-    if (name === "images") continue;
-    if (parseAutogrowImageIndex(name) == null) continue;
-    inp.type = MERGE_IMAGE_TYPE;
-    if (inp.link == null || !g2) continue;
-    const link2 = lookupGraphLink$1(g2, inp.link);
-    if (link2) link2.type = MERGE_IMAGE_TYPE;
-  }
-}
-function ensureMergeInputCount(node, count2) {
-  if (!node || count2 <= 0) return;
-  if (!Array.isArray(node.inputs)) node.inputs = [];
-  const n = Math.min(Math.max(1, count2), IMAGE_MERGE_MAX);
-  for (let i = 0; i < n; i++) {
-    if (findMergeImageSlot(node, i) >= 0) continue;
-    const name = `images.image${i}`;
-    if (typeof node.addInput === "function") node.addInput(name, MERGE_IMAGE_TYPE);
-    else node.inputs.push({ name, type: MERGE_IMAGE_TYPE, link: null });
-  }
-  if (n < IMAGE_MERGE_MAX && findMergeImageSlot(node, n) < 0) {
-    const spare = `images.image${n}`;
-    if (typeof node.addInput === "function") node.addInput(spare, MERGE_IMAGE_TYPE);
-    else node.inputs.push({ name: spare, type: MERGE_IMAGE_TYPE, link: null });
-  }
-  ensureMergeImageSockets(node);
-}
-function linkedMergeImageMax(node, saved) {
-  var _a2, _b2;
-  let linkedMax = -1;
-  for (const s of saved ?? []) {
-    const idx = parseAutogrowImageIndex(String((s == null ? void 0 : s.name) || ""));
-    if (idx != null && (s == null ? void 0 : s.link) != null) linkedMax = Math.max(linkedMax, idx);
-  }
-  for (const inp of (node == null ? void 0 : node.inputs) ?? []) {
-    const idx = parseAutogrowImageIndex(String((inp == null ? void 0 : inp.name) || ""));
-    if (idx != null && (inp == null ? void 0 : inp.link) != null) linkedMax = Math.max(linkedMax, idx);
-  }
-  const links = (_a2 = node == null ? void 0 : node.graph) == null ? void 0 : _a2.links;
-  if (links) {
-    const all = typeof links.values === "function" ? [...links.values()] : Object.values(links);
-    for (const link2 of all) {
-      if (!link2 || link2.target_id !== (node == null ? void 0 : node.id)) continue;
-      const slot = Number(link2.target_slot);
-      if (!Number.isInteger(slot) || slot < 0) continue;
-      const inp = (_b2 = node.inputs) == null ? void 0 : _b2[slot];
-      const idx = parseAutogrowImageIndex(String((inp == null ? void 0 : inp.name) || ""));
-      if (idx != null) linkedMax = Math.max(linkedMax, idx);
-    }
-  }
-  return linkedMax;
-}
-function pruneMergeEmptyInputs(node, keepCount) {
-  if (!node || !Array.isArray(node.inputs)) return;
-  const keep = Math.min(Math.max(1, keepCount), IMAGE_MERGE_MAX);
-  const maxKeepIdx = keep < IMAGE_MERGE_MAX ? keep : keep - 1;
-  for (let i = node.inputs.length - 1; i >= 0; i--) {
-    const inp = node.inputs[i];
-    const idx = parseAutogrowImageIndex(String((inp == null ? void 0 : inp.name) || ""));
-    if (idx == null || idx <= maxKeepIdx) continue;
-    if ((inp == null ? void 0 : inp.link) != null) continue;
-    if (typeof node.removeInput === "function") node.removeInput(i);
-    else node.inputs.splice(i, 1);
-  }
-}
-function restoreMergeInputsFromSaved(node, info) {
-  if (!node) return;
-  if (!Array.isArray(node.inputs)) node.inputs = [];
-  const saved = Array.isArray(info == null ? void 0 : info.inputs) ? info.inputs : [];
-  const linkedMax = linkedMergeImageMax(node, saved);
-  const need = Math.max(linkedMax + 1, 1);
-  ensureMergeInputCount(node, need);
-  for (const s of saved) {
-    const name = String((s == null ? void 0 : s.name) || "");
-    const idx = parseAutogrowImageIndex(name);
-    if (idx == null) continue;
-    const linkId = s == null ? void 0 : s.link;
-    if (linkId == null) continue;
-    const slot = findMergeImageSlot(node, idx);
-    if (slot < 0) continue;
-    const inp = node.inputs[slot];
-    if (!inp) continue;
-    inp.link = linkId;
-    const link2 = lookupGraphLink$1(node.graph, linkId);
-    if (link2) {
-      link2.target_id = node.id;
-      link2.target_slot = slot;
-      link2.type = MERGE_IMAGE_TYPE;
-    }
-  }
-  const g2 = node.graph;
-  const links = g2 == null ? void 0 : g2.links;
-  if (links) {
-    const all = typeof links.values === "function" ? [...links.values()] : Object.values(links);
-    for (const link2 of all) {
-      if (!link2 || link2.target_id !== node.id) continue;
-      const slot = Number(link2.target_slot);
-      if (!Number.isInteger(slot) || slot < 0) continue;
-      const inp = node.inputs[slot];
-      if (!inp) continue;
-      const idx = parseAutogrowImageIndex(String(inp.name || ""));
-      if (idx == null) continue;
-      inp.link = link2.id ?? link2;
-      link2.type = MERGE_IMAGE_TYPE;
-    }
-  }
-  pruneMergeEmptyInputs(node, need);
-  ensureMergeImageSockets(node, g2);
-}
-function countLinkedMergeSlots(inputs) {
-  const seen = /* @__PURE__ */ new Set();
-  for (const inp of inputs ?? []) {
-    const idx = parseAutogrowImageIndex(String(inp.slot || inp.name || ""));
-    if (idx == null) continue;
-    const linked = inp.link != null || inp.source != null && inp.source !== "empty";
-    if (!linked) continue;
-    seen.add(idx);
-  }
-  return seen.size;
-}
-function collectMergeUrlsFromSources(opts) {
-  var _a2;
-  const byIndex = /* @__PURE__ */ new Map();
-  const put = (slot, raw) => {
-    const idx = parseAutogrowImageIndex(slot);
-    if (idx == null) return;
-    const url = previewUrlFromPayload(raw) ?? (raw && !String(raw).startsWith("{") ? String(raw) : null);
-    if (!url) return;
-    if (!byIndex.has(idx)) byIndex.set(idx, url);
-  };
-  for (const inp of opts.inputs ?? []) put(String(inp.slot || ""), inp.content);
-  for (const inp of opts.nodeInputs ?? []) {
-    const name = String(inp.name || "");
-    const idx = parseAutogrowImageIndex(name);
-    if (idx == null || inp.link == null || byIndex.has(idx)) continue;
-    put(name, ((_a2 = opts.resolveLink) == null ? void 0 : _a2.call(opts, inp.link)) ?? null);
-  }
-  return [...byIndex.entries()].sort((a2, b) => a2[0] - b[0]).map(([, url]) => url).slice(0, IMAGE_MERGE_MAX);
-}
-function uniqueSlotIndexes(indexes) {
-  const seen = /* @__PURE__ */ new Set();
-  const out = [];
-  for (const i of indexes) {
-    if (!Number.isInteger(i) || i < 0 || seen.has(i)) continue;
-    seen.add(i);
-    out.push(i);
-  }
-  return out;
-}
-function layoutImagesRow(images, gap = 0) {
-  const out = document.createElement("canvas");
-  if (!images.length) {
-    out.width = 1;
-    out.height = 1;
-    return out;
-  }
-  const sizes = images.map(layerImageSize);
-  const w = sizes.reduce((sum, s) => sum + s.w, 0) + gap * Math.max(0, images.length - 1);
-  const h2 = Math.max(...sizes.map((s) => s.h));
-  out.width = Math.max(1, w);
-  out.height = Math.max(1, h2);
-  const ctx = out.getContext("2d");
-  if (!ctx) return out;
-  let x = 0;
-  for (let i = 0; i < images.length; i++) {
-    ctx.drawImage(images[i], x, 0);
-    x += sizes[i].w + gap;
-  }
-  return out;
-}
-function containFitSquare(im, size2) {
-  const side = Math.max(1, Math.round(size2));
-  const out = document.createElement("canvas");
-  out.width = side;
-  out.height = side;
-  const ctx = out.getContext("2d");
-  if (!ctx) return out;
-  const { w, h: h2 } = layerImageSize(im);
-  const scale = Math.min(side / w, side / h2);
-  const dw = w * scale;
-  const dh = h2 * scale;
-  ctx.drawImage(im, (side - dw) / 2, (side - dh) / 2, dw, dh);
-  return out;
-}
-function padCanvasToSquare(src) {
-  const w = Math.max(1, src.width | 0);
-  const h2 = Math.max(1, src.height | 0);
-  const side = Math.max(1, Math.max(w, h2));
-  if (w === side && h2 === side) return src;
-  const out = document.createElement("canvas");
-  out.width = side;
-  out.height = side;
-  const ctx = out.getContext("2d");
-  if (!ctx) return out;
-  ctx.drawImage(src, Math.floor((side - w) / 2), Math.floor((side - h2) / 2));
-  return out;
-}
-function squareCellSize(images) {
-  let side = 1;
-  for (const im of images) {
-    const { w, h: h2 } = layerImageSize(im);
-    side = Math.max(side, Math.max(w, h2));
-  }
-  return side;
-}
-function layoutImagesRowSquare(images, gap = 0) {
-  if (!images.length) return layoutImagesRow(images, gap);
-  const cell = squareCellSize(images);
-  const squares = images.map((im) => containFitSquare(im, cell));
-  try {
-    return layoutImagesRow(squares, gap);
-  } finally {
-    for (const c2 of squares) {
-      c2.width = 0;
-      c2.height = 0;
-    }
-  }
-}
-function mergeImages(images, mode, aspect2 = "native") {
-  const m = parseMergeMode(mode);
-  const a2 = parseMergeAspect(aspect2);
-  if (m === "row") {
-    return a2 === "1:1" ? layoutImagesRowSquare(images) : layoutImagesRow(images);
-  }
-  const stacked = compositeLayerImages(images);
-  if (a2 !== "1:1") return stacked;
-  const squared = padCanvasToSquare(stacked);
-  if (squared !== stacked) {
-    stacked.width = 0;
-    stacked.height = 0;
-  }
-  return squared;
-}
-function slotIndexesInDocumentOrder(items, indexes) {
-  const want = new Set(indexes);
-  return items.map((_, i) => i).filter((i) => want.has(i));
-}
-const imageMerge = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  IMAGE_MERGE_CLASS,
-  IMAGE_MERGE_MAX,
-  MERGE_IMAGE_TYPE,
-  MERGE_MODES,
-  collectMergeUrlsFromSources,
-  containFitSquare,
-  countLinkedMergeSlots,
-  ensureMergeImageSockets,
-  ensureMergeInputCount,
-  findMergeImageSlot,
-  layoutImagesRow,
-  linkedMergeImageMax,
-  mergeImageSlotNames,
-  mergeImages,
-  padCanvasToSquare,
-  parseAutogrowImageIndex,
-  parseMergeAspect,
-  parseMergeMode,
-  pruneMergeEmptyInputs,
-  restoreMergeInputsFromSaved,
-  slotIndexesInDocumentOrder,
-  uniqueSlotIndexes
-}, Symbol.toStringTag, { value: "Module" }));
-function computeFit$1(boxW, boxH, mediaW, mediaH) {
-  if (!boxW || !boxH || !mediaW || !mediaH) return { scale: 1, offX: 0, offY: 0 };
-  const scale = Math.min(boxW / mediaW, boxH / mediaH);
-  return {
-    scale,
-    offX: (boxW - mediaW * scale) / 2,
-    offY: (boxH - mediaH * scale) / 2
-  };
-}
-function clientToMedia(clientX, clientY, rect, fit, mediaW, mediaH) {
-  return [
-    Math.min(mediaW, Math.max(0, (clientX - rect.left - fit.offX) / fit.scale)),
-    Math.min(mediaH, Math.max(0, (clientY - rect.top - fit.offY) / fit.scale))
-  ];
-}
-function mediaToBox(x, y, fit) {
-  return [x * fit.scale + fit.offX, y * fit.scale + fit.offY];
-}
-function useVideoViewport(opts) {
-  const { videoEl, overlayEl } = opts;
-  const vw = /* @__PURE__ */ ref(0);
-  const vh = /* @__PURE__ */ ref(0);
-  const duration2 = /* @__PURE__ */ ref(0);
-  const currentTime = /* @__PURE__ */ ref(0);
-  let observer2 = null;
-  function observe(el2) {
-    observer2 == null ? void 0 : observer2.disconnect();
-    observer2 = null;
-    if (!el2 || !opts.onResize || typeof ResizeObserver === "undefined") return;
-    observer2 = new ResizeObserver(() => {
-      var _a2;
-      return (_a2 = opts.onResize) == null ? void 0 : _a2.call(opts);
-    });
-    observer2.observe(el2);
-  }
-  watch(overlayEl, observe, { immediate: true });
-  onBeforeUnmount(() => {
-    observer2 == null ? void 0 : observer2.disconnect();
-    observer2 = null;
-  });
-  function onLoadedMetadata() {
-    const v = videoEl.value;
-    if (!v) return;
-    vw.value = v.videoWidth;
-    vh.value = v.videoHeight;
-    duration2.value = Number.isFinite(v.duration) ? v.duration : 0;
-  }
-  function onTimeUpdate() {
-    var _a2;
-    currentTime.value = ((_a2 = videoEl.value) == null ? void 0 : _a2.currentTime) ?? 0;
-  }
-  function fit() {
-    const box = overlayEl.value;
-    if (!box) return { scale: 1, offX: 0, offY: 0 };
-    return computeFit$1(box.clientWidth, box.clientHeight, vw.value, vh.value);
-  }
-  function toVideo(e) {
-    const box = overlayEl.value;
-    if (!box) return [0, 0];
-    const rect = box.getBoundingClientRect();
-    const zoom = rect.width > 0 && box.clientWidth > 0 ? rect.width / box.clientWidth : 1;
-    return clientToMedia(
-      rect.left + (e.clientX - rect.left) / zoom,
-      rect.top + (e.clientY - rect.top) / zoom,
-      rect,
-      fit(),
-      vw.value,
-      vh.value
-    );
-  }
-  function syncCanvasSize() {
-    const c2 = overlayEl.value;
-    const ctx = c2 == null ? void 0 : c2.getContext("2d");
-    if (!c2 || !ctx) return null;
-    if (c2.width !== c2.clientWidth || c2.height !== c2.clientHeight) {
-      c2.width = c2.clientWidth;
-      c2.height = c2.clientHeight;
-    }
-    ctx.clearRect(0, 0, c2.width, c2.height);
-    return ctx;
-  }
-  function togglePlay() {
-    const v = videoEl.value;
-    if (!v) return;
-    if (v.paused) void v.play();
-    else v.pause();
-  }
-  return {
-    vw,
-    vh,
-    duration: duration2,
-    currentTime,
-    onLoadedMetadata,
-    onTimeUpdate,
-    fit,
-    toVideo,
-    syncCanvasSize,
-    togglePlay
-  };
-}
-const SCHEDULE_DELAY_MS$4 = 250;
-const MIN_GRID = 1;
-const MAX_GRID = 10;
-const MIN_BORDER = 0;
-const MIN_DIVIDER_PX = 2;
-function displayedImageRect(natW, natH, contW, contH) {
-  if (natW <= 0 || natH <= 0 || contW <= 0 || contH <= 0) return null;
-  const fit = computeFit$1(contW, contH, natW, natH);
-  return {
-    w: natW * fit.scale,
-    h: natH * fit.scale,
-    ox: fit.offX,
-    oy: fit.offY,
-    scale: fit.scale
-  };
-}
-function dividerCenters(n, natSize, border, outer) {
-  const o = outer ? 1 : 0;
-  const cell = (natSize - (n - 1 + 2 * o) * border) / n;
-  const centers = [];
-  if (o && border > 0) centers.push(border / 2);
-  for (let k2 = 1; k2 < n; k2++) centers.push(o * border + k2 * cell + (k2 - 0.5) * border);
-  if (o && border > 0) centers.push(natSize - border / 2);
-  return centers;
-}
-function dividerBands(axis, d, natSize, count2, border, outer) {
-  const b = Math.max(0, border);
-  const thick = Math.max(MIN_DIVIDER_PX, b * d.scale);
-  return dividerCenters(count2, natSize, b, outer).map((centerNat) => axis === "v" ? {
-    left: `${d.ox + centerNat * d.scale - thick / 2}px`,
-    top: `${d.oy}px`,
-    width: `${thick}px`,
-    height: `${d.h}px`
-  } : {
-    left: `${d.ox}px`,
-    top: `${d.oy + centerNat * d.scale - thick / 2}px`,
-    width: `${d.w}px`,
-    height: `${thick}px`
-  });
-}
-function useGridSplit(node, state2) {
-  var _a2;
-  const store2 = useStageStore();
-  const sourceImageUrl = computed(() => {
-    const inp = state2.inputs.find((i) => i.slot === "image");
-    return inp && inp.source === "upstream" && inp.content ? inp.content : null;
-  });
-  const rows = /* @__PURE__ */ ref(readWidgetNum(node, "rows", 2));
-  const cols = /* @__PURE__ */ ref(readWidgetNum(node, "cols", 2));
-  const border = /* @__PURE__ */ ref(Math.max(MIN_BORDER, readWidgetNum(node, "border", 0)));
-  const outerBorder = /* @__PURE__ */ ref(!!((_a2 = getWidget(node, "outer_border")) == null ? void 0 : _a2.value));
-  function setGrid(r2, c2) {
-    rows.value = Math.max(MIN_GRID, Math.min(MAX_GRID, r2));
-    cols.value = Math.max(MIN_GRID, Math.min(MAX_GRID, c2));
-  }
-  function setBorder(v) {
-    border.value = Math.max(MIN_BORDER, Math.round(Number.isFinite(v) ? v : 0));
-  }
-  function setOuterBorder(v) {
-    outerBorder.value = !!v;
-  }
-  function wireWidget(name, apply2) {
-    const w = getWidget(node, name);
-    if (!w) return;
-    const orig = w.callback;
-    w.callback = (v) => {
-      orig == null ? void 0 : orig.call(w, v);
-      apply2(Number(v));
-    };
-  }
-  wireWidget("rows", (v) => {
-    if (v !== rows.value) rows.value = v;
-  });
-  wireWidget("cols", (v) => {
-    if (v !== cols.value) cols.value = v;
-  });
-  wireWidget("border", (v) => {
-    if (v !== border.value) border.value = Math.max(MIN_BORDER, v);
-  });
-  {
-    const w = getWidget(node, "outer_border");
-    if (w) {
-      const orig = w.callback;
-      w.callback = (v) => {
-        orig == null ? void 0 : orig.call(w, v);
-        outerBorder.value = !!v;
-      };
-    }
-  }
-  if (node) {
-    const orig = node.onConfigure;
-    node.onConfigure = function(info) {
-      var _a3;
-      orig == null ? void 0 : orig.call(this, info);
-      const r2 = readWidgetNum(node, "rows", rows.value);
-      const c2 = readWidgetNum(node, "cols", cols.value);
-      const b = readWidgetNum(node, "border", border.value);
-      const o = !!((_a3 = getWidget(node, "outer_border")) == null ? void 0 : _a3.value);
-      if (r2 !== rows.value) rows.value = r2;
-      if (c2 !== cols.value) cols.value = c2;
-      if (b !== border.value) border.value = Math.max(MIN_BORDER, b);
-      if (o !== outerBorder.value) outerBorder.value = o;
-    };
-  }
-  const splitting = /* @__PURE__ */ ref(false);
-  let timer = null;
-  let seq2 = 0;
-  let cachedImg = null;
-  let cachedUrl = null;
-  function getSourceImage(url) {
-    if (cachedImg && cachedUrl === url && cachedImg.complete) {
-      return Promise.resolve(cachedImg);
-    }
-    return new Promise((resolve2, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        cachedImg = img;
-        cachedUrl = url;
-        resolve2(img);
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
-  }
-  function schedule() {
-    if (!sourceImageUrl.value) return;
-    if (timer != null) window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
-      timer = null;
-      void run3();
-    }, SCHEDULE_DELAY_MS$4);
-  }
-  async function run3() {
-    const url = sourceImageUrl.value;
-    const r2 = rows.value, c2 = cols.value;
-    if (!url || r2 < 1 || c2 < 1) return;
-    const mySeq = ++seq2;
-    splitting.value = true;
-    try {
-      const img = await getSourceImage(url);
-      if (mySeq !== seq2) return;
-      const b = Math.max(0, Math.round(border.value));
-      const o = outerBorder.value ? 1 : 0;
-      const cellW = Math.floor((img.naturalWidth - (c2 - 1 + 2 * o) * b) / c2);
-      const cellH = Math.floor((img.naturalHeight - (r2 - 1 + 2 * o) * b) / r2);
-      if (cellW < 1 || cellH < 1) return;
-      const items = [];
-      let n = 0;
-      const nodeId = String((node == null ? void 0 : node.id) ?? "unknown");
-      for (let row = 0; row < r2; row++) {
-        for (let col = 0; col < c2; col++) {
-          if (mySeq !== seq2) return;
-          n++;
-          const canvas = document.createElement("canvas");
-          canvas.width = cellW;
-          canvas.height = cellH;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) throw new Error("2d context unavailable");
-          ctx.drawImage(img, o * b + col * (cellW + b), o * b + row * (cellH + b), cellW, cellH, 0, 0, cellW, cellH);
-          const imageUrl = await uploadCanvas(canvas, {
-            subfolder: "comfytv/gridsplit",
-            filename: `comfytv-grid-${nodeId}-${Date.now()}-${n}.png`
-          });
-          if (mySeq !== seq2) return;
-          items.push({
-            index: String(n),
-            label: `R${row + 1}C${col + 1}`,
-            image_url: imageUrl
-          });
-        }
-      }
-      if (mySeq !== seq2) return;
-      store2.applyExecutedPayload(state2, { output: [JSON.stringify({ images: items })] });
-    } catch (e) {
-      console.error("[ComfyTV/gridsplit] split failed", e);
-    } finally {
-      if (mySeq === seq2) splitting.value = false;
-    }
-  }
-  watch([rows, cols, border, outerBorder], ([r2, c2, b, o]) => {
-    writeWidget(node, "rows", r2);
-    writeWidget(node, "cols", c2);
-    writeWidget(node, "border", b);
-    writeWidget(node, "outer_border", o);
-    schedule();
-  });
-  watch(sourceImageUrl, () => schedule(), { immediate: true });
-  return {
-    sourceImageUrl,
-    rows,
-    cols,
-    setGrid,
-    border,
-    setBorder,
-    outerBorder,
-    setOuterBorder,
-    splitting
-  };
-}
-const SPLIT_LINE_PX = 2;
-const SPLIT_HIT_PX = 10;
-const SCHEDULE_DELAY_MS$3 = 250;
-const MIN_SPLIT_GAP = 0.01;
-const MAX_SPLITS = 9;
-const DEFAULT_V_SPLITS = [0.5];
-const DEFAULT_H_SPLITS = [];
-const FACE_LABELS = ["正", "左", "背", "右"];
-const CUSTOM_SPLIT_IMAGE_TYPE = "COMFYTV_IMAGE";
-const CUSTOM_SPLIT_IMAGES_TYPE = "COMFYTV_IMAGES";
-const CUSTOM_SPLIT_MAX_TILES = 32;
-const MODEL3D_CLASS = "ComfyTV.Model3DStage";
-function sortedUnique(splits) {
-  const seen = /* @__PURE__ */ new Set();
-  const out = [];
-  for (const n of [...splits].sort((a2, b) => a2 - b)) {
-    const t2 = Math.round(n * 1e6) / 1e6;
-    if (!Number.isFinite(t2) || t2 <= 0 || t2 >= 1) continue;
-    if (seen.has(t2)) continue;
-    seen.add(t2);
-    out.push(t2);
-    if (out.length >= MAX_SPLITS) break;
-  }
-  return out;
-}
-function parseSplits(raw, fallback = []) {
-  if (raw == null || String(raw).trim() === "") return [...fallback];
-  try {
-    const v = JSON.parse(String(raw));
-    if (!Array.isArray(v)) return [...fallback];
-    return sortedUnique(v.map(Number));
-  } catch {
-    return [...fallback];
-  }
-}
-function serializeSplits(splits) {
-  return JSON.stringify(sortedUnique(splits));
-}
-function edgesFromSplits(splits) {
-  return [0, ...sortedUnique(splits), 1];
-}
-function clampSplit(value, prev, next) {
-  const lo = prev + MIN_SPLIT_GAP;
-  const hi = next - MIN_SPLIT_GAP;
-  if (hi < lo) return (prev + next) / 2;
-  return Math.min(hi, Math.max(lo, value));
-}
-function setSplitAt(splits, index2, value) {
-  const cur = sortedUnique(splits);
-  if (index2 < 0 || index2 >= cur.length) return cur;
-  const prev = index2 === 0 ? 0 : cur[index2 - 1];
-  const next = index2 === cur.length - 1 ? 1 : cur[index2 + 1];
-  const nextArr = [...cur];
-  nextArr[index2] = clampSplit(value, prev, next);
-  return sortedUnique(nextArr);
-}
-function removeSplitAt(splits, index2) {
-  const cur = sortedUnique(splits);
-  if (index2 < 0 || index2 >= cur.length) return cur;
-  return cur.filter((_, i) => i !== index2);
-}
-function insertInLargestGap(splits) {
-  const cur = sortedUnique(splits);
-  if (cur.length >= MAX_SPLITS) return null;
-  const e = edgesFromSplits(cur);
-  let bestI = 0;
-  let bestGap = -1;
-  for (let i = 0; i < e.length - 1; i++) {
-    const g2 = e[i + 1] - e[i];
-    if (g2 > bestGap) {
-      bestGap = g2;
-      bestI = i;
-    }
-  }
-  if (bestGap < MIN_SPLIT_GAP * 2) return null;
-  const mid = (e[bestI] + e[bestI + 1]) / 2;
-  return sortedUnique([...cur, mid]);
-}
-function cellsFromSplits(vSplits, hSplits, natW, natH) {
-  const xs = edgesFromSplits(vSplits).map((t2) => Math.round(t2 * natW));
-  const ys = edgesFromSplits(hSplits).map((t2) => Math.round(t2 * natH));
-  xs[xs.length - 1] = natW;
-  ys[ys.length - 1] = natH;
-  const cells = [];
-  let n = 0;
-  for (let r2 = 0; r2 < ys.length - 1; r2++) {
-    for (let c2 = 0; c2 < xs.length - 1; c2++) {
-      n++;
-      const x = xs[c2];
-      const y = ys[r2];
-      const w = Math.max(1, xs[c2 + 1] - x);
-      const h2 = Math.max(1, ys[r2 + 1] - y);
-      cells.push({ x, y, w, h: h2, row: r2, col: c2, index: n, label: `R${r2 + 1}C${c2 + 1}` });
-    }
-  }
-  return cells;
-}
-function isFaceLabel(value) {
-  return FACE_LABELS.includes(value);
-}
-function resizeCellLabels(labels, count2) {
-  const n = Math.max(0, count2);
-  const next = labels.slice(0, n).map((v) => isFaceLabel(v) ? v : "");
-  while (next.length < n) next.push("");
-  return next;
-}
-function parseCellLabels(raw, count2) {
-  if (raw == null || String(raw).trim() === "") return resizeCellLabels([], count2);
-  try {
-    const v = JSON.parse(String(raw));
-    if (!Array.isArray(v)) return resizeCellLabels([], count2);
-    return resizeCellLabels(v.map((x) => String(x ?? "")), count2);
-  } catch {
-    return resizeCellLabels([], count2);
-  }
-}
-function serializeCellLabels(labels) {
-  return JSON.stringify(labels.map((v) => isFaceLabel(v) ? v : ""));
-}
-function assignFaceLabel(labels, index2, name) {
-  const next = [...labels];
-  if (index2 < 0 || index2 >= next.length) return next;
-  const face = isFaceLabel(name) ? name : "";
-  if (face) {
-    for (let i = 0; i < next.length; i++) {
-      if (i !== index2 && next[i] === face) next[i] = "";
-    }
-  }
-  next[index2] = face;
-  return next;
-}
-function ensureFaceLabels(labels, count2) {
-  const next = resizeCellLabels(labels, count2);
-  if (next.some(isFaceLabel)) return next;
-  for (let i = 0; i < Math.min(count2, FACE_LABELS.length); i++) {
-    next[i] = FACE_LABELS[i];
-  }
-  return next;
-}
-function faceRank(label) {
-  const i = FACE_LABELS.indexOf(label);
-  return i >= 0 ? i : FACE_LABELS.length;
-}
-function orderByFaceLabels(items, getLabel2) {
-  return items.map((item, i) => ({ item, i, rank: faceRank(getLabel2(item)) })).sort((a2, b) => a2.rank - b.rank || a2.i - b.i).map((row) => row.item);
-}
-function uniqueOutputName(label, used, fallback) {
-  const base2 = label.trim() || fallback;
-  let name = base2;
-  let n = 2;
-  while (used.has(name)) name = `${base2} (${n++})`;
-  used.add(name);
-  return name;
-}
-function syncCustomSplitOutputs(node, items) {
-  var _a2, _b2, _c;
-  if (!node) return;
-  if (!Array.isArray(node.outputs)) node.outputs = [];
-  if (!node.outputs[0]) {
-    if (typeof node.addOutput === "function") {
-      node.addOutput("images", CUSTOM_SPLIT_IMAGES_TYPE, {
-        label: "images",
-        localized_name: "images"
-      });
-    } else {
-      node.outputs.push({
-        name: "images",
-        type: CUSTOM_SPLIT_IMAGES_TYPE,
-        label: "images",
-        localized_name: "images",
-        links: []
-      });
-    }
-  } else {
-    const batch2 = node.outputs[0];
-    batch2.name = "images";
-    batch2.label = "images";
-    batch2.localized_name = "images";
-    batch2.type = CUSTOM_SPLIT_IMAGES_TYPE;
-  }
-  const tileOutputs = Array.isArray(node.outputs) ? node.outputs.slice(1) : [];
-  let linkedTiles = 0;
-  for (let i = 0; i < tileOutputs.length; i++) {
-    const links = (_a2 = tileOutputs[i]) == null ? void 0 : _a2.links;
-    if (Array.isArray(links) && links.length > 0) linkedTiles = i + 1;
-  }
-  const n = Math.max(0, Math.min(CUSTOM_SPLIT_MAX_TILES, Math.max(items.length, linkedTiles)));
-  while (node.outputs.length > n + 1) {
-    const last = node.outputs[node.outputs.length - 1];
-    const links = last == null ? void 0 : last.links;
-    if (Array.isArray(links) && links.length > 0) break;
-    if (typeof node.removeOutput === "function") node.removeOutput(node.outputs.length - 1);
-    else node.outputs.pop();
-  }
-  const used = /* @__PURE__ */ new Set(["images", "image"]);
-  for (let i = 0; i < n; i++) {
-    const fallback = `image${i + 1}`;
-    const label = uniqueOutputName(((_b2 = items[i]) == null ? void 0 : _b2.label) || "", used, fallback);
-    const slot = i + 1;
-    if (slot >= node.outputs.length) {
-      if (typeof node.addOutput === "function") {
-        node.addOutput(label, CUSTOM_SPLIT_IMAGE_TYPE, { label, localized_name: label });
-      } else {
-        node.outputs.push({
-          name: label,
-          type: CUSTOM_SPLIT_IMAGE_TYPE,
-          label,
-          localized_name: label,
-          links: []
-        });
-      }
-      continue;
-    }
-    const out = node.outputs[slot];
-    out.name = label;
-    out.label = label;
-    out.localized_name = label;
-    out.type = CUSTOM_SPLIT_IMAGE_TYPE;
-  }
-  (_c = node.setDirtyCanvas) == null ? void 0 : _c.call(node, true, true);
-}
-function findCustomSplitTileSlot(node, label) {
-  var _a2;
-  const outs = node == null ? void 0 : node.outputs;
-  if (!Array.isArray(outs)) return -1;
-  for (let i = 1; i < outs.length; i++) {
-    if (String(((_a2 = outs[i]) == null ? void 0 : _a2.name) || "") === label) return i;
-  }
-  return -1;
-}
-function faceInputSlotNames(face) {
-  const idx = FACE_LABELS.indexOf(face);
-  const names = [];
-  if (idx >= 0) names.push(`images.image${idx}`);
-  names.push(`images.${face}`, face);
-  return names;
-}
-function findModel3DFaceSlot(node, face) {
-  const inputs = node == null ? void 0 : node.inputs;
-  if (!Array.isArray(inputs)) return -1;
-  for (const name of faceInputSlotNames(face)) {
-    const i = inputs.findIndex((inp) => String((inp == null ? void 0 : inp.name) || "") === name);
-    if (i >= 0) return i;
-  }
-  return -1;
-}
-function cellOverlayStyle(cell, d, natW, natH) {
-  if (!(natW > 0) || !(natH > 0)) {
-    return { left: "0px", top: "0px", width: "0px", height: "0px" };
-  }
-  return {
-    left: `${d.ox + cell.x / natW * d.w}px`,
-    top: `${d.oy + cell.y / natH * d.h}px`,
-    width: `${cell.w / natW * d.w}px`,
-    height: `${cell.h / natH * d.h}px`
-  };
-}
-function splitBandStyle(axis, d, t2, thick = MIN_DIVIDER_PX) {
-  const w = Math.max(MIN_DIVIDER_PX, thick);
-  if (axis === "v") {
-    return {
-      left: `${d.ox + t2 * d.w - w / 2}px`,
-      top: `${d.oy}px`,
-      width: `${w}px`,
-      height: `${d.h}px`
-    };
-  }
-  return {
-    left: `${d.ox}px`,
-    top: `${d.oy + t2 * d.h - w / 2}px`,
-    width: `${d.w}px`,
-    height: `${w}px`
-  };
-}
-function imageScreenRect(img, container, d) {
-  if (img) {
-    const r2 = img.getBoundingClientRect();
-    if (r2.width > 0 && r2.height > 0) {
-      return { left: r2.left, top: r2.top, width: r2.width, height: r2.height };
-    }
-  }
-  if (!container || !d || d.w <= 0 || d.h <= 0) return null;
-  const cr2 = container.getBoundingClientRect();
-  const lw = container.clientWidth;
-  const lh = container.clientHeight;
-  if (lw <= 0 || lh <= 0 || cr2.width <= 0 || cr2.height <= 0) return null;
-  const sx = cr2.width / lw;
-  const sy = cr2.height / lh;
-  return {
-    left: cr2.left + d.ox * sx,
-    top: cr2.top + d.oy * sy,
-    width: d.w * sx,
-    height: d.h * sy
-  };
-}
-function splitDelta(drag, clientX, clientY) {
-  if (!(drag.span > 0)) return drag.startT;
-  const client = drag.axis === "v" ? clientX : clientY;
-  return drag.startT + (client - drag.startClient) / drag.span;
-}
-function sameSplits(a2, b) {
-  if (a2.length !== b.length) return false;
-  for (let i = 0; i < a2.length; i++) if (a2[i] !== b[i]) return false;
-  return true;
-}
-function useCustomSplit(node, state2) {
-  const store2 = useStageStore();
-  const sourceImageUrl = computed(() => {
-    const inp = state2.inputs.find((i) => i.slot === "image");
-    return inp && inp.source === "upstream" && inp.content ? inp.content : null;
-  });
-  const vSplits = /* @__PURE__ */ ref(parseSplits(readWidgetStr(node, "v_splits", ""), DEFAULT_V_SPLITS));
-  const hSplits = /* @__PURE__ */ ref(parseSplits(readWidgetStr(node, "h_splits", ""), DEFAULT_H_SPLITS));
-  const selected = /* @__PURE__ */ ref(null);
-  const annotating = /* @__PURE__ */ ref(false);
-  const selectedFace = /* @__PURE__ */ ref(FACE_LABELS[0]);
-  const cellCount = computed(() => (vSplits.value.length + 1) * (hSplits.value.length + 1));
-  const cellLabels = /* @__PURE__ */ ref(parseCellLabels(
-    readWidgetStr(node, "cell_labels", ""),
-    cellCount.value
-  ));
-  const canAddV = computed(() => vSplits.value.length < MAX_SPLITS);
-  const canAddH = computed(() => hSplits.value.length < MAX_SPLITS);
-  function syncLabels(count2) {
-    const next = resizeCellLabels(cellLabels.value, count2);
-    if (next.length === cellLabels.value.length && next.every((v, i) => v === cellLabels.value[i])) return;
-    cellLabels.value = next;
-  }
-  function applyV(next) {
-    var _a2;
-    if (!next) return;
-    if (sameSplits(next, vSplits.value)) return;
-    vSplits.value = next;
-    if (((_a2 = selected.value) == null ? void 0 : _a2.axis) === "v" && selected.value.index >= next.length) {
-      selected.value = next.length ? { axis: "v", index: next.length - 1 } : null;
-    }
-  }
-  function applyH(next) {
-    var _a2;
-    if (!next) return;
-    if (sameSplits(next, hSplits.value)) return;
-    hSplits.value = next;
-    if (((_a2 = selected.value) == null ? void 0 : _a2.axis) === "h" && selected.value.index >= next.length) {
-      selected.value = next.length ? { axis: "h", index: next.length - 1 } : null;
-    }
-  }
-  function addV() {
-    applyV(insertInLargestGap(vSplits.value));
-  }
-  function addH() {
-    applyH(insertInLargestGap(hSplits.value));
-  }
-  function selectSplit(axis, index2) {
-    selected.value = { axis, index: index2 };
-  }
-  function setSplit(axis, index2, value) {
-    if (axis === "v") applyV(setSplitAt(vSplits.value, index2, value));
-    else applyH(setSplitAt(hSplits.value, index2, value));
-  }
-  function removeSelected() {
-    const sel2 = selected.value;
-    if (!sel2) return;
-    if (sel2.axis === "v") applyV(removeSplitAt(vSplits.value, sel2.index));
-    else applyH(removeSplitAt(hSplits.value, sel2.index));
-    selected.value = null;
-  }
-  function toggleAnnotating() {
-    annotating.value = !annotating.value;
-  }
-  function stampCell(index2) {
-    if (!annotating.value) return;
-    const cur = cellLabels.value[index2] || "";
-    const name = cur === selectedFace.value ? "" : selectedFace.value;
-    cellLabels.value = assignFaceLabel(cellLabels.value, index2, name);
-  }
-  function applyAutoFaceLabels() {
-    const next = ensureFaceLabels(cellLabels.value, cellCount.value);
-    if (next.length !== cellLabels.value.length || next.some((v, i) => v !== cellLabels.value[i])) {
-      cellLabels.value = next;
-    }
-    return next;
-  }
-  async function generateMultiViewModel() {
-    applyAutoFaceLabels();
-    if (timer != null) {
-      window.clearTimeout(timer);
-      timer = null;
-    }
-    await run3();
-    const { spawnModel3DFromCustomSplit: spawnModel3DFromCustomSplit2 } = await Promise.resolve().then(() => spawnFollowUp);
-    return spawnModel3DFromCustomSplit2(node);
-  }
-  let lineDrag = null;
-  function beginLineDrag(axis, index2, clientX, clientY, image) {
-    const splits = axis === "v" ? vSplits.value : hSplits.value;
-    const startT = splits[index2];
-    const span = axis === "v" ? image.width : image.height;
-    if (startT == null || !(span > 0)) return;
-    selectSplit(axis, index2);
-    lineDrag = {
-      axis,
-      index: index2,
-      startT,
-      startClient: axis === "v" ? clientX : clientY,
-      span
-    };
-  }
-  function moveLineDrag(clientX, clientY) {
-    if (!lineDrag) return;
-    setSplit(lineDrag.axis, lineDrag.index, splitDelta(lineDrag, clientX, clientY));
-  }
-  function endLineDrag() {
-    lineDrag = null;
-  }
-  function readFromWidgets() {
-    const v = parseSplits(readWidgetStr(node, "v_splits", ""), DEFAULT_V_SPLITS);
-    const h2 = parseSplits(readWidgetStr(node, "h_splits", ""), DEFAULT_H_SPLITS);
-    if (!sameSplits(v, vSplits.value)) vSplits.value = v;
-    if (!sameSplits(h2, hSplits.value)) hSplits.value = h2;
-    const labels = parseCellLabels(
-      readWidgetStr(node, "cell_labels", ""),
-      (vSplits.value.length + 1) * (hSplits.value.length + 1)
-    );
-    if (labels.length !== cellLabels.value.length || labels.some((x, i) => x !== cellLabels.value[i])) {
-      cellLabels.value = labels;
-    }
-  }
-  {
-    const wv = getWidget(node, "v_splits");
-    if (wv) {
-      const orig = wv.callback;
-      wv.callback = (val) => {
-        orig == null ? void 0 : orig.call(wv, val);
-        const next = parseSplits(String(val ?? ""), DEFAULT_V_SPLITS);
-        if (!sameSplits(next, vSplits.value)) vSplits.value = next;
-      };
-    }
-    const wh = getWidget(node, "h_splits");
-    if (wh) {
-      const orig = wh.callback;
-      wh.callback = (val) => {
-        orig == null ? void 0 : orig.call(wh, val);
-        const next = parseSplits(String(val ?? ""), DEFAULT_H_SPLITS);
-        if (!sameSplits(next, hSplits.value)) hSplits.value = next;
-      };
-    }
-    const wl = getWidget(node, "cell_labels");
-    if (wl) {
-      const orig = wl.callback;
-      wl.callback = (val) => {
-        orig == null ? void 0 : orig.call(wl, val);
-        const next = parseCellLabels(
-          String(val ?? ""),
-          (vSplits.value.length + 1) * (hSplits.value.length + 1)
-        );
-        if (next.length !== cellLabels.value.length || next.some((x, i) => x !== cellLabels.value[i])) {
-          cellLabels.value = next;
-        }
-      };
-    }
-  }
-  if (node) {
-    const orig = node.onConfigure;
-    node.onConfigure = function(info) {
-      orig == null ? void 0 : orig.call(this, info);
-      readFromWidgets();
-    };
-  }
-  const splitting = /* @__PURE__ */ ref(false);
-  let timer = null;
-  let seq2 = 0;
-  let cachedImg = null;
-  let cachedUrl = null;
-  function getSourceImage(url) {
-    if (cachedImg && cachedUrl === url && cachedImg.complete) {
-      return Promise.resolve(cachedImg);
-    }
-    return new Promise((resolve2, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        cachedImg = img;
-        cachedUrl = url;
-        resolve2(img);
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
-  }
-  function schedule() {
-    if (!sourceImageUrl.value) return;
-    if (timer != null) window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
-      timer = null;
-      void run3();
-    }, SCHEDULE_DELAY_MS$3);
-  }
-  async function run3() {
-    const url = sourceImageUrl.value;
-    if (!url) return;
-    const mySeq = ++seq2;
-    splitting.value = true;
-    try {
-      const img = await getSourceImage(url);
-      if (mySeq !== seq2) return;
-      const cells = cellsFromSplits(
-        vSplits.value,
-        hSplits.value,
-        img.naturalWidth,
-        img.naturalHeight
-      );
-      if (!cells.length) return;
-      syncLabels(cells.length);
-      const prepared = cells.map((cell, i) => ({
-        cell,
-        label: cellLabels.value[i] || cell.label
-      }));
-      const ordered = orderByFaceLabels(prepared, (row) => row.label);
-      const items = [];
-      const nodeId = String((node == null ? void 0 : node.id) ?? "unknown");
-      for (let i = 0; i < ordered.length; i++) {
-        const { cell, label } = ordered[i];
-        if (mySeq !== seq2) return;
-        const canvas = document.createElement("canvas");
-        canvas.width = cell.w;
-        canvas.height = cell.h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("2d context unavailable");
-        ctx.drawImage(img, cell.x, cell.y, cell.w, cell.h, 0, 0, cell.w, cell.h);
-        const imageUrl = await uploadCanvas(canvas, {
-          subfolder: "comfytv/customsplit",
-          filename: `comfytv-customsplit-${nodeId}-${Date.now()}-${i + 1}.png`
-        });
-        if (mySeq !== seq2) return;
-        items.push({
-          index: String(i + 1),
-          label,
-          image_url: imageUrl
-        });
-      }
-      if (mySeq !== seq2) return;
-      const batch2 = JSON.stringify({ images: items });
-      store2.applyExecutedPayload(state2, { output: [batch2] });
-      store2.setOutputSlots(state2, [
-        batch2,
-        ...items.map((im) => im.image_url)
-      ]);
-      syncCustomSplitOutputs(node, items);
-    } catch (e) {
-      console.error("[ComfyTV/customsplit] split failed", e);
-    } finally {
-      if (mySeq === seq2) splitting.value = false;
-    }
-  }
-  watch([vSplits, hSplits], () => {
-    writeWidget(node, "v_splits", serializeSplits(vSplits.value));
-    writeWidget(node, "h_splits", serializeSplits(hSplits.value));
-    syncLabels(cellCount.value);
-    schedule();
-  }, { deep: true });
-  watch(cellLabels, () => {
-    writeWidget(node, "cell_labels", serializeCellLabels(cellLabels.value));
-    schedule();
-  }, { deep: true });
-  watch(sourceImageUrl, () => schedule(), { immediate: true });
-  return {
-    sourceImageUrl,
-    vSplits,
-    hSplits,
-    selected,
-    selectSplit,
-    setSplit,
-    addV,
-    addH,
-    removeSelected,
-    beginLineDrag,
-    moveLineDrag,
-    endLineDrag,
-    canAddV,
-    canAddH,
-    cellCount,
-    splitting,
-    FACE_LABELS,
-    cellLabels,
-    annotating,
-    selectedFace,
-    toggleAnnotating,
-    stampCell,
-    applyAutoFaceLabels,
-    generateMultiViewModel
-  };
-}
-const STAGE_CLASS_BY_KIND = {
-  text: "ComfyTV.TextStage",
-  image: "ComfyTV.ImageStage",
-  video: "ComfyTV.VideoStage",
-  audio: "ComfyTV.AudioStage",
-  panorama: "ComfyTV.PanoramaStage",
-  storyboard: "ComfyTV.StoryboardStage",
-  "image-batch": "ComfyTV.ShotImagesStage",
-  "image-picker": "ComfyTV.ImagePickerStage",
-  "audio-picker": "ComfyTV.AudioPickerStage",
-  "video-picker": "ComfyTV.VideoPickerStage",
-  timeline: "ComfyTV.DirectorTimelineStage",
-  model: "ComfyTV.Model3DStage",
-  material: "ComfyTV.MaterialStage",
-  custom: "ComfyTV.CustomStage"
-};
-const TARGET_GROUP_BY_KIND = {
-  text: "texts",
-  image: "images",
-  video: "videos",
-  audio: "videos",
-  panorama: "images",
-  storyboard: "texts",
-  "image-batch": "images",
-  "image-picker": "images",
-  "audio-picker": "videos",
-  "video-picker": "videos",
-  timeline: "images",
-  model: "models",
-  material: "images",
-  custom: "images"
-};
-function findFirstAutogrowSlot(node, groupPrefix) {
-  if (!node.inputs) return -1;
-  for (let i = 0; i < node.inputs.length; i++) {
-    const n = String(node.inputs[i].name || "");
-    if (n.startsWith(groupPrefix + ".")) return i;
-  }
-  return -1;
-}
-function findNamedSlot(node, name) {
-  if (!node.inputs) return -1;
-  for (let i = 0; i < node.inputs.length; i++) {
-    if (String(node.inputs[i].name || "") === name) return i;
-  }
-  return -1;
-}
-function findNamedOutputSlot(node, name) {
-  var _a2;
-  const outs = node == null ? void 0 : node.outputs;
-  if (!outs) return -1;
-  for (let i = 0; i < outs.length; i++) {
-    if (String(((_a2 = outs[i]) == null ? void 0 : _a2.name) || "") === name) return i;
-  }
-  return -1;
-}
-function lookupGraphLink(graph, id) {
-  var _a2;
-  const links = graph == null ? void 0 : graph.links;
-  if (!links) return ((_a2 = graph == null ? void 0 : graph.getLink) == null ? void 0 : _a2.call(graph, id)) ?? null;
-  if (typeof links.get === "function") return links.get(id) ?? null;
-  return links[id] ?? null;
-}
-function findDownstreamOfClass(srcNode, originSlot, cls) {
-  var _a2, _b2, _c;
-  const graph = (srcNode == null ? void 0 : srcNode.graph) ?? (app$1 == null ? void 0 : app$1.graph);
-  const links = ((_b2 = (_a2 = srcNode == null ? void 0 : srcNode.outputs) == null ? void 0 : _a2[originSlot]) == null ? void 0 : _b2.links) ?? [];
-  if (!graph || !links.length) return null;
-  for (const lid of links) {
-    const link2 = lookupGraphLink(graph, lid);
-    if (!link2) continue;
-    const tid = link2.target_id ?? link2.targetId;
-    const t2 = (_c = graph.getNodeById) == null ? void 0 : _c.call(graph, tid);
-    if ((t2 == null ? void 0 : t2.comfyClass) === cls) return t2;
-  }
-  return null;
-}
-function spawnOrFocusImagesSplit(srcNode) {
-  var _a2, _b2;
-  let srcSlot = findNamedOutputSlot(srcNode, "images");
-  if (srcSlot < 0) srcSlot = 1;
-  const existing = findDownstreamOfClass(srcNode, srcSlot, "ComfyTV.ImagesSplitStage");
-  if (existing) {
-    const canvas = app$1 == null ? void 0 : app$1.canvas;
-    (_a2 = canvas == null ? void 0 : canvas.centerOnNode) == null ? void 0 : _a2.call(canvas, existing);
-    (_b2 = canvas == null ? void 0 : canvas.selectNode) == null ? void 0 : _b2.call(canvas, existing);
-    return existing;
-  }
-  return spawnConsumingNode(srcNode, "ComfyTV.ImagesSplitStage", "images", srcSlot);
-}
-const IMAGE_LOADER_CLASS$1 = "ComfyTV.ImageLoaderStage";
-function connectSrcSlotsToAutogrow(srcNode, srcSlots, dstNode, _type = "image") {
-  ensureMergeImageSockets(dstNode);
-  const wire = (i, attempt) => {
-    var _a2;
-    if (i >= srcSlots.length) {
-      ensureMergeImageSockets(dstNode);
-      return;
-    }
-    ensureMergeImageSockets(dstNode);
-    const inSlot = findMergeImageSlot(dstNode, i);
-    if (inSlot >= 0) {
-      const inp = (_a2 = dstNode.inputs) == null ? void 0 : _a2[inSlot];
-      if (inp) inp.type = MERGE_IMAGE_TYPE;
-      srcNode.connect(srcSlots[i], dstNode, inSlot);
-      ensureMergeImageSockets(dstNode);
-      wire(i + 1, 0);
-      return;
-    }
-    if (attempt < 20) setTimeout(() => wire(i, attempt + 1), 40);
-    else console.warn("[ComfyTV/merge] missing image slot", i);
-  };
-  wire(0, 0);
-}
-function spawnImageMergeFromSlots(srcNode, slotIndexes, mode = "layers", aspect2 = "native") {
-  var _a2, _b2;
-  const slots = uniqueSlotIndexes(slotIndexes);
-  if (!srcNode || !slots.length) return null;
-  const node = createNodeAt(IMAGE_MERGE_CLASS, posRightOf(srcNode));
-  if (!node) return null;
-  setWidget(node, "merge_mode", parseMergeMode(mode));
-  setWidget(node, "aspect_ratio", parseMergeAspect(aspect2));
-  stampLineage(srcNode, node);
-  connectSrcSlotsToAutogrow(srcNode, slots, node, "image");
-  const canvas = app$1 == null ? void 0 : app$1.canvas;
-  (_a2 = canvas == null ? void 0 : canvas.centerOnNode) == null ? void 0 : _a2.call(canvas, node);
-  (_b2 = canvas == null ? void 0 : canvas.selectNode) == null ? void 0 : _b2.call(canvas, node);
-  useStageStore().notifyDownstream();
-  return node;
-}
-function spawnModel3DFromCustomSplit(srcNode) {
-  var _a2, _b2;
-  if (!srcNode) return null;
-  let existing = null;
-  for (const face of FACE_LABELS) {
-    const srcSlot = findCustomSplitTileSlot(srcNode, face);
-    if (srcSlot < 0) continue;
-    existing = findDownstreamOfClass(srcNode, srcSlot, MODEL3D_CLASS);
-    if (existing) break;
-  }
-  const node = existing || createNodeAt(MODEL3D_CLASS, posRightOf(srcNode));
-  if (!node) return null;
-  if (!existing) stampLineage(srcNode, node);
-  const wireFace = (face, attempt) => {
-    var _a3;
-    const srcSlot = findCustomSplitTileSlot(srcNode, face);
-    if (srcSlot < 0) return;
-    const inSlot = findModel3DFaceSlot(node, face);
-    if (inSlot >= 0) {
-      const inp = (_a3 = node.inputs) == null ? void 0 : _a3[inSlot];
-      if (inp) inp.type = CUSTOM_SPLIT_IMAGE_TYPE;
-      srcNode.connect(srcSlot, node, inSlot);
-      return;
-    }
-    if (attempt < 25) setTimeout(() => wireFace(face, attempt + 1), 40);
-    else console.warn("[ComfyTV/customsplit] Model3D missing face slot", face);
-  };
-  const faces = (srcNode.outputs ?? []).slice(1).map((o) => String((o == null ? void 0 : o.name) || "")).filter((n) => isFaceLabel(n));
-  const toWire = faces.length ? faces : [...FACE_LABELS];
-  for (const face of toWire) wireFace(face, 0);
-  const canvas = app$1 == null ? void 0 : app$1.canvas;
-  (_a2 = canvas == null ? void 0 : canvas.centerOnNode) == null ? void 0 : _a2.call(canvas, node);
-  (_b2 = canvas == null ? void 0 : canvas.selectNode) == null ? void 0 : _b2.call(canvas, node);
-  useStageStore().notifyDownstream();
-  return node;
-}
-const IMAGE_GENERATE_CLASS = "ComfyTV.ImageStage";
-function spawnImageGenerateFromSlots(srcNode, slotIndexes) {
-  var _a2, _b2, _c, _d, _e2, _f;
-  const slots = [...new Set(slotIndexes.filter((i) => Number.isInteger(i) && i >= 0))].sort((a2, b) => a2 - b);
-  if (!srcNode || !slots.length) return [];
-  const store2 = useStageStore();
-  const created = [];
-  const baseX = (((_a2 = srcNode.pos) == null ? void 0 : _a2[0]) || 0) + (((_b2 = srcNode.size) == null ? void 0 : _b2[0]) || 280) + 60;
-  let y = ((_c = srcNode.pos) == null ? void 0 : _c[1]) || 0;
-  for (const slot of slots) {
-    const node = createNodeAt(IMAGE_GENERATE_CLASS, [baseX, y]);
-    if (!node) continue;
-    const inSlot = findFirstAutogrowSlot(node, "images");
-    if (inSlot >= 0) srcNode.connect(slot, node, inSlot);
-    else console.warn("[ComfyTV/images-split] ImageStage has no images autogrow slot");
-    stampLineage(srcNode, node);
-    created.push(node);
-    y += (((_d = node.size) == null ? void 0 : _d[1]) || 260) + 40;
-  }
-  const canvas = app$1 == null ? void 0 : app$1.canvas;
-  if (created[0]) {
-    (_e2 = canvas == null ? void 0 : canvas.centerOnNode) == null ? void 0 : _e2.call(canvas, created[0]);
-    (_f = canvas == null ? void 0 : canvas.selectNode) == null ? void 0 : _f.call(canvas, created[0]);
-  }
-  store2.notifyDownstream();
-  return created;
-}
-function outputHasLinks(node, idx) {
-  var _a2;
-  const out = (_a2 = node == null ? void 0 : node.outputs) == null ? void 0 : _a2[idx];
-  return !!((out == null ? void 0 : out.links) && out.links.length > 0);
-}
-function createNodeAt(targetClass, pos) {
-  var _a2, _b2, _c;
-  const win = window;
-  if (!((_a2 = win.LiteGraph) == null ? void 0 : _a2.createNode)) {
-    console.error("[ComfyTV/action] LiteGraph.createNode not available");
-    return null;
-  }
-  const node = win.LiteGraph.createNode(targetClass);
-  if (!node) {
-    console.error("[ComfyTV/action] createNode returned null for", targetClass);
-    return null;
-  }
-  const graph = app$1 == null ? void 0 : app$1.graph;
-  graph == null ? void 0 : graph.add(node);
-  node.pos = findFreePos(graph, pos, [((_b2 = node.size) == null ? void 0 : _b2[0]) || 280, ((_c = node.size) == null ? void 0 : _c[1]) || 260], node);
-  return node;
-}
-function posRightOf(srcNode, dx = 60) {
-  var _a2, _b2, _c;
-  return [
-    (((_a2 = srcNode.pos) == null ? void 0 : _a2[0]) || 0) + (((_b2 = srcNode.size) == null ? void 0 : _b2[0]) || 280) + dx,
-    ((_c = srcNode.pos) == null ? void 0 : _c[1]) || 0
-  ];
-}
-function setWidget(node, name, value) {
-  var _a2;
-  const w = (_a2 = node.widgets) == null ? void 0 : _a2.find((wi) => wi.name === name);
-  if (w) w.value = value;
-}
-function stampLineage(srcNode, newNode) {
-  const store2 = useStageStore();
-  const srcState = store2.getStage(srcNode);
-  const parentId = srcState == null ? void 0 : srcState.outputId;
-  if (parentId != null && parentId > 0) {
-    setWidget(newNode, "parent_output_id", parentId);
-  }
-}
-function wireAndSeed(srcNode, newNode, preset2, srcSlot = 0) {
-  var _a2;
-  const store2 = useStageStore();
-  let slot = -1;
-  if (preset2.inputSocket) {
-    slot = findNamedSlot(newNode, preset2.inputSocket);
-  } else if (preset2.inputAutogrowGroup) {
-    slot = findFirstAutogrowSlot(newNode, preset2.inputAutogrowGroup);
-  }
-  if (slot < 0) {
-    console.warn(
-      "[ComfyTV/preset]",
-      preset2.id,
-      "no target slot on",
-      newNode.comfyClass,
-      "inputs=",
-      (_a2 = newNode.inputs) == null ? void 0 : _a2.map((i) => i.name)
-    );
-  } else {
-    srcNode.connect(srcSlot, newNode, slot);
-  }
-  if (preset2.widgets) {
-    for (const [name, value] of Object.entries(preset2.widgets)) {
-      setWidget(newNode, name, value);
-    }
-    if ("main_prompt" in preset2.widgets) {
-      const state2 = store2.getStage(newNode);
-      if (state2) state2.mainPrompt = String(preset2.widgets.main_prompt ?? "");
-    }
-  }
-  stampLineage(srcNode, newNode);
-}
-function spawnImagePreset(srcNode, preset2, srcSlot = 0) {
-  var _a2, _b2, _c;
-  const store2 = useStageStore();
-  if (preset2.multiTargetClasses && preset2.multiTargetClasses.length) {
-    const baseX = (((_a2 = srcNode.pos) == null ? void 0 : _a2[0]) || 0) + (((_b2 = srcNode.size) == null ? void 0 : _b2[0]) || 280) + 60;
-    const baseY = ((_c = srcNode.pos) == null ? void 0 : _c[1]) || 0;
-    const rowGap = 60;
-    let rowY = baseY;
-    preset2.multiTargetClasses.forEach((cls, i) => {
-      var _a3;
-      const newNode2 = createNodeAt(cls, [baseX, rowY]);
-      if (!newNode2) return;
-      wireAndSeed(srcNode, newNode2, preset2, srcSlot);
-      rowY += (((_a3 = newNode2.size) == null ? void 0 : _a3[1]) || 260) + rowGap;
-    });
-    store2.notifyDownstream();
-    return;
-  }
-  const targetClass = preset2.targetClass ?? STAGE_CLASS_BY_KIND.image;
-  const newNode = createNodeAt(targetClass, posRightOf(srcNode));
-  if (!newNode) return;
-  wireAndSeed(srcNode, newNode, preset2, srcSlot);
-  store2.notifyDownstream();
-}
-function spawnConsumingNode(srcNode, targetClass, inputSlotName, srcSlot = 0) {
-  var _a2;
-  const newNode = createNodeAt(targetClass, posRightOf(srcNode));
-  if (!newNode) return null;
-  const slot = findNamedSlot(newNode, inputSlotName);
-  if (slot < 0) {
-    console.warn(
-      "[ComfyTV/action] target",
-      targetClass,
-      "has no",
-      inputSlotName,
-      "slot",
-      "inputs=",
-      (_a2 = newNode.inputs) == null ? void 0 : _a2.map((i) => i.name)
-    );
-    return newNode;
-  }
-  srcNode.connect(srcSlot, newNode, slot);
-  stampLineage(srcNode, newNode);
-  return newNode;
-}
-const RELIGHT_WORKFLOW_LABEL = "NanoBanana2";
-function spawnRelightPair(srcNode, srcSlot) {
-  const store2 = useStageStore();
-  const relight2 = createNodeAt("ComfyTV.RelightStage", posRightOf(srcNode));
-  if (!relight2) return;
-  const img = createNodeAt("ComfyTV.ImageStage", posRightOf(relight2));
-  if (!img) return;
-  setWidget(img, "workflow", RELIGHT_WORKFLOW_LABEL);
-  const s0 = findFirstAutogrowSlot(img, "images");
-  if (s0 >= 0) {
-    srcNode.connect(srcSlot, img, s0);
-  } else {
-    console.warn("[ComfyTV/relight] new ImageStage has no images autogrow slot");
-  }
-  const wireSecond = (attempt = 0) => {
-    const s1 = findNamedSlot(img, "images.image1");
-    if (s1 >= 0) {
-      relight2.connect(0, img, s1);
-      store2.notifyDownstream();
-      return;
-    }
-    if (attempt < 10) setTimeout(() => wireSecond(attempt + 1), 50);
-    else console.warn("[ComfyTV/relight] images.image1 never appeared on new ImageStage");
-  };
-  wireSecond();
-  stampLineage(srcNode, img);
-  store2.notifyDownstream();
-}
-function spawnExtendVideo(srcNode) {
-  const store2 = useStageStore();
-  const extract = createNodeAt("ComfyTV.VideoExtractFrameStage", posRightOf(srcNode));
-  if (!extract) return;
-  const extractInSlot = findNamedSlot(extract, "video");
-  if (extractInSlot >= 0) srcNode.connect(0, extract, extractInSlot);
-  stampLineage(srcNode, extract);
-  const newVideo = createNodeAt("ComfyTV.VideoStage", posRightOf(extract));
-  if (!newVideo) return;
-  const imageSlot = findFirstAutogrowSlot(newVideo, "images");
-  if (imageSlot >= 0) extract.connect(0, newVideo, imageSlot);
-  stampLineage(srcNode, newVideo);
-  store2.notifyDownstream();
-}
-function spawnPanoramaView(srcNode, mode) {
-  if (mode === "current") {
-    spawnConsumingNode(srcNode, "ComfyTV.PanoramaCurrentViewStage", "panorama");
-    return;
-  }
-  const node = spawnConsumingNode(srcNode, "ComfyTV.PanoramaMultiViewStage", "panorama");
-  if (!node) return;
-  setWidget(node, "view_count", mode === "four" ? 4 : 12);
-}
-async function spawnAssetImageLoader(srcNode, url, label, mediaType = "image") {
-  var _a2;
-  const assetStore2 = useAssetStore();
-  await assetStore2.hydrate();
-  let asset = assetStore2.byPayloadUrl(url) ?? null;
-  if (!asset) {
-    asset = await assetStore2.create({
-      name: ((_a2 = extractFilenameFromUrl(url)) == null ? void 0 : _a2.replace(/\.[^.]+$/, "")) || label || mediaType,
-      payload_url: url,
-      media_type: mediaType,
-      category_ids: []
-    });
-  }
-  if (!asset) {
-    console.error("[ComfyTV/action] load-asset: could not add", mediaType, "to library", url);
-    return;
-  }
-  const newNode = createAssetLoaderNode(asset, posRightOf(srcNode));
-  if (!newNode) return;
-  useStageStore().notifyDownstream();
-}
-const GENERATE_IMAGE_PRESET = {
-  id: "generate",
-  targetClass: "ComfyTV.ImageStage",
-  inputAutogrowGroup: "images"
-};
-function makeImageActionHandlers(srcSlot) {
-  const outputSlot = (src) => {
-    const named = findNamedOutputSlot(src, "image");
-    return named >= 0 ? named : srcSlot;
-  };
-  return {
-    "generate": (src) => spawnImagePreset(src, GENERATE_IMAGE_PRESET, outputSlot(src)),
-    "panorama": (src) => spawnConsumingNode(src, "ComfyTV.PanoramaStage", "image", outputSlot(src)),
-    "multiangle": (src) => spawnConsumingNode(src, "ComfyTV.MultiangleStage", "image", outputSlot(src)),
-    "relight": (src) => spawnRelightPair(src, outputSlot(src)),
-    "material": (src) => spawnConsumingNode(src, "ComfyTV.MaterialStage", "image", outputSlot(src)),
-    ...Object.fromEntries(
-      IMAGE_VARIANT_PRESETS.map((p2) => [
-        `preset:${p2.id}`,
-        (src) => spawnImagePreset(src, p2, outputSlot(src))
-      ])
-    ),
-    ...Object.fromEntries(
-      IMAGE_EDIT_PRESETS.map((p2) => [
-        `edit:${p2.id}`,
-        (src) => spawnImagePreset(src, p2, outputSlot(src))
-      ])
-    )
-  };
-}
-const imageActionHandlers = makeImageActionHandlers(0);
-const imageBatchActionHandlers = makeImageActionHandlers(1);
-const PRODUCT_SHOT_PRESET = {
-  id: "product-shot",
-  targetClass: "ComfyTV.ImageEditStage",
-  inputAutogrowGroup: "images",
-  widgets: {
-    workflow: "Qwen Edit 2511",
-    main_prompt: "Turn this 3D viewport render into a professional product photograph on a clean light-gray studio backdrop with soft diffused lighting and a subtle ground reflection. Keep the subject's colors, materials and pose exactly as they are."
-  }
-};
-const videoActionHandlers = {
-  "extend": (src) => spawnExtendVideo(src),
-  ...Object.fromEntries(
-    VIDEO_CHANGE_PRESETS.map((p2) => [
-      `change:${p2.id}`,
-      (src) => spawnImagePreset(src, p2)
-    ])
-  )
-};
-const audioActionHandlers = Object.fromEntries(
-  AUDIO_CHANGE_PRESETS.map((p2) => [
-    `change:${p2.id}`,
-    (src) => spawnImagePreset(src, p2)
-  ])
-);
-const SPAWN_HANDLERS = {
-  image: imageActionHandlers,
-  "image-picker": imageActionHandlers,
-  "image-batch": imageBatchActionHandlers,
-  model: {
-    "product-shot": (src) => spawnImagePreset(src, PRODUCT_SHOT_PRESET, 1)
-  },
-  video: videoActionHandlers,
-  "video-picker": videoActionHandlers,
-  audio: audioActionHandlers,
-  "audio-picker": audioActionHandlers,
-  panorama: {
-    "view-current": (src) => spawnPanoramaView(src, "current"),
-    "view-four": (src) => spawnPanoramaView(src, "four"),
-    "view-twelve": (src) => spawnPanoramaView(src, "twelve")
-  }
-};
-function spawnFollowUpStage(srcNode, srcKind, actionId, context2) {
-  var _a2, _b2;
-  const handler = (_a2 = SPAWN_HANDLERS[srcKind]) == null ? void 0 : _a2[actionId];
-  if (handler) {
-    handler(srcNode, context2);
-    return;
-  }
-  const targetClass = STAGE_CLASS_BY_KIND[srcKind];
-  const targetGroup = TARGET_GROUP_BY_KIND[srcKind];
-  const newNode = createNodeAt(targetClass, posRightOf(srcNode));
-  if (!newNode) return;
-  const targetSlot = findFirstAutogrowSlot(newNode, targetGroup);
-  if (targetSlot < 0) {
-    console.warn(
-      "[ComfyTV/action] no autogrow slot for",
-      targetGroup,
-      "on new",
-      targetClass,
-      "inputs=",
-      (_b2 = newNode.inputs) == null ? void 0 : _b2.map((i) => i.name)
-    );
-    return;
-  }
-  srcNode.connect(0, newNode, targetSlot);
-  stampLineage(srcNode, newNode);
-}
-const spawnFollowUp = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  IMAGE_GENERATE_CLASS,
-  IMAGE_LOADER_CLASS: IMAGE_LOADER_CLASS$1,
-  IMAGE_MERGE_CLASS,
-  connectSrcSlotsToAutogrow,
-  createNodeAt,
-  findDownstreamOfClass,
-  findFirstAutogrowSlot,
-  findNamedOutputSlot,
-  findNamedSlot,
-  outputHasLinks,
-  setWidget,
-  spawnAssetImageLoader,
-  spawnConsumingNode,
-  spawnFollowUpStage,
-  spawnImageGenerateFromSlots,
-  spawnImageMergeFromSlots,
-  spawnModel3DFromCustomSplit,
-  spawnOrFocusImagesSplit
-}, Symbol.toStringTag, { value: "Module" }));
 const QUICK_CREATE = [
   { id: "image", classType: "ComfyTV.ImageStage", labelKey: "v2.bottomBar.createImage" },
   { id: "video", classType: "ComfyTV.VideoStage", labelKey: "v2.bottomBar.createVideo" },
@@ -154561,7 +154704,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-CI_9CKHT.mjs");
+    const { STLLoader } = await import("./STLLoader-BX_i-vB-.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -154569,7 +154712,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-BFAQC_k2.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-C9ACitpC.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -261359,6 +261502,7 @@ async function hydrateV2Flag() {
     enabled = (row == null ? void 0 : row.value) === true;
     applyLodSettings(rows);
     applyAutoPickerSetting(rows);
+    applyAutoBridgeSetting(rows);
     applyCanvasDropSetting(rows);
     applyPanelOnSelectSetting(rows);
     try {
@@ -261669,6 +261813,7 @@ const extension = {
       t: (key, params2) => i18n.global.t(key, params2 ?? {}),
       attachAuth: attachComfyOrgAuth
     });
+    installAutoBridge();
     installCanvasMirror(a2, {
       resolveApp: () => a2,
       resolveProjectId: () => useProjectStore(pinia).currentProjectId,
@@ -262114,4 +262259,4 @@ export {
   DropdownMenuRoot_default as y,
   DropdownMenuTrigger_default as z
 };
-//# sourceMappingURL=main-BGJra1jd.mjs.map
+//# sourceMappingURL=main-jJHimKfv.mjs.map
