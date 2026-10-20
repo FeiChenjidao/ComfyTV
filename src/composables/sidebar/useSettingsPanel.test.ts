@@ -30,7 +30,7 @@ function rows(): any[] {
 
 function fullRows(): any[] {
   return [
-    row('enable-v2', 'boolean', false, { experimental: true }),
+    row('enable-v2', 'boolean', true, { experimental: true }),
     ...rows(),
     row('enable-mcp', 'boolean', false),
     row('enable-bot', 'boolean', false),
@@ -281,7 +281,7 @@ describe('useSettingsPanel', () => {
     expect(byId('eagle').probe).toBe('online')
     expect(byId('blender').probe).toBe('offline')
     expect(byId('collab').probe).toBeNull()
-    p.setValue('enable-v2', true)
+    p.setValue('enable-v2', false)
     expect(byId('general').dirty).toBe(true)
     expect(byId('backup').dirty).toBe(false)
   })

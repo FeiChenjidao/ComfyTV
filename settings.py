@@ -9,7 +9,7 @@ CUSTOM_NODE_DIR = os.path.dirname(os.path.realpath(__file__))
 PROPERTIES_FILENAME = "comfytv.properties"
 
 SETTINGS_SPEC: dict[str, dict[str, Any]] = {
-    "enable-v2": {"type": "boolean", "default": False, "experimental": True},
+    "enable-v2": {"type": "boolean", "default": True, "experimental": True},
     "v2-panel-on-select": {"type": "boolean", "default": True},
     "v2-lod-scale": {"type": "choice", "default": "42", "options": ["30", "42", "50", "60"]},
     "v2-lod-fill": {"type": "choice", "default": "checker", "options": ["checker", "image"]},
