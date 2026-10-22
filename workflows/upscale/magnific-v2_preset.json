@@ -1,0 +1,24 @@
+{
+  "_comment": "Exported preset for the 'Magnific图像放大（精确V2）' workflow (kind=upscale). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "Magnific图像放大（精确V2）",
+  "meta": {
+    "prompt_required": false
+  },
+  "inputs": {
+    "2": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    },
+    "5": {
+      "scale_factor": {
+        "from": "option:scale"
+      }
+    }
+  },
+  "result": {
+    "type": "ui_save_url",
+    "node": "3"
+  }
+}

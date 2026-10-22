@@ -1,0 +1,45 @@
+{
+  "_comment": "Exported preset for the 'Magnific图像放大（创意）' workflow (kind=upscale). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "Magnific图像放大（创意）",
+  "inputs": {
+    "2": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    },
+    "6": {
+      "auto_downscale": {
+        "from": "literal:true",
+        "default": "true",
+        "cast": "bool"
+      },
+      "creativity": {
+        "from": "option:creativity",
+        "cast": "int"
+      },
+      "fractality": {
+        "from": "option:fractality",
+        "cast": "int"
+      },
+      "hdr": {
+        "from": "option:hdr",
+        "cast": "int"
+      },
+      "prompt": {
+        "from": "main_prompt"
+      },
+      "resemblance": {
+        "from": "option:resemblance",
+        "cast": "int"
+      },
+      "scale_factor": {
+        "from": "option:scale"
+      }
+    }
+  },
+  "result": {
+    "type": "ui_save_url",
+    "node": "3"
+  }
+}

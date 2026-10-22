@@ -1,0 +1,18 @@
+{
+  "_comment": "Exported preset for the 'WaveSpeed（省钱超分）' workflow (kind=upscale). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "WaveSpeed（省钱超分）",
+  "meta": {
+    "prompt_required": false
+  },
+  "inputs": {
+    "18": {
+      "target_resolution": {
+        "from": "option:scale"
+      }
+    }
+  },
+  "result": {
+    "type": "ui_save_url",
+    "node": "3"
+  }
+}

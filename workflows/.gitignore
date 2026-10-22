@@ -67,6 +67,12 @@
 !text/local-qwen3-4b_preset.json
 !upscale/ultrasharp-4x.json
 !upscale/ultrasharp-4x_preset.json
+!upscale/Magnific图像放大（创意）.json
+!upscale/Magnific图像放大（创意）_preset.json
+!upscale/magnific-v2.json
+!upscale/magnific-v2_preset.json
+!upscale/WaveSpeed（省钱超分）.json
+!upscale/WaveSpeed（省钱超分）_preset.json
 !video/local-ltx-2.3-flf2v.json
 !video/local-ltx-2.3-flf2v_preset.json
 !video/local-ltx-2.3-i2v.json
