@@ -496,15 +496,15 @@ class TestTransformStageExecute:
     def test_crop(self, reset_db):
         from ComfyTV.nodes.stages.edits import CropStage
         schema = CropStage.define_schema().kw
-        assert [item.args[0] for item in schema["outputs"]] == ["image", "images"]
+        assert [item.args[0] for item in schema["outputs"]] == ["images", "image"]
         out = CropStage.execute(project_id="default",
                                 image="/view?filename=a.png",
                                 crop_x=0, crop_y=0, crop_w=100, crop_h=100,
                                 crop_boxes="[]")
-        assert out.values[0] == "/view?filename=a.png"
-        assert json.loads(out.values[1]) == {
+        assert json.loads(out.values[0]) == {
             "images": ["/view?filename=a.png"],
         }
+        assert out.values[1] == "/view?filename=a.png"
 
     def test_rotate(self, reset_db):
         from ComfyTV.nodes.stages.edits import RotateStage
