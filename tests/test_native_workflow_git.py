@@ -119,6 +119,21 @@ class TestNativeWorkflowGit:
         assert st["is_repo"] is False
         assert st["ok"] is True
 
+    def test_safe_rel_path_keeps_leading_space(self, tmp_path):
+        mod = _load_mod()
+        root = tmp_path / "workflows"
+        root.mkdir()
+        spaced = root / " PS_NanoBanana_GPTImage.json"
+        spaced.write_text('{"nodes":[]}', encoding="utf-8")
+        found = mod._safe_rel_path(root, " PS_NanoBanana_GPTImage.json")
+        assert found == spaced.resolve()
+
+        spaced.unlink()
+        plain = root / "PS_NanoBanana_GPTImage.json"
+        plain.write_text('{"nodes":[]}', encoding="utf-8")
+        found = mod._safe_rel_path(root, " PS_NanoBanana_GPTImage.json")
+        assert found == plain.resolve()
+
     def test_push_paths_rejects_duplicate_name(self, tmp_path):
         mod = _load_mod()
         root = _init_repo(tmp_path)

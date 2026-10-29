@@ -408,19 +408,50 @@ def _is_git_repo(root: Path) -> bool:
         return False
 
 
+def _rel_candidates(rel: str) -> list[str]:
+    """Path variants to try under the workflows root.
+
+    Keep a leading space: ComfyUI can save `` name.json``, and stripping it
+    makes commit look up a file that is not on disk. If that exact name is
+    missing, also try the stripped form so an already-renamed file still hits.
+    """
+    raw = (rel or "").replace("\\", "/").strip("\r\n").lstrip("/")
+    if not raw.strip() or raw.startswith("..") or "/../" in f"/{raw}/":
+        return []
+    texts = [raw]
+    stripped = raw.strip()
+    if (
+        stripped
+        and stripped != raw
+        and not stripped.startswith("..")
+        and "/../" not in f"/{stripped}/"
+    ):
+        texts.append(stripped)
+    return texts
+
+
 def _safe_rel_path(root: Path, rel: str) -> Optional[Path]:
     """Resolve rel under root; reject traversal / absolute paths."""
-    text = (rel or "").replace("\\", "/").strip().lstrip("/")
-    if not text or text.startswith("..") or "/../" in f"/{text}/":
+    texts = _rel_candidates(rel)
+    if not texts:
         return None
     try:
         root_r = root.resolve()
-        cand = (root_r / text).resolve()
     except OSError:
         return None
-    if cand != root_r and root_r not in cand.parents:
-        return None
-    return cand
+    missing: Optional[Path] = None
+    for text in texts:
+        try:
+            cand = (root_r / text).resolve()
+        except OSError:
+            return None
+        if cand != root_r and root_r not in cand.parents:
+            return None
+        if cand.is_file():
+            return cand
+        if missing is None:
+            missing = cand
+    return missing
 
 
 def _upstream_ref(root: Path) -> str:

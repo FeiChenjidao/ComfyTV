@@ -185,6 +185,10 @@ function gitBadgesFor(path: string): GitBadge[] {
   return gitBadgesByPath.value.get(path) || []
 }
 
+function workflowLocallyChanged(path: string): boolean {
+  return gitBadgesFor(path).some((b) => b.key === 'new' || b.key === 'modified')
+}
+
 /** Cloud templates = paths present on remote tip; everything else is local-only. */
 const remoteTemplateSet = computed(() => {
   const fromStatus = gitStatus.value?.remote_workflows
@@ -226,6 +230,22 @@ const templateWorkflows = computed(() => {
 const localWorkflows = computed(() => {
   const remote = remoteTemplateSet.value
   return workflows.value.filter((w) => !remote.has(w.path))
+})
+
+const dirtyTemplates = computed(() =>
+  templateWorkflows.value.filter((row) => workflowLocallyChanged(row.path)),
+)
+
+/** Edited cloud templates, then every local-only workflow. */
+const commitCandidates = computed(() => {
+  const seen = new Set<string>()
+  const rows: NativeWorkflow[] = []
+  for (const row of [...dirtyTemplates.value, ...localWorkflows.value]) {
+    if (seen.has(row.path)) continue
+    seen.add(row.path)
+    rows.push(row)
+  }
+  return rows
 })
 
 const filtered = computed(() => filterNodes(catalog.value, searchQ.value, searchCat.value))
@@ -426,11 +446,8 @@ async function openCommitPicker() {
   if (!ok) return
   commitPickOpen.value = true
   const next: Record<string, boolean> = {}
-  // Commit is for local workflows (right column), not cloud templates
-  for (const row of localWorkflows.value) {
-    const badges = gitBadgesFor(row.path)
-    const dirty = badges.some((b) => b.key === 'new' || b.key === 'modified')
-    next[row.path] = dirty
+  for (const row of commitCandidates.value) {
+    next[row.path] = workflowLocallyChanged(row.path)
   }
   commitSelected.value = next
 }
@@ -562,7 +579,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
           <button
             type="button"
             class="ctv-bbar__git-btn ctv-bbar__git-btn--primary"
-            :disabled="!canGitActions || !localWorkflows.length"
+            :disabled="!canGitActions || !commitCandidates.length"
             @click="openCommitPicker"
           >{{ t('v2.bottomBar.gitCommit') }}</button>
         </div>
@@ -612,7 +629,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
         >
         <div class="ctv-bbar__commit-list">
           <label
-            v-for="row in localWorkflows"
+            v-for="row in commitCandidates"
             :key="row.path"
             class="ctv-bbar__commit-item"
           >
@@ -622,6 +639,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
               :disabled="!!gitBusy"
             >
             <span class="ctv-bbar__row-main">{{ row.name }}</span>
+            <span v-if="remoteTemplateSet.has(row.path)" class="ctv-bbar__badge">
+              {{ t('v2.bottomBar.templates') }}
+            </span>
             <span
               v-for="b in gitBadgesFor(row.path)"
               :key="b.key"
@@ -632,7 +652,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
               {{ nativeWorkflowFolder(row.path) }}
             </span>
           </label>
-          <div v-if="!localWorkflows.length" class="ctv-bbar__muted">
+          <div v-if="!commitCandidates.length" class="ctv-bbar__muted">
             {{ t('v2.bottomBar.localWorkflowsEmpty') }}
           </div>
         </div>
