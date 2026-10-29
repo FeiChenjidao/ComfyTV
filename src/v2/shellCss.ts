@@ -80,6 +80,12 @@ html:not(.dark-theme) .v2-pop {
 .lg-node[data-v2-shell].outline-node-stroke-executing,
 .lg-node[data-v2-shell].te-man-concurrent-running-outline { outline: none !important; }
 
+/* Only the in-node card (current Vue nodes) needs a definite height.
+ * Older builds keep the card on the canvas overlay, outside .lg-node, so this
+ * does not apply and that overlay still sizes the panel. */
+.lg-node[data-v2-shell]:has(.v2-card) {
+  height: var(--node-height);
+}
 .lg-node[data-v2-shell] {
   --primary-background: rgba(167, 139, 250, 0.8);
   --primary-background-hover: rgba(167, 139, 250, 0.95);
@@ -127,11 +133,18 @@ body[data-v2-toolbar] .selection-toolbox {
   background: transparent;
   border-radius: 0;
   box-shadow: none;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.lg-node[data-v2-shell]:has(.v2-card) [data-testid="node-inner-wrapper"] {
+  height: 100%;
 }
 .lg-node[data-v2-shell] [data-testid^="node-body-"] {
   padding: 0;
   gap: 0;
   background: transparent;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .lg-node[data-v2-shell] [data-testid^="node-body-"] > div:first-child {
@@ -242,10 +255,40 @@ body[data-v2-slot-hover] .p-tooltip { display: none !important; }
   flex: 1;
   min-height: 0;
 }
+/* Vue nodes mount the DOM widget in the grid and skip the canvas overlay.
+ * The widget wrapper forces flex-basis 0% on the card, and the row was a
+ * horizontal flex, so the card height became 0 and the shell never painted. */
+.lg-node[data-v2-shell] [data-testid="node-widgets"] > div:has(.v2-card) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
 .lg-node[data-v2-shell] .lg-node-widget { display: flex; padding: 0; }
-.lg-node[data-v2-shell] .lg-node-widget:has(.v2-card) { flex: 1; min-height: 0; }
+.lg-node[data-v2-shell] .lg-node-widget:has(.v2-card) {
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
 .lg-node[data-v2-shell] .lg-node-widget > div:first-child { display: none; }
 .lg-node[data-v2-shell] .lg-node-widget > *:last-child { flex: 1; min-width: 0; }
+.lg-node[data-v2-shell] .lg-node-widget:has(.v2-card) > *:last-child,
+.lg-node[data-v2-shell] .lg-node-widget:has(.v2-card) > *:last-child > :not(.v2-card),
+.lg-node[data-v2-shell] .lg-node-widget:has(.v2-card) > *:last-child > :not(.v2-card) > :not(.v2-card),
+.lg-node[data-v2-shell] div:has(> .v2-card) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+.lg-node[data-v2-shell] .v2-card {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
 .lg-node[data-v2-shell] .lg-node-widget:not(:has(.v2-card)) { display: none; }
 .v2-compositor-host {
   position: relative;
