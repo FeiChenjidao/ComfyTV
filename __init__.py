@@ -23,6 +23,7 @@ else:
     _runners.seed_workflows()
 
     from . import api as _api
+    from . import photoshop as _photoshop
     from . import storage as _storage
     from .nodes.stages import ComfyTVExtension as _ComfyTVExtension
 

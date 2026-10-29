@@ -250,6 +250,8 @@ class ComfyTVExtension(ComfyExtension):
             install_exec_error_recorder(cls, meta.get("kind", "stage"))
             _ensure_hidden_pnginfo(cls)
             install_auth_passthrough(cls)
+        from ...photoshop.nodes import PHOTOSHOP_NODES
+        classes.extend(PHOTOSHOP_NODES)
         return classes
 
 

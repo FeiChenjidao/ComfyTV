@@ -1,0 +1,90 @@
+{
+  "manifestVersion": 5,
+  "id": "com.comfytv.photoshop.uxp",
+  "name": "ComfyTV",
+  "version": "0.2.1",
+  "main": "index.html",
+  "host": {
+    "app": "PS",
+    "minVersion": "25.0.0"
+  },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "com.comfytv.photoshop.panel",
+      "label": {
+        "default": "Ai Panel"
+      },
+      "minimumSize": {
+        "width": 300,
+        "height": 420
+      },
+      "maximumSize": {
+        "width": 1600,
+        "height": 2000
+      },
+      "preferredDockedSize": {
+        "width": 360,
+        "height": 640
+      },
+      "preferredFloatingSize": {
+        "width": 420,
+        "height": 720
+      }
+    },
+    {
+      "type": "panel",
+      "id": "com.comfytv.photoshop.web",
+      "label": {
+        "default": "ComfyUI"
+      },
+      "minimumSize": {
+        "width": 320,
+        "height": 240
+      },
+      "maximumSize": {
+        "width": 2000,
+        "height": 2000
+      },
+      "preferredDockedSize": {
+        "width": 900,
+        "height": 640
+      },
+      "preferredFloatingSize": {
+        "width": 1200,
+        "height": 800
+      }
+    }
+  ],
+  "requiredPermissions": {
+    "ipc": {
+      "enablePluginCommunication": true
+    },
+    "launchProcess": {
+      "schemes": ["http", "https"]
+    },
+    "webview": {
+      "allow": "yes",
+      "domains": [
+        "http://localhost:8188",
+        "http://127.0.0.1:8188"
+      ]
+    },
+    "network": {
+      "domains": [
+        "http://localhost:8188",
+        "http://localhost:8188/",
+        "http://localhost:8188/comfytv/photoshop/status",
+        "http://localhost:8188/comfytv/photoshop/layer",
+        "ws://localhost:8188",
+        "ws://localhost:8188/ps/ws",
+        "http://127.0.0.1:8188",
+        "http://127.0.0.1:8188/",
+        "http://127.0.0.1:8188/comfytv/photoshop/status",
+        "http://127.0.0.1:8188/comfytv/photoshop/layer",
+        "ws://127.0.0.1:8188",
+        "ws://127.0.0.1:8188/ps/ws"
+      ]
+    }
+  }
+}

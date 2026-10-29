@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ai Panel</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+  <uxp-panel panelid="com.comfytv.photoshop.panel">
+    <span id="connection-state" class="connection-state">未连接</span>
+    <main class="panel-shell">
+      <section class="preview-stage">
+        <div id="empty-preview" class="empty-preview">
+          <img class="empty-image" src="preview-default.jpg" alt="">
+        </div>
+        <img id="preview" class="preview" alt="生成结果预览">
+        <span id="preview-hit" class="preview-hit" role="button" tabindex="0"></span>
+
+        <nav class="tool-rail" aria-label="面板工具">
+          <div class="button-seg">
+            <span id="settings-toggle" class="rail-btn" role="button" tabindex="0" title="设置">
+              <span class="glass-face glass" aria-hidden="true"></span>
+              <span class="icon-slot" data-icon="settings-toggle"></span>
+            </span>
+            <span id="web-toggle" class="rail-btn" role="button" tabindex="0" title="在 Photoshop 中打开 ComfyUI">
+              <span class="glass-face glass" aria-hidden="true"></span>
+              <span class="icon-slot" data-icon="web-toggle"></span>
+            </span>
+          </div>
+          <span id="fit-toggle" class="rail-btn rail-btn-single" role="button" tabindex="0" title="切换预览适配">
+            <span class="glass-face glass" aria-hidden="true"></span>
+            <span class="icon-slot" data-icon="fit-toggle"></span>
+          </span>
+        </nav>
+
+        <section id="settings-drawer" class="drawer glass hidden">
+          <div class="drawer-title">
+            <strong>设置</strong>
+            <button class="close-button" data-close="settings-drawer" type="button" title="关闭">&#215;</button>
+          </div>
+          <label for="server">ComfyUI 地址</label>
+          <div class="server-row">
+            <input id="server" value="http://127.0.0.1:8188" spellcheck="false">
+            <button id="connect" type="button">连接</button>
+          </div>
+          <label for="negative">负面提示词</label>
+          <textarea id="negative" rows="3" placeholder="可选"></textarea>
+          <label for="max-res">更大则缩小</label>
+          <input id="max-res" type="number" min="16" max="3840" step="16" value="1024">
+          <label for="min-res">更小则放大</label>
+          <input id="min-res" type="number" min="16" max="3840" step="16" value="512">
+          <label class="check-row"><input id="crop-selection" type="checkbox" checked><span>有选区时裁切到选区</span></label>
+          <label for="crop-pad">选区外扩 %</label>
+          <input id="crop-pad" type="number" min="0" max="200" step="1" value="32" title="裁切时每边按选区尺寸的这个百分比向外扩，把周围一起传进去">
+          <label class="check-row"><input id="auto-seed" type="checkbox"><span>每次自动随机种子</span></label>
+          <label class="check-row"><input id="render-on-change" type="checkbox"><span>文档变化时自动渲染</span></label>
+          <button id="send-layer" class="secondary-button" type="button">发送当前图层到 ComfyTV</button>
+          <button id="add-layer" class="secondary-button" type="button" disabled>把结果添加为图层</button>
+        </section>
+
+        <section id="workflow-drawer" class="drawer glass hidden">
+          <div class="drawer-title">
+            <strong>工作流</strong>
+            <button class="close-button" data-close="workflow-drawer" type="button" title="关闭">&#215;</button>
+          </div>
+          <label for="workflow">工作流</label>
+          <select id="workflow"><option value="">等待 ComfyUI 同步</option></select>
+          <label for="render-mode">渲染模式</label>
+          <select id="render-mode"><option value="">等待 ComfyUI 同步</option></select>
+        </section>
+
+        <section id="prompt-card" class="prompt-card glass hidden">
+          <div class="prompt-heading">
+            <span>提示</span>
+            <span id="progress-label">就绪</span>
+          </div>
+          <textarea id="positive" rows="3" placeholder="描述你想生成的画面"></textarea>
+          <div class="seed-row">
+            <button id="randomize" class="text-button" type="button" title="立刻更换随机种子">随机</button>
+            <input id="seed" type="number" min="0" max="2147483647" value="1379">
+          </div>
+        </section>
+
+        <div id="status-toast" class="status-toast glass hidden"></div>
+
+        <div id="progress-frame" class="progress-frame" aria-hidden="true">
+          <div id="pf-top" class="pf-edge"></div>
+          <div id="pf-right" class="pf-edge"></div>
+          <div id="pf-bottom" class="pf-edge"></div>
+          <div id="pf-left" class="pf-edge"></div>
+          <div id="pf-head" class="pf-head"></div>
+        </div>
+
+        <footer class="dock">
+          <div class="dock-cluster">
+          <div class="float-tools">
+            <span id="live-toggle" class="tiny-btn" role="button" tabindex="0" title="文档变化时自动渲染">
+              <span class="glass-face glass" aria-hidden="true"></span>
+              <span class="icon-slot" data-icon="live-toggle"></span>
+            </span>
+            <span id="crop-toggle" class="tiny-btn active" role="button" tabindex="0" title="有选区时裁切到选区">
+              <span class="glass-face glass" aria-hidden="true"></span>
+              <span class="icon-slot" data-icon="crop-toggle"></span>
+            </span>
+          </div>
+          <div class="dock-bar">
+            <span id="menu-button" class="ghost-btn" role="button" tabindex="0" title="工作流和渲染模式">
+              <span class="glass-face glass" aria-hidden="true"></span>
+              <span class="icon-slot" data-icon="menu-button"></span>
+            </span>
+            <span id="spark-button" class="ghost-btn" role="button" tabindex="0" title="提示词">
+              <span class="glass-face glass" aria-hidden="true"></span>
+              <span class="icon-slot" data-icon="spark-button"></span>
+            </span>
+            <div class="render-wrap">
+              <span class="glass-face glass" aria-hidden="true"></span>
+              <span class="icon-slot" data-icon="render"></span>
+              <button id="render" class="render-button" type="button" title="渲染。右键会先换一个随机种子再渲染">
+                <span>渲染</span>
+              </button>
+            </div>
+          </div>
+          </div>
+        </footer>
+      </section>
+    </main>
+  </uxp-panel>
+  <uxp-panel panelid="com.comfytv.photoshop.web">
+    <div class="web-shell">
+      <webview id="comfy-webview" src="http://localhost:8188"></webview>
+    </div>
+  </uxp-panel>
+    <script src="icons.js"></script>
+    <script src="glass.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>
