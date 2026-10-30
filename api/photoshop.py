@@ -194,6 +194,7 @@ async def photoshop_layer(request: web.Request) -> web.Response:
         "width": width,
         "height": height,
         "bounds": body.get("bounds") if isinstance(body.get("bounds"), dict) else None,
+        "create_new": body.get("create_new") is True,
     }
     try:
         PromptServer.instance.send_sync("comfytv-photoshop-layer", payload)

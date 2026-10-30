@@ -190,6 +190,12 @@ def _ensure_comfyui_stubs():
 
         latest.io = io
         latest.IO = io
+        for _file3d_name in (
+            "File3DGLB", "File3DGLTF", "File3DOBJ", "File3DFBX", "File3DSTL",
+            "File3DUSDZ", "File3DPLY", "File3DSPLAT", "File3DSPZ", "File3DKSPLAT",
+            "File3DSplatAny", "File3DPointCloudAny", "File3DAny",
+        ):
+            setattr(io, _file3d_name, _AnyType)
         latest.Types = types.SimpleNamespace(
             MESH=_AnyType, VOXEL=_AnyType, SPLAT=_AnyType, File3D=_AnyType,
         )

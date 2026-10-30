@@ -1,11 +1,11 @@
-ComfyTV Photoshop 插件 0.2.1
+ComfyTV Photoshop 插件 0.2.2
 需要 Photoshop 2024 或更新版本，并且本机 ComfyUI 开在 8188 端口。
 
 一、用安装包（同事电脑装了 Adobe Creative Cloud 桌面版时用这个）
 
 1. 用 Adobe 账号登录 Creative Cloud 桌面版。这就是当时要注册、登录的那一步。
 2. 先打开一次 Photoshop，再关掉。
-3. 双击 ComfyTV-photoshop-0.2.1.ccx。
+3. 双击 ComfyTV-photoshop-0.2.2.ccx。
 4. 出现“不是来自 Creative Cloud 市场”的提示时，选安装。
 5. 弹出权限时允许。插件要连本机 8188，并在 Photoshop 里打开 ComfyUI 页面。
 6. 完全退出 Photoshop 再打开。菜单：增效工具 > ComfyTV。里面有 Ai Panel 和 ComfyUI 两个面板。
@@ -19,7 +19,7 @@ C:\Program Files\Common Files\Adobe\Adobe Desktop Common\RemoteComponents\UPI\Un
 1. Photoshop：编辑 > 首选项 > 增效工具，勾选“启用开发人员模式”。
 2. 完全退出 Photoshop。
 3. 把插件文件夹拷到：
-   %AppData%\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.2.1
+   %AppData%\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.2.2
    文件夹名必须和安装包里的版本号一致。
 4. 再打开 Photoshop。同样在 增效工具 > ComfyTV 里。
 
@@ -39,4 +39,5 @@ ComfyUI 要在本机 8188 运行。在 Photoshop 里点地球图标，打开内�
 打开上面的工作流之后，把这个 ComfyUI 页面强制刷新一次，面板留着不要关，再点渲染。
 Nano Banana 和 GPT Image 还要在这个内嵌页面里登录 Comfy 账号。
 
-工作流下拉里是 NanoBanana 和 GPT。渲染模式跟着走：NanoBanana 是 2K / 4K，GPT 是不透明 / 半透明。
+工作流下拉里是 NanoBanana、NanoBanana Pro、GPT。
+渲染模式跟着走：NanoBanana 和 NanoBanana Pro 是比例和分辨率（1K / 2K / 4K）。GPT 用节点里的尺寸，包含 Custom。输出背景是自动 / 不透明 / 半透明。

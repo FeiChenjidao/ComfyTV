@@ -15,6 +15,7 @@ export interface PhotoshopLayerPayload {
   layer: string
   width: number
   height: number
+  create_new?: boolean
 }
 
 function selectedNodes(canvas: any): any[] {
@@ -53,7 +54,7 @@ function createTarget(host: any): any | null {
 
 export function applyPhotoshopLayer(host: any, payload: PhotoshopLayerPayload): any | null {
   if (!payload?.name || !payload?.subfolder || payload.type !== 'input') return null
-  const selected = selectedTarget(host)
+  const selected = payload.create_new ? null : selectedTarget(host)
   const node = selected ?? createTarget(host)
   if (!node) return null
 

@@ -13,11 +13,13 @@ const DEFAULT_SERVER = "http://127.0.0.1:8188"
 const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.2.1"
+const PLUGIN_VERSION = "0.2.2"
 const clientId = `comfytv-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
 let socket = null
 let reconnectTimer = null
+let modelPullTimer = null
+let modelListSynced = false
 let toastTimer = null
 let latestRenderFile = null
 let capturePreviewFile = null
@@ -25,6 +27,12 @@ let lastCaptureBounds = null
 let lastSentFrame = null
 let lastDocumentPpi = 72
 let renderCount = 0
+let renderHistory = []
+let selectedHistoryIndex = 0
+let historyPage = 0
+const HISTORY_PAGE_SIZE = 8
+const HISTORY_WARN_COUNT = 380
+const HISTORY_KEEP_MS = 7 * 24 * 60 * 60 * 1000
 let watchTimer = null
 let liveTimer = null
 let lastHistoryMarker = null
@@ -35,14 +43,18 @@ function element(id) {
   return document.getElementById(id)
 }
 
+const SERVER_PORTS = [8188, 8189, 8190, 8000, 3000]
+
 function normalizeServer(value) {
   const server = String(value || "").trim().replace(/\/$/, "")
-  if (!/^http:\/\/(127\.0\.0\.1|localhost):8188$/i.test(server)) {
-    throw new Error("当前版本仅允许 http://127.0.0.1:8188")
+  const match = /^http:\/\/(127\.0\.0\.1|localhost):(\d+)$/i.exec(server)
+  const port = match ? Number(match[2]) : 0
+  if (!match || SERVER_PORTS.indexOf(port) < 0) {
+    throw new Error("只允许本机端口 8188、8189、8190、8000、3000")
   }
   // UXP 的域名白名单不认 127.0.0.1 这种 IP，请求会被报成 Manifest entry not found。
   // localhost 和它是同一台机器、同一个端口。
-  return "http://localhost:8188"
+  return `http://localhost:${port}`
 }
 
 function serverAddress() {
@@ -176,9 +188,58 @@ function showStatus(message, isError = false) {
 function setBusy(busy) {
   element("render").disabled = busy
   element("send-layer").disabled = busy
+  const wrap = document.querySelector(".generate-wrap")
+  if (wrap) wrap.classList.toggle("is-disabled", busy)
   if (busy) setConnection("读取图像", "busy")
   else if (socket?.readyState === WebSocket.OPEN) setConnection("已连接", "connected")
   else setConnection("未连接", "error")
+}
+
+const BATCH_MAX = 8
+let batchRunning = false
+let batchStop = false
+let renderDone = null
+
+function batchCount() {
+  const value = Number.parseInt(element("batch-count").value, 10)
+  if (!Number.isFinite(value)) return 1
+  return Math.max(1, Math.min(BATCH_MAX, value))
+}
+
+function setRenderLabel(text) {
+  const button = element("render")
+  const stopping = text === "停止"
+  button.title = stopping ? "停止后面的生成" : "开始生成。右键会先换一个随机种子。生成过程中再点一次，停掉后面的。"
+  button.classList.toggle("is-stop", stopping)
+}
+
+function settleRender(error) {
+  const pending = renderDone
+  renderDone = null
+  if (!pending) return
+  if (error) pending.reject(error)
+  else pending.resolve()
+}
+
+function armRenderWait() {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      if (renderDone && renderDone.reject === reject) {
+        renderDone = null
+        reject(new Error("这一张等待超时"))
+      }
+    }, 8 * 60 * 1000)
+    renderDone = {
+      resolve: () => {
+        clearTimeout(timer)
+        resolve()
+      },
+      reject: (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    }
+  })
 }
 
 function plainBounds(bounds) {
@@ -366,8 +427,18 @@ function alignBoundsToStep(bounds, limit, shrink, cover) {
 }
 
 function overMaxFrame(width, height) {
-  if (width <= GPT_MAX_EDGE && height <= GPT_MAX_EDGE && width * height <= GPT_MAX_PIXELS) return null
-  const fitted = fitGptImageSize(width, height)
+  let maxRes = edgeLimit(element("max-res").value, 1024)
+  let minRes = edgeLimit(element("min-res").value, 512)
+  if (minRes > maxRes) minRes = maxRes
+  const longest = Math.max(width, height)
+  const shortest = Math.min(width, height)
+  const ratio = longest / Math.max(1, shortest)
+  const userOk = longest <= maxRes && shortest >= minRes
+  const hardOk = width <= GPT_MAX_EDGE && height <= GPT_MAX_EDGE && width * height <= GPT_MAX_PIXELS
+    && shortest >= GPT_MIN_EDGE && width * height >= GPT_MIN_PIXELS && ratio <= GPT_MAX_RATIO + 1e-6
+  if (userOk && hardOk) return null
+  const fitted = captureSize({ left: 0, top: 0, right: width, bottom: height })
+  if (!fitted || (fitted.width === width && fitted.height === height)) return null
   return {
     width: fitted.width,
     height: fitted.height,
@@ -841,50 +912,64 @@ async function captureWorkflowInput() {
       await rememberBlendSelection(Boolean(selection))
     } catch (_) {}
 
+    const profile = profilePayload(renderProfile)
   return {
       captureNote: captureNote(sourceBounds, mode, frame),
     canvasBase64: canvas.encoded,
     maskBase64,
     configdata: {
-      positive: element("positive").value,
+      positive: composePrompt(),
       negative: element("negative").value,
       seed: String(validSeed()),
-        // 面板上已经没有强度滑条。节点仍读取这个字段，固定传 63。
-        slider: 63,
       pluginVer: PLUGIN_VERSION,
+      family: profile.family,
+      aspect: profile.aspect,
+      resolution: profile.resolution,
+      quality: profile.quality,
+      background: profile.background,
+      size: profile.size,
+      group: profile.group,
+      referenceCount: referenceFiles.length,
+      referenceNames: referenceFiles.map((file) => file.name || ""),
     },
     queue: true,
   }
   })
 }
 
-async function encodeActiveLayer() {
+async function encodeActiveLayers() {
   if (!app.documents.length) throw new Error("请先打开 Photoshop 文档")
   const document = app.activeDocument
-  const layer = document.activeLayers[0]
-  if (!layer) throw new Error("请先选择一个图层")
-
+  const active = document.activeLayers || []
+  const layers = []
+  for (let index = 0; index < active.length; index += 1) layers.push(active[index])
+  if (!layers.length) throw new Error("请先选择一个图层")
   const selection = await activeSelection(document)
   const limit = fullDocumentBounds(document)
-  const layerBounds = clampBounds(plainBounds(layer.boundsNoEffects || layer.bounds), limit)
-  if (!layerBounds) throw new Error("当前图层没有可发送的像素")
-  const sourceBounds = (selection && clampBounds(selection, layerBounds)) || layerBounds
-  const image = await encodePixels({
-    documentID: document.id,
-    layerID: layer.id,
-    sourceBounds,
-    componentSize: 8,
-    colorSpace: "RGB",
-  })
-
-  return {
-    image_base64: image.encoded,
-    document: document.name,
-    layer: layer.name,
-    bounds: sourceBounds,
-    layer_bounds: image.sourceBounds || layerBounds,
-    selection_bounds: selection,
+  const payloads = []
+  for (let index = 0; index < layers.length; index += 1) {
+    const layer = layers[index]
+    const layerBounds = clampBounds(plainBounds(layer.boundsNoEffects || layer.bounds), limit)
+    if (!layerBounds) throw new Error(`图层「${layer.name || index + 1}」没有可发送的像素`)
+    const sourceBounds = (selection && clampBounds(selection, layerBounds)) || layerBounds
+    const image = await encodePixels({
+      documentID: document.id,
+      layerID: layer.id,
+      sourceBounds,
+      componentSize: 8,
+      colorSpace: "RGB",
+    })
+    payloads.push({
+      image_base64: image.encoded,
+      document: document.name,
+      layer: layer.name,
+      bounds: sourceBounds,
+      layer_bounds: image.sourceBounds || layerBounds,
+      selection_bounds: selection,
+      create_new: index > 0,
+    })
   }
+  return payloads
 }
 
 async function request(path, options = {}) {
@@ -919,12 +1004,38 @@ function sendSocket(payload) {
 }
 
 function sendWorkflowPayload(payload) {
-  // 画布、遮罩、排队分成三条消息。旧服务端单条上限 4MB，合在一起会把连接掐掉。
+  // 画布、遮罩、参考图、排队分成多条消息。旧服务端单条上限 4MB，合在一起会把连接掐掉。
+  const workflow = Number(element("workflow").value)
+  const profile = payload.configdata
+    ? {
+      family: payload.configdata.family,
+      aspect: payload.configdata.aspect,
+      resolution: payload.configdata.resolution,
+      quality: payload.configdata.quality,
+      background: payload.configdata.background,
+      size: payload.configdata.size,
+      group: payload.configdata.group,
+    }
+    : profilePayload(renderProfile)
+  sendSocket({ referenceClear: true })
+  referenceFiles.forEach((file, index) => {
+    sendSocket({
+      referenceBase64: file.base64,
+      referenceIndex: index + 1,
+      referenceName: file.name || "",
+    })
+  })
   sendSocket({ canvasBase64: payload.canvasBase64 })
   if (payload.maskBase64) sendSocket({ maskBase64: payload.maskBase64 })
-  const rest = { queue: payload.queue }
-  if (payload.configdata) rest.configdata = payload.configdata
-  sendSocket(rest)
+  if (Number.isFinite(workflow)) sendSocket({ workflow })
+  sendSocket({ renderProfile: profile })
+  sendSocket({
+    queue: payload.queue,
+    workflow: Number.isFinite(workflow) ? workflow : 0,
+    renderProfile: profile,
+    referenceCount: referenceFiles.length,
+    configdata: payload.configdata,
+  })
 }
 
 function updateOptions(selectId, value) {
@@ -938,6 +1049,9 @@ function updateOptions(selectId, value) {
     option.selected = Boolean(item?.selected)
     select.appendChild(option)
   })
+  const followed = selectId === "workflow" && syncProfileToModel()
+  if (typeof syncComposer === "function") syncComposer()
+  if (followed) pushRenderProfile()
 }
 
 function base64ToBuffer(value) {
@@ -1007,44 +1121,830 @@ async function stampPngPpi(file, ppi) {
   await file.write(out.buffer, { format: storage.formats.binary })
 }
 
-async function receiveRender(value) {
+function historyKey() {
+  return `${STORE_PREFIX}renderHistory`
+}
+
+function nextRenderNumber() {
+  let max = 0
+  for (const item of renderHistory) max = Math.max(max, Number(item.number) || 0)
+  return max + 1
+}
+
+function saveRenderHistory() {
+  const stored = renderHistory.map((item) => ({ name: item.name, number: item.number }))
+  localStorage.setItem(historyKey(), JSON.stringify(stored))
+}
+
+function readRenderHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(historyKey()) || "[]")
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((item) => item && item.name && Number(item.number) > 0)
+  } catch (_) {
+    return []
+  }
+}
+
+async function historyFile(item) {
+  const folder = await storage.localFileSystem.getDataFolder()
+  return folder.getEntry(item.name)
+}
+
+const THUMB_KEEP = 48
+
+function thumbNameFor(name) {
+  return `thumb-${String(name).replace(/\.png$/i, "")}.png`
+}
+
+function unfilterPaeth(raw, rawOffset, dest, prev, stride, channels) {
+  for (let index = 0; index < channels; index += 1) dest[index] = (raw[rawOffset + index] + prev[index]) & 255
+  for (let index = channels; index < stride; index += 1) {
+    const left = dest[index - channels]
+    const up = prev[index]
+    const upperLeft = prev[index - channels]
+    const estimate = left + up - upperLeft
+    const leftDistance = estimate > left ? estimate - left : left - estimate
+    const upDistance = estimate > up ? estimate - up : up - estimate
+    const diagonalDistance = estimate > upperLeft ? estimate - upperLeft : upperLeft - estimate
+    let predicted = upperLeft
+    if (leftDistance <= upDistance && leftDistance <= diagonalDistance) predicted = left
+    else if (upDistance <= diagonalDistance) predicted = up
+    dest[index] = (raw[rawOffset + index] + predicted) & 255
+  }
+}
+
+function unfilterRow(filter, source, sourceOffset, dest, prev, stride, channels) {
+  if (filter === 0) {
+    dest.set(source.subarray(sourceOffset, sourceOffset + stride))
+    return
+  }
+  if (filter === 1) {
+    for (let index = 0; index < channels; index += 1) dest[index] = source[sourceOffset + index]
+    for (let index = channels; index < stride; index += 1) dest[index] = (source[sourceOffset + index] + dest[index - channels]) & 255
+    return
+  }
+  if (filter === 2) {
+    for (let index = 0; index < stride; index += 1) dest[index] = (source[sourceOffset + index] + prev[index]) & 255
+    return
+  }
+  if (filter === 3) {
+    for (let index = 0; index < stride; index += 1) {
+      const left = index >= channels ? dest[index - channels] : 0
+      dest[index] = (source[sourceOffset + index] + ((left + prev[index]) >> 1)) & 255
+    }
+    return
+  }
+  unfilterPaeth(source, sourceOffset, dest, prev, stride, channels)
+}
+
+function paintThumbRow(row, channels, sampleX, dstW, rgb, sampleY) {
+  const out = sampleY * dstW * 3
+  for (let x = 0; x < dstW; x += 1) {
+    const index = sampleX[x] * channels
+    let red = row[index]
+    let green = red
+    let blue = red
+    let alpha = 255
+    if (channels === 3 || channels === 4) {
+      green = row[index + 1]
+      blue = row[index + 2]
+    }
+    if (channels === 4) alpha = row[index + 3]
+    else if (channels === 2) alpha = row[index + 1]
+    const scale = alpha / 255
+    const dest = out + x * 3
+    rgb[dest] = Math.round(red * scale)
+    rgb[dest + 1] = Math.round(green * scale)
+    rgb[dest + 2] = Math.round(blue * scale)
+  }
+}
+
+async function makeThumbRgb(bytes, maxEdge) {
+  const header = pngHeader(bytes)
+  if (!header || header.bitDepth !== 8 || bytes[28] !== 0) return null
+  const channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[header.colorType]
+  if (!channels) return null
+  const parts = []
+  let offset = 8
+  while (offset + 12 <= bytes.length) {
+    const length = ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0
+    const type = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7])
+    if (type === "IDAT") parts.push(bytes.subarray(offset + 8, offset + 8 + length))
+    if (type === "IEND") break
+    offset += 12 + length
+  }
+  if (!parts.length) return null
+  const width = header.width
+  const height = header.height
+  const stride = width * channels
+  const rowBytes = stride + 1
+  const inflated = inflateZlib(concatBytes(parts), rowBytes * height)
+  if (inflated.length < rowBytes * height) return null
+  const scale = Math.min(1, maxEdge / Math.max(width, height))
+  const dstW = Math.max(1, Math.round(width * scale))
+  const dstH = Math.max(1, Math.round(height * scale))
+  const rgb = new Uint8Array(dstW * dstH * 3)
+  const sampleX = new Int32Array(dstW)
+  for (let x = 0; x < dstW; x += 1) sampleX[x] = Math.min(width - 1, Math.floor(((x + 0.5) * width) / dstW))
+  const row = new Uint8Array(stride)
+  const prev = new Uint8Array(stride)
+  let sampleY = 0
+  for (let y = 0; y < height && sampleY < dstH; y += 1) {
+    if ((y & 63) === 0) await new Promise((resolve) => setTimeout(resolve, 0))
+    unfilterRow(inflated[y * rowBytes], inflated, y * rowBytes + 1, row, prev, stride, channels)
+    const wanted = Math.min(height - 1, Math.floor(((sampleY + 0.5) * height) / dstH))
+    if (y === wanted) {
+      paintThumbRow(row, channels, sampleX, dstW, rgb, sampleY)
+      sampleY += 1
+      while (sampleY < dstH && Math.min(height - 1, Math.floor(((sampleY + 0.5) * height) / dstH)) === y) {
+        paintThumbRow(row, channels, sampleX, dstW, rgb, sampleY)
+        sampleY += 1
+      }
+    }
+    prev.set(row)
+  }
+  return { width: dstW, height: dstH, rgb }
+}
+function encodeThumbPng(width, height, rgb) {
+  const stride = 1 + width * 3
+  const raw = new Uint8Array(stride * height)
+  for (let y = 0; y < height; y += 1) {
+    raw.set(rgb.subarray(y * width * 3, (y + 1) * width * 3), y * stride + 1)
+  }
+  const base64 = rgbPngBase64(width, height, raw, 3)
+  return base64ToBuffer(base64)
+}
+
+let thumbFolderTask = null
+
+function thumbFolder() {
+  if (thumbFolderTask) return thumbFolderTask
+  thumbFolderTask = (async () => {
+    const root = await storage.localFileSystem.getDataFolder()
+    try {
+      return await root.getEntry("history-thumbs")
+    } catch (_) {
+      return root.createFolder("history-thumbs")
+    }
+  })()
+  return thumbFolderTask
+}
+
+function protectedThumbNames() {
+  const names = new Set()
+  const recent = Math.min(renderHistory.length, THUMB_KEEP)
+  for (let index = 0; index < recent; index += 1) names.add(thumbNameFor(renderHistory[index].name))
+  const start = historyPage * HISTORY_PAGE_SIZE
+  const end = Math.min(renderHistory.length, start + HISTORY_PAGE_SIZE)
+  for (let index = start; index < end; index += 1) names.add(thumbNameFor(renderHistory[index].name))
+  return names
+}
+
+async function trimThumbFolder() {
+  const folder = await thumbFolder()
+  const entries = await folder.getEntries()
+  const files = entries.filter((entry) => entry.isFile && /^thumb-.*\.(png|jpg)$/i.test(entry.name))
+  if (files.length <= THUMB_KEEP) return
+  const protect = protectedThumbNames()
+  const spare = files.filter((entry) => !protect.has(entry.name))
+  spare.sort((a, b) => String(a.name).localeCompare(String(b.name)))
+  const removeCount = files.length - THUMB_KEEP
+  for (let index = 0; index < removeCount && index < spare.length; index += 1) {
+    try { await spare[index].delete() } catch (_) {}
+  }
+}
+
+async function retireLooseThumbs() {
+  const root = await storage.localFileSystem.getDataFolder()
+  const entries = await root.getEntries()
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index]
+    if (entry.isFile && /^thumb-.*\.(png|jpg)$/i.test(entry.name)) {
+      try { await entry.delete() } catch (_) {}
+    }
+  }
+}
+
+let thumbQueue = Promise.resolve()
+
+function enqueueThumb(task) {
+  const run = thumbQueue.then(() => new Promise((resolve, reject) => {
+    setTimeout(() => {
+      try { resolve(task()) } catch (error) { reject(error) }
+    }, 0)
+  }))
+  thumbQueue = run.then(() => {}, () => {})
+  return run
+}
+
+function rgbFromImageData(data) {
+  const rgb = new Uint8Array((data.length / 4) * 3)
+  let out = 0
+  for (let index = 0; index < data.length; index += 4) {
+    const alpha = data[index + 3] / 255
+    rgb[out] = Math.round(data[index] * alpha)
+    rgb[out + 1] = Math.round(data[index + 1] * alpha)
+    rgb[out + 2] = Math.round(data[index + 2] * alpha)
+    out += 3
+  }
+  return rgb
+}
+
+function thumbLooksEmpty(data) {
+  for (let index = 0; index < data.length; index += 4) {
+    if (data[index + 3] >= 8) return false
+  }
+  return true
+}
+
+function thumbSize(width, height) {
+  const scale = Math.min(1, 160 / Math.max(width, height))
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  }
+}
+
+function pixelsFromDrawable(source, sourceWidth, sourceHeight) {
+  const size = thumbSize(sourceWidth, sourceHeight)
+  const canvas = document.createElement("canvas")
+  canvas.width = size.width
+  canvas.height = size.height
+  const context = canvas.getContext("2d")
+  if (!context || typeof context.getImageData !== "function") return null
+  context.drawImage(source, 0, 0, size.width, size.height)
+  const data = context.getImageData(0, 0, size.width, size.height).data
+  canvas.width = 0
+  if (thumbLooksEmpty(data)) return null
+  return { width: size.width, height: size.height, rgb: rgbFromImageData(data) }
+}
+
+async function bitmapThumb(bytes) {
+  if (typeof createImageBitmap !== "function" || typeof Blob !== "function") return null
+  let bitmap = null
+  try {
+    const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    bitmap = await createImageBitmap(new Blob([copy], { type: "image/png" }))
+    if (!bitmap.width || !bitmap.height) return null
+    return pixelsFromDrawable(bitmap, bitmap.width, bitmap.height)
+  } catch (_) {
+    return null
+  } finally {
+    if (bitmap && typeof bitmap.close === "function") bitmap.close()
+  }
+}
+
+function loadThumbImage(url) {
+  let image = document.getElementById("thumb-loader")
+  if (!image) {
+    image = document.createElement("img")
+    image.id = "thumb-loader"
+    image.alt = ""
+    image.decoding = "sync"
+    image.style.cssText = "position:absolute;left:-2000px;width:160px;height:160px;pointer-events:none"
+    document.body.appendChild(image)
+  }
+  image.removeAttribute("src")
+  return new Promise((resolve, reject) => {
+    const finish = (ok) => {
+      image.onload = null
+      image.onerror = null
+      if (ok) resolve(image)
+      else reject(new Error("缩略图读取失败"))
+    }
+    image.onload = () => finish(true)
+    image.onerror = () => finish(false)
+    image.src = url
+  })
+}
+
+async function domThumb(file) {
+  const url = String(file && file.url || "")
+  if (!url) return null
+  try {
+    const image = await loadThumbImage(url)
+    const width = image.naturalWidth || image.width
+    const height = image.naturalHeight || image.height
+    if (!width || !height) return null
+    return pixelsFromDrawable(image, width, height)
+  } catch (_) {
+    return null
+  } finally {
+    const image = document.getElementById("thumb-loader")
+    if (image) image.removeAttribute("src")
+  }
+}
+
+async function storeThumbBytes(name, buffer) {
+  const folder = await thumbFolder()
+  const thumb = await folder.createFile(thumbNameFor(name), { overwrite: true })
+  await thumb.write(buffer, { format: storage.formats.binary })
+  await trimThumbFolder()
+  try {
+    return await folder.getEntry(thumb.name)
+  } catch (_) {
+    return thumb
+  }
+}
+
+async function writePreparedThumb(name, base64) {
+  const clean = String(base64 || "").replace(/^data:image\/[^;]+;base64,/, "")
+  const entry = await storeThumbBytes(name, base64ToBuffer(clean))
+  return { entry, src: `data:image/png;base64,${clean}` }
+}
+
+async function serverThumb(bytes) {
+  try {
+    const copy = bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
+      ? bytes.buffer
+      : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    const response = await fetch(`${serverAddress()}/ps/thumb`, {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: copy,
+    })
+    if (!response.ok) return null
+    const buffer = await response.arrayBuffer()
+    if (!buffer || buffer.byteLength < 32) return null
+    return buffer
+  } catch (_) {
+    return null
+  }
+}
+
+async function writeThumbFile(file, name) {
+  const raw = await file.read({ format: storage.formats.binary })
+  const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
+  const prepared = await serverThumb(bytes)
+  if (prepared) return storeThumbBytes(name, prepared)
+  let small = await bitmapThumb(bytes)
+  if (!small) small = await domThumb(file)
+  if (!small && readPngBytes(bytes)) small = await makeThumbRgb(bytes, 160)
+  if (!small) throw new Error("缩略图解码失败")
+  return storeThumbBytes(name, encodeThumbPng(small.width, small.height, small.rgb))
+}
+
+async function rememberThumb(item, entry) {
+  item.thumb = entry || item.thumb || null
+  if (!item.thumbSrc && entry && typeof entry.read === "function") {
+    try {
+      const raw = await entry.read({ format: storage.formats.binary })
+      const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
+      if (bytes.length > 32) item.thumbSrc = `data:image/png;base64,${bytesToBase64(bytes)}`
+    } catch (_) {}
+  }
+  return item.thumbSrc || String(entry && entry.url || "")
+}
+
+function ensureThumb(item) {
+  if (item.thumbSrc) return Promise.resolve(item.thumb || null)
+  if (item.thumbTask) return item.thumbTask
+  item.thumbTask = enqueueThumb(async () => {
+    const thumbName = thumbNameFor(item.name)
+    let entry = item.thumb
+    if (!entry) {
+      try {
+        entry = await (await thumbFolder()).getEntry(thumbName)
+      } catch (_) {}
+    }
+    if (!entry) {
+      if (!item.file) item.file = await historyFile(item)
+      entry = await writeThumbFile(item.file, item.name)
+    }
+    await rememberThumb(item, entry)
+    return item.thumb
+  }).catch((error) => {
+    item.thumbTask = null
+    throw error
+  })
+  return item.thumbTask
+}
+
+let historyOpen = false
+let historyHideTimer = null
+
+function historyCardFromEvent(event) {
+  let node = event.target
+  const strip = element("history-strip")
+  while (node && node !== strip) {
+    if (node.classList && node.classList.contains("history-card")) return node
+    node = node.parentNode
+  }
+  return null
+}
+
+function clearHistoryThumbs() {
+  const strip = element("history-strip")
+  if (!strip) return
+  const images = strip.querySelectorAll("img")
+  for (let index = 0; index < images.length; index += 1) images[index].removeAttribute("src")
+}
+
+function historyTrack() {
+  const strip = element("history-strip")
+  let track = element("history-track")
+  if (!track && strip) {
+    track = document.createElement("div")
+    track.id = "history-track"
+    track.className = "history-track"
+    strip.appendChild(track)
+  }
+  return track
+}
+
+let thumbMount = 0
+
+function mountVisibleThumbs() {
+  const strip = element("history-strip")
+  if (!strip || !historyOpen) return
+  const token = ++thumbMount
+  const cards = strip.querySelectorAll(".history-card")
+  for (let index = 0; index < cards.length; index += 1) {
+    const card = cards[index]
+    const image = card.querySelector("img")
+    const item = renderHistory[Number(card.dataset.index)]
+    if (!image || !item) continue
+    ensureThumb(item).then(() => {
+      if (token !== thumbMount || !historyOpen || !card.isConnected) return
+      const url = item.thumbSrc || String(item.thumb && item.thumb.url || "")
+      if (url && image.getAttribute("src") !== url) image.src = url
+    }).catch(() => {
+      image.dataset.failed = "1"
+    })
+  }
+}
+
+function setHistoryOpen(open) {
+  historyOpen = open && renderHistory.length > 0
+  const hover = element("history-hover")
+  if (hover) hover.classList.toggle("open", historyOpen)
+  if (historyOpen) mountVisibleThumbs()
+  else clearHistoryThumbs()
+}
+
+function showHistoryCards() {
+  clearTimeout(historyHideTimer)
+  setHistoryOpen(true)
+}
+
+function scheduleHideHistory() {
+  clearTimeout(historyHideTimer)
+  historyHideTimer = setTimeout(() => setHistoryOpen(false), 180)
+}
+
+function scrollActiveHistoryCard() {
+  const strip = element("history-strip")
+  const card = strip && strip.querySelector(".history-card.active")
+  if (!strip || !card) return
+  const left = card.offsetLeft
+  const right = left + card.offsetWidth
+  if (left < strip.scrollLeft) strip.scrollLeft = left
+  else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth
+}
+
+function stepHistory(delta) {
+  if (!renderHistory.length) return
+  const next = Math.max(0, Math.min(renderHistory.length - 1, selectedHistoryIndex + delta))
+  if (next === selectedHistoryIndex) return
+  selectHistory(next).then(scrollActiveHistoryCard).catch((error) => showStatus(error.message, true))
+}
+
+function typingTarget(node) {
+  const tag = node && node.tagName
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT"
+}
+
+function focusHistoryKeys() {
+  if (typingTarget(document.activeElement)) return
+  const stage = document.querySelector(".preview-stage")
+  if (stage && document.activeElement !== stage) stage.focus()
+}
+
+function historyKeyDelta(event) {
+  const key = String(event.key || "")
+  const code = String(event.code || "")
+  const which = event.keyCode || event.which
+  if (key === "ArrowLeft" || key === "Left" || code === "ArrowLeft" || which === 37) return -1
+  if (key === "ArrowRight" || key === "Right" || code === "ArrowRight" || which === 39) return 1
+  return 0
+}
+
+function onHistoryKey(event) {
+  if (event._comfytvHistory) return
+  const delta = historyKeyDelta(event)
+  if (!delta || typingTarget(event.target)) return
+  event._comfytvHistory = true
+  event.preventDefault()
+  event.stopPropagation()
+  stepHistory(delta)
+}
+
+function historyPageCount() {
+  return Math.max(1, Math.ceil(renderHistory.length / HISTORY_PAGE_SIZE))
+}
+
+function showHistoryPage(page) {
+  const next = Math.max(0, Math.min(historyPageCount() - 1, page))
+  if (next === historyPage && element("history-track") && element("history-track").childNodes.length) return
+  historyPage = next
+  paintHistoryStrip()
+}
+
+function paintHistoryStrip() {
+  const strip = element("history-strip")
+  const track = historyTrack()
+  if (!strip || !track) return
+  track.textContent = ""
+  if (!renderHistory.length) {
+    historyPage = 0
+    setHistoryOpen(false)
+    return
+  }
+  historyPage = Math.max(0, Math.min(historyPageCount() - 1, historyPage))
+  const start = historyPage * HISTORY_PAGE_SIZE
+  const end = Math.min(renderHistory.length, start + HISTORY_PAGE_SIZE)
+  for (let index = start; index < end; index += 1) {
+    const card = document.createElement("span")
+    card.className = index === selectedHistoryIndex ? "history-card active" : "history-card"
+    card.setAttribute("role", "button")
+    card.tabIndex = 0
+    card.dataset.index = String(index)
+    const image = document.createElement("img")
+    image.className = "history-thumb"
+    image.alt = ""
+    image.decoding = "async"
+    const ready = renderHistory[index]
+    if (ready && ready.thumbSrc) image.src = ready.thumbSrc
+    card.appendChild(image)
+    track.appendChild(card)
+  }
+  if (historyOpen) mountVisibleThumbs()
+  warmVisibleThumbs()
+}
+
+function warmVisibleThumbs() {
+  const start = historyPage * HISTORY_PAGE_SIZE
+  const end = Math.min(renderHistory.length, start + HISTORY_PAGE_SIZE)
+  for (let index = start; index < end; index += 1) ensureThumb(renderHistory[index]).catch(() => {})
+}
+
+let historyWheelAt = 0
+
+function onHistoryWheel(event) {
+  if (!historyOpen) return
+  event.preventDefault()
+  event.stopPropagation()
+  let delta = Number(event.deltaY) || 0
+  if (!delta && event.wheelDelta) delta = -Number(event.wheelDelta)
+  if (Math.abs(Number(event.deltaX) || 0) > Math.abs(delta)) delta = Number(event.deltaX) || 0
+  if (!delta) return
+  const now = Date.now()
+  if (now - historyWheelAt < 160) return
+  historyWheelAt = now
+  showHistoryPage(historyPage + (delta > 0 ? 1 : -1))
+}
+
+function markActiveHistoryCard() {
+  const track = element("history-track")
+  if (!track) return
+  const cards = track.querySelectorAll(".history-card")
+  for (let index = 0; index < cards.length; index += 1) {
+    cards[index].classList.toggle("active", Number(cards[index].dataset.index) === selectedHistoryIndex)
+  }
+}
+
+async function selectHistory(index) {
+  const item = renderHistory[index]
+  if (!item) return
+  const page = Math.floor(index / HISTORY_PAGE_SIZE)
+  const pageChanged = page !== historyPage || !element("history-track") || !element("history-track").childNodes.length
+  selectedHistoryIndex = index
+  historyPage = page
+  if (pageChanged) paintHistoryStrip()
+  else markActiveHistoryCard()
+  const file = await historyFile(item)
+  if (selectedHistoryIndex !== index) return
+  latestRenderFile = file
+  renderCount = Number(item.number) || index + 1
+  element("add-layer").disabled = false
+  showPreview("", file.url)
+}
+
+async function restoreRenderHistory() {
+  const stored = readRenderHistory()
+  const kept = []
+  for (const item of stored) {
+    try {
+      const file = await historyFile(item)
+      kept.push({ name: item.name, number: item.number, file })
+    } catch (_) {}
+  }
+  renderHistory = kept
+  saveRenderHistory()
+  retireLooseThumbs().then(() => trimThumbFolder()).catch(() => {})
+  selectedHistoryIndex = 0
+  paintHistoryStrip()
+  if (kept.length) await selectHistory(0)
+  refreshHistoryLimit()
+}
+
+async function receiveRender(value, thumbBase64) {
   const base64 = String(value || "").replace(/^data:image\/[^;]+;base64,/, "")
   if (!base64) return
-  renderCount += 1
-  const previous = latestRenderFile
-  latestRenderFile = await writeDataFile(`render-${renderCount}.png`, base64)
-  if (previous) {
-    try { await previous.delete() } catch (_) {}
+  const number = nextRenderNumber()
+  const name = `render-${Date.now()}.png`
+  const file = await writeDataFile(name, base64)
+  const item = { name, number, file }
+  renderHistory.unshift(item)
+  saveRenderHistory()
+  if (thumbBase64) {
+    try {
+      const saved = await writePreparedThumb(name, thumbBase64)
+      item.thumb = saved.entry
+      item.thumbSrc = saved.src
+    } catch (_) {}
   }
-  showPreview(base64, latestRenderFile.url)
+  if (!item.thumbSrc) ensureThumb(item).catch(() => {})
+  selectedHistoryIndex = 0
+  historyPage = 0
+  latestRenderFile = file
+  renderCount = number
+  showPreview(base64, file.url)
   element("add-layer").disabled = false
+  paintHistoryStrip()
   setProgress("完成")
   finishMarquee()
   showStatus("生成结果已收到")
+  refreshHistoryLimit()
+}
+
+function renderStamp(name) {
+  const match = /render-(\d+)/i.exec(String(name || ""))
+  if (!match) return 0
+  const stamp = Number(match[1])
+  return Number.isFinite(stamp) && stamp > 0 ? stamp : 0
+}
+
+let historyLimitDismissed = false
+
+function refreshHistoryLimit() {
+  const node = element("history-limit")
+  const text = element("history-limit-text")
+  if (!node || !text) return
+  if (renderHistory.length < HISTORY_WARN_COUNT) {
+    historyLimitDismissed = false
+    node.classList.add("hidden")
+    return
+  }
+  text.textContent = `生成图已有 ${renderHistory.length} 张`
+  if (!historyLimitDismissed) node.classList.remove("hidden")
+}
+
+function dismissHistoryLimit() {
+  historyLimitDismissed = true
+  const node = element("history-limit")
+  if (node) node.classList.add("hidden")
+}
+
+async function deleteEntry(entry) {
+  try {
+    await entry.delete()
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
+async function cleanOldRenders() {
+  const button = element("history-clean")
+  if (button) button.disabled = true
+  const removed = new Set()
+  try {
+    const cutoff = Date.now() - HISTORY_KEEP_MS
+    const root = await storage.localFileSystem.getDataFolder()
+    const entries = await root.getEntries()
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index]
+      if (!entry.isFile || !/^render-\d+\.png$/i.test(entry.name)) continue
+      const stamp = renderStamp(entry.name)
+      if (!stamp || stamp >= cutoff) continue
+      if (await deleteEntry(entry)) removed.add(entry.name)
+    }
+    const folder = await thumbFolder()
+    const thumbs = await folder.getEntries()
+    for (let index = 0; index < thumbs.length; index += 1) {
+      const entry = thumbs[index]
+      if (!entry.isFile) continue
+      const stamp = renderStamp(entry.name)
+      if (!stamp || stamp >= cutoff) continue
+      await deleteEntry(entry)
+    }
+    for (let index = 0; index < renderHistory.length; index += 1) {
+      const item = renderHistory[index]
+      const stamp = renderStamp(item.name)
+      if (!stamp || stamp >= cutoff || removed.has(item.name)) continue
+      try {
+        await historyFile(item)
+      } catch (_) {
+        removed.add(item.name)
+      }
+    }
+    const currentName = renderHistory[selectedHistoryIndex] && renderHistory[selectedHistoryIndex].name
+    renderHistory = renderHistory.filter((item) => !removed.has(item.name))
+    saveRenderHistory()
+    if (!renderHistory.length) {
+      selectedHistoryIndex = 0
+      historyPage = 0
+      latestRenderFile = null
+      renderCount = 0
+      element("add-layer").disabled = true
+      showPreview("", "")
+      paintHistoryStrip()
+    } else if (currentName && renderHistory.some((item) => item.name === currentName)) {
+      selectedHistoryIndex = renderHistory.findIndex((item) => item.name === currentName)
+      historyPage = Math.floor(selectedHistoryIndex / HISTORY_PAGE_SIZE)
+      paintHistoryStrip()
+    } else {
+      await selectHistory(0)
+    }
+    showStatus(removed.size ? `已清理 ${removed.size} 张七天前的图片` : "没有七天前的图片")
+    refreshHistoryLimit()
+  } catch (error) {
+    showStatus(error.message || "清理失败", true)
+  } finally {
+    if (button) button.disabled = false
+  }
+}
+
+async function openRenderFolder() {
+  try {
+    const uxp = loadModule("uxp")
+    const folder = await storage.localFileSystem.getDataFolder()
+    const path = folder.nativePath || ""
+    if (uxp.shell && typeof uxp.shell.openPath === "function" && path) {
+      await uxp.shell.openPath(path, "打开生成图文件夹")
+      return
+    }
+    showStatus(path ? `文件夹：${path}` : "打不开生成图文件夹", true)
+  } catch (error) {
+    showStatus(error.message || "打不开生成图文件夹", true)
+  }
 }
 
 function handleSocketMessage(event) {
   try {
     const message = JSON.parse(event.data)
-    if (message.render) receiveRender(message.render).catch((error) => showStatus(error.message, true))
+    if (message.render) {
+      receiveRender(message.render, message.thumb).then(() => settleRender()).catch((error) => {
+        showStatus(error.message, true)
+        settleRender(error)
+      })
+    }
     if (message.render_status) {
       const status = String(message.render_status)
-      setProgress(status)
+      if (!batchRunning) setProgress(status)
       if (status === "genrating") setMarquee(0, true)
       else if (status === "genrated") finishMarquee()
-      else if (status === "genrate_error") setMarquee(0, false)
+      else if (status === "genrate_error") {
+        setMarquee(0, false)
+        settleRender(new Error("生成失败"))
+      }
     }
     if (message.progress !== undefined) {
       const percent = Number(message.progress)
       setProgress(`${percent}%`)
       if (!Number.isNaN(percent)) setMarquee(percent, true)
     }
-    if (message.Send_workflow) updateOptions("workflow", message.Send_workflow)
-    if (message.Send_rndrMode) updateOptions("render-mode", message.Send_rndrMode)
-    if (message.alert) showStatus(String(message.alert), true)
+    if (message.Send_workflow) {
+      updateOptions("workflow", message.Send_workflow)
+      modelListSynced = true
+      if (modelPullTimer) {
+        clearInterval(modelPullTimer)
+        modelPullTimer = null
+      }
+    }
+    if (message.pullProfile) pushRenderProfile()
+    if (message.alert) {
+      const alertText = String(message.alert)
+      showStatus(alertText, true)
+      if (renderDone) settleRender(new Error(alertText))
+    }
   } catch (error) {
     showStatus(`无法解析 ComfyUI 消息：${error.message}`, true)
   }
+}
+
+function requestModelList() {
+  if (modelListSynced) {
+    if (modelPullTimer) {
+      clearInterval(modelPullTimer)
+      modelPullTimer = null
+    }
+    return
+  }
+  if (!socket || socket.readyState !== WebSocket.OPEN) return
+  try { sendSocket({ pullModels: true }) } catch (_) {}
 }
 
 function connectSocket() {
@@ -1059,6 +1959,11 @@ function connectSocket() {
     socket.onopen = () => {
       setConnection("已连接", "connected")
       showStatus("ComfyUI 工作流通道已连接")
+      pushRenderProfile()
+      modelListSynced = false
+      requestModelList()
+      if (modelPullTimer) clearInterval(modelPullTimer)
+      modelPullTimer = setInterval(requestModelList, 2000)
     }
     socket.onmessage = handleSocketMessage
     socket.onerror = () => setConnection("连接错误", "error")
@@ -1094,6 +1999,7 @@ async function showCapturedPreview(base64) {
   const previous = capturePreviewFile
   capturePreviewFile = await writeDataFile(`capture-${Date.now()}.png`, base64)
   showPreview(base64, capturePreviewFile.url)
+  showCanvasReference(capturePreviewFile.url)
   if (previous) {
     try { await previous.delete() } catch (_) {}
   }
@@ -1142,7 +2048,7 @@ function showPreview(source, fileUrl) {
 async function render() {
   suppressWatchUntil = Date.now() + 1500
   setBusy(true)
-  setProgress("读取 Photoshop")
+  setProgress(batchRunning ? element("progress-label").textContent : "读取 Photoshop")
   try {
     if (element("auto-seed").checked) randomSeed()
     const payload = await core.executeAsModal(
@@ -1159,24 +2065,78 @@ async function render() {
     setProgress("失败")
     setMarquee(0, false)
     showStatus(error.message || String(error), true)
+    throw error
   } finally {
     setBusy(false)
+  }
+}
+
+function requestInterrupt() {
+  try { sendSocket({ interrupt: true }) } catch (_) {}
+  settleRender(new Error("已停止"))
+}
+
+async function renderBatch(totalOverride) {
+  if (batchRunning) {
+    batchStop = true
+    requestInterrupt()
+    showStatus("正在停止")
+    return
+  }
+  const total = Number.isFinite(totalOverride) ? totalOverride : batchCount()
+  if (!Number.isFinite(totalOverride)) element("batch-count").value = String(total)
+  batchRunning = true
+  batchStop = false
+  setRenderLabel("停止")
+  let finished = 0
+  try {
+    for (let index = 0; index < total; index += 1) {
+      if (batchStop) break
+      if (total > 1) setProgress(`第 ${index + 1} / ${total} 张`)
+      const pending = armRenderWait()
+      pending.catch(() => {})
+      try {
+        await render()
+        await pending
+      } catch (error) {
+        settleRender(error)
+        throw error
+      }
+      finished += 1
+      if (total > 1) showStatus(`第 ${finished} / ${total} 张已完成`)
+    }
+    if (batchStop) showStatus(finished ? `已停止，完成 ${finished} 张` : "已停止")
+    else if (total > 1) showStatus(`${total} 张已生成`)
+  } catch (error) {
+    if (batchStop || (error && error.message === "已停止")) {
+      showStatus(finished ? `已停止，完成 ${finished} 张` : "已停止")
+    } else {
+      showStatus(error.message || String(error), true)
+    }
+  } finally {
+    batchRunning = false
+    batchStop = false
+    setRenderLabel("渲染")
   }
 }
 
 async function sendLayer() {
   setBusy(true)
   try {
-    const payload = await core.executeAsModal(
-      () => encodeActiveLayer(),
-      { commandName: "Send active layer to ComfyTV" },
+    const payloads = await core.executeAsModal(
+      () => encodeActiveLayers(),
+      { commandName: "Send active layers to ComfyTV" },
     )
-    const result = await request("/comfytv/photoshop/layer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    showStatus(`${result.layer || result.name || "当前图层"} 已发送到 ComfyTV`)
+    const names = []
+    for (let index = 0; index < payloads.length; index += 1) {
+      const result = await request("/comfytv/photoshop/layer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payloads[index]),
+      })
+      names.push(result.layer || result.name || payloads[index].layer)
+    }
+    showStatus(names.length > 1 ? `已发送 ${names.length} 个图层：${names.join("、")}` : `${names[0]} 已发送到 ComfyTV`)
   } catch (error) {
     showStatus(error.message || String(error), true)
   } finally {
@@ -1249,7 +2209,7 @@ function buildHuffman(lengths) {
   return root
 }
 
-function inflateZlib(bytes) {
+function inflateZlib(bytes, expected) {
   let position = bytes[0] === 0x78 ? 2 : 0
   let accumulator = 0
   let bits = 0
@@ -1279,7 +2239,33 @@ function inflateZlib(bytes) {
   const fixedLiteral = buildHuffman(fixedLengths)
   const fixedDistance = buildHuffman(new Array(32).fill(5))
   const codeOrder = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
-  const output = []
+  let output = new Uint8Array(expected > 0 ? expected : 65536)
+  let outLength = 0
+  const reserve = (extra) => {
+    if (outLength + extra <= output.length) return
+    let size = output.length
+    while (size < outLength + extra) size *= 2
+    const next = new Uint8Array(size)
+    next.set(output)
+    output = next
+  }
+  const pushOut = (value) => {
+    reserve(1)
+    output[outLength] = value & 255
+    outLength += 1
+  }
+  const pushMatch = (distance, length) => {
+    reserve(length)
+    if (distance >= length) {
+      output.copyWithin(outLength, outLength - distance, outLength - distance + length)
+      outLength += length
+      return
+    }
+    for (let index = 0; index < length; index += 1) {
+      output[outLength] = output[outLength - distance]
+      outLength += 1
+    }
+  }
   let finalBlock = 0
   while (!finalBlock) {
     finalBlock = read(1)
@@ -1292,7 +2278,7 @@ function inflateZlib(bytes) {
       position += 4
       accumulator = 0
       bits = 0
-      for (let index = 0; index < size; index += 1) output.push(bytes[position + index])
+      for (let index = 0; index < size; index += 1) pushOut(bytes[position + index])
       position += size
       continue
     }
@@ -1327,7 +2313,7 @@ function inflateZlib(bytes) {
     while (true) {
       const symbol = readSymbol(literalTree)
       if (symbol < 256) {
-        output.push(symbol)
+        pushOut(symbol)
         continue
       }
       if (symbol === 256) break
@@ -1335,10 +2321,10 @@ function inflateZlib(bytes) {
       const length = LENGTH_BASE[lengthIndex] + (LENGTH_EXTRA[lengthIndex] ? read(LENGTH_EXTRA[lengthIndex]) : 0)
       const distanceIndex = readSymbol(distanceTree)
       const distance = DIST_BASE[distanceIndex] + (DIST_EXTRA[distanceIndex] ? read(DIST_EXTRA[distanceIndex]) : 0)
-      for (let index = 0; index < length; index += 1) output.push(output[output.length - distance])
+      pushMatch(distance, length)
     }
   }
-  return new Uint8Array(output)
+  return output.subarray(0, outLength)
 }
 
 function paethPredictor(left, up, upperLeft) {
@@ -1364,10 +2350,10 @@ function pngAlphaInsets(bytes) {
     offset += 12 + length
   }
   if (!parts.length) return null
-  const inflated = inflateZlib(concatBytes(parts))
   const channels = header.colorType === 6 ? 4 : 2
   const stride = header.width * channels
   const rowBytes = stride + 1
+  const inflated = inflateZlib(concatBytes(parts), rowBytes * header.height)
   if (inflated.length < rowBytes * header.height) return null
   const pixels = new Uint8Array(stride * header.height)
   let minX = header.width
@@ -1706,17 +2692,16 @@ async function addResultLayer() {
     showStatus(error.message || String(error), true)
   } finally {
     element("add-layer").disabled = false
+    focusHistoryKeys()
   }
 }
 
 function closePrompt() {
-  element("prompt-card").classList.add("hidden")
-  element("spark-button").classList.remove("active")
+  closeComposerMenus()
 }
 
 function syncDrawerButtons(openId) {
   element("settings-toggle").classList.toggle("active", openId === "settings-drawer")
-  element("menu-button").classList.toggle("active", openId === "workflow-drawer")
 }
 
 function workflowListReady() {
@@ -1744,21 +2729,934 @@ function toggleDrawer(id) {
   document.querySelectorAll(".drawer").forEach((item) => item.classList.add("hidden"))
   if (opening) {
     drawer.classList.remove("hidden")
-    closePrompt()
-    if (id === "workflow-drawer") announceWorkflowList()
+    closeComposerMenus()
   }
   syncDrawerButtons(opening ? id : "")
 }
 
-function togglePrompt() {
-  const card = element("prompt-card")
-  const opening = card.classList.contains("hidden")
-  card.classList.toggle("hidden", !opening)
-  element("spark-button").classList.toggle("active", opening)
-  if (opening) {
-    document.querySelectorAll(".drawer").forEach((item) => item.classList.add("hidden"))
-    syncDrawerButtons("")
+const referenceFiles = []
+const COUNT_STEPS = [1, 2, 4, 8]
+const RATIO_ORDER = ["1:1", "2:3", "3:2", "4:5", "5:4", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "2:1", "1:2", "3:1", "1:3", "1:4", "4:1", "8:1", "1:8"]
+const GPT_SIZE = {
+  auto: { auto: "auto" },
+  "1K": { "1:1": "1024x1024", "2:3": "1024x1536", "3:2": "1536x1024" },
+  "2K": { "1:1": "2048x2048", "16:9": "2048x1152", "9:16": "1152x2048" },
+  "4K": { "16:9": "3840x2160", "9:16": "2160x3840" },
+}
+const GPT_NODE_SIZES = ["auto", "1024x1024", "1024x1536", "1536x1024", "2048x2048", "2048x1152", "1152x2048", "3840x2160", "2160x3840", "Custom"]
+const GPT_SIZE_ASPECT = {
+  auto: "auto",
+  "1024x1024": "1:1",
+  "1024x1536": "2:3",
+  "1536x1024": "3:2",
+  "2048x2048": "1:1",
+  "2048x1152": "16:9",
+  "1152x2048": "9:16",
+  "3840x2160": "16:9",
+  "2160x3840": "9:16",
+  Custom: "auto",
+}
+const RENDER_FAMILIES = {
+  nanobanana: {
+    label: "NanoBanana",
+    short: "Nano",
+    aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9", "1:4", "4:1", "8:1", "1:8"],
+    resolutions: ["1K", "2K", "4K"],
+    qualities: [{ value: "MINIMAL", label: "低" }, { value: "HIGH", label: "高" }],
+    backgrounds: [],
+    defaultResolution: "2K",
+    defaultQuality: "MINIMAL",
+  },
+  pro: {
+    label: "Pro",
+    short: "Pro",
+    aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+    resolutions: ["1K", "2K", "4K"],
+    qualities: [],
+    backgrounds: [],
+    defaultResolution: "2K",
+    defaultQuality: "",
+  },
+  gpt: {
+    label: "GPT",
+    short: "GPT",
+    resolutions: ["auto", "1K", "2K", "4K"],
+    qualities: [
+      { value: "low", label: "低" },
+      { value: "medium", label: "中" },
+      { value: "high", label: "高" },
+      { value: "xhigh", label: "超高" },
+      { value: "max", label: "最高" },
+    ],
+    backgrounds: [
+      { value: "auto", label: "自动" },
+      { value: "opaque", label: "不透明" },
+      { value: "transparent", label: "半透明" },
+    ],
+    defaultResolution: "auto",
+    defaultQuality: "high",
+    defaultBackground: "auto",
+  },
+}
+let renderProfile = {
+  family: "nanobanana",
+  aspect: "auto",
+  resolution: "2K",
+  quality: "MINIMAL",
+  background: "",
+}
+
+function gptSizeLabel(value) {
+  return value === "auto" ? "auto" : String(value).replace("x", "×")
+}
+
+function gptResolution(raw) {
+  const resolution = raw && raw.resolution
+  if (GPT_NODE_SIZES.includes(resolution)) return resolution
+  const mapped = (GPT_SIZE[resolution] || {})[raw && raw.aspect]
+  return GPT_NODE_SIZES.includes(mapped) ? mapped : "auto"
+}
+
+function aspectChoices(profile) {
+  if (profile.family === "gpt") return [GPT_SIZE_ASPECT[profile.resolution] || "auto"]
+  return RENDER_FAMILIES[profile.family].aspects
+}
+
+function orderedAspects(values) {
+  const rest = values.filter((value) => value !== "auto")
+  return RATIO_ORDER.filter((value) => rest.includes(value)).concat(rest.filter((value) => !RATIO_ORDER.includes(value)))
+}
+
+function normalizeProfile(raw) {
+  const familyId = RENDER_FAMILIES[raw && raw.family] ? raw.family : "nanobanana"
+  const family = RENDER_FAMILIES[familyId]
+  const resolution = familyId === "gpt"
+    ? gptResolution(raw)
+    : (family.resolutions.includes(raw && raw.resolution) ? raw.resolution : family.defaultResolution)
+  const draft = { family: familyId, resolution }
+  const aspects = aspectChoices(draft)
+  const aspect = familyId === "gpt" ? aspects[0] : (aspects.includes(raw && raw.aspect) ? raw.aspect : aspects[0])
+  const quality = family.qualities.some((item) => item.value === (raw && raw.quality)) ? raw.quality : (family.defaultQuality || "")
+  const background = family.backgrounds.some((item) => item.value === (raw && raw.background)) ? raw.background : (family.defaultBackground || "")
+  return { family: familyId, aspect, resolution, quality, background }
+}
+
+function profileGroupName(profile) {
+  if (profile.family === "nanobanana") return `NanoBanana ${profile.resolution}`
+  if (profile.family === "pro") return `NanoBanana Pro ${profile.resolution}`
+  const background = { auto: "自动", opaque: "不透明", transparent: "半透明" }[profile.background] || "自动"
+  return `GPT ${background}`
+}
+
+function profilePayload(profile) {
+  const normalized = normalizeProfile(profile)
+  const size = normalized.family === "gpt" ? normalized.resolution : ""
+  return { ...normalized, group: profileGroupName(normalized), size }
+}
+
+function modeButtonLabel(profile) {
+  if (profile.family === "gpt") return gptSizeLabel(profile.resolution)
+  return `${optionLabel(profile.aspect)} · ${optionLabel(profile.resolution)}`
+}
+
+function familyFromModelName(name) {
+  const text = String(name || "")
+  if (text.includes("Pro")) return "pro"
+  if (text.includes("GPT")) return "gpt"
+  if (text.includes("Nano")) return "nanobanana"
+  return ""
+}
+
+function syncProfileToModel() {
+  const model = element("workflow")
+  const option = model.options[model.selectedIndex]
+  const family = familyFromModelName(option ? option.textContent : "")
+  if (!family || family === renderProfile.family) return false
+  renderProfile = normalizeProfile({ ...renderProfile, family })
+  saveRenderProfile()
+  const menu = element("mode-menu")
+  if (menu && !menu.classList.contains("hidden")) fillModeSheet(menu)
+  syncComposer()
+  return true
+}
+
+function loadRenderProfile() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(`${STORE_PREFIX}renderProfile`) || "")
+    renderProfile = normalizeProfile(saved)
+  } catch (_) {
+    renderProfile = normalizeProfile(renderProfile)
   }
+}
+
+function saveRenderProfile() {
+  localStorage.setItem(`${STORE_PREFIX}renderProfile`, JSON.stringify(renderProfile))
+}
+
+function pushRenderProfile() {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return
+  try { sendSocket({ renderProfile: profilePayload(renderProfile) }) } catch (_) {}
+}
+
+function chooseRenderProfile(patch) {
+  renderProfile = normalizeProfile({ ...renderProfile, ...patch })
+  saveRenderProfile()
+  pushRenderProfile()
+  syncComposer()
+  const menu = element("mode-menu")
+  if (menu && !menu.classList.contains("hidden")) fillModeSheet(menu)
+}
+
+function ratioBox(token) {
+  if (token === "auto") return { width: 16, height: 16 }
+  const parts = String(token).split(":").map((item) => Number(item))
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return { width: 16, height: 16 }
+  const scale = 18 / Math.max(parts[0], parts[1])
+  return {
+    width: Math.max(8, Math.round(parts[0] * scale)),
+    height: Math.max(8, Math.round(parts[1] * scale)),
+  }
+}
+
+function optionLabel(value) {
+  return value === "auto" ? "自适应" : value
+}
+
+function appendChip(parent, label, on, onClick) {
+  const chip = document.createElement("span")
+  chip.className = on ? "mode-chip is-on" : "mode-chip"
+  chip.setAttribute("role", "button")
+  chip.tabIndex = 0
+  chip.textContent = label
+  chip.addEventListener("click", (event) => {
+    event.stopPropagation()
+    onClick()
+  })
+  parent.appendChild(chip)
+}
+
+function appendSection(menu, title) {
+  const section = document.createElement("div")
+  section.className = "mode-section"
+  const heading = document.createElement("div")
+  heading.className = "mode-section-title"
+  heading.textContent = title
+  section.appendChild(heading)
+  menu.appendChild(section)
+  return section
+}
+
+function fillModeSheet(menu) {
+  const profile = normalizeProfile(renderProfile)
+  renderProfile = profile
+  menu.textContent = ""
+
+  if (profile.family === "gpt") {
+    const sizeSection = appendSection(menu, "尺寸")
+    const sizeRow = document.createElement("div")
+    sizeRow.className = "mode-chip-row"
+    GPT_NODE_SIZES.forEach((value) => {
+      appendChip(sizeRow, gptSizeLabel(value), profile.resolution === value, () => chooseRenderProfile({ resolution: value }))
+    })
+    sizeSection.appendChild(sizeRow)
+  }
+
+  if (profile.family !== "gpt") {
+  const ratioSection = appendSection(menu, "比例")
+  const layout = document.createElement("div")
+  layout.className = "ratio-layout"
+  const aspects = aspectChoices(profile)
+  if (aspects.includes("auto")) {
+    const auto = document.createElement("span")
+    auto.className = profile.aspect === "auto" ? "ratio-auto is-on" : "ratio-auto"
+    auto.setAttribute("role", "button")
+    auto.tabIndex = 0
+    const glyph = document.createElement("span")
+    glyph.className = "ratio-glyph"
+    const box = ratioBox("auto")
+    glyph.style.width = `${box.width}px`
+    glyph.style.height = `${box.height}px`
+    const caption = document.createElement("span")
+    caption.textContent = "自适应"
+    auto.appendChild(glyph)
+    auto.appendChild(caption)
+    auto.addEventListener("click", (event) => {
+      event.stopPropagation()
+      chooseRenderProfile({ aspect: "auto" })
+    })
+    layout.appendChild(auto)
+  }
+  const grid = document.createElement("div")
+  grid.className = "ratio-grid"
+  orderedAspects(aspects).forEach((value) => {
+    const cell = document.createElement("span")
+    cell.className = profile.aspect === value ? "ratio-cell is-on" : "ratio-cell"
+    cell.setAttribute("role", "button")
+    cell.tabIndex = 0
+    const glyph = document.createElement("span")
+    glyph.className = "ratio-glyph"
+    const box = ratioBox(value)
+    glyph.style.width = `${box.width}px`
+    glyph.style.height = `${box.height}px`
+    const caption = document.createElement("span")
+    caption.textContent = value
+    cell.appendChild(glyph)
+    cell.appendChild(caption)
+    cell.addEventListener("click", (event) => {
+      event.stopPropagation()
+      chooseRenderProfile({ aspect: value })
+    })
+    grid.appendChild(cell)
+  })
+  layout.appendChild(grid)
+  ratioSection.appendChild(layout)
+
+  const resolutionSection = appendSection(menu, "分辨率")
+  const resolutionRow = document.createElement("div")
+  resolutionRow.className = "mode-chip-row"
+  RENDER_FAMILIES[profile.family].resolutions.forEach((value) => {
+    appendChip(resolutionRow, optionLabel(value), profile.resolution === value, () => chooseRenderProfile({ resolution: value }))
+  })
+  resolutionSection.appendChild(resolutionRow)
+  }
+
+  const qualities = RENDER_FAMILIES[profile.family].qualities
+  if (qualities.length) {
+    const qualitySection = appendSection(menu, "质量")
+    const qualityRow = document.createElement("div")
+    qualityRow.className = "mode-chip-row"
+    qualities.forEach((item) => {
+      appendChip(qualityRow, item.label, profile.quality === item.value, () => chooseRenderProfile({ quality: item.value }))
+    })
+    qualitySection.appendChild(qualityRow)
+  }
+
+  const backgrounds = RENDER_FAMILIES[profile.family].backgrounds
+  if (backgrounds.length) {
+    const backgroundSection = appendSection(menu, "输出背景")
+    const backgroundRow = document.createElement("div")
+    backgroundRow.className = "mode-chip-row"
+    backgrounds.forEach((item) => {
+      appendChip(backgroundRow, item.label, profile.background === item.value, () => chooseRenderProfile({ background: item.value }))
+    })
+    backgroundSection.appendChild(backgroundRow)
+  }
+}
+
+function syncComposer() {
+  const model = element("workflow")
+  const modelText = model.options[model.selectedIndex] ? model.options[model.selectedIndex].textContent.trim() : ""
+  element("model-label").textContent = modelText && model.value !== "" ? modelText : "模型"
+  element("mode-label").textContent = modeButtonLabel(normalizeProfile(renderProfile))
+  const count = batchCount()
+  element("batch-count").value = String(count)
+  element("count-label").textContent = `${count}x`
+}
+
+function syncPromptMirror() {
+  const text = element("positive").value
+  const mirror = element("positive-mirror")
+  const empty = !String(text || "").trim()
+  mirror.textContent = empty ? "描述你想要生成的内容" : text
+  mirror.classList.toggle("is-empty", empty)
+}
+
+function closeComposerMenus() {
+  element("model-menu").classList.add("hidden")
+  element("mode-menu").classList.add("hidden")
+  element("count-menu").classList.add("hidden")
+  element("composer").classList.remove("menu-open")
+}
+
+function fillSelectMenu(menu, select) {
+  menu.textContent = ""
+  let count = 0
+  for (let index = 0; index < select.options.length; index += 1) {
+    const option = select.options[index]
+    if (option.value === "") continue
+    count += 1
+    const item = document.createElement("span")
+    item.className = "composer-option"
+    item.setAttribute("role", "button")
+    item.tabIndex = 0
+    item.textContent = option.textContent
+    if (option.selected) item.classList.add("is-selected")
+    item.addEventListener("click", (event) => {
+      event.stopPropagation()
+      select.value = option.value
+      select.dispatchEvent(new Event("change", { bubbles: true }))
+      syncComposer()
+      closeComposerMenus()
+    })
+    menu.appendChild(item)
+  }
+  if (!count) {
+    const empty = document.createElement("span")
+    empty.className = "composer-option"
+    empty.textContent = "等待 ComfyUI 同步"
+    menu.appendChild(empty)
+  }
+}
+
+function fillCountMenu(menu) {
+  menu.textContent = ""
+  const current = batchCount()
+  COUNT_STEPS.forEach((count) => {
+    const item = document.createElement("span")
+    item.className = "composer-option"
+    item.setAttribute("role", "button")
+    item.tabIndex = 0
+    item.textContent = `${count}x`
+    if (count === current) item.classList.add("is-selected")
+    item.addEventListener("click", (event) => {
+      event.stopPropagation()
+      element("batch-count").value = String(count)
+      saveSettings()
+      syncComposer()
+      closeComposerMenus()
+    })
+    menu.appendChild(item)
+  })
+}
+
+function toggleComposerMenu(id) {
+  const menu = element(id)
+  const willOpen = menu.classList.contains("hidden")
+  closeComposerMenus()
+  if (!willOpen) return
+  if (id === "model-menu") {
+    if (!workflowListReady()) announceWorkflowList()
+    fillSelectMenu(menu, element("workflow"))
+  } else if (id === "mode-menu") {
+    fillModeSheet(menu)
+  } else {
+    fillCountMenu(menu)
+  }
+  syncPromptMirror()
+  menu.classList.remove("hidden")
+  element("composer").classList.add("menu-open")
+}
+
+function showCanvasReference(url) {
+  const card = element("ref-doc")
+  if (!card || !url) return
+  let img = card.querySelector("img")
+  if (!img) {
+    img = document.createElement("img")
+    img.alt = ""
+    card.appendChild(img)
+  }
+  img.src = String(url)
+  card.classList.add("has-image")
+}
+
+function paintReferenceRow() {
+  const row = element("ref-row")
+  const add = element("ref-add")
+  row.querySelectorAll(".ref-thumb").forEach((node) => node.remove())
+  referenceFiles.forEach((file, index) => {
+    const card = document.createElement("span")
+    card.className = "ref-card ref-thumb has-image"
+    card.setAttribute("role", "button")
+    card.tabIndex = 0
+    card.title = `写入 @参考图${index + 1}`
+    const img = document.createElement("img")
+    img.alt = ""
+    img.src = file.src || ""
+    card.appendChild(img)
+    const remove = document.createElement("button")
+    remove.type = "button"
+    remove.className = "ref-remove"
+    remove.textContent = "×"
+    remove.title = "移除这张参考图"
+    remove.addEventListener("click", (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      referenceFiles.splice(index, 1)
+      paintReferenceRow()
+    })
+    card.appendChild(remove)
+    card.addEventListener("click", (event) => {
+      event.stopPropagation()
+      insertMention(`@参考图${index + 1}`)
+      showStatus(`已写入 @参考图${index + 1}`)
+    })
+    row.insertBefore(card, add)
+  })
+}
+
+async function referenceFromFile(file) {
+  const binary = await file.read({ format: storage.formats.binary })
+  const bytes = new Uint8Array(binary)
+  if (!bytes.length) throw new Error("这张图片是空的")
+  if (bytes.length > 25 * 1024 * 1024) throw new Error("参考图请小于 25MB")
+  const name = String(file.name || "reference.png")
+  if (!/\.(png|jpe?g|webp)$/i.test(name)) throw new Error("请选择 png、jpg 或 webp")
+  const mime = /\.jpe?g$/i.test(name) ? "image/jpeg" : (/\.webp$/i.test(name) ? "image/webp" : "image/png")
+  const base64 = bytesToBase64(bytes)
+  return { name, base64, src: `data:${mime};base64,${base64}` }
+}
+
+async function addReferenceImage() {
+  try {
+    const picked = await storage.localFileSystem.getFileForOpening({ types: ["png", "jpg", "jpeg", "webp"] })
+    const files = Array.isArray(picked) ? picked : (picked ? [picked] : [])
+    if (!files.length) return
+    let added = 0
+    for (const file of files) {
+      if (referenceFiles.length >= 6) {
+        showStatus("参考图最多 6 张", true)
+        break
+      }
+      referenceFiles.push(await referenceFromFile(file))
+      added += 1
+    }
+    paintReferenceRow()
+    if (added) showStatus(added > 1 ? `已添加 ${added} 张参考图` : `已添加参考图 ${referenceFiles[referenceFiles.length - 1].name}`)
+  } catch (error) {
+    const message = error && error.message ? error.message : "无法添加参考图"
+    showStatus(/permission|denied|not allowed/i.test(message) ? "没有读取本地图片的权限，请完全退出 Photoshop 后再打开面板" : message, true)
+  }
+}
+
+let activeStyleId = localStorage.getItem(`${STORE_PREFIX}promptStyle`) || "style-none"
+let activeFilterId = localStorage.getItem(`${STORE_PREFIX}promptFilter`) || "filter-none"
+let activeCustomName = ""
+
+function libraryItems(kind) {
+  const builtin = kind === "function"
+    ? (typeof FILTER_LIBRARY === "undefined" ? [] : FILTER_LIBRARY)
+    : (typeof STYLE_LIBRARY === "undefined" ? [] : STYLE_LIBRARY)
+  return builtin.concat(readUserLibrary().filter((item) => item.library === kind))
+}
+
+function readUserLibrary() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(`${STORE_PREFIX}userLibrary`) || "[]")
+    if (!Array.isArray(parsed)) return []
+    return parsed.map((item) => {
+      if (!item || !item.id || !String(item.name || "").trim() || !String(item.group || "").trim()) return null
+      return {
+        id: String(item.id),
+        library: item.library === "function" ? "function" : "style",
+        group: String(item.group).trim(),
+        name: String(item.name).trim(),
+        des: String(item.des || ""),
+        prompt: String(item.prompt || ""),
+        user: true,
+      }
+    }).filter(Boolean)
+  } catch (_) {
+    return []
+  }
+}
+
+function writeUserLibrary(items) {
+  localStorage.setItem(`${STORE_PREFIX}userLibrary`, JSON.stringify(items.slice(0, 80).map((item) => ({
+    id: item.id,
+    library: item.library,
+    group: item.group,
+    name: item.name,
+    des: item.des || "",
+    prompt: item.prompt || "",
+  }))))
+}
+
+function activeCustomPreset() {
+  if (!activeCustomName) return null
+  return readPromptPresets().find((item) => item.name === activeCustomName) || null
+}
+
+function escapeRegExp(text) {
+  return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function tidyPrompt(text) {
+  return String(text || "").replace(/[ \t]{2,}/g, " ").replace(/[ \t]+\n/g, "\n").replace(/^\s+|\s+$/g, "")
+}
+
+function stripToken(text, name) {
+  if (!name) return String(text || "")
+  return String(text || "").replace(new RegExp(`(^|\\s)@${escapeRegExp(name)}(?=\\s|$)`, "g"), "$1")
+}
+
+function ensureToken(text, name) {
+  const token = `@${name}`
+  const source = String(text || "")
+  if (new RegExp(`(?:^|\\s)${escapeRegExp(token)}(?=\\s|$)`).test(source)) return tidyPrompt(source)
+  return tidyPrompt(`${token} ${source}`)
+}
+
+function placeKindToken(previousName, nextName) {
+  const field = element("positive")
+  let text = stripToken(field.value, previousName)
+  if (nextName) text = ensureToken(text, nextName)
+  field.value = tidyPrompt(text)
+  syncPromptMirror()
+}
+
+function namedSelection(kind) {
+  if (kind === "style") {
+    const item = libraryItems("style").find((entry) => entry.id === activeStyleId)
+    return item && item.prompt ? item.name : ""
+  }
+  if (kind === "function") {
+    const item = libraryItems("function").find((entry) => entry.id === activeFilterId)
+    return item && item.prompt ? item.name : ""
+  }
+  const custom = activeCustomPreset()
+  return custom && (custom.prefix || custom.suffix) ? custom.name : ""
+}
+
+function composePrompt() {
+  let text = String(element("positive").value || "")
+  text = text.replace(/@参考图(\d+)/g, (_, raw) => `图片${Number(raw) + 2}`)
+  const custom = activeCustomPreset()
+  if (custom && custom.name) text = stripToken(text, custom.name)
+  const named = libraryItems("style").concat(libraryItems("function"))
+    .filter((item) => item && item.prompt && item.name)
+    .sort((a, b) => b.name.length - a.name.length)
+  named.forEach((item) => {
+    text = text.replace(new RegExp(`@${escapeRegExp(item.name)}`, "g"), item.prompt)
+  })
+  text = tidyPrompt(text)
+  if (custom && (custom.prefix || custom.suffix)) {
+    text = [custom.prefix, text, custom.suffix].map((part) => String(part || "").trim()).filter(Boolean).join("\n")
+  }
+  return text
+}
+
+function mentionQuery(field) {
+  const value = String(field.value || "")
+  let end = value.length
+  if (typeof field.selectionStart === "number" && (field.selectionStart > 0 || value.length === 0)) {
+    end = field.selectionStart
+  }
+  const match = value.slice(0, end).match(/@([^\s@]*)$/)
+  if (!match) return null
+  return { start: end - match[0].length, end, query: match[1] }
+}
+
+function insertMention(token) {
+  const field = element("positive")
+  const value = String(field.value || "")
+  const found = mentionQuery(field)
+  if (found) field.value = `${value.slice(0, found.start)}${token} ${value.slice(found.end)}`
+  else if (!new RegExp(`(?:^|\\s)${escapeRegExp(token)}(?=\\s|$)`).test(value)) field.value = tidyPrompt(`${value} ${token}`)
+  syncPromptMirror()
+  const menu = element("mention-menu")
+  if (menu) menu.classList.add("hidden")
+}
+
+function paintMentionMenu() {
+  const menu = element("mention-menu")
+  const field = element("positive")
+  if (!menu || !field) return
+  const found = mentionQuery(field)
+  if (!found) {
+    menu.classList.add("hidden")
+    return
+  }
+  const query = found.query.trim()
+  const items = referenceFiles.map((_, index) => `参考图${index + 1}`).filter((label) => !query || label.includes(query))
+  menu.textContent = ""
+  if (!items.length) {
+    const empty = document.createElement("div")
+    empty.className = "mention-empty"
+    empty.textContent = referenceFiles.length ? "没有匹配的参考图" : "先添加参考图，才能 @参考图1"
+    menu.appendChild(empty)
+  } else {
+    items.forEach((label) => {
+      const row = document.createElement("span")
+      row.className = "mention-item"
+      row.setAttribute("role", "button")
+      row.tabIndex = 0
+      row.textContent = `@${label}`
+      const pick = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        insertMention(`@${label}`)
+      }
+      row.addEventListener("mousedown", pick)
+      row.addEventListener("click", pick)
+      menu.appendChild(row)
+    })
+  }
+  menu.classList.remove("hidden")
+}
+
+function readPromptPresets() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(`${STORE_PREFIX}promptPresets`) || "[]")
+    if (!Array.isArray(parsed)) return []
+    return parsed.map((item) => {
+      if (!item || !String(item.name || "").trim()) return null
+      if (item.prefix || item.suffix) {
+        return { name: String(item.name).trim(), prefix: String(item.prefix || ""), suffix: String(item.suffix || "") }
+      }
+      if (item.text) return { name: String(item.name).trim(), prefix: String(item.text), suffix: "" }
+      return null
+    }).filter(Boolean)
+  } catch (_) {
+    return []
+  }
+}
+
+function writePromptPresets(items) {
+  localStorage.setItem(`${STORE_PREFIX}promptPresets`, JSON.stringify(items.slice(0, 40).map((item) => ({
+    name: String(item.name).trim(),
+    prefix: String(item.prefix || ""),
+    suffix: String(item.suffix || ""),
+  }))))
+}
+
+function syncPresetButton() {
+  const button = element("preset-open")
+  const names = []
+  const style = libraryItems("style").find((item) => item.id === activeStyleId)
+  const filter = libraryItems("function").find((item) => item.id === activeFilterId)
+  if (style && style.prompt) names.push(style.name)
+  if (filter && filter.prompt) names.push(filter.name)
+  const custom = activeCustomPreset()
+  if (custom && (custom.prefix || custom.suffix)) names.push(custom.name)
+  button.title = names.length ? `预设：${names.join("、")}` : "预设"
+  button.classList.toggle("is-on", names.length > 0)
+  paintPromptTags()
+}
+
+function paintLibrary(hostId, items, activeId, onPick) {
+  const host = element(hostId)
+  host.textContent = ""
+  const groups = []
+  items.forEach((item) => {
+    let group = groups.find((entry) => entry.name === item.group)
+    if (!group) {
+      group = { name: item.group, items: [] }
+      groups.push(group)
+    }
+    group.items.push(item)
+  })
+  groups.forEach((group) => {
+    const title = document.createElement("div")
+    title.className = "library-group"
+    title.textContent = group.name
+    host.appendChild(title)
+    const grid = document.createElement("div")
+    grid.className = "library-grid"
+    group.items.forEach((item) => {
+      const card = document.createElement("span")
+      card.className = "library-card"
+      if (item.id === activeId) card.classList.add("is-selected")
+      card.setAttribute("role", "button")
+      card.tabIndex = 0
+      const name = document.createElement("strong")
+      name.textContent = item.name
+      card.appendChild(name)
+      if (item.des) {
+        const des = document.createElement("span")
+        des.textContent = item.des
+        card.appendChild(des)
+      }
+      card.addEventListener("click", () => onPick(item))
+      if (item.user) {
+        const remove = document.createElement("button")
+        remove.type = "button"
+        remove.className = "library-remove"
+        remove.textContent = "删除"
+        remove.addEventListener("click", (event) => {
+          event.stopPropagation()
+          writeUserLibrary(readUserLibrary().filter((entry) => entry.id !== item.id))
+          if (activeStyleId === item.id) {
+            activeStyleId = "style-none"
+            localStorage.setItem(`${STORE_PREFIX}promptStyle`, activeStyleId)
+          }
+          if (activeFilterId === item.id) {
+            activeFilterId = "filter-none"
+            localStorage.setItem(`${STORE_PREFIX}promptFilter`, activeFilterId)
+          }
+          syncPresetButton()
+          paintLibraries()
+        })
+        card.appendChild(remove)
+      }
+      grid.appendChild(card)
+    })
+    host.appendChild(grid)
+  })
+}
+
+function paintLibraries() {
+  paintLibrary("preset-tab-style", libraryItems("style"), activeStyleId, (item) => {
+    const previous = namedSelection("style")
+    activeStyleId = item.id
+    localStorage.setItem(`${STORE_PREFIX}promptStyle`, item.id)
+    placeKindToken(previous, item.prompt ? item.name : "")
+    syncPresetButton()
+    paintLibraries()
+    showStatus(item.prompt ? `已把 @${item.name} 写入提示词` : "已取消风格")
+  })
+  paintLibrary("preset-tab-filter", libraryItems("function"), activeFilterId, (item) => {
+    const previous = namedSelection("function")
+    activeFilterId = item.id
+    localStorage.setItem(`${STORE_PREFIX}promptFilter`, item.id)
+    placeKindToken(previous, item.prompt ? item.name : "")
+    syncPresetButton()
+    paintLibraries()
+    showStatus(item.prompt ? `已把 @${item.name} 写入提示词` : "已取消功能")
+  })
+}
+
+function selectedPresetTags() {
+  const tags = []
+  const style = libraryItems("style").find((item) => item.id === activeStyleId)
+  const filter = libraryItems("function").find((item) => item.id === activeFilterId)
+  const custom = activeCustomPreset()
+  if (style && style.prompt) tags.push({ kind: "style", name: style.name })
+  if (filter && filter.prompt) tags.push({ kind: "function", name: filter.name })
+  if (custom && (custom.prefix || custom.suffix)) tags.push({ kind: "custom", name: custom.name })
+  return tags
+}
+
+function clearPresetTag(kind) {
+  const previous = namedSelection(kind)
+  if (kind === "style") {
+    activeStyleId = "style-none"
+    localStorage.setItem(`${STORE_PREFIX}promptStyle`, activeStyleId)
+    paintLibraries()
+  } else if (kind === "function") {
+    activeFilterId = "filter-none"
+    localStorage.setItem(`${STORE_PREFIX}promptFilter`, activeFilterId)
+    paintLibraries()
+  } else {
+    activeCustomName = ""
+    paintCustomPresets()
+  }
+  placeKindToken(previous, "")
+  syncPresetButton()
+}
+
+function paintPromptTags() {
+  const host = element("prompt-tags")
+  if (!host) return
+  host.textContent = ""
+  selectedPresetTags().forEach((tag) => {
+    const chip = document.createElement("span")
+    chip.className = "prompt-tag"
+    const label = document.createElement("span")
+    label.textContent = `@${tag.name}`
+    chip.appendChild(label)
+    const remove = document.createElement("button")
+    remove.type = "button"
+    remove.title = "移除"
+    remove.textContent = "×"
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation()
+      clearPresetTag(tag.kind)
+    })
+    chip.appendChild(remove)
+    host.appendChild(chip)
+  })
+}
+
+function customPresetCards() {
+  const none = { id: "", group: "自定义", name: "无", des: "不使用自定义前后缀", prompt: "", user: false }
+  const saved = readPromptPresets().map((item) => ({
+    id: item.name,
+    group: "自定义",
+    name: item.name,
+    des: [item.prefix, item.suffix].filter(Boolean).join(" / "),
+    prompt: [item.prefix, item.suffix].filter(Boolean).join("\n"),
+    user: false,
+  }))
+  return [none].concat(saved)
+}
+
+function paintCustomPresets() {
+  const list = element("custom-preset-list")
+  if (!list) return
+  paintLibrary("custom-preset-list", customPresetCards(), activeCustomName, (item) => {
+    const previous = namedSelection("custom")
+    activeCustomName = item.id
+    placeKindToken(previous, item.prompt ? item.name : "")
+    paintCustomPresets()
+    syncPresetButton()
+    showStatus(item.prompt ? `已把 @${item.name} 写入提示词` : "已取消自定义预设")
+  })
+  list.querySelectorAll(".library-card").forEach((card) => {
+    const name = card.querySelector("strong")
+    const title = name ? name.textContent : ""
+    if (!title || title === "无") return
+    if (card.querySelector(".library-remove")) return
+    const remove = document.createElement("button")
+    remove.type = "button"
+    remove.className = "library-remove"
+    remove.textContent = "删除"
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation()
+      writePromptPresets(readPromptPresets().filter((entry) => entry.name !== title))
+      if (activeCustomName === title) activeCustomName = ""
+      paintCustomPresets()
+      syncPresetButton()
+    })
+    card.appendChild(remove)
+  })
+}
+
+function showPresetTab(name) {
+  element("preset-tab-style").classList.toggle("hidden", name !== "style")
+  element("preset-tab-filter").classList.toggle("hidden", name !== "filter")
+  element("preset-tab-custom").classList.toggle("hidden", name !== "custom")
+  if (name === "custom") paintCustomPresets()
+  document.querySelectorAll(".preset-tab").forEach((tab) => {
+    tab.classList.toggle("is-active", tab.dataset.presetTab === name)
+  })
+}
+
+function togglePresetPanel() {
+  const panel = element("preset-panel")
+  const opening = panel.classList.contains("hidden")
+  panel.classList.toggle("hidden", !opening)
+  if (!opening) return
+  closeComposerMenus()
+  paintLibraries()
+  paintCustomPresets()
+}
+
+function openPresetDialog() {
+  element("preset-name-input").value = ""
+  element("preset-prefix").value = ""
+  element("preset-suffix").value = ""
+  element("preset-dialog").classList.remove("hidden")
+  element("preset-name-input").focus()
+}
+
+function closePresetDialog() {
+  element("preset-dialog").classList.add("hidden")
+}
+
+function confirmPreset() {
+  const prefix = element("preset-prefix").value.trim()
+  const suffix = element("preset-suffix").value.trim()
+  const name = element("preset-name-input").value.trim()
+  if (!prefix && !suffix) {
+    showStatus("前缀和后缀都是空的", true)
+    return
+  }
+  if (!name) {
+    showStatus("请先给预设起个名字", true)
+    return
+  }
+  const items = readPromptPresets().filter((item) => item.name !== name)
+  items.unshift({ name, prefix, suffix })
+  writePromptPresets(items)
+  const previous = namedSelection("custom")
+  activeCustomName = name
+  placeKindToken(previous, name)
+  showPresetTab("custom")
+  paintCustomPresets()
+  syncPresetButton()
+  closePresetDialog()
+  showStatus(`已选用预设「${name}」`)
 }
 
 function paintToggle(button, on) {
@@ -1783,10 +3681,12 @@ function bindCheckToggle(buttonId, inputId, afterClick) {
 }
 
 function scheduleLiveRender() {
+  if (batchRunning) return
   if (!element("render-on-change").checked || element("render").disabled) return
   clearTimeout(liveTimer)
   liveTimer = setTimeout(() => {
-    if (!element("render").disabled) render()
+    if (batchRunning || element("render").disabled) return
+    renderBatch(1)
   }, 700)
 }
 
@@ -1819,7 +3719,7 @@ function applyLiveRender(enabled, announce) {
 
 async function watchDocument() {
   if (!element("render-on-change").checked || !app?.documents?.length) return
-  if (Date.now() < suppressWatchUntil || element("render").disabled) return
+  if (batchRunning || Date.now() < suppressWatchUntil || element("render").disabled) return
   const document = app.activeDocument
   const marker = historyMarker(document)
   const selection = await activeSelection(document)
@@ -1837,15 +3737,16 @@ async function watchDocument() {
   if (/ComfyTV|Mask Sent to AI/i.test(name)) return
   if (historyChanged || (selectionChanged && element("crop-selection").checked)) {
     suppressWatchUntil = Date.now() + 1200
-    render()
+    renderBatch(1)
   }
 }
 
 function mountEmbeddedComfy() {
   const view = document.getElementById("comfy-webview")
   if (!view) return
-  const current = view.getAttribute("src") || ""
-  if (!current || current === "about:blank") view.setAttribute("src", EMBEDDED_COMFY)
+  let src = EMBEDDED_COMFY
+  try { src = serverAddress() } catch (_) {}
+  if ((view.getAttribute("src") || "") !== src) view.setAttribute("src", src)
 }
 
 async function openComfyUI() {
@@ -1876,7 +3777,8 @@ function saveSettings() {
     cropSelection: element("crop-selection").checked,
     cropPad: element("crop-pad").value,
     autoSeed: element("auto-seed").checked,
-    renderOnChange: element("render-on-change").checked,
+    liveRender: element("render-on-change").checked,
+    batchCount: batchCount(),
   }
   Object.entries(values).forEach(([key, value]) => localStorage.setItem(`${STORE_PREFIX}${key}`, String(value)))
 }
@@ -1897,13 +3799,17 @@ function restoreSettings() {
   const checks = [
     ["crop-selection", "cropSelection", true],
     ["auto-seed", "autoSeed", false],
-    ["render-on-change", "renderOnChange", false],
+    ["render-on-change", "liveRender", false],
   ]
   checks.forEach(([id, key, fallback]) => {
     const saved = localStorage.getItem(`${STORE_PREFIX}${key}`)
     element(id).checked = saved === null ? fallback : saved === "true"
   })
+  const savedBatch = Number.parseInt(localStorage.getItem(`${STORE_PREFIX}batchCount`) || "1", 10)
+  element("batch-count").value = String(Number.isFinite(savedBatch) ? Math.max(1, Math.min(BATCH_MAX, savedBatch)) : 1)
   setPreviewFit(localStorage.getItem(`${STORE_PREFIX}fitContain`) === "true")
+  loadRenderProfile()
+  syncComposer()
 }
 
 function initialize() {
@@ -1915,7 +3821,6 @@ function initialize() {
   restoreSettings()
   element("settings-toggle").addEventListener("click", () => toggleDrawer("settings-drawer"))
   element("web-toggle").addEventListener("click", () => { openComfyUI() })
-  element("menu-button").addEventListener("click", () => toggleDrawer("workflow-drawer"))
   document.querySelectorAll("[data-close]").forEach((button) => {
     button.addEventListener("click", () => {
       element(button.dataset.close).classList.add("hidden")
@@ -1938,20 +3843,84 @@ function initialize() {
   })
   applyLiveRender(element("render-on-change").checked, false)
   element("randomize").addEventListener("click", randomSeed)
-  element("spark-button").addEventListener("click", togglePrompt)
+  element("model-trigger").addEventListener("click", (event) => {
+    event.stopPropagation()
+    toggleComposerMenu("model-menu")
+  })
+  element("mode-trigger").addEventListener("click", (event) => {
+    event.stopPropagation()
+    toggleComposerMenu("mode-menu")
+  })
+  element("count-trigger").addEventListener("click", (event) => {
+    event.stopPropagation()
+    toggleComposerMenu("count-menu")
+  })
+  element("ref-doc").addEventListener("click", () => {
+    showStatus("生成时使用当前 Photoshop 画面")
+  })
+  element("ref-add-btn").addEventListener("click", (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    addReferenceImage()
+  })
+  document.addEventListener("click", (event) => {
+    if (event.target.closest && event.target.closest(".composer-menu, #model-trigger, #mode-trigger, #count-trigger")) return
+    closeComposerMenus()
+  })
+  element("preset-save-chip").addEventListener("click", openPresetDialog)
+  element("preset-open").addEventListener("click", togglePresetPanel)
+  element("preset-panel-close").addEventListener("click", (event) => {
+    event.stopPropagation()
+    element("preset-panel").classList.add("hidden")
+  })
+  document.querySelectorAll(".preset-tab").forEach((tab) => {
+    tab.addEventListener("click", () => showPresetTab(tab.dataset.presetTab))
+  })
+  element("preset-dialog-close").addEventListener("click", closePresetDialog)
+  element("preset-dialog-ok").addEventListener("click", confirmPreset)
+  element("preset-name-input").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return
+    event.preventDefault()
+    confirmPreset()
+  })
+  element("positive").addEventListener("input", paintMentionMenu)
+  element("positive").addEventListener("keyup", paintMentionMenu)
+  element("positive").addEventListener("click", paintMentionMenu)
+  element("positive").addEventListener("keydown", (event) => {
+    const menu = element("mention-menu")
+    if (!menu || menu.classList.contains("hidden")) return
+    if (event.key === "Escape") {
+      menu.classList.add("hidden")
+      return
+    }
+    if (event.key !== "Enter") return
+    const first = menu.querySelector(".mention-item")
+    if (!first) return
+    event.preventDefault()
+    first.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }))
+  })
+  syncPresetButton()
+  ;["style", "function", "custom"].forEach((kind) => {
+    const name = namedSelection(kind)
+    if (name) placeKindToken("", name)
+  })
   let suppressRenderClick = false
   element("render").addEventListener("click", () => {
     if (suppressRenderClick) {
       suppressRenderClick = false
       return
     }
-    render()
+    renderBatch()
   })
   element("render").addEventListener("contextmenu", (event) => {
     event.preventDefault()
     suppressRenderClick = true
+    if (batchRunning) {
+      renderBatch()
+      return
+    }
     randomSeed()
-    if (!element("render").disabled) render()
+    if (!element("render").disabled) renderBatch()
   })
   element("send-layer").addEventListener("click", sendLayer)
   element("connect").addEventListener("click", connect)
@@ -1963,19 +3932,11 @@ function initialize() {
   element("seed").addEventListener("change", scheduleLiveRender)
   element("workflow").addEventListener("change", (event) => {
     if (event.target.value === "") return
+    syncProfileToModel()
     try {
       sendSocket({ workflow: Number(event.target.value) })
-      showStatus("已切换工作流")
-      scheduleLiveRender()
-    } catch (error) {
-      showStatus(error.message, true)
-    }
-  })
-  element("render-mode").addEventListener("change", (event) => {
-    if (event.target.value === "") return
-    try {
-      sendSocket({ rndrMode: Number(event.target.value) })
-      showStatus("已切换渲染模式")
+      pushRenderProfile()
+      showStatus("已切换模型")
       scheduleLiveRender()
     } catch (error) {
       showStatus(error.message, true)
@@ -1989,13 +3950,18 @@ function initialize() {
     })
   })
   document.querySelectorAll("textarea, input").forEach((control) => control.addEventListener("change", saveSettings))
+  const stage = document.querySelector(".preview-stage")
+  stage.addEventListener("mouseenter", focusHistoryKeys)
+  stage.addEventListener("pointerdown", () => focusHistoryKeys(), true)
+  stage.addEventListener("keydown", onHistoryKey)
+  window.addEventListener("keydown", onHistoryKey, true)
   document.addEventListener("keydown", (event) => {
-    const target = event.target
-    const typing = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")
+    const typing = typingTarget(event.target)
     if (!typing && event.ctrlKey && event.shiftKey && event.key === "Enter") {
       event.preventDefault()
-      if (!element("render").disabled) render()
+      if (!element("render").disabled) renderBatch()
     }
+    onHistoryKey(event)
   })
   window.addEventListener("beforeunload", () => {
     clearTimeout(reconnectTimer)
@@ -2003,7 +3969,33 @@ function initialize() {
     stopDocumentWatch()
     if (socket) socket.close()
   })
-  connect()
+  const historyHover = element("history-hover")
+  const historyStrip = element("history-strip")
+  const historyHotspot = element("history-hotspot")
+  historyHotspot.addEventListener("mouseenter", showHistoryCards)
+  historyStrip.addEventListener("mouseenter", showHistoryCards)
+  historyHotspot.addEventListener("mouseleave", scheduleHideHistory)
+  historyStrip.addEventListener("mouseleave", scheduleHideHistory)
+  historyStrip.addEventListener("click", (event) => {
+    const card = historyCardFromEvent(event)
+    if (!card) return
+    selectHistory(Number(card.dataset.index)).catch((error) => showStatus(error.message, true))
+  })
+  historyStrip.addEventListener("wheel", onHistoryWheel, true)
+  historyStrip.addEventListener("mousewheel", onHistoryWheel, true)
+  historyStrip.addEventListener("scroll", () => {
+    if (historyOpen) mountVisibleThumbs()
+  })
+  element("history-limit-close").addEventListener("click", dismissHistoryLimit)
+  element("history-clean").addEventListener("click", () => {
+    cleanOldRenders().catch((error) => showStatus(error.message, true))
+  })
+  element("history-open-folder").addEventListener("click", () => {
+    openRenderFolder().catch((error) => showStatus(error.message, true))
+  })
+  restoreRenderHistory()
+    .catch((error) => showStatus(error.message, true))
+    .then(() => connect())
 }
 
 let panelBooted = false

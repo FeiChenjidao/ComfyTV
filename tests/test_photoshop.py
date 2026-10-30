@@ -81,6 +81,7 @@ def test_layer_route_stores_and_broadcasts(monkeypatch, tmp_path):
     assert stored.read_bytes() == _png()
     assert sent[0][0] == "comfytv-photoshop-layer"
     assert sent[0][1]["layer"] == "Character"
+    assert sent[0][1]["create_new"] is False
 
 
 def test_layer_route_rejects_non_loopback():

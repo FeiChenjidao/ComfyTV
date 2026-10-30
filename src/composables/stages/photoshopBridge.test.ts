@@ -90,4 +90,18 @@ describe('applyPhotoshopLayer', () => {
     expect(node).not.toBe(selectedLoader)
     expect(node).toBe(added[0])
   })
+
+  it('creates a new loader when create_new is set, even if one loader is selected', () => {
+    const selectedLoader = loader()
+    const added: any[] = []
+    const host = {
+      canvas: { selected_nodes: { 1: selectedLoader }, selectNode: vi.fn(), centerOnNode: vi.fn() },
+      graph: { _nodes: [selectedLoader], add: (node: any) => added.push(node), setDirtyCanvas: vi.fn() },
+    }
+    const node = applyPhotoshopLayer(host, { ...payload, name: 'ps-layer-2.png', create_new: true })
+    expect(node).not.toBe(selectedLoader)
+    expect(node).toBe(added[0])
+    expect(selectedLoader.widgets[0].value).toBe('')
+    expect(node.widgets[0].value).toBe('comfytv/photoshop/ps-layer-2.png')
+  })
 })

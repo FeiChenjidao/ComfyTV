@@ -35,6 +35,23 @@ def _open_image(name):
         return Image.new(mode="RGB", size=(24, 24), color=(0, 0, 0))
 
 
+def _to_tensor(image):
+    if image.mode not in ("RGB", "RGBA"):
+        image = image.convert("RGBA")
+    pixels = np.array(image)
+    if pixels.ndim == 2:
+        pixels = np.stack([pixels, pixels, pixels], axis=-1)
+    return torch.from_numpy(pixels.astype(np.float32) / 255.0)[None,]
+
+
+def _reference_tensor(index):
+    name = f"PS_ref_{index}.png"
+    path = os.path.join(PS_INPUTS, name)
+    if not os.path.isfile(path) or os.path.getsize(path) == 0:
+        return torch.zeros((1, 8, 8, 3), dtype=torch.float32)
+    return _to_tensor(_open_image(name))
+
+
 class PhotoshopFromPanel(io.ComfyNode):
     @classmethod
     def define_schema(cls):
@@ -47,18 +64,30 @@ class PhotoshopFromPanel(io.ComfyNode):
             outputs=[
                 io.Image.Output(display_name="Canvas"),
                 io.Mask.Output(display_name="Mask"),
-                io.Float.Output(display_name="Slider"),
                 io.Int.Output(display_name="Seed"),
                 io.String.Output(display_name="+"),
                 io.String.Output(display_name="-"),
                 io.Int.Output(display_name="W"),
                 io.Int.Output(display_name="H"),
+                io.Image.Output(display_name="Ref1"),
+                io.Image.Output(display_name="Ref2"),
+                io.Image.Output(display_name="Ref3"),
+                io.Image.Output(display_name="Ref4"),
+                io.Image.Output(display_name="Ref5"),
+                io.Image.Output(display_name="Ref6"),
+                io.Combo.Output(display_name="比例"),
+                io.Combo.Output(display_name="质量"),
+                io.Combo.Output(display_name="分辨率"),
+                io.Combo.Output(display_name="输出背景"),
+                io.Combo.Output(display_name="尺寸"),
             ],
         )
 
     @classmethod
     def fingerprint_inputs(cls):
-        return "|".join(_file_hash(name) for name in ("config.json", "PS_canvas.png", "PS_mask.png"))
+        names = ["config.json", "PS_canvas.png", "PS_mask.png"]
+        names.extend(f"PS_ref_{index}.png" for index in range(1, 7))
+        return "|".join(_file_hash(name) for name in names)
 
     @classmethod
     def execute(cls):
@@ -67,12 +96,7 @@ class PhotoshopFromPanel(io.ComfyNode):
             config = json.load(file)
 
         image = _open_image("PS_canvas.png")
-        if image.mode not in ("RGB", "RGBA"):
-            image = image.convert("RGBA")
-        pixels = np.array(image)
-        if pixels.ndim == 2:
-            pixels = np.stack([pixels, pixels, pixels], axis=-1)
-        canvas = torch.from_numpy(pixels.astype(np.float32) / 255.0)[None,]
+        canvas = _to_tensor(image)
         width, height = image.size
 
         mask_image = ImageOps.exif_transpose(_open_image("PS_mask.png"))
@@ -80,15 +104,24 @@ class PhotoshopFromPanel(io.ComfyNode):
         mask[mask == (1 / 255.0)] = 0.0
         mask = torch.from_numpy(mask)
 
+        def text(key, fallback=""):
+            value = config.get(key, fallback)
+            return fallback if value is None or value == "" else str(value)
+
         return io.NodeOutput(
             canvas,
             mask.unsqueeze(0),
-            float(config["slider"]) / 100,
             int(config["seed"]),
             config["positive"],
             config["negative"],
             int(width),
             int(height),
+            *[_reference_tensor(index) for index in range(1, 7)],
+            text("aspect", "auto"),
+            text("quality"),
+            text("resolution", "2K"),
+            text("background", "auto"),
+            text("size", "auto"),
         )
 
 

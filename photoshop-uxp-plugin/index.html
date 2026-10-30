@@ -10,27 +10,35 @@
   <uxp-panel panelid="com.comfytv.photoshop.panel">
     <span id="connection-state" class="connection-state">未连接</span>
     <main class="panel-shell">
-      <section class="preview-stage">
+      <section class="preview-stage" tabindex="-1">
         <div id="empty-preview" class="empty-preview">
           <img class="empty-image" src="preview-default.jpg" alt="">
         </div>
         <img id="preview" class="preview" alt="生成结果预览">
         <span id="preview-hit" class="preview-hit" role="button" tabindex="0"></span>
 
+        <div id="history-hover" class="history-hover">
+          <div id="history-hotspot" class="history-hotspot"></div>
+          <div id="history-strip" class="history-strip"></div>
+        </div>
+
         <nav class="tool-rail" aria-label="面板工具">
           <div class="button-seg">
             <span id="settings-toggle" class="rail-btn" role="button" tabindex="0" title="设置">
               <span class="glass-face glass" aria-hidden="true"></span>
               <span class="icon-slot" data-icon="settings-toggle"></span>
+              <span class="btn-hit"></span>
             </span>
             <span id="web-toggle" class="rail-btn" role="button" tabindex="0" title="在 Photoshop 中打开 ComfyUI">
               <span class="glass-face glass" aria-hidden="true"></span>
               <span class="icon-slot" data-icon="web-toggle"></span>
+              <span class="btn-hit"></span>
             </span>
           </div>
           <span id="fit-toggle" class="rail-btn rail-btn-single" role="button" tabindex="0" title="切换预览适配">
             <span class="glass-face glass" aria-hidden="true"></span>
             <span class="icon-slot" data-icon="fit-toggle"></span>
+            <span class="btn-hit"></span>
           </span>
         </nav>
 
@@ -39,50 +47,86 @@
             <strong>设置</strong>
             <button class="close-button" data-close="settings-drawer" type="button" title="关闭">&#215;</button>
           </div>
-          <label for="server">ComfyUI 地址</label>
-          <div class="server-row">
-            <input id="server" value="http://127.0.0.1:8188" spellcheck="false">
-            <button id="connect" type="button">连接</button>
+          <div class="field-row">
+            <label for="server">ComfyUI 地址</label>
+            <div class="server-row">
+              <input id="server" value="http://127.0.0.1:8188" spellcheck="false">
+              <button id="connect" type="button">连接</button>
+            </div>
           </div>
-          <label for="negative">负面提示词</label>
-          <textarea id="negative" rows="3" placeholder="可选"></textarea>
-          <label for="max-res">更大则缩小</label>
-          <input id="max-res" type="number" min="16" max="3840" step="16" value="1024">
-          <label for="min-res">更小则放大</label>
-          <input id="min-res" type="number" min="16" max="3840" step="16" value="512">
+          <div class="field-row">
+            <label for="negative">负面提示词</label>
+            <textarea id="negative" rows="3" placeholder="可选"></textarea>
+          </div>
+          <div class="field-row">
+            <label for="max-res">更大则缩小</label>
+            <input id="max-res" type="number" min="16" max="3840" step="16" value="1024">
+          </div>
+          <div class="field-row">
+            <label for="min-res">更小则放大</label>
+            <input id="min-res" type="number" min="16" max="3840" step="16" value="512">
+          </div>
           <label class="check-row"><input id="crop-selection" type="checkbox" checked><span>有选区时裁切到选区</span></label>
-          <label for="crop-pad">选区外扩 %</label>
-          <input id="crop-pad" type="number" min="0" max="200" step="1" value="32" title="裁切时每边按选区尺寸的这个百分比向外扩，把周围一起传进去">
+          <div class="field-row">
+            <label for="crop-pad">选区外扩 %</label>
+            <input id="crop-pad" type="number" min="0" max="200" step="1" value="32" title="裁切时每边按选区尺寸的这个百分比向外扩，把周围一起传进去">
+          </div>
+          <div class="field-row">
+            <label for="seed">种子</label>
+            <div class="server-row">
+              <input id="seed" type="number" min="0" max="2147483647" value="1379">
+              <button id="randomize" type="button">随机</button>
+            </div>
+          </div>
           <label class="check-row"><input id="auto-seed" type="checkbox"><span>每次自动随机种子</span></label>
           <label class="check-row"><input id="render-on-change" type="checkbox"><span>文档变化时自动渲染</span></label>
           <button id="send-layer" class="secondary-button" type="button">发送当前图层到 ComfyTV</button>
           <button id="add-layer" class="secondary-button" type="button" disabled>把结果添加为图层</button>
         </section>
 
-        <section id="workflow-drawer" class="drawer glass hidden">
-          <div class="drawer-title">
-            <strong>工作流</strong>
-            <button class="close-button" data-close="workflow-drawer" type="button" title="关闭">&#215;</button>
-          </div>
-          <label for="workflow">工作流</label>
-          <select id="workflow"><option value="">等待 ComfyUI 同步</option></select>
-          <label for="render-mode">渲染模式</label>
-          <select id="render-mode"><option value="">等待 ComfyUI 同步</option></select>
-        </section>
-
-        <section id="prompt-card" class="prompt-card glass hidden">
-          <div class="prompt-heading">
-            <span>提示</span>
-            <span id="progress-label">就绪</span>
-          </div>
-          <textarea id="positive" rows="3" placeholder="描述你想生成的画面"></textarea>
-          <div class="seed-row">
-            <button id="randomize" class="text-button" type="button" title="立刻更换随机种子">随机</button>
-            <input id="seed" type="number" min="0" max="2147483647" value="1379">
-          </div>
-        </section>
 
         <div id="status-toast" class="status-toast glass hidden"></div>
+
+        <section id="preset-panel" class="preset-panel hidden">
+          <div class="preset-panel-head">
+            <div class="preset-tabs">
+              <span class="preset-tab is-active" data-preset-tab="style" role="button" tabindex="0">风格</span>
+              <span class="preset-tab" data-preset-tab="filter" role="button" tabindex="0">功能</span>
+              <span class="preset-tab" data-preset-tab="custom" role="button" tabindex="0">自定义</span>
+            </div>
+            <button id="preset-panel-close" class="close-button" type="button" title="关闭">&#215;</button>
+          </div>
+          <div id="preset-tab-style" class="preset-tab-body"></div>
+          <div id="preset-tab-filter" class="preset-tab-body hidden"></div>
+          <div id="preset-tab-custom" class="preset-tab-body hidden">
+            <div id="custom-preset-list"></div>
+            <button id="preset-save-chip" class="preset-new" type="button">新建预设</button>
+          </div>
+        </section>
+
+        <section id="preset-dialog" class="preset-dialog hidden">
+          <div class="preset-dialog-title">
+            <strong>新建预设</strong>
+            <button id="preset-dialog-close" class="close-button" type="button" title="关闭">&#215;</button>
+          </div>
+          <label for="preset-name-input">名称</label>
+          <input id="preset-name-input" type="text" maxlength="40" placeholder="例如 三视图">
+          <label for="preset-prefix">前缀</label>
+          <textarea id="preset-prefix" rows="3" placeholder="加在提示词前面"></textarea>
+          <label for="preset-suffix">后缀</label>
+          <textarea id="preset-suffix" rows="3" placeholder="加在提示词后面"></textarea>
+          <button id="preset-dialog-ok" type="button">保存</button>
+        </section>
+
+        <section id="history-limit" class="history-limit hidden">
+          <div class="history-limit-title">
+            <strong id="history-limit-text">生成图已有 380 张</strong>
+            <button id="history-limit-close" class="close-button" type="button" title="关闭">&#215;</button>
+          </div>
+          <button id="history-clean" type="button">一键清理七天前图片</button>
+          <button id="history-open-folder" type="button">打开文件夹</button>
+          <p id="history-limit-note">只删除七天前的大图和对应缩略图，七天内的会留下。</p>
+        </section>
 
         <div id="progress-frame" class="progress-frame" aria-hidden="true">
           <div id="pf-top" class="pf-edge"></div>
@@ -92,36 +136,66 @@
           <div id="pf-head" class="pf-head"></div>
         </div>
 
-        <footer class="dock">
-          <div class="dock-cluster">
-          <div class="float-tools">
-            <span id="live-toggle" class="tiny-btn" role="button" tabindex="0" title="文档变化时自动渲染">
-              <span class="glass-face glass" aria-hidden="true"></span>
-              <span class="icon-slot" data-icon="live-toggle"></span>
+        <footer id="composer" class="composer">
+          <div id="ref-row" class="composer-refs">
+            <span id="ref-doc" class="ref-card" role="button" tabindex="0" title="生成时使用当前 Photoshop 画面">
+              <span class="icon-slot" data-icon="ref-frame"></span>
+              <span class="ref-card-label">画布</span>
             </span>
-            <span id="crop-toggle" class="tiny-btn active" role="button" tabindex="0" title="有选区时裁切到选区">
-              <span class="glass-face glass" aria-hidden="true"></span>
-              <span class="icon-slot" data-icon="crop-toggle"></span>
+            <span id="ref-add" class="ref-card" title="从文件添加参考图">
+              <span class="icon-slot" data-icon="ref-plus"></span>
+              <span class="ref-card-label">添加</span>
+              <button id="ref-add-btn" type="button" title="从文件添加参考图"></button>
             </span>
           </div>
-          <div class="dock-bar">
-            <span id="menu-button" class="ghost-btn" role="button" tabindex="0" title="工作流和渲染模式">
-              <span class="glass-face glass" aria-hidden="true"></span>
-              <span class="icon-slot" data-icon="menu-button"></span>
-            </span>
-            <span id="spark-button" class="ghost-btn" role="button" tabindex="0" title="提示词">
-              <span class="glass-face glass" aria-hidden="true"></span>
-              <span class="icon-slot" data-icon="spark-button"></span>
-            </span>
-            <div class="render-wrap">
-              <span class="glass-face glass" aria-hidden="true"></span>
-              <span class="icon-slot" data-icon="render"></span>
-              <button id="render" class="render-button" type="button" title="渲染。右键会先换一个随机种子再渲染">
-                <span>渲染</span>
-              </button>
+          <div class="composer-prompt-row">
+            <div id="mention-menu" class="mention-menu hidden"></div>
+            <div id="prompt-tags" class="prompt-tags"></div>
+            <textarea id="positive" class="composer-prompt" rows="2" placeholder="描述你想要生成的内容，输入 @ 引用参考图"></textarea>
+            <div id="positive-mirror" class="composer-prompt-mirror" aria-hidden="true"></div>
+          </div>
+          <div id="progress-label" class="composer-progress">就绪</div>
+          <div class="composer-bar">
+            <div class="composer-bar-left">
+              <span id="model-trigger" class="composer-select" role="button" tabindex="0" title="模型">
+                <span id="model-label">模型</span>
+                <span class="icon-slot" data-icon="caret"></span>
+              </span>
+              <span id="mode-trigger" class="composer-select" role="button" tabindex="0" title="模式">
+                <span id="mode-label">模式</span>
+                <span class="icon-slot" data-icon="caret"></span>
+              </span>
+              <span id="live-toggle" class="tiny-btn" role="button" tabindex="0" title="文档变化时自动渲染">
+                <span class="icon-slot" data-icon="live-toggle"></span>
+              </span>
+              <span id="crop-toggle" class="tiny-btn active" role="button" tabindex="0" title="有选区时裁切到选区">
+                <span class="icon-slot" data-icon="crop-toggle"></span>
+              </span>
+              <span id="preset-open" class="tiny-btn" role="button" tabindex="0" title="预设">
+                <span class="icon-slot" data-icon="preset-open"></span>
+              </span>
+            </div>
+            <div class="composer-bar-right">
+              <span id="count-trigger" class="composer-count" role="button" tabindex="0" title="生成数量。上一张回来后再生成下一张。">
+                <span id="count-label">1x</span>
+                <span class="icon-slot" data-icon="caret"></span>
+              </span>
+              <div class="generate-wrap">
+                <span class="icon-slot generate-disk" data-icon="render-disk"></span>
+                <span class="icon-slot" data-icon="render-up"></span>
+                <button id="render" type="button" title="开始生成。右键会先换一个随机种子。生成过程中再点一次，停掉后面的。"></button>
+              </div>
             </div>
           </div>
-          </div>
+          <div id="model-menu" class="composer-menu hidden"></div>
+          <div id="mode-menu" class="composer-menu mode-sheet hidden"></div>
+          <div id="count-menu" class="composer-menu composer-count-menu hidden"></div>
+          <select id="workflow" class="composer-native">
+            <option value="0" selected>NanoBanana</option>
+            <option value="1">NanoBanana Pro</option>
+            <option value="2">GPT</option>
+          </select>
+          <input id="batch-count" class="composer-native" type="number" min="1" max="8" step="1" value="1">
         </footer>
       </section>
     </main>
@@ -133,6 +207,7 @@
   </uxp-panel>
     <script src="icons.js"></script>
     <script src="glass.js"></script>
+    <script src="presets.js"></script>
     <script src="main.js"></script>
   </body>
 </html>

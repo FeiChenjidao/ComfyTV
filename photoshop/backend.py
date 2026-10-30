@@ -27,6 +27,26 @@ async def save_config(data):
         json.dump(data, file, ensure_ascii=False)
 
 
+def clear_reference_files():
+    if not os.path.isdir(PS_INPUTS):
+        return
+    for name in os.listdir(PS_INPUTS):
+        if name.startswith("PS_ref_") and name.endswith(".png"):
+            try:
+                os.remove(os.path.join(PS_INPUTS, name))
+            except OSError:
+                pass
+
+
+def reference_filename(index):
+    try:
+        number = int(index)
+    except (TypeError, ValueError):
+        number = 1
+    number = max(1, min(6, number))
+    return f"PS_ref_{number}.png"
+
+
 async def send_message(users, kind, message=True):
     try:
         if not users:
@@ -89,6 +109,10 @@ async def handle_message(platform, data):
     if platform != "ps":
         return
     try:
+        if msg.get("referenceClear"):
+            clear_reference_files()
+        if "referenceBase64" in msg:
+            await save_file(msg["referenceBase64"], reference_filename(msg.get("referenceIndex")))
         if "canvasBase64" in msg:
             await save_file(msg["canvasBase64"], "PS_canvas.png")
         if "maskBase64" in msg:
@@ -98,8 +122,15 @@ async def handle_message(platform, data):
         if "workspace" in msg:
             await send_message(comfyui_users, "workspace", msg["workspace"])
         if msg.get("queue"):
-            await send_message(comfyui_users, "queue", msg["queue"])
-        if not any(key in msg for key in ("configdata", "maskBase64", "canvasBase64", "workspace", "queue")):
+            forward = {
+                "queue": True,
+                "renderProfile": msg.get("renderProfile") or {},
+                "referenceCount": int(msg.get("referenceCount") or 0),
+            }
+            if "workflow" in msg:
+                forward["workflow"] = msg["workflow"]
+            await send_message(comfyui_users, "", json.dumps(forward))
+        if not any(key in msg for key in ("configdata", "maskBase64", "canvasBase64", "workspace", "queue", "referenceClear", "referenceBase64")):
             await send_message(comfyui_users, "", json.dumps(msg))
     except Exception as error:
         print(f"# PS: error from Photoshop: {error}")
@@ -120,10 +151,49 @@ async def render_done(request):
         path = os.path.join(folder_paths.get_temp_directory(), filename)
         with open(path, "rb") as image_file:
             encoded = base64.b64encode(image_file.read()).decode("utf-8")
-        await send_message(photoshop_users, "render", encoded)
+        payload = {"render": encoded}
+        try:
+            payload["thumb"] = thumb_png_base64(path)
+        except Exception as error:
+            print(f"# PS: thumb skipped: {error}")
+        await send_message(photoshop_users, "", json.dumps(payload))
     except Exception as error:
         print(f"# PS: Error reading or sending render: {error}")
     return web.Response(text="Render sent to ps")
+
+
+def thumb_png_bytes(raw, edge=160):
+    import io
+    from PIL import Image
+
+    resample = Image.Resampling.BILINEAR if hasattr(Image, "Resampling") else Image.BILINEAR
+    with Image.open(io.BytesIO(raw)) as image:
+        image.thumbnail((edge, edge), resample)
+        if image.mode == "RGB":
+            output = image
+        else:
+            rgba = image.convert("RGBA")
+            output = Image.new("RGB", rgba.size, (0, 0, 0))
+            output.paste(rgba, mask=rgba.getchannel("A"))
+        buffer = io.BytesIO()
+        output.save(buffer, format="PNG")
+        return buffer.getvalue()
+
+
+def thumb_png_base64(path, edge=160):
+    with open(path, "rb") as image_file:
+        return base64.b64encode(thumb_png_bytes(image_file.read(), edge)).decode("ascii")
+
+
+async def make_thumb(request):
+    try:
+        raw = await request.read()
+        if not raw or len(raw) > 80 * 1024 * 1024:
+            return web.Response(status=413)
+        return web.Response(body=thumb_png_bytes(raw), content_type="image/png")
+    except Exception as error:
+        print(f"# PS: thumb failed: {error}")
+        return web.Response(status=400)
 
 
 def register_routes():
@@ -132,6 +202,7 @@ def register_routes():
         routes.get("/ps/ws")(websocket_handler)
         routes.get("/ps/inputs/{filename}")(inputs_file)
         routes.get("/ps/renderdone")(render_done)
+        routes.post("/ps/thumb")(make_thumb)
         print("# PS: ComfyTV Photoshop bridge ready")
     except Exception as error:
         print("# PS: Photoshop routes are already registered. Remove the comfyui-photoshop custom node so ComfyTV can own them.")
