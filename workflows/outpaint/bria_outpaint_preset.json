@@ -1,0 +1,47 @@
+{
+  "_comment": "Exported preset for the 'bria_outpaint' workflow (kind=outpaint). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "bria_outpaint",
+  "inputs": {
+    "11": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    },
+    "42": {
+      "bottom": {
+        "from": "option:pad_bottom",
+        "default": "304",
+        "cast": "int"
+      },
+      "feathering": {
+        "from": "option:feathering",
+        "default": "40",
+        "cast": "int"
+      },
+      "left": {
+        "from": "option:pad_left",
+        "default": "448",
+        "cast": "int"
+      },
+      "right": {
+        "from": "option:pad_right",
+        "default": "448",
+        "cast": "int"
+      },
+      "top": {
+        "from": "option:pad_top",
+        "default": "304",
+        "cast": "int"
+      }
+    },
+    "44": {
+      "model": {
+        "from": "option:model_version"
+      },
+      "prompt": {
+        "from": "main_prompt"
+      }
+    }
+  }
+}
