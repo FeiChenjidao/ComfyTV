@@ -46,10 +46,6 @@
 
 !multiangle/qwen-edit-2511-multiangle.json
 !multiangle/qwen-edit-2511-multiangle_preset.json
-!outpaint/flux-fill-outpaint.json
-!outpaint/flux-fill-outpaint_preset.json
-!outpaint/fooocus-sdxl-outpaint.json
-!outpaint/fooocus-sdxl-outpaint_preset.json
 !outpaint/bria_outpaint.json
 !outpaint/bria_outpaint_preset.json
 !panorama/qwen-edit-2511-img2pano.json
