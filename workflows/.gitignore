@@ -27,10 +27,10 @@
 !image/NanoBanana2.json
 !image/NanoBanana2_preset.json
 !image/PS_NanoBanana_GPTImage.json
-!inpaint/flux-fill-inpaint.json
-!inpaint/flux-fill-inpaint_preset.json
-!inpaint/fooocus-sdxl-inpaint.json
-!inpaint/fooocus-sdxl-inpaint_preset.json
+!inpaint/GPT局部重绘.json
+!inpaint/GPT局部重绘_preset.json
+!inpaint/Nanobanana 局部重绘.json
+!inpaint/Nanobanana 局部重绘_preset.json
 !layer-separation/Seedream5.0Pro 图层分离.json
 !layer-separation/Seedream5.0Pro 图层分离_preset.json
 !material-estimate/qwen3vl-estimate.json

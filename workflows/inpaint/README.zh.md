@@ -25,28 +25,7 @@
 
 ## 当前内置
 
-- **Flux Fill Inpaint**(`flux-fill-inpaint.json` + `_preset.json`) , Flux Fill Dev fp8 inpaint,子图工作流。测试通过。**不依赖第三方插件。**
-- **Fooocus SDXL Inpaint**(`fooocus-sdxl-inpaint.json` + `_preset.json`) , 改自 Acly 的 `comfyui-inpaint-nodes` 插件 `inpaint-refine.json` 模板。SDXL base + Fooocus inpaint head/patch。**需要安装插件 + 额外模型文件** , 见下文「可选:Fooocus 变种」。
+- **GPT局部重绘**（`GPT局部重绘.json` + `_preset.json`），使用 `OpenAIGPTImageNodeV2` 做蒙版重绘。
+- **Nanobanana 局部重绘**（`Nanobanana 局部重绘.json` + `_preset.json`），使用 `GeminiNanoBanana2V2` 做蒙版重绘。
 
-## 需要的模型
-
-**Flux Fill Inpaint:**
-- `flux1-fill-dev_fp8.safetensors` , 放进 `models/diffusion_models/`
-- `clip_l.safetensors` + `t5xxl_fp16.safetensors` , 放进 `models/clip/`
-- `ae.safetensors` , 放进 `models/vae/`
-
-## 可选:Fooocus SDXL 变种
-
-Fooocus 变种走 Acly 的 [`comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes) 插件提供的 inpaint head + patch 节点(同 LaMa Erase 是同一个插件)。下拉框选「Fooocus SDXL Inpaint」前:
-
-1. **安装插件**(如果 Erase 已经装过就跳过):
-   ```bash
-   cd I:/ComfyUI/custom_nodes
-   git clone https://github.com/Acly/comfyui-inpaint-nodes.git
-   pip install opencv-python
-   ```
-2. **下载 Fooocus inpaint 文件**,按插件 README([Acly/comfyui-inpaint-nodes#installation](https://github.com/Acly/comfyui-inpaint-nodes#installation))说明操作。文件放进 `I:/ComfyUI/models/inpaint/`:
-   - `fooocus_inpaint_head.pth`(~3 MB)
-   - `inpaint_v26.fooocus.patch`(~1.3 GB)
-3. **准备一个 SDXL checkpoint** 在 `models/checkpoints/`。preset 默认用 `animagine-xl-3.1.safetensors`,要换在侧边栏改 CheckpointLoader 的模型名即可。
-4. 重启 ComfyUI 让插件的节点注册。
+两个工作流都使用 ComfyUI API 节点，需要登录 Comfy 账号并具备相应模型的使用权限。
