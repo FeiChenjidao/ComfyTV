@@ -44,6 +44,11 @@ class TestMergeCustomParams:
 
 
 class TestCapsMerge:
+    def test_outpaint_exposes_all_four_pad_bindings(self):
+        from ComfyTV.nodes.stages.common.caps import CAPS_BY_KIND
+        keys = CAPS_BY_KIND["outpaint"]["option_keys"]
+        assert "option:pad_bottom" in keys
+
     def test_custom_key_and_seeded_builtins_in_caps(self, reset_db):
         from ComfyTV import storage
         from ComfyTV.nodes.stages.common.caps import caps_payload

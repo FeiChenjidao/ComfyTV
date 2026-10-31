@@ -25,7 +25,7 @@ CAPS_BY_KIND: dict[str, dict] = {
                            []),
     'upscale':       _caps(['image'],                      ['option:seed', 'option:scale'],
                            []),
-    'outpaint':      _caps(['image'],                      ['option:seed', 'option:negative', 'option:pad_left', 'option:pad_top', 'option:pad_right', 'option:feathering'],
+    'outpaint':      _caps(['image'],                      ['option:seed', 'option:negative', 'option:pad_left', 'option:pad_top', 'option:pad_right', 'option:pad_bottom', 'option:feathering'],
                            []),
     'inpaint':       _caps(['image'],                      ['option:seed', 'option:negative', 'option:mask_data'],
                            []),

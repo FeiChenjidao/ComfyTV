@@ -49,6 +49,31 @@ export function useOutpaintCanvas(
     pad.value = { left: 0, top: 0, right: 0, bottom: 0 }
   }
 
+  function setTargetWidth(value: number) {
+    if (!naturalW.value) return
+    const extra = Math.max(0, Math.min(8192, Math.round(value || naturalW.value) - naturalW.value))
+    const left = Math.max(extra - 4096, Math.min(pad.value.left, extra, 4096))
+    pad.value = { ...pad.value, left, right: extra - left }
+  }
+
+  function setTargetHeight(value: number) {
+    if (!naturalH.value) return
+    const extra = Math.max(0, Math.min(8192, Math.round(value || naturalH.value) - naturalH.value))
+    const top = Math.max(extra - 4096, Math.min(pad.value.top, extra, 4096))
+    pad.value = { ...pad.value, top, bottom: extra - top }
+  }
+
+  function centerImage() {
+    const horizontal = pad.value.left + pad.value.right
+    const vertical = pad.value.top + pad.value.bottom
+    pad.value = {
+      left: Math.floor(horizontal / 2),
+      right: Math.ceil(horizontal / 2),
+      top: Math.floor(vertical / 2),
+      bottom: Math.ceil(vertical / 2),
+    }
+  }
+
   watch(pad, (v) => {
     writeWidget(node, 'pad_left',   v.left)
     writeWidget(node, 'pad_top',    v.top)
@@ -75,6 +100,8 @@ export function useOutpaintCanvas(
 
   const virtualW = computed(() => Math.max(1, naturalW.value + pad.value.left + pad.value.right))
   const virtualH = computed(() => Math.max(1, naturalH.value + pad.value.top + pad.value.bottom))
+  const maxTargetW = computed(() => Math.max(8192, naturalW.value + 8192))
+  const maxTargetH = computed(() => Math.max(8192, naturalH.value + 8192))
 
   const scale = computed(() => {
     const cw = canvasRect.value.w - 24
@@ -169,10 +196,10 @@ export function useOutpaintCanvas(
 
   return {
     sourceImageUrl,
-    pad, setPad, resetAll,
+    pad, setPad, resetAll, setTargetWidth, setTargetHeight, centerImage,
     onSourceLoaded,
     padAreaStyle, imgStyle, handleStyle, badgeStyle,
-    outDims,
+    outDims, virtualW, virtualH, maxTargetW, maxTargetH,
     onHandlePointerDown,
   }
 }

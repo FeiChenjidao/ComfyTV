@@ -103,6 +103,46 @@ describe('useOutpaintCanvas', () => {
     expect(pad.value).toEqual({ left: 0, top: 0, right: 0, bottom: 0 })
   })
 
+  it('sets exact target canvas dimensions and preserves the leading offsets when possible', () => {
+    const node = makeNode([
+      makeWidget('pad_left', 10), makeWidget('pad_top', 20),
+      makeWidget('pad_right', 30), makeWidget('pad_bottom', 40),
+    ])
+    const api = useOutpaintCanvas(node, makeState('/u'), ref(null), ref(null))
+    api.onSourceLoaded({ target: { naturalWidth: 512, naturalHeight: 384 } } as any)
+    api.setTargetWidth(800)
+    api.setTargetHeight(600)
+    expect(api.pad.value).toEqual({ left: 10, right: 278, top: 20, bottom: 196 })
+    expect(api.virtualW.value).toBe(800)
+    expect(api.virtualH.value).toBe(600)
+  })
+
+  it('centers the image without changing the canvas size', () => {
+    const node = makeNode([
+      makeWidget('pad_left', 10), makeWidget('pad_top', 20),
+      makeWidget('pad_right', 31), makeWidget('pad_bottom', 41),
+    ])
+    const api = useOutpaintCanvas(node, makeState('/u'), ref(null), ref(null))
+    api.onSourceLoaded({ target: { naturalWidth: 512, naturalHeight: 384 } } as any)
+    api.centerImage()
+    expect(api.pad.value).toEqual({ left: 20, right: 21, top: 30, bottom: 31 })
+    expect(api.virtualW.value).toBe(553)
+    expect(api.virtualH.value).toBe(445)
+  })
+
+  it('splits oversized target growth so neither side exceeds its widget limit', () => {
+    const node = makeNode([
+      makeWidget('pad_left', 0), makeWidget('pad_top', 0),
+      makeWidget('pad_right', 0), makeWidget('pad_bottom', 0),
+    ])
+    const api = useOutpaintCanvas(node, makeState('/u'), ref(null), ref(null))
+    api.onSourceLoaded({ target: { naturalWidth: 512, naturalHeight: 384 } } as any)
+    api.setTargetWidth(8512)
+    expect(api.pad.value.left).toBe(3904)
+    expect(api.pad.value.right).toBe(4096)
+    expect(api.virtualW.value).toBe(8512)
+  })
+
   it('onSourceLoaded captures natural dimensions and outDims updates', async () => {
     const node = makeNode([
       makeWidget('pad_left',  10),

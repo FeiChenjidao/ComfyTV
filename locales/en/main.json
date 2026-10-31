@@ -2129,6 +2129,10 @@
     "top": "Top",
     "right": "Right",
     "bottom": "Bottom",
+    "canvasSize": "Canvas",
+    "width": "Canvas width",
+    "height": "Canvas height",
+    "center": "Center image",
     "reset": "Reset",
     "output": "Output",
     "noInputImage": "Wire an image to begin"

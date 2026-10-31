@@ -47,6 +47,40 @@
     </div>
 
     <div class="ctv:flex ctv:flex-col ctv:gap-1">
+      <div class="ctv:flex ctv:items-center ctv:gap-1.5">
+        <span class="ctv:text-2xs ctv:text-muted-foreground/60">{{ $t('outpaint.canvasSize') }}</span>
+        <input
+          type="number" min="1" :max="maxTargetW" step="8"
+          class="ctv:w-16 ctv:py-px ctv:px-1 ctv:rounded-sm ctv:text-[11px] ctv:font-mono
+                 ctv:bg-secondary-background ctv:text-base-foreground ctv:border ctv:border-border-subtle
+                 ctv:disabled:opacity-40"
+          :value="virtualW"
+          :aria-label="$t('outpaint.width')"
+          :disabled="!sourceImageUrl"
+          @change="(e) => setTargetWidth(Number((e.target as HTMLInputElement).value))"
+        />
+        <span class="ctv:text-2xs ctv:text-muted-foreground/50">×</span>
+        <input
+          type="number" min="1" :max="maxTargetH" step="8"
+          class="ctv:w-16 ctv:py-px ctv:px-1 ctv:rounded-sm ctv:text-[11px] ctv:font-mono
+                 ctv:bg-secondary-background ctv:text-base-foreground ctv:border ctv:border-border-subtle
+                 ctv:disabled:opacity-40"
+          :value="virtualH"
+          :aria-label="$t('outpaint.height')"
+          :disabled="!sourceImageUrl"
+          @change="(e) => setTargetHeight(Number((e.target as HTMLInputElement).value))"
+        />
+        <button
+          type="button"
+          class="ctv:size-6 ctv:p-0 ctv:flex ctv:items-center ctv:justify-center ctv:rounded-sm ctv:cursor-pointer
+                 ctv:bg-secondary-background ctv:text-base-foreground ctv:border ctv:border-border-subtle
+                 ctv:hover:enabled:bg-secondary-background-hover ctv:disabled:opacity-40 ctv:disabled:cursor-default"
+          :title="$t('outpaint.center')"
+          :aria-label="$t('outpaint.center')"
+          :disabled="!sourceImageUrl"
+          @click="centerImage"
+        ><IconLocateFixed class="ctv:size-3.5" /></button>
+      </div>
       <div class="ctv:flex ctv:items-center ctv:gap-1.5 ctv:flex-wrap">
         <label v-for="side in SIDES" :key="`in-${side}`"
                class="ctv:flex ctv:items-center ctv:gap-[3px] ctv:py-0.5 ctv:px-1 ctv:rounded-sm
@@ -91,6 +125,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import IconLocateFixed from '~icons/lucide/locate-fixed'
 
 import StageCard from '@/components/stages/StageCard.vue'
 import { SIDES, useOutpaintCanvas } from '@/composables/stages/useOutpaintCanvas'
@@ -111,10 +146,10 @@ const canvasEl = ref<HTMLDivElement | null>(null)
 
 const {
   sourceImageUrl,
-  pad, setPad, resetAll,
+  pad, setPad, resetAll, setTargetWidth, setTargetHeight, centerImage,
   onSourceLoaded,
   padAreaStyle, imgStyle, handleStyle, badgeStyle,
-  outDims,
+  outDims, virtualW, virtualH, maxTargetW, maxTargetH,
   onHandlePointerDown,
 } = useOutpaintCanvas(props.node, props.state, canvasEl, rootEl)
 </script>
