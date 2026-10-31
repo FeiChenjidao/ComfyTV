@@ -1,0 +1,28 @@
+{
+  "_comment": "Exported preset for the 'GPT局部重绘' workflow (kind=inpaint). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "GPT局部重绘",
+  "inputs": {
+    "1": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    },
+    "10": {
+      "model": {
+        "from": "option:model_version"
+      }
+    },
+    "13": {
+      "string_a": {
+        "from": "main_prompt"
+      }
+    },
+    "4": {
+      "image": {
+        "from": "option:mask_data",
+        "default": "example.png"
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "_comment": "Exported preset for the 'Nanobanana 局部重绘' workflow (kind=inpaint). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "Nanobanana 局部重绘",
+  "inputs": {
+    "100": {
+      "image": {
+        "from": "option:mask_data",
+        "default": "example.png"
+      }
+    },
+    "101": {
+      "model": {
+        "from": "option:model_version"
+      },
+      "model.aspect_ratio": {
+        "from": "option:aspect_ratio"
+      },
+      "model.resolution": {
+        "from": "option:resolution"
+      }
+    },
+    "105": {
+      "string_a": {
+        "from": "main_prompt"
+      }
+    },
+    "17": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true
+      }
+    }
+  }
+}
