@@ -14,7 +14,7 @@ const DEFAULT_LAUNCH = "D:\\ComfyUI_Desktop\\Comfy Desktop\\Comfy Desktop.exe"
 const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.3.1"
+const PLUGIN_VERSION = "0.3.2"
 const COMPOSER_PROTOCOL_VERSION = 2
 const WORKFLOW_PROTOCOL_VERSION = 3
 const COMFY_AUTH_STORAGE_KEY = "comfytv.comfyui.auth-envelope.v2"
@@ -5357,6 +5357,12 @@ function onComfyAuthMessage(event) {
 }
 
 function composerWorkbenchUrl() {
+  const uxp = loadModule("uxp")
+  const uxpMajor = Number.parseInt(String(uxp.versions && uxp.versions.uxp || ""), 10)
+  const photoshopMajor = Number.parseInt(String(app && app.version || ""), 10)
+  if ((Number.isFinite(uxpMajor) && uxpMajor >= 8) || (!Number.isFinite(uxpMajor) && photoshopMajor >= 26)) {
+    return "plugin:/composer-web/index.html"
+  }
   let root = EMBEDDED_COMFY
   try { root = serverAddress() } catch (_) {}
   return `${root}/comfytv/photoshop/composer`

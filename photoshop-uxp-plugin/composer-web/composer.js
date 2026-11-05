@@ -116,6 +116,7 @@ function requestHostPromptFocus() {
 }
 
 async function watchComposerFiles() {
+  if (!/^https?:$/i.test(window.location.protocol)) return
   try {
     const response = await fetch(`./composer-version?time=${Date.now()}`, { cache: "no-store" })
     if (!response.ok) return

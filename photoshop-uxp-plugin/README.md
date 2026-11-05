@@ -28,7 +28,7 @@ D:\ComfyUI\ComfyUI\custom_nodes\ComfyTV\photoshop-uxp-plugin
 Photoshop's registered production folder is a Junction to this source folder:
 
 ```text
-C:\Users\Administrator\AppData\Roaming\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.3.1
+C:\Users\Administrator\AppData\Roaming\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.3.2
 ```
 
 Open `Plugins > ComfyTV`, start ComfyUI, and load the Photoshop workflow. Render
@@ -96,7 +96,7 @@ What crashes Photoshop:
   crashed `Photoshop.exe` (`0xc0000005`, offset `0x5291b7`). One extra JPEG was
   fine. Do not give each icon its own image file.
 
-Reload rule: Photoshop reads the versioned `0.3.1` Junction registered in
+Reload rule: Photoshop reads the versioned `0.3.2` Junction registered in
 `%AppData%\Adobe\UXP\PluginsInfo\v1\PS.json`. Do not copy the plugin into a
 second folder. Fully quit and reopen Photoshop after manifest or UXP host
 changes; ordinary composer assets can use the hot-update refresh path. Open

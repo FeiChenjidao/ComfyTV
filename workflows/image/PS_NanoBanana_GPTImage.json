@@ -1,19 +1,19 @@
 {
   "id": "c94f279c-fb3c-42d5-be0b-54a56ac25f84",
   "revision": 0,
-  "last_node_id": 25,
-  "last_link_id": 145,
+  "last_node_id": 32,
+  "last_link_id": 133,
   "nodes": [
     {
       "id": 1,
       "type": "🔹Photoshop ComfyUI Plugin",
       "pos": [
-        40,
-        180
+        206.9799999999999,
+        -324.56999999999965
       ],
       "size": [
         330,
-        560
+        520
       ],
       "flags": {},
       "order": 0,
@@ -24,12 +24,8 @@
           "name": "Canvas",
           "type": "IMAGE",
           "links": [
-            81,
-            90,
-            99,
-            108,
-            117,
-            132
+            111,
+            122
           ],
           "slot_index": 0
         },
@@ -37,12 +33,8 @@
           "name": "Mask",
           "type": "IMAGE",
           "links": [
-            82,
-            91,
-            100,
-            109,
-            118,
-            133
+            112,
+            123
           ],
           "slot_index": 1
         },
@@ -50,12 +42,8 @@
           "name": "Ref1",
           "type": "IMAGE",
           "links": [
-            83,
-            92,
-            101,
-            110,
-            119,
-            134
+            113,
+            124
           ],
           "slot_index": 2
         },
@@ -63,12 +51,8 @@
           "name": "Ref2",
           "type": "IMAGE",
           "links": [
-            84,
-            93,
-            102,
-            111,
-            120,
-            135
+            114,
+            125
           ],
           "slot_index": 3
         },
@@ -76,12 +60,8 @@
           "name": "Ref3",
           "type": "IMAGE",
           "links": [
-            85,
-            94,
-            103,
-            112,
-            121,
-            136
+            115,
+            126
           ],
           "slot_index": 4
         },
@@ -89,12 +69,8 @@
           "name": "Ref4",
           "type": "IMAGE",
           "links": [
-            86,
-            95,
-            104,
-            113,
-            122,
-            137
+            116,
+            127
           ],
           "slot_index": 5
         },
@@ -102,12 +78,8 @@
           "name": "Ref5",
           "type": "IMAGE",
           "links": [
-            87,
-            96,
-            105,
-            114,
-            123,
-            138
+            117,
+            128
           ],
           "slot_index": 6
         },
@@ -115,12 +87,8 @@
           "name": "Ref6",
           "type": "IMAGE",
           "links": [
-            88,
-            97,
-            106,
-            115,
-            124,
-            139
+            118,
+            129
           ],
           "slot_index": 7
         },
@@ -128,9 +96,7 @@
           "name": "Media Batch",
           "type": "IMAGE",
           "links": [
-            126,
-            128,
-            130
+            120
           ],
           "slot_index": 8
         },
@@ -144,15 +110,9 @@
           "name": "Seed",
           "type": "INT",
           "links": [
-            3,
-            8,
-            22,
-            28,
-            37,
-            41,
             45,
-            49,
-            54
+            132,
+            133
           ],
           "slot_index": 10
         },
@@ -160,15 +120,9 @@
           "name": "+",
           "type": "STRING",
           "links": [
-            80,
-            89,
-            98,
-            107,
-            116,
-            125,
-            127,
-            129,
-            131
+            110,
+            119,
+            121
           ],
           "slot_index": 11
         },
@@ -182,9 +136,7 @@
           "name": "W",
           "type": "INT",
           "links": [
-            140,
-            142,
-            144
+            130
           ],
           "slot_index": 13
         },
@@ -192,9 +144,7 @@
           "name": "H",
           "type": "INT",
           "links": [
-            141,
-            143,
-            145
+            131
           ],
           "slot_index": 14
         },
@@ -202,12 +152,8 @@
           "name": "比例",
           "type": "COMBO",
           "links": [
-            56,
-            62,
-            68,
-            71,
             73,
-            75
+            103
           ],
           "slot_index": 15
         },
@@ -216,10 +162,6 @@
           "type": "COMBO",
           "links": [
             58,
-            61,
-            64,
-            67,
-            70,
             79
           ],
           "slot_index": 16
@@ -228,12 +170,8 @@
           "name": "分辨率",
           "type": "COMBO",
           "links": [
-            57,
-            63,
-            69,
-            72,
             74,
-            76
+            57
           ],
           "slot_index": 17
         },
@@ -241,8 +179,6 @@
           "name": "输出背景",
           "type": "COMBO",
           "links": [
-            60,
-            66,
             78
           ],
           "slot_index": 18
@@ -251,9 +187,7 @@
           "name": "尺寸",
           "type": "COMBO",
           "links": [
-            59,
-            65,
-            77
+            102
           ],
           "slot_index": 19
         }
@@ -304,16 +238,16 @@
       "id": 3,
       "type": "GeminiNanoBanana2V2",
       "pos": [
-        1520,
-        40
+        1576,
+        -557.2000000000003
       ],
       "size": [
         420,
-        480
+        558
       ],
       "flags": {},
-      "order": 7,
-      "mode": 0,
+      "order": 5,
+      "mode": 2,
       "inputs": [
         {
           "localized_name": "prompt",
@@ -322,7 +256,7 @@
           "widget": {
             "name": "prompt"
           },
-          "link": 80
+          "link": 110
         },
         {
           "localized_name": "model",
@@ -340,7 +274,7 @@
           "widget": {
             "name": "model.aspect_ratio"
           },
-          "link": 56
+          "link": 103
         },
         {
           "localized_name": "resolution",
@@ -365,56 +299,56 @@
           "name": "model.images.image_1",
           "shape": 7,
           "type": "IMAGE",
-          "link": 81
+          "link": 111
         },
         {
           "localized_name": "image_2",
           "name": "model.images.image_2",
           "shape": 7,
           "type": "IMAGE",
-          "link": 82
+          "link": 112
         },
         {
           "localized_name": "image_3",
           "name": "model.images.image_3",
           "shape": 7,
           "type": "IMAGE",
-          "link": 83
+          "link": 113
         },
         {
           "localized_name": "image_4",
           "name": "model.images.image_4",
           "shape": 7,
           "type": "IMAGE",
-          "link": 84
+          "link": 114
         },
         {
           "localized_name": "image_5",
           "name": "model.images.image_5",
           "shape": 7,
           "type": "IMAGE",
-          "link": 85
+          "link": 115
         },
         {
           "localized_name": "image_6",
           "name": "model.images.image_6",
           "shape": 7,
           "type": "IMAGE",
-          "link": 86
+          "link": 116
         },
         {
           "localized_name": "image_7",
           "name": "model.images.image_7",
           "shape": 7,
           "type": "IMAGE",
-          "link": 87
+          "link": 117
         },
         {
           "localized_name": "image_8",
           "name": "model.images.image_8",
           "shape": 7,
           "type": "IMAGE",
-          "link": 88
+          "link": 118
         },
         {
           "localized_name": "files",
@@ -430,7 +364,7 @@
           "widget": {
             "name": "seed"
           },
-          "link": 3
+          "link": 132
         },
         {
           "localized_name": "response_modalities",
@@ -494,7 +428,7 @@
           "links": null
         }
       ],
-      "title": "NanoBanana 2K",
+      "title": "NanoBanana",
       "properties": {
         "Node name for S&R": "GeminiNanoBanana2V2",
         "cnr_id": "comfy-core"
@@ -532,16 +466,16 @@
       "id": 4,
       "type": "🔹SendTo Photoshop Plugin",
       "pos": [
-        2000,
-        200
+        2045.1,
+        -464.4
       ],
       "size": [
         280,
         80
       ],
       "flags": {},
-      "order": 11,
-      "mode": 0,
+      "order": 8,
+      "mode": 2,
       "inputs": [
         {
           "localized_name": "output",
@@ -560,1064 +494,32 @@
       ],
       "properties": {
         "Node name for S&R": "🔹SendTo Photoshop Plugin"
-      }
+      },
+      "title": "NanoBanana"
     },
     {
-      "id": 5,
-      "type": "OpenAIGPTImageNodeV2",
+      "id": 20,
+      "type": "GeminiImage2Node",
       "pos": [
-        1520,
-        3340
+        1557.1421197271445,
+        77.12249125023217
       ],
       "size": [
-        420,
-        384
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "提示词",
-          "name": "prompt",
-          "type": "STRING",
-          "widget": {
-            "name": "prompt"
-          },
-          "link": 89
-        },
-        {
-          "localized_name": "模型",
-          "name": "model",
-          "type": "COMFY_DYNAMICCOMBO_V3",
-          "widget": {
-            "name": "model"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "尺寸",
-          "name": "model.size",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.size"
-          },
-          "link": 59
-        },
-        {
-          "localized_name": "自定义宽度",
-          "name": "model.custom_width",
-          "type": "INT",
-          "widget": {
-            "name": "model.custom_width"
-          },
-          "link": 140
-        },
-        {
-          "localized_name": "自定义高度",
-          "name": "model.custom_height",
-          "type": "INT",
-          "widget": {
-            "name": "model.custom_height"
-          },
-          "link": 141
-        },
-        {
-          "localized_name": "背景",
-          "name": "model.background",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.background"
-          },
-          "link": 60
-        },
-        {
-          "localized_name": "质量",
-          "name": "model.quality",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.quality"
-          },
-          "link": 61
-        },
-        {
-          "localized_name": "image_1",
-          "name": "model.images.image_1",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 90
-        },
-        {
-          "localized_name": "image_2",
-          "name": "model.images.image_2",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 91
-        },
-        {
-          "localized_name": "image_3",
-          "name": "model.images.image_3",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 92
-        },
-        {
-          "localized_name": "image_4",
-          "name": "model.images.image_4",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 93
-        },
-        {
-          "localized_name": "image_5",
-          "name": "model.images.image_5",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 94
-        },
-        {
-          "localized_name": "image_6",
-          "name": "model.images.image_6",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 95
-        },
-        {
-          "localized_name": "image_7",
-          "name": "model.images.image_7",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 96
-        },
-        {
-          "localized_name": "image_8",
-          "name": "model.images.image_8",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 97
-        },
-        {
-          "localized_name": "mask",
-          "name": "model.mask",
-          "shape": 7,
-          "type": "MASK",
-          "link": null
-        },
-        {
-          "localized_name": "数量",
-          "name": "n",
-          "type": "INT",
-          "widget": {
-            "name": "n"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "种子",
-          "name": "seed",
-          "type": "INT",
-          "widget": {
-            "name": "seed"
-          },
-          "link": 8
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "图像",
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            9
-          ]
-        }
-      ],
-      "title": "GPT 不透明",
-      "properties": {
-        "Node name for S&R": "OpenAIGPTImageNodeV2",
-        "cnr_id": "comfy-core"
-      },
-      "widgets_values": [
-        "",
-        "gpt-image-2.5-flare",
-        "auto",
-        1024,
-        1024,
-        "opaque",
-        "high",
-        1,
-        0,
-        "fixed"
-      ],
-      "widgets_values_named": {
-        "prompt": "",
-        "model": "gpt-image-2.5-flare",
-        "model.size": "auto",
-        "model.custom_width": 1024,
-        "model.custom_height": 1024,
-        "model.background": "opaque",
-        "model.quality": "high",
-        "n": 1,
-        "seed": 0,
-        "control_after_generate": "fixed"
-      },
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 6,
-      "type": "🔹SendTo Photoshop Plugin",
-      "pos": [
-        2000,
-        3460
-      ],
-      "size": [
-        280,
-        80
-      ],
-      "flags": {},
-      "order": 12,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "output",
-          "name": "output",
-          "type": "IMAGE",
-          "link": 9
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "images",
-          "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "🔹SendTo Photoshop Plugin"
-      }
-    },
-    {
-      "id": 10,
-      "type": "Fast Groups Muter (rgthree)",
-      "pos": [
-        38.50476531656163,
-        731.1762903809293
-      ],
-      "size": [
-        452.73298783735675,
-        157.47834292325052
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "OPT_CONNECTION",
-          "type": "*",
-          "links": null
-        }
-      ],
-      "title": "⚙️模式",
-      "properties": {
-        "matchColors": "",
-        "matchTitle": "NanoBanana 1K|NanoBanana 2K|NanoBanana 4K|NanoBanana Pro 1K|NanoBanana Pro 2K|NanoBanana Pro 4K|GPT 自动|GPT 不透明|GPT 半透明",
-        "showNav": true,
-        "showAllGraphs": true,
-        "sort": "position",
-        "customSortAlphabet": "",
-        "toggleRestriction": "always one",
-        "Node name for S&R": "Fast Groups Muter (rgthree)"
-      },
-      "color": "#233",
-      "bgcolor": "#355"
-    },
-    {
-      "id": 11,
-      "type": "GeminiNanoBanana2V2",
-      "pos": [
-        1520,
-        640
-      ],
-      "size": [
-        420,
-        480
-      ],
-      "flags": {},
-      "order": 9,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "prompt",
-          "name": "prompt",
-          "type": "STRING",
-          "widget": {
-            "name": "prompt"
-          },
-          "link": 98
-        },
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "COMFY_DYNAMICCOMBO_V3",
-          "widget": {
-            "name": "model"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "aspect_ratio",
-          "name": "model.aspect_ratio",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.aspect_ratio"
-          },
-          "link": 62
-        },
-        {
-          "localized_name": "resolution",
-          "name": "model.resolution",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.resolution"
-          },
-          "link": 63
-        },
-        {
-          "localized_name": "thinking_level",
-          "name": "model.thinking_level",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.thinking_level"
-          },
-          "link": 64
-        },
-        {
-          "localized_name": "image_1",
-          "name": "model.images.image_1",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 99
-        },
-        {
-          "localized_name": "image_2",
-          "name": "model.images.image_2",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 100
-        },
-        {
-          "localized_name": "image_3",
-          "name": "model.images.image_3",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 101
-        },
-        {
-          "localized_name": "image_4",
-          "name": "model.images.image_4",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 102
-        },
-        {
-          "localized_name": "image_5",
-          "name": "model.images.image_5",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 103
-        },
-        {
-          "localized_name": "image_6",
-          "name": "model.images.image_6",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 104
-        },
-        {
-          "localized_name": "image_7",
-          "name": "model.images.image_7",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 105
-        },
-        {
-          "localized_name": "image_8",
-          "name": "model.images.image_8",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 106
-        },
-        {
-          "localized_name": "files",
-          "name": "model.files",
-          "shape": 7,
-          "type": "GEMINI_INPUT_FILES",
-          "link": null
-        },
-        {
-          "localized_name": "seed",
-          "name": "seed",
-          "type": "INT",
-          "widget": {
-            "name": "seed"
-          },
-          "link": 22
-        },
-        {
-          "localized_name": "response_modalities",
-          "name": "response_modalities",
-          "type": "COMBO",
-          "widget": {
-            "name": "response_modalities"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "system_prompt",
-          "name": "system_prompt",
-          "shape": 7,
-          "type": "STRING",
-          "widget": {
-            "name": "system_prompt"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "temperature",
-          "name": "temperature",
-          "shape": 7,
-          "type": "FLOAT",
-          "widget": {
-            "name": "temperature"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "top_p",
-          "name": "top_p",
-          "shape": 7,
-          "type": "FLOAT",
-          "widget": {
-            "name": "top_p"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "图像",
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            30
-          ]
-        },
-        {
-          "localized_name": "字符串",
-          "name": "STRING",
-          "type": "STRING",
-          "links": null
-        },
-        {
-          "localized_name": "thought_image",
-          "name": "thought_image",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "title": "NanoBanana 4K",
-      "properties": {
-        "Node name for S&R": "GeminiNanoBanana2V2",
-        "cnr_id": "comfy-core"
-      },
-      "widgets_values": [
-        "",
-        "Nano Banana 2 (Gemini 3.1 Flash Image)",
-        "auto",
-        "4K",
-        "MINIMAL",
-        42,
-        "fixed",
-        "IMAGE",
-        "You are an expert image-generation engine. You must ALWAYS produce an image.",
-        1,
-        0.95
-      ],
-      "widgets_values_named": {
-        "prompt": "",
-        "model": "Nano Banana 2 (Gemini 3.1 Flash Image)",
-        "model.aspect_ratio": "auto",
-        "model.resolution": "4K",
-        "model.thinking_level": "MINIMAL",
-        "seed": 42,
-        "control_after_generate": "fixed",
-        "response_modalities": "IMAGE",
-        "system_prompt": "You are an expert image-generation engine. You must ALWAYS produce an image.",
-        "temperature": 1,
-        "top_p": 0.95
-      },
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 12,
-      "type": "🔹SendTo Photoshop Plugin",
-      "pos": [
-        2000,
-        800
-      ],
-      "size": [
-        280,
-        80
+        400,
+        306
       ],
       "flags": {},
       "order": 4,
       "mode": 2,
       "inputs": [
         {
-          "localized_name": "output",
-          "name": "output",
-          "type": "IMAGE",
-          "link": 30
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "images",
-          "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "🔹SendTo Photoshop Plugin"
-      }
-    },
-    {
-      "id": 13,
-      "type": "OpenAIGPTImageNodeV2",
-      "pos": [
-        1520,
-        3860
-      ],
-      "size": [
-        420,
-        384
-      ],
-      "flags": {},
-      "order": 10,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "提示词",
-          "name": "prompt",
-          "type": "STRING",
-          "widget": {
-            "name": "prompt"
-          },
-          "link": 107
-        },
-        {
-          "localized_name": "模型",
-          "name": "model",
-          "type": "COMFY_DYNAMICCOMBO_V3",
-          "widget": {
-            "name": "model"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "尺寸",
-          "name": "model.size",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.size"
-          },
-          "link": 65
-        },
-        {
-          "localized_name": "自定义宽度",
-          "name": "model.custom_width",
-          "type": "INT",
-          "widget": {
-            "name": "model.custom_width"
-          },
-          "link": 142
-        },
-        {
-          "localized_name": "自定义高度",
-          "name": "model.custom_height",
-          "type": "INT",
-          "widget": {
-            "name": "model.custom_height"
-          },
-          "link": 143
-        },
-        {
-          "localized_name": "背景",
-          "name": "model.background",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.background"
-          },
-          "link": 66
-        },
-        {
-          "localized_name": "质量",
-          "name": "model.quality",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.quality"
-          },
-          "link": 67
-        },
-        {
-          "localized_name": "image_1",
-          "name": "model.images.image_1",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 108
-        },
-        {
-          "localized_name": "image_2",
-          "name": "model.images.image_2",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 109
-        },
-        {
-          "localized_name": "image_3",
-          "name": "model.images.image_3",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 110
-        },
-        {
-          "localized_name": "image_4",
-          "name": "model.images.image_4",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 111
-        },
-        {
-          "localized_name": "image_5",
-          "name": "model.images.image_5",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 112
-        },
-        {
-          "localized_name": "image_6",
-          "name": "model.images.image_6",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 113
-        },
-        {
-          "localized_name": "image_7",
-          "name": "model.images.image_7",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 114
-        },
-        {
-          "localized_name": "image_8",
-          "name": "model.images.image_8",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 115
-        },
-        {
-          "localized_name": "mask",
-          "name": "model.mask",
-          "shape": 7,
-          "type": "MASK",
-          "link": null
-        },
-        {
-          "localized_name": "数量",
-          "name": "n",
-          "type": "INT",
-          "widget": {
-            "name": "n"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "种子",
-          "name": "seed",
-          "type": "INT",
-          "widget": {
-            "name": "seed"
-          },
-          "link": 28
-        }
-      ],
-      "outputs": [
-        {
           "localized_name": "图像",
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            29
-          ]
-        }
-      ],
-      "title": "GPT 半透明",
-      "properties": {
-        "Node name for S&R": "OpenAIGPTImageNodeV2",
-        "cnr_id": "comfy-core"
-      },
-      "widgets_values": [
-        "",
-        "gpt-image-2.5-flare",
-        "auto",
-        1024,
-        1024,
-        "transparent",
-        "high",
-        1,
-        0,
-        "fixed"
-      ],
-      "widgets_values_named": {
-        "prompt": "",
-        "model": "gpt-image-2.5-flare",
-        "model.size": "auto",
-        "model.custom_width": 1024,
-        "model.custom_height": 1024,
-        "model.background": "transparent",
-        "model.quality": "high",
-        "n": 1,
-        "seed": 0,
-        "control_after_generate": "fixed"
-      },
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 14,
-      "type": "🔹SendTo Photoshop Plugin",
-      "pos": [
-        2000,
-        3980
-      ],
-      "size": [
-        280,
-        80
-      ],
-      "flags": {},
-      "order": 13,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "output",
-          "name": "output",
-          "type": "IMAGE",
-          "link": 29
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "images",
           "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "🔹SendTo Photoshop Plugin"
-      }
-    },
-    {
-      "id": 16,
-      "type": "GeminiNanoBanana2V2",
-      "pos": [
-        1520,
-        -560
-      ],
-      "size": [
-        420,
-        480
-      ],
-      "flags": {},
-      "order": 16,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "prompt",
-          "name": "prompt",
-          "type": "STRING",
-          "widget": {
-            "name": "prompt"
-          },
-          "link": 116
-        },
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "COMFY_DYNAMICCOMBO_V3",
-          "widget": {
-            "name": "model"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "aspect_ratio",
-          "name": "model.aspect_ratio",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.aspect_ratio"
-          },
-          "link": 68
-        },
-        {
-          "localized_name": "resolution",
-          "name": "model.resolution",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.resolution"
-          },
-          "link": 69
-        },
-        {
-          "localized_name": "thinking_level",
-          "name": "model.thinking_level",
-          "type": "COMBO",
-          "widget": {
-            "name": "model.thinking_level"
-          },
-          "link": 70
-        },
-        {
-          "localized_name": "image_1",
-          "name": "model.images.image_1",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 117
-        },
-        {
-          "localized_name": "image_2",
-          "name": "model.images.image_2",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 118
-        },
-        {
-          "localized_name": "image_3",
-          "name": "model.images.image_3",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 119
-        },
-        {
-          "localized_name": "image_4",
-          "name": "model.images.image_4",
           "shape": 7,
           "type": "IMAGE",
           "link": 120
         },
         {
-          "localized_name": "image_5",
-          "name": "model.images.image_5",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 121
-        },
-        {
-          "localized_name": "image_6",
-          "name": "model.images.image_6",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 122
-        },
-        {
-          "localized_name": "image_7",
-          "name": "model.images.image_7",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 123
-        },
-        {
-          "localized_name": "image_8",
-          "name": "model.images.image_8",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 124
-        },
-        {
-          "localized_name": "files",
-          "name": "model.files",
-          "shape": 7,
-          "type": "GEMINI_INPUT_FILES",
-          "link": null
-        },
-        {
-          "localized_name": "seed",
-          "name": "seed",
-          "type": "INT",
-          "widget": {
-            "name": "seed"
-          },
-          "link": 37
-        },
-        {
-          "localized_name": "response_modalities",
-          "name": "response_modalities",
-          "type": "COMBO",
-          "widget": {
-            "name": "response_modalities"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "system_prompt",
-          "name": "system_prompt",
-          "shape": 7,
-          "type": "STRING",
-          "widget": {
-            "name": "system_prompt"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "temperature",
-          "name": "temperature",
-          "shape": 7,
-          "type": "FLOAT",
-          "widget": {
-            "name": "temperature"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "top_p",
-          "name": "top_p",
-          "shape": 7,
-          "type": "FLOAT",
-          "widget": {
-            "name": "top_p"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "图像",
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            38
-          ]
-        },
-        {
-          "localized_name": "字符串",
-          "name": "STRING",
-          "type": "STRING",
-          "links": null
-        },
-        {
-          "localized_name": "thought_image",
-          "name": "thought_image",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "title": "NanoBanana 1K",
-      "properties": {
-        "Node name for S&R": "GeminiNanoBanana2V2",
-        "cnr_id": "comfy-core"
-      },
-      "widgets_values": [
-        "",
-        "Nano Banana 2 (Gemini 3.1 Flash Image)",
-        "auto",
-        "1K",
-        "MINIMAL",
-        42,
-        "fixed",
-        "IMAGE",
-        "You are an expert image-generation engine. You must ALWAYS produce an image.",
-        1,
-        0.95
-      ],
-      "widgets_values_named": {
-        "prompt": "",
-        "model": "Nano Banana 2 (Gemini 3.1 Flash Image)",
-        "model.aspect_ratio": "auto",
-        "model.resolution": "1K",
-        "model.thinking_level": "MINIMAL",
-        "seed": 42,
-        "control_after_generate": "fixed",
-        "response_modalities": "IMAGE",
-        "system_prompt": "You are an expert image-generation engine. You must ALWAYS produce an image.",
-        "temperature": 1,
-        "top_p": 0.95
-      },
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 17,
-      "type": "🔹SendTo Photoshop Plugin",
-      "pos": [
-        2000,
-        -400
-      ],
-      "size": [
-        280,
-        80
-      ],
-      "flags": {},
-      "order": 17,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "output",
-          "name": "output",
-          "type": "IMAGE",
-          "link": 38
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "images",
-          "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "🔹SendTo Photoshop Plugin"
-      },
-      "title": "NanoBanana 1K"
-    },
-    {
-      "id": 18,
-      "type": "GeminiImage2Node",
-      "pos": [
-        1520,
-        1240
-      ],
-      "size": [
-        400,
-        306
-      ],
-      "flags": {},
-      "order": 18,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "图像",
-          "name": "images",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 126
-        },
-        {
           "localized_name": "文件",
           "name": "files",
           "shape": 7,
@@ -1631,179 +533,7 @@
           "widget": {
             "name": "prompt"
           },
-          "link": 125
-        },
-        {
-          "localized_name": "模型",
-          "name": "model",
-          "type": "COMBO",
-          "widget": {
-            "name": "model"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "随机种",
-          "name": "seed",
-          "type": "INT",
-          "widget": {
-            "name": "seed"
-          },
-          "link": 41
-        },
-        {
-          "localized_name": "宽高比",
-          "name": "aspect_ratio",
-          "type": "COMBO",
-          "widget": {
-            "name": "aspect_ratio"
-          },
-          "link": 71
-        },
-        {
-          "localized_name": "分辨率",
-          "name": "resolution",
-          "type": "COMBO",
-          "widget": {
-            "name": "resolution"
-          },
-          "link": 72
-        },
-        {
-          "localized_name": "响应模态",
-          "name": "response_modalities",
-          "type": "COMBO",
-          "widget": {
-            "name": "response_modalities"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "系统提示词",
-          "name": "system_prompt",
-          "shape": 7,
-          "type": "STRING",
-          "widget": {
-            "name": "system_prompt"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "图像",
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            42
-          ]
-        },
-        {
-          "localized_name": "字符串",
-          "name": "STRING",
-          "type": "STRING",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "GeminiImage2Node"
-      },
-      "widgets_values": [
-        "",
-        "gemini-3-pro-image-preview",
-        42,
-        "randomize",
-        "auto",
-        "1K",
-        "IMAGE+TEXT",
-        "You are an expert image-generation engine. You must ALWAYS produce an image.\nInterpret all user input—regardless of format, intent, or abstraction—as literal visual directives for image composition.\nIf a prompt is conversational or lacks specific visual details, you must creatively invent a concrete visual scenario that depicts the concept.\nPrioritize generating the visual representation above any text, formatting, or conversational requests."
-      ],
-      "widgets_values_named": {
-        "prompt": "",
-        "model": "gemini-3-pro-image-preview",
-        "seed": 42,
-        "control_after_generate": "randomize",
-        "aspect_ratio": "auto",
-        "resolution": "1K",
-        "response_modalities": "IMAGE+TEXT",
-        "system_prompt": "You are an expert image-generation engine. You must ALWAYS produce an image.\nInterpret all user input—regardless of format, intent, or abstraction—as literal visual directives for image composition.\nIf a prompt is conversational or lacks specific visual details, you must creatively invent a concrete visual scenario that depicts the concept.\nPrioritize generating the visual representation above any text, formatting, or conversational requests."
-      },
-      "color": "#432",
-      "bgcolor": "#653",
-      "title": "NanoBanana Pro 1K"
-    },
-    {
-      "id": 19,
-      "type": "🔹SendTo Photoshop Plugin",
-      "pos": [
-        2000,
-        1560
-      ],
-      "size": [
-        280,
-        80
-      ],
-      "flags": {},
-      "order": 19,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "output",
-          "name": "output",
-          "type": "IMAGE",
-          "link": 42
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "images",
-          "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "🔹SendTo Photoshop Plugin"
-      },
-      "title": "NanoBanana Pro 1K"
-    },
-    {
-      "id": 20,
-      "type": "GeminiImage2Node",
-      "pos": [
-        1520,
-        1760
-      ],
-      "size": [
-        400,
-        306
-      ],
-      "flags": {},
-      "order": 20,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "图像",
-          "name": "images",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 128
-        },
-        {
-          "localized_name": "文件",
-          "name": "files",
-          "shape": 7,
-          "type": "GEMINI_INPUT_FILES",
-          "link": null
-        },
-        {
-          "localized_name": "提示词",
-          "name": "prompt",
-          "type": "STRING",
-          "widget": {
-            "name": "prompt"
-          },
-          "link": 127
+          "link": 119
         },
         {
           "localized_name": "模型",
@@ -1877,6 +607,7 @@
           "links": null
         }
       ],
+      "title": "NanoBanana Pro",
       "properties": {
         "Node name for S&R": "GeminiImage2Node"
       },
@@ -1901,22 +632,21 @@
         "system_prompt": "You are an expert image-generation engine. You must ALWAYS produce an image.\nInterpret all user input—regardless of format, intent, or abstraction—as literal visual directives for image composition.\nIf a prompt is conversational or lacks specific visual details, you must creatively invent a concrete visual scenario that depicts the concept.\nPrioritize generating the visual representation above any text, formatting, or conversational requests."
       },
       "color": "#432",
-      "bgcolor": "#653",
-      "title": "NanoBanana Pro 2K"
+      "bgcolor": "#653"
     },
     {
       "id": 21,
       "type": "🔹SendTo Photoshop Plugin",
       "pos": [
-        2000,
-        2080
+        2037.1421197271454,
+        397.1224912502328
       ],
       "size": [
         280,
         80
       ],
       "flags": {},
-      "order": 21,
+      "order": 7,
       "mode": 2,
       "inputs": [
         {
@@ -1934,197 +664,25 @@
           "links": null
         }
       ],
+      "title": "NanoBanana Pro",
       "properties": {
         "Node name for S&R": "🔹SendTo Photoshop Plugin"
-      },
-      "title": "NanoBanana Pro 2K"
-    },
-    {
-      "id": 22,
-      "type": "GeminiImage2Node",
-      "pos": [
-        1520,
-        2280
-      ],
-      "size": [
-        400,
-        306
-      ],
-      "flags": {},
-      "order": 22,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "图像",
-          "name": "images",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 130
-        },
-        {
-          "localized_name": "文件",
-          "name": "files",
-          "shape": 7,
-          "type": "GEMINI_INPUT_FILES",
-          "link": null
-        },
-        {
-          "localized_name": "提示词",
-          "name": "prompt",
-          "type": "STRING",
-          "widget": {
-            "name": "prompt"
-          },
-          "link": 129
-        },
-        {
-          "localized_name": "模型",
-          "name": "model",
-          "type": "COMBO",
-          "widget": {
-            "name": "model"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "随机种",
-          "name": "seed",
-          "type": "INT",
-          "widget": {
-            "name": "seed"
-          },
-          "link": 49
-        },
-        {
-          "localized_name": "宽高比",
-          "name": "aspect_ratio",
-          "type": "COMBO",
-          "widget": {
-            "name": "aspect_ratio"
-          },
-          "link": 75
-        },
-        {
-          "localized_name": "分辨率",
-          "name": "resolution",
-          "type": "COMBO",
-          "widget": {
-            "name": "resolution"
-          },
-          "link": 76
-        },
-        {
-          "localized_name": "响应模态",
-          "name": "response_modalities",
-          "type": "COMBO",
-          "widget": {
-            "name": "response_modalities"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "系统提示词",
-          "name": "system_prompt",
-          "shape": 7,
-          "type": "STRING",
-          "widget": {
-            "name": "system_prompt"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "图像",
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            50
-          ]
-        },
-        {
-          "localized_name": "字符串",
-          "name": "STRING",
-          "type": "STRING",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "GeminiImage2Node"
-      },
-      "widgets_values": [
-        "",
-        "gemini-3-pro-image-preview",
-        42,
-        "randomize",
-        "auto",
-        "4K",
-        "IMAGE+TEXT",
-        "You are an expert image-generation engine. You must ALWAYS produce an image.\nInterpret all user input—regardless of format, intent, or abstraction—as literal visual directives for image composition.\nIf a prompt is conversational or lacks specific visual details, you must creatively invent a concrete visual scenario that depicts the concept.\nPrioritize generating the visual representation above any text, formatting, or conversational requests."
-      ],
-      "widgets_values_named": {
-        "prompt": "",
-        "model": "gemini-3-pro-image-preview",
-        "seed": 42,
-        "control_after_generate": "randomize",
-        "aspect_ratio": "auto",
-        "resolution": "4K",
-        "response_modalities": "IMAGE+TEXT",
-        "system_prompt": "You are an expert image-generation engine. You must ALWAYS produce an image.\nInterpret all user input—regardless of format, intent, or abstraction—as literal visual directives for image composition.\nIf a prompt is conversational or lacks specific visual details, you must creatively invent a concrete visual scenario that depicts the concept.\nPrioritize generating the visual representation above any text, formatting, or conversational requests."
-      },
-      "color": "#432",
-      "bgcolor": "#653",
-      "title": "NanoBanana Pro 4K"
-    },
-    {
-      "id": 23,
-      "type": "🔹SendTo Photoshop Plugin",
-      "pos": [
-        2000,
-        2600
-      ],
-      "size": [
-        280,
-        80
-      ],
-      "flags": {},
-      "order": 23,
-      "mode": 2,
-      "inputs": [
-        {
-          "localized_name": "output",
-          "name": "output",
-          "type": "IMAGE",
-          "link": 50
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "images",
-          "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "🔹SendTo Photoshop Plugin"
-      },
-      "title": "NanoBanana Pro 4K"
+      }
     },
     {
       "id": 24,
       "type": "OpenAIGPTImageNodeV2",
       "pos": [
-        1520,
-        2820
+        1554.6531850524814,
+        583.2089952921735
       ],
       "size": [
         420,
-        384
+        504
       ],
       "flags": {},
-      "order": 24,
-      "mode": 2,
+      "order": 6,
+      "mode": 0,
       "inputs": [
         {
           "localized_name": "提示词",
@@ -2133,7 +691,7 @@
           "widget": {
             "name": "prompt"
           },
-          "link": 131
+          "link": 121
         },
         {
           "localized_name": "模型",
@@ -2151,7 +709,7 @@
           "widget": {
             "name": "model.size"
           },
-          "link": 77
+          "link": 102
         },
         {
           "localized_name": "自定义宽度",
@@ -2160,7 +718,7 @@
           "widget": {
             "name": "model.custom_width"
           },
-          "link": 144
+          "link": 130
         },
         {
           "localized_name": "自定义高度",
@@ -2169,7 +727,7 @@
           "widget": {
             "name": "model.custom_height"
           },
-          "link": 145
+          "link": 131
         },
         {
           "localized_name": "背景",
@@ -2194,56 +752,56 @@
           "name": "model.images.image_1",
           "shape": 7,
           "type": "IMAGE",
-          "link": 132
+          "link": 122
         },
         {
           "localized_name": "image_2",
           "name": "model.images.image_2",
           "shape": 7,
           "type": "IMAGE",
-          "link": 133
+          "link": 123
         },
         {
           "localized_name": "image_3",
           "name": "model.images.image_3",
           "shape": 7,
           "type": "IMAGE",
-          "link": 134
+          "link": 124
         },
         {
           "localized_name": "image_4",
           "name": "model.images.image_4",
           "shape": 7,
           "type": "IMAGE",
-          "link": 135
+          "link": 125
         },
         {
           "localized_name": "image_5",
           "name": "model.images.image_5",
           "shape": 7,
           "type": "IMAGE",
-          "link": 136
+          "link": 126
         },
         {
           "localized_name": "image_6",
           "name": "model.images.image_6",
           "shape": 7,
           "type": "IMAGE",
-          "link": 137
+          "link": 127
         },
         {
           "localized_name": "image_7",
           "name": "model.images.image_7",
           "shape": 7,
           "type": "IMAGE",
-          "link": 138
+          "link": 128
         },
         {
           "localized_name": "image_8",
           "name": "model.images.image_8",
           "shape": 7,
           "type": "IMAGE",
-          "link": 139
+          "link": 129
         },
         {
           "localized_name": "mask",
@@ -2268,7 +826,7 @@
           "widget": {
             "name": "seed"
           },
-          "link": 54
+          "link": 133
         }
       ],
       "outputs": [
@@ -2281,7 +839,7 @@
           ]
         }
       ],
-      "title": "GPT 自动",
+      "title": "GPT",
       "properties": {
         "Node name for S&R": "OpenAIGPTImageNodeV2",
         "cnr_id": "comfy-core"
@@ -2317,16 +875,16 @@
       "id": 25,
       "type": "🔹SendTo Photoshop Plugin",
       "pos": [
-        2000,
-        2940
+        2034.6531850524807,
+        703.2089952921735
       ],
       "size": [
         280,
         80
       ],
       "flags": {},
-      "order": 25,
-      "mode": 2,
+      "order": 9,
+      "mode": 0,
       "inputs": [
         {
           "localized_name": "output",
@@ -2343,106 +901,18 @@
           "links": null
         }
       ],
+      "title": "GPT",
       "properties": {
         "Node name for S&R": "🔹SendTo Photoshop Plugin"
-      },
-      "title": "GPT 自动"
+      }
     }
   ],
   "links": [
     [
-      9,
-      5,
-      0,
-      6,
-      0,
-      "IMAGE"
-    ],
-    [
       13,
       3,
       0,
       4,
-      0,
-      "IMAGE"
-    ],
-    [
-      29,
-      13,
-      0,
-      14,
-      0,
-      "IMAGE"
-    ],
-    [
-      30,
-      11,
-      0,
-      12,
-      0,
-      "IMAGE"
-    ],
-    [
-      3,
-      1,
-      10,
-      3,
-      14,
-      "INT"
-    ],
-    [
-      8,
-      1,
-      10,
-      5,
-      17,
-      "INT"
-    ],
-    [
-      22,
-      1,
-      10,
-      11,
-      14,
-      "INT"
-    ],
-    [
-      28,
-      1,
-      10,
-      13,
-      17,
-      "INT"
-    ],
-    [
-      37,
-      1,
-      10,
-      16,
-      14,
-      "INT"
-    ],
-    [
-      38,
-      16,
-      0,
-      17,
-      0,
-      "IMAGE"
-    ],
-    [
-      41,
-      1,
-      10,
-      18,
-      4,
-      "INT"
-    ],
-    [
-      42,
-      18,
-      0,
-      19,
       0,
       "IMAGE"
     ],
@@ -2463,30 +933,6 @@
       "IMAGE"
     ],
     [
-      49,
-      1,
-      10,
-      22,
-      4,
-      "INT"
-    ],
-    [
-      50,
-      22,
-      0,
-      23,
-      0,
-      "IMAGE"
-    ],
-    [
-      54,
-      1,
-      10,
-      24,
-      17,
-      "INT"
-    ],
-    [
       55,
       24,
       0,
@@ -2495,7 +941,23 @@
       "IMAGE"
     ],
     [
-      56,
+      73,
+      1,
+      15,
+      20,
+      5,
+      "COMBO"
+    ],
+    [
+      74,
+      1,
+      17,
+      20,
+      6,
+      "COMBO"
+    ],
+    [
+      103,
       1,
       15,
       3,
@@ -2519,151 +981,7 @@
       "COMBO"
     ],
     [
-      59,
-      1,
-      19,
-      5,
-      2,
-      "COMBO"
-    ],
-    [
-      60,
-      1,
-      18,
-      5,
-      5,
-      "COMBO"
-    ],
-    [
-      61,
-      1,
-      16,
-      5,
-      6,
-      "COMBO"
-    ],
-    [
-      62,
-      1,
-      15,
-      11,
-      2,
-      "COMBO"
-    ],
-    [
-      63,
-      1,
-      17,
-      11,
-      3,
-      "COMBO"
-    ],
-    [
-      64,
-      1,
-      16,
-      11,
-      4,
-      "COMBO"
-    ],
-    [
-      65,
-      1,
-      19,
-      13,
-      2,
-      "COMBO"
-    ],
-    [
-      66,
-      1,
-      18,
-      13,
-      5,
-      "COMBO"
-    ],
-    [
-      67,
-      1,
-      16,
-      13,
-      6,
-      "COMBO"
-    ],
-    [
-      68,
-      1,
-      15,
-      16,
-      2,
-      "COMBO"
-    ],
-    [
-      69,
-      1,
-      17,
-      16,
-      3,
-      "COMBO"
-    ],
-    [
-      70,
-      1,
-      16,
-      16,
-      4,
-      "COMBO"
-    ],
-    [
-      71,
-      1,
-      15,
-      18,
-      5,
-      "COMBO"
-    ],
-    [
-      72,
-      1,
-      17,
-      18,
-      6,
-      "COMBO"
-    ],
-    [
-      73,
-      1,
-      15,
-      20,
-      5,
-      "COMBO"
-    ],
-    [
-      74,
-      1,
-      17,
-      20,
-      6,
-      "COMBO"
-    ],
-    [
-      75,
-      1,
-      15,
-      22,
-      5,
-      "COMBO"
-    ],
-    [
-      76,
-      1,
-      17,
-      22,
-      6,
-      "COMBO"
-    ],
-    [
-      77,
+      102,
       1,
       19,
       24,
@@ -2687,439 +1005,119 @@
       "COMBO"
     ],
     [
-      80,
-      1,
-      11,
-      3,
-      0,
-      "STRING"
-    ],
-    [
-      81,
-      1,
-      0,
-      3,
-      5,
-      "IMAGE"
-    ],
-    [
-      82,
-      1,
-      1,
-      3,
-      6,
-      "IMAGE"
-    ],
-    [
-      83,
-      1,
-      2,
-      3,
-      7,
-      "IMAGE"
-    ],
-    [
-      84,
-      1,
-      3,
-      3,
-      8,
-      "IMAGE"
-    ],
-    [
-      85,
-      1,
-      4,
-      3,
-      9,
-      "IMAGE"
-    ],
-    [
-      86,
-      1,
-      5,
-      3,
-      10,
-      "IMAGE"
-    ],
-    [
-      87,
-      1,
-      6,
-      3,
-      11,
-      "IMAGE"
-    ],
-    [
-      88,
-      1,
-      7,
-      3,
-      12,
-      "IMAGE"
-    ],
-    [
-      89,
-      1,
-      11,
-      5,
-      0,
-      "STRING"
-    ],
-    [
-      90,
-      1,
-      0,
-      5,
-      7,
-      "IMAGE"
-    ],
-    [
-      91,
-      1,
-      1,
-      5,
-      8,
-      "IMAGE"
-    ],
-    [
-      92,
-      1,
-      2,
-      5,
-      9,
-      "IMAGE"
-    ],
-    [
-      93,
-      1,
-      3,
-      5,
-      10,
-      "IMAGE"
-    ],
-    [
-      94,
-      1,
-      4,
-      5,
-      11,
-      "IMAGE"
-    ],
-    [
-      95,
-      1,
-      5,
-      5,
-      12,
-      "IMAGE"
-    ],
-    [
-      96,
-      1,
-      6,
-      5,
-      13,
-      "IMAGE"
-    ],
-    [
-      97,
-      1,
-      7,
-      5,
-      14,
-      "IMAGE"
-    ],
-    [
-      98,
-      1,
-      11,
-      11,
-      0,
-      "STRING"
-    ],
-    [
-      99,
-      1,
-      0,
-      11,
-      5,
-      "IMAGE"
-    ],
-    [
-      100,
-      1,
-      1,
-      11,
-      6,
-      "IMAGE"
-    ],
-    [
-      101,
-      1,
-      2,
-      11,
-      7,
-      "IMAGE"
-    ],
-    [
-      102,
-      1,
-      3,
-      11,
-      8,
-      "IMAGE"
-    ],
-    [
-      103,
-      1,
-      4,
-      11,
-      9,
-      "IMAGE"
-    ],
-    [
-      104,
-      1,
-      5,
-      11,
-      10,
-      "IMAGE"
-    ],
-    [
-      105,
-      1,
-      6,
-      11,
-      11,
-      "IMAGE"
-    ],
-    [
-      106,
-      1,
-      7,
-      11,
-      12,
-      "IMAGE"
-    ],
-    [
-      107,
-      1,
-      11,
-      13,
-      0,
-      "STRING"
-    ],
-    [
-      108,
-      1,
-      0,
-      13,
-      7,
-      "IMAGE"
-    ],
-    [
-      109,
-      1,
-      1,
-      13,
-      8,
-      "IMAGE"
-    ],
-    [
       110,
       1,
-      2,
-      13,
-      9,
-      "IMAGE"
+      11,
+      3,
+      0,
+      "STRING"
     ],
     [
       111,
       1,
+      0,
       3,
-      13,
-      10,
+      5,
       "IMAGE"
     ],
     [
       112,
       1,
-      4,
-      13,
-      11,
+      1,
+      3,
+      6,
       "IMAGE"
     ],
     [
       113,
       1,
-      5,
-      13,
-      12,
+      2,
+      3,
+      7,
       "IMAGE"
     ],
     [
       114,
       1,
-      6,
-      13,
-      13,
+      3,
+      3,
+      8,
       "IMAGE"
     ],
     [
       115,
       1,
-      7,
-      13,
-      14,
+      4,
+      3,
+      9,
       "IMAGE"
     ],
     [
       116,
       1,
-      11,
-      16,
-      0,
-      "STRING"
+      5,
+      3,
+      10,
+      "IMAGE"
     ],
     [
       117,
       1,
-      0,
-      16,
-      5,
+      6,
+      3,
+      11,
       "IMAGE"
     ],
     [
       118,
       1,
-      1,
-      16,
-      6,
+      7,
+      3,
+      12,
       "IMAGE"
     ],
     [
       119,
       1,
+      11,
+      20,
       2,
-      16,
-      7,
-      "IMAGE"
+      "STRING"
     ],
     [
       120,
       1,
-      3,
-      16,
       8,
+      20,
+      0,
       "IMAGE"
     ],
     [
       121,
       1,
-      4,
-      16,
-      9,
-      "IMAGE"
+      11,
+      24,
+      0,
+      "STRING"
     ],
     [
       122,
       1,
-      5,
-      16,
-      10,
+      0,
+      24,
+      7,
       "IMAGE"
     ],
     [
       123,
       1,
-      6,
-      16,
-      11,
+      1,
+      24,
+      8,
       "IMAGE"
     ],
     [
       124,
-      1,
-      7,
-      16,
-      12,
-      "IMAGE"
-    ],
-    [
-      125,
-      1,
-      11,
-      18,
-      2,
-      "STRING"
-    ],
-    [
-      126,
-      1,
-      8,
-      18,
-      0,
-      "IMAGE"
-    ],
-    [
-      127,
-      1,
-      11,
-      20,
-      2,
-      "STRING"
-    ],
-    [
-      128,
-      1,
-      8,
-      20,
-      0,
-      "IMAGE"
-    ],
-    [
-      129,
-      1,
-      11,
-      22,
-      2,
-      "STRING"
-    ],
-    [
-      130,
-      1,
-      8,
-      22,
-      0,
-      "IMAGE"
-    ],
-    [
-      131,
-      1,
-      11,
-      24,
-      0,
-      "STRING"
-    ],
-    [
-      132,
-      1,
-      0,
-      24,
-      7,
-      "IMAGE"
-    ],
-    [
-      133,
-      1,
-      1,
-      24,
-      8,
-      "IMAGE"
-    ],
-    [
-      134,
       1,
       2,
       24,
@@ -3127,7 +1125,7 @@
       "IMAGE"
     ],
     [
-      135,
+      125,
       1,
       3,
       24,
@@ -3135,7 +1133,7 @@
       "IMAGE"
     ],
     [
-      136,
+      126,
       1,
       4,
       24,
@@ -3143,7 +1141,7 @@
       "IMAGE"
     ],
     [
-      137,
+      127,
       1,
       5,
       24,
@@ -3151,7 +1149,7 @@
       "IMAGE"
     ],
     [
-      138,
+      128,
       1,
       6,
       24,
@@ -3159,7 +1157,7 @@
       "IMAGE"
     ],
     [
-      139,
+      129,
       1,
       7,
       24,
@@ -3167,39 +1165,7 @@
       "IMAGE"
     ],
     [
-      140,
-      1,
-      13,
-      5,
-      3,
-      "INT"
-    ],
-    [
-      141,
-      1,
-      14,
-      5,
-      4,
-      "INT"
-    ],
-    [
-      142,
-      1,
-      13,
-      13,
-      3,
-      "INT"
-    ],
-    [
-      143,
-      1,
-      14,
-      13,
-      4,
-      "INT"
-    ],
-    [
-      144,
+      130,
       1,
       13,
       24,
@@ -3207,167 +1173,75 @@
       "INT"
     ],
     [
-      145,
+      131,
       1,
       14,
       24,
       4,
+      "INT"
+    ],
+    [
+      132,
+      1,
+      10,
+      3,
+      14,
+      "INT"
+    ],
+    [
+      133,
+      1,
+      10,
+      24,
+      17,
       "INT"
     ]
   ],
   "groups": [
     {
-      "id": 1,
-      "title": "NanoBanana 2K",
-      "bounding": [
-        1480,
-        0,
-        860,
-        560
-      ],
-      "color": "#3f789e",
-      "flags": {}
-    },
-    {
-      "id": 2,
-      "title": "NanoBanana 4K",
-      "bounding": [
-        1480,
-        600,
-        860,
-        560
-      ],
-      "color": "#6b5b95",
-      "flags": {}
-    },
-    {
       "id": 6,
       "title": "GPT",
       "bounding": [
-        1460,
-        2760,
-        900,
-        1560
+        1544.6531850524814,
+        513.2089952921735,
+        780,
+        464
       ],
       "color": "#2b4557",
-      "flags": {}
-    },
-    {
-      "id": 3,
-      "title": "GPT 不透明",
-      "bounding": [
-        1480,
-        3300,
-        860,
-        480
-      ],
-      "color": "#4e5e4e",
-      "flags": {}
-    },
-    {
-      "id": 4,
-      "title": "GPT 半透明",
-      "bounding": [
-        1480,
-        3820,
-        860,
-        480
-      ],
-      "color": "#2f6f6f",
       "flags": {}
     },
     {
       "id": 5,
       "title": "NanoBanana",
       "bounding": [
-        1460,
-        -636,
-        900,
-        1816
-      ],
-      "color": "#b58b2a",
-      "flags": {}
-    },
-    {
-      "id": 7,
-      "title": "NanoBanana 1K",
-      "bounding": [
-        1480,
-        -600,
-        860,
+        1566,
+        -627.2000000000003,
+        769.0999999999999,
         560
       ],
-      "color": "#2a6f8f",
+      "color": "#b58b2a",
       "flags": {}
     },
     {
       "id": 8,
       "title": "NanoBanana Pro",
       "bounding": [
-        1460,
-        1180,
-        900,
-        1580
+        1547.1421197271445,
+        7.122491250232207,
+        780,
+        480
       ],
       "color": "#6b3fa0",
-      "flags": {}
-    },
-    {
-      "id": 9,
-      "title": "NanoBanana Pro 1K",
-      "bounding": [
-        1480,
-        1220,
-        860,
-        480
-      ],
-      "color": "#5b4b8a",
-      "flags": {}
-    },
-    {
-      "id": 10,
-      "title": "NanoBanana Pro 2K",
-      "bounding": [
-        1480,
-        1740,
-        860,
-        480
-      ],
-      "color": "#7a4ea3",
-      "flags": {}
-    },
-    {
-      "id": 11,
-      "title": "NanoBanana Pro 4K",
-      "bounding": [
-        1480,
-        2260,
-        860,
-        480
-      ],
-      "color": "#4a3a78",
-      "flags": {}
-    },
-    {
-      "id": 12,
-      "title": "GPT 自动",
-      "bounding": [
-        1480,
-        2780,
-        860,
-        480
-      ],
-      "color": "#3d6a58",
       "flags": {}
     }
   ],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.9680000000000027,
+      "scale": 0.8264462809917354,
       "offset": [
-        -985.7762012245713,
-        747.8992095028898
+        -294.65505731555174,
+        744.2494692876758
       ]
     }
   },
