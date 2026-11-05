@@ -10,6 +10,7 @@ import struct
 import time
 import uuid
 from io import BytesIO
+from pathlib import Path
 
 from aiohttp import web
 import folder_paths
@@ -25,6 +26,7 @@ _MAX_IMAGE_BYTES = 256 * 1024 * 1024
 _MAX_IMAGE_EDGE = 32_768
 _MAX_IMAGE_PIXELS = 268_435_456
 _SUBFOLDER = "comfytv/photoshop"
+_COMPOSER_ROOT = Path(__file__).resolve().parent.parent / "photoshop-uxp-plugin" / "composer-web"
 _CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -139,6 +141,11 @@ def _require_loopback(request: web.Request) -> web.Response | None:
     return _response({"error": "Photoshop bridge is local-only"}, status=403)
 
 
+def _composer_revision() -> int:
+    files = ("index.html", "composer.js", "composer.css")
+    return max((_COMPOSER_ROOT / name).stat().st_mtime_ns for name in files)
+
+
 @routes.options("/comfytv/photoshop/{tail:.*}")
 async def photoshop_options(request: web.Request) -> web.Response:
     denied = _require_loopback(request)
@@ -153,6 +160,34 @@ async def photoshop_status(request: web.Request) -> web.Response:
     if denied is not None:
         return denied
     return _response({"ok": True})
+
+
+@routes.get("/comfytv/photoshop/composer")
+async def photoshop_composer(request: web.Request) -> web.Response:
+    denied = _require_loopback(request)
+    if denied is not None:
+        return denied
+    response = web.FileResponse(_COMPOSER_ROOT / "index.html")
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@routes.get("/comfytv/photoshop/composer-version")
+async def photoshop_composer_version(request: web.Request) -> web.Response:
+    denied = _require_loopback(request)
+    if denied is not None:
+        return denied
+    return _response({"revision": _composer_revision()})
+
+
+@routes.get("/comfytv/photoshop/{name:composer\\.(?:js|css)}")
+async def photoshop_composer_asset(request: web.Request) -> web.Response:
+    denied = _require_loopback(request)
+    if denied is not None:
+        return denied
+    response = web.FileResponse(_COMPOSER_ROOT / request.match_info["name"])
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @routes.post("/comfytv/photoshop/layer")

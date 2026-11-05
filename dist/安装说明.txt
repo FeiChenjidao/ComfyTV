@@ -1,11 +1,19 @@
-ComfyTV Photoshop 插件 0.2.2
+ComfyTV Photoshop 插件 0.3.1
 需要 Photoshop 2024 或更新版本，并且本机 ComfyUI 开在 8188 端口。
+
+这个完整安装包内应包含：
+
+- ComfyTV-photoshop-0.3.1.ccx：Creative Cloud 安装版 Photoshop 插件
+- ComfyTV-photoshop-0.3.1-手动安装.zip：无 Creative Cloud 时使用的插件文件夹
+- ComfyTV-custom-node-1.10.0.zip：与本插件配套的完整 ComfyTV 自定义节点
+- PS_NanoBanana_GPTImage.json：配套工作流
+- 四份 SHA256 校验文件：用于确认传输没有损坏或漏文件
 
 一、用安装包（同事电脑装了 Adobe Creative Cloud 桌面版时用这个）
 
 1. 用 Adobe 账号登录 Creative Cloud 桌面版。这就是当时要注册、登录的那一步。
-2. 先打开一次 Photoshop，再关掉。
-3. 双击 ComfyTV-photoshop-0.2.2.ccx。
+2. 先打开一次 Photoshop，再完全退出。升级旧版时，先卸载旧的 ComfyTV，不要同时保留旧版和新版。
+3. 双击 ComfyTV-photoshop-0.3.1.ccx。
 4. 出现“不是来自 Creative Cloud 市场”的提示时，选安装。
 5. 弹出权限时允许。插件要连本机 8188，并在 Photoshop 里打开 ComfyUI 页面。
 6. 完全退出 Photoshop 再打开。菜单：增效工具 > ComfyTV。里面有 Ai Panel 和 ComfyUI 两个面板。
@@ -18,10 +26,18 @@ C:\Program Files\Common Files\Adobe\Adobe Desktop Common\RemoteComponents\UPI\Un
 
 1. Photoshop：编辑 > 首选项 > 增效工具，勾选“启用开发人员模式”。
 2. 完全退出 Photoshop。
-3. 把插件文件夹拷到：
-   %AppData%\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.2.2
-   文件夹名必须和安装包里的版本号一致。
-4. 再打开 Photoshop。同样在 增效工具 > ComfyTV 里。
+3. 确认电脑上没有通过 CCX 安装的另一份 ComfyTV。系统级 CCX 安装与用户级手动安装只能选择一种。
+4. 解压 ComfyTV-photoshop-0.3.1-手动安装.zip，把解压得到的全部插件文件拷到：
+   %AppData%\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.3.1
+   manifest.json 必须直接位于这个目录下，不能再多套一层文件夹。文件夹名必须和安装包里的版本号一致。
+5. 再打开 Photoshop。同样在 增效工具 > ComfyTV 里。
+
+如果 Photoshop 里按钮点了没有反应，优先检查是否同时存在两份同 ID 插件：
+
+- 系统级：C:\Program Files\Common Files\Adobe\UXP\Plugins\External
+- 用户级：%AppData%\Adobe\UXP\Plugins\External
+
+同一台电脑只能保留其中一份 ComfyTV。不要在两个目录中同时放置它。
 
 三、ComfyUI 这边
 
@@ -30,10 +46,20 @@ C:\Program Files\Common Files\Adobe\Adobe Desktop Common\RemoteComponents\UPI\Un
 
 同事的 ComfyUI 里要有：
 
-- 这份 ComfyTV（里面已经带 Photoshop 对接，更新后要重启 ComfyUI）
+- 安装包中的 ComfyTV-custom-node-1.10.0.zip（里面已经带 Photoshop 对接）
 - 自定义节点 rgthree-comfy
 - 工作流 workflows/image/PS_NanoBanana_GPTImage.json
   同一份文件也放在这个安装说明旁边。在 ComfyUI 里打开它。
+
+安装或更新 ComfyTV：
+
+1. 完全退出 ComfyUI / Comfy Desktop。
+2. 找到实际运行实例的 custom_nodes 目录。不要凭名称猜路径；从启动日志确认当前实例。
+3. 先备份旧的 custom_nodes\ComfyTV。不要把新旧文件夹混在一起，也不要留下 ComfyTV-old 之类仍会被 ComfyUI 扫描的副本。
+4. 把 ComfyTV-custom-node-1.10.0.zip 直接解压到 custom_nodes。最终必须是：
+   custom_nodes\ComfyTV\__init__.py
+5. 不要把它解压成 custom_nodes\ComfyTV\ComfyTV\__init__.py。
+6. 重新启动 ComfyUI。启动日志中应出现 ComfyTV 节点加载信息。
 
 ComfyUI 要在本机 8188 运行。在 Photoshop 里点地球图标，打开内嵌的 ComfyUI 面板。
 打开上面的工作流之后，把这个 ComfyUI 页面强制刷新一次，面板留着不要关，再点渲染。
@@ -41,3 +67,15 @@ Nano Banana 和 GPT Image 还要在这个内嵌页面里登录 Comfy 账号。
 
 工作流下拉里是 NanoBanana、NanoBanana Pro、GPT。
 渲染模式跟着走：NanoBanana 和 NanoBanana Pro 是比例和分辨率（1K / 2K / 4K）。GPT 用节点里的尺寸，包含 Custom。输出背景是自动 / 不透明 / 半透明。
+
+四、核对版本
+
+安装包旁边的 ComfyTV-photoshop-0.3.1.ccx.sha256.txt 是安装包校验值。
+ComfyTV-photoshop-0.3.1-files.sha256.txt 是 CCX 内部全部运行文件的清单。
+ComfyTV-custom-node-1.10.0.zip.sha256.txt 是 ComfyTV 自定义节点运行包的校验值。
+完整包文件校验.sha256.txt 是最终同事安装包内部所有文件的校验清单。
+如果传输后文件损坏，可以用 PowerShell 检查：
+
+Get-FileHash .\ComfyTV-photoshop-0.3.1.ccx -Algorithm SHA256
+
+输出值应当和 ccx.sha256.txt 中的值一致。

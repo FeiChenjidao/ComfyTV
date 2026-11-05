@@ -45,6 +45,17 @@ _ubc_work
 .mcp-shots
 docs/tutorial/dist/
 
+# Photoshop runtime data lives under ComfyUI/user/comfytv/photoshop.
+photoshop/data/
+photoshop-uxp-plugin/backup-*/
+.tmp_*
+.backups/
+.cursor/
+_muter2.json
+dist/*.sha256.txt
+photoshop-uxp-plugin/icon-live-toggle.jpg
+photoshop-uxp-plugin/icons/live-toggle.*
+
 # GitHub auto-revokes PATs when they appear in commits (even private repos).
 # Configure via ComfyTV Settings / commit popup ? never git add the real file.
 secrets/comfytv-git-token

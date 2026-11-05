@@ -23,24 +23,24 @@
         </div>
 
         <nav class="tool-rail" aria-label="面板工具">
-          <div class="button-seg">
-            <span id="settings-toggle" class="rail-btn" role="button" tabindex="0" title="设置">
-              <span class="glass-face glass" aria-hidden="true"></span>
-              <span class="icon-slot" data-icon="settings-toggle"></span>
-              <span class="btn-hit"></span>
-            </span>
-            <span id="web-toggle" class="rail-btn" role="button" tabindex="0" title="在 Photoshop 中打开 ComfyUI">
-              <span class="glass-face glass" aria-hidden="true"></span>
-              <span class="icon-slot" data-icon="web-toggle"></span>
-              <span class="btn-hit"></span>
-            </span>
-          </div>
-          <span id="fit-toggle" class="rail-btn rail-btn-single" role="button" tabindex="0" title="切换预览适配">
-            <span class="glass-face glass" aria-hidden="true"></span>
+          <span id="settings-toggle" class="rail-btn" role="button" tabindex="0" title="设置">
+            <span class="icon-slot" data-icon="settings-toggle"></span>
+            <span class="btn-hit"></span>
+          </span>
+          <span id="web-toggle" class="rail-btn" role="button" tabindex="0" title="在 Photoshop 中打开 ComfyUI">
+            <span class="icon-slot" data-icon="web-toggle"></span>
+            <span class="btn-hit"></span>
+          </span>
+          <span id="fit-toggle" class="rail-btn" role="button" tabindex="0" title="切换预览适配">
             <span class="icon-slot" data-icon="fit-toggle"></span>
             <span class="btn-hit"></span>
           </span>
         </nav>
+
+        <span id="history-toggle" class="rail-btn history-toggle" role="button" tabindex="0" title="历史记录">
+          <span class="icon-slot" data-icon="history-toggle"></span>
+          <span class="btn-hit"></span>
+        </span>
 
         <section id="settings-drawer" class="drawer glass hidden">
           <div class="drawer-title">
@@ -54,6 +54,14 @@
               <button id="connect" type="button">连接</button>
             </div>
           </div>
+          <div class="field-row">
+            <label for="comfy-launch">启动程序</label>
+            <div class="server-row">
+              <input id="comfy-launch" spellcheck="false" placeholder="Comfy Desktop.exe">
+              <button id="pick-comfy" type="button">选择</button>
+            </div>
+          </div>
+          <button id="start-comfy" class="secondary-button" type="button">启动 ComfyUI</button>
           <div class="field-row">
             <label for="negative">负面提示词</label>
             <textarea id="negative" rows="3" placeholder="可选"></textarea>
@@ -79,7 +87,6 @@
             </div>
           </div>
           <label class="check-row"><input id="auto-seed" type="checkbox"><span>每次自动随机种子</span></label>
-          <label class="check-row"><input id="render-on-change" type="checkbox"><span>文档变化时自动渲染</span></label>
           <button id="send-layer" class="secondary-button" type="button">发送当前图层到 ComfyTV</button>
           <button id="add-layer" class="secondary-button" type="button" disabled>把结果添加为图层</button>
         </section>
@@ -87,35 +94,32 @@
 
         <div id="status-toast" class="status-toast glass hidden"></div>
 
-        <section id="preset-panel" class="preset-panel hidden">
-          <div class="preset-panel-head">
-            <div class="preset-tabs">
-              <span class="preset-tab is-active" data-preset-tab="style" role="button" tabindex="0">风格</span>
-              <span class="preset-tab" data-preset-tab="filter" role="button" tabindex="0">功能</span>
-              <span class="preset-tab" data-preset-tab="custom" role="button" tabindex="0">自定义</span>
+        <section id="history-panel" class="history-panel hidden" aria-label="历史记录">
+          <header class="history-panel-header">
+            <div class="history-panel-title">
+              <strong>历史记录</strong>
+              <span id="history-panel-count">0 张</span>
             </div>
-            <button id="preset-panel-close" class="close-button" type="button" title="关闭">&#215;</button>
-          </div>
-          <div id="preset-tab-style" class="preset-tab-body"></div>
-          <div id="preset-tab-filter" class="preset-tab-body hidden"></div>
-          <div id="preset-tab-custom" class="preset-tab-body hidden">
-            <div id="custom-preset-list"></div>
-            <button id="preset-save-chip" class="preset-new" type="button">新建预设</button>
-          </div>
-        </section>
-
-        <section id="preset-dialog" class="preset-dialog hidden">
-          <div class="preset-dialog-title">
-            <strong>新建预设</strong>
-            <button id="preset-dialog-close" class="close-button" type="button" title="关闭">&#215;</button>
-          </div>
-          <label for="preset-name-input">名称</label>
-          <input id="preset-name-input" type="text" maxlength="40" placeholder="例如 三视图">
-          <label for="preset-prefix">前缀</label>
-          <textarea id="preset-prefix" rows="3" placeholder="加在提示词前面"></textarea>
-          <label for="preset-suffix">后缀</label>
-          <textarea id="preset-suffix" rows="3" placeholder="加在提示词后面"></textarea>
-          <button id="preset-dialog-ok" type="button">保存</button>
+            <div class="history-panel-actions">
+              <button id="history-panel-clear" class="history-panel-action danger" type="button">清空</button>
+              <button id="history-panel-edit" class="history-panel-action" type="button">编辑</button>
+              <button id="history-panel-close" class="close-button" type="button" title="关闭">&#215;</button>
+            </div>
+          </header>
+          <div id="history-panel-grid" class="history-panel-grid"></div>
+          <div id="history-panel-empty" class="history-panel-empty hidden">暂无生成记录</div>
+          <footer class="history-panel-footer">
+            <div class="history-panel-pagination">
+              <button id="history-panel-prev" type="button">上一页</button>
+              <span id="history-panel-page">1 / 1</span>
+              <button id="history-panel-next" type="button">下一页</button>
+            </div>
+            <div id="history-panel-batch" class="history-panel-batch hidden">
+              <span id="history-panel-selected-count">已选 0 张</span>
+              <button id="history-panel-delete-selected" class="danger" type="button" disabled>删除所选</button>
+              <button id="history-panel-edit-done" type="button">完成</button>
+            </div>
+          </footer>
         </section>
 
         <section id="history-limit" class="history-limit hidden">
@@ -136,23 +140,33 @@
           <div id="pf-head" class="pf-head"></div>
         </div>
 
+        <div id="host-popover-layer" class="host-popover-layer" aria-live="polite">
+          <div id="model-menu" class="composer-menu host-model-menu hidden"></div>
+          <div id="mode-menu" class="composer-menu mode-sheet host-mode-menu hidden"></div>
+          <div id="count-menu" class="composer-menu composer-count-menu host-count-menu hidden"></div>
+          <div id="preset-host-menu" class="host-preset-menu hidden"></div>
+        </div>
+
         <footer id="composer" class="composer">
-          <div id="ref-row" class="composer-refs">
-            <span id="ref-doc" class="ref-card" role="button" tabindex="0" title="生成时使用当前 Photoshop 画面">
-              <span class="icon-slot" data-icon="ref-frame"></span>
-              <span class="ref-card-label">画布</span>
-            </span>
-            <span id="ref-add" class="ref-card" title="从文件添加参考图">
-              <span class="icon-slot" data-icon="ref-plus"></span>
-              <span class="ref-card-label">添加</span>
-              <button id="ref-add-btn" type="button" title="从文件添加参考图"></button>
-            </span>
-          </div>
-          <div class="composer-prompt-row">
-            <div id="mention-menu" class="mention-menu hidden"></div>
-            <div id="prompt-tags" class="prompt-tags"></div>
-            <textarea id="positive" class="composer-prompt" rows="2" placeholder="描述你想要生成的内容，输入 @ 引用参考图"></textarea>
-            <div id="positive-mirror" class="composer-prompt-mirror" aria-hidden="true"></div>
+          <webview id="composer-webview" class="composer-webview" src="http://localhost:8188/comfytv/photoshop/composer" tabindex="0"></webview>
+          <div id="composer-legacy" class="composer-legacy">
+            <div id="ref-row" class="composer-refs">
+              <span id="ref-doc" class="ref-card" role="button" tabindex="0" title="生成时使用当前 Photoshop 画面">
+                <span class="icon-slot" data-icon="ref-frame"></span>
+                <span class="ref-card-label">画布</span>
+              </span>
+              <span id="ref-add" class="ref-card" title="从文件添加参考图">
+                <span class="icon-slot" data-icon="ref-plus"></span>
+                <span class="ref-card-label">添加</span>
+                <button id="ref-add-btn" type="button" title="从文件添加参考图"></button>
+              </span>
+            </div>
+            <div class="composer-prompt-row">
+              <div id="mention-menu" class="mention-menu hidden"></div>
+              <div id="prompt-tags" class="prompt-tags"></div>
+              <textarea id="positive" class="composer-prompt" rows="2" placeholder="描述你想要生成的内容，输入 @ 引用参考图"></textarea>
+              <div id="positive-mirror" class="composer-prompt-mirror" aria-hidden="true"></div>
+            </div>
           </div>
           <div id="progress-label" class="composer-progress">就绪</div>
           <div class="composer-bar">
@@ -164,9 +178,6 @@
               <span id="mode-trigger" class="composer-select" role="button" tabindex="0" title="模式">
                 <span id="mode-label">模式</span>
                 <span class="icon-slot" data-icon="caret"></span>
-              </span>
-              <span id="live-toggle" class="tiny-btn" role="button" tabindex="0" title="文档变化时自动渲染">
-                <span class="icon-slot" data-icon="live-toggle"></span>
               </span>
               <span id="crop-toggle" class="tiny-btn active" role="button" tabindex="0" title="有选区时裁切到选区">
                 <span class="icon-slot" data-icon="crop-toggle"></span>
@@ -187,9 +198,6 @@
               </div>
             </div>
           </div>
-          <div id="model-menu" class="composer-menu hidden"></div>
-          <div id="mode-menu" class="composer-menu mode-sheet hidden"></div>
-          <div id="count-menu" class="composer-menu composer-count-menu hidden"></div>
           <select id="workflow" class="composer-native">
             <option value="0" selected>NanoBanana</option>
             <option value="1">NanoBanana Pro</option>
@@ -202,12 +210,12 @@
   </uxp-panel>
   <uxp-panel panelid="com.comfytv.photoshop.web">
     <div class="web-shell">
-      <webview id="comfy-webview" src="http://localhost:8188"></webview>
+      <webview id="comfy-webview" src="about:blank"></webview>
     </div>
   </uxp-panel>
     <script src="icons.js"></script>
     <script src="glass.js"></script>
-    <script src="presets.js"></script>
+    <script src="preset-data.js"></script>
     <script src="main.js"></script>
   </body>
 </html>

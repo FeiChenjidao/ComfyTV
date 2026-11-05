@@ -2,7 +2,7 @@
   "manifestVersion": 5,
   "id": "com.comfytv.photoshop.uxp",
   "name": "ComfyTV",
-  "version": "0.2.2",
+  "version": "0.3.1",
   "main": "index.html",
   "host": {
     "app": "PS",
@@ -62,10 +62,12 @@
       "enablePluginCommunication": true
     },
     "launchProcess": {
-      "schemes": ["http", "https"]
+      "schemes": ["http", "https"],
+      "extensions": [".exe"]
     },
     "webview": {
       "allow": "yes",
+      "enableMessageBridge": "localAndRemote",
       "domains": [
         "http://localhost:8188",
         "http://127.0.0.1:8188",

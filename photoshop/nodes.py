@@ -3,7 +3,6 @@ import json
 import os
 from io import BytesIO
 
-import aiohttp
 import folder_paths
 import numpy as np
 import torch
@@ -11,7 +10,7 @@ from comfy_api.latest import io
 from nodes import SaveImage
 from PIL import Image, ImageOps
 
-from .backend import PS_INPUTS
+from .backend import PS_INPUTS, send_render_file
 
 
 def _file_hash(name):
@@ -44,12 +43,33 @@ def _to_tensor(image):
     return torch.from_numpy(pixels.astype(np.float32) / 255.0)[None,]
 
 
-def _reference_tensor(index):
-    name = f"PS_ref_{index}.png"
+def _optional_image_tensor(name):
     path = os.path.join(PS_INPUTS, name)
     if not os.path.isfile(path) or os.path.getsize(path) == 0:
-        return torch.zeros((1, 8, 8, 3), dtype=torch.float32)
-    return _to_tensor(_open_image(name))
+        return None
+    return _to_tensor(_open_image(name).convert("RGB"))
+
+
+def _fit_media_tensor(image, height, width):
+    if image.shape[1] == height and image.shape[2] == width:
+        return image
+    source_height, source_width = image.shape[1:3]
+    scale = min(width / source_width, height / source_height)
+    target_width = max(1, min(width, round(source_width * scale)))
+    target_height = max(1, min(height, round(source_height * scale)))
+    resized = torch.nn.functional.interpolate(
+        image.movedim(-1, 1),
+        size=(target_height, target_width),
+        mode="bilinear",
+        align_corners=False,
+    )
+    left = (width - target_width) // 2
+    right = width - target_width - left
+    top = (height - target_height) // 2
+    bottom = height - target_height - top
+    if left or right or top or bottom:
+        resized = torch.nn.functional.pad(resized, (left, right, top, bottom), mode="replicate")
+    return resized.movedim(1, -1)
 
 
 class PhotoshopFromPanel(io.ComfyNode):
@@ -63,18 +83,20 @@ class PhotoshopFromPanel(io.ComfyNode):
             inputs=[],
             outputs=[
                 io.Image.Output(display_name="Canvas"),
-                io.Mask.Output(display_name="Mask"),
-                io.Int.Output(display_name="Seed"),
-                io.String.Output(display_name="+"),
-                io.String.Output(display_name="-"),
-                io.Int.Output(display_name="W"),
-                io.Int.Output(display_name="H"),
+                io.Image.Output(display_name="Mask"),
                 io.Image.Output(display_name="Ref1"),
                 io.Image.Output(display_name="Ref2"),
                 io.Image.Output(display_name="Ref3"),
                 io.Image.Output(display_name="Ref4"),
                 io.Image.Output(display_name="Ref5"),
                 io.Image.Output(display_name="Ref6"),
+                io.Image.Output(display_name="Media Batch"),
+                io.Boolean.Output(display_name="Has Mask"),
+                io.Int.Output(display_name="Seed"),
+                io.String.Output(display_name="+"),
+                io.String.Output(display_name="-"),
+                io.Int.Output(display_name="W"),
+                io.Int.Output(display_name="H"),
                 io.Combo.Output(display_name="比例"),
                 io.Combo.Output(display_name="质量"),
                 io.Combo.Output(display_name="分辨率"),
@@ -99,10 +121,25 @@ class PhotoshopFromPanel(io.ComfyNode):
         canvas = _to_tensor(image)
         width, height = image.size
 
-        mask_image = ImageOps.exif_transpose(_open_image("PS_mask.png"))
-        mask = np.array(mask_image.getchannel("B")).astype(np.float32) / 255.0
-        mask[mask == (1 / 255.0)] = 0.0
-        mask = torch.from_numpy(mask)
+        has_mask = bool(config.get("hasMask")) and os.path.isfile(os.path.join(PS_INPUTS, "PS_mask.png"))
+        mask_image = ImageOps.exif_transpose(_open_image("PS_mask.png")) if has_mask else Image.new("L", (width, height), 255)
+        if mask_image.size != (width, height):
+            mask_image = mask_image.resize((width, height), Image.Resampling.BILINEAR)
+        canvas = _to_tensor(image.convert("RGB"))
+        optional_mask = _to_tensor(mask_image.convert("RGB")) if has_mask else None
+        reference_count = max(0, min(6, int(config.get("referenceCount") or 0)))
+        references = [
+            _optional_image_tensor(f"PS_ref_{index}.png") if index <= reference_count else None
+            for index in range(1, 7)
+        ]
+        media = [canvas]
+        if optional_mask is not None:
+            media.append(optional_mask)
+        media.extend(reference for reference in references if reference is not None)
+        media_batch = torch.cat(
+            [_fit_media_tensor(item, height, width) for item in media],
+            dim=0,
+        )
 
         def text(key, fallback=""):
             value = config.get(key, fallback)
@@ -110,13 +147,15 @@ class PhotoshopFromPanel(io.ComfyNode):
 
         return io.NodeOutput(
             canvas,
-            mask.unsqueeze(0),
+            optional_mask,
+            *references,
+            media_batch,
+            has_mask,
             int(config["seed"]),
             config["positive"],
             config["negative"],
             int(width),
             int(height),
-            *[_reference_tensor(index) for index in range(1, 7)],
             text("aspect", "auto"),
             text("quality"),
             text("resolution", "2K"),
@@ -147,10 +186,13 @@ class SendToPhotoshop(io.ComfyNode):
         saved = saver.save_images(output, "PS_OUTPUTS", prompt, extra_pnginfo)
         filename = saved["ui"]["images"][0]["filename"]
         try:
-            url = f"http://127.0.0.1:8188/ps/renderdone?filename={filename}"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    await response.text()
+            job_id = ""
+            try:
+                with open(os.path.join(PS_INPUTS, "config.json"), "r", encoding="utf-8") as file:
+                    job_id = str(json.load(file).get("jobId") or "")
+            except (OSError, ValueError):
+                pass
+            await send_render_file(filename, job_id)
         except Exception as error:
             print(f"# PS: error on send2Ps: {error}")
         return io.NodeOutput()

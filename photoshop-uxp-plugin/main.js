@@ -10,10 +10,19 @@ const { action, app, core, imaging, constants } = loadModule("photoshop")
 const { storage } = loadModule("uxp")
 
 const DEFAULT_SERVER = "http://127.0.0.1:8188"
+const DEFAULT_LAUNCH = "D:\\ComfyUI_Desktop\\Comfy Desktop\\Comfy Desktop.exe"
 const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.2.2"
+const PLUGIN_VERSION = "0.3.1"
+const COMPOSER_PROTOCOL_VERSION = 2
+const WORKFLOW_PROTOCOL_VERSION = 3
+const COMFY_AUTH_STORAGE_KEY = "comfytv.comfyui.auth-envelope.v2"
+const COMFY_AUTH_LEGACY_KEY = "comfytv.comfyui.firebase-auth.v1"
+const COMFY_AUTH_PREFIX = "firebase:authUser:"
+const COMFY_AUTH_MAX_BYTES = 1024 * 1024
+const REFERENCE_MAX_EDGE = 2048
+const REFERENCE_MAX_BYTES = 25 * 1024 * 1024
 const clientId = `comfytv-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
 let socket = null
@@ -23,6 +32,7 @@ let modelListSynced = false
 let toastTimer = null
 let latestRenderFile = null
 let capturePreviewFile = null
+let capturePreviewThumbSrc = ""
 let lastCaptureBounds = null
 let lastSentFrame = null
 let lastDocumentPpi = 72
@@ -31,13 +41,13 @@ let renderHistory = []
 let selectedHistoryIndex = 0
 let historyPage = 0
 const HISTORY_PAGE_SIZE = 8
+const HISTORY_PANEL_PAGE_SIZE = 36
 const HISTORY_WARN_COUNT = 380
 const HISTORY_KEEP_MS = 7 * 24 * 60 * 60 * 1000
-let watchTimer = null
-let liveTimer = null
-let lastHistoryMarker = null
-let lastSelectionKey = null
-let suppressWatchUntil = 0
+let launchTimer = null
+let composerWebReady = false
+let hostPopoverMenu = ""
+let composerStateSignatures = Object.create(null)
 
 function element(id) {
   return document.getElementById(id)
@@ -73,6 +83,7 @@ function setConnection(message, state = "") {
 
 function setProgress(message) {
   element("progress-label").textContent = message
+  syncComposerWorkbench()
 }
 
 const MARQUEE_THICK = 4
@@ -164,12 +175,14 @@ function setMarquee(percent, running) {
     frame.classList.remove("active")
     clearInterval(marqueeTimer)
     marqueeTimer = 0
+    syncComposerWorkbench()
     return
   }
   marqueePercent = Math.max(0, Math.min(100, Number(percent) || 0))
   frame.classList.add("active")
   paintMarquee()
   ensureMarqueeClock()
+  syncComposerWorkbench()
 }
 
 function finishMarquee() {
@@ -193,12 +206,49 @@ function setBusy(busy) {
   if (busy) setConnection("读取图像", "busy")
   else if (socket?.readyState === WebSocket.OPEN) setConnection("已连接", "connected")
   else setConnection("未连接", "error")
+  syncComposerWorkbench()
 }
 
 const BATCH_MAX = 8
 let batchRunning = false
 let batchStop = false
 let renderDone = null
+let activeJobId = ""
+let activeBatchIndex = 0
+const jobPhaseRanks = new Map()
+const jobPhases = new Map()
+const JOB_PHASE_RANK = {
+  queued: 1,
+  running: 2,
+  result_received: 3,
+  completed: 4,
+  error: 4,
+  interrupted: 4,
+}
+
+function terminalJobPhase(phase) {
+  return phase === "completed" || phase === "error" || phase === "interrupted"
+}
+
+function acceptJobPhase(jobId, phase) {
+  const id = String(jobId || "")
+  if (!id) return true
+  const currentPhase = String(jobPhases.get(id) || "")
+  if (terminalJobPhase(currentPhase)) return currentPhase === phase
+  const next = Number(JOB_PHASE_RANK[phase] || 0)
+  const current = Number(jobPhaseRanks.get(id) || 0)
+  if (next < current) return false
+  jobPhaseRanks.delete(id)
+  jobPhaseRanks.set(id, next)
+  jobPhases.delete(id)
+  jobPhases.set(id, phase)
+  while (jobPhaseRanks.size > 24) {
+    const oldest = jobPhaseRanks.keys().next().value
+    jobPhaseRanks.delete(oldest)
+    jobPhases.delete(oldest)
+  }
+  return true
+}
 
 function batchCount() {
   const value = Number.parseInt(element("batch-count").value, 10)
@@ -211,17 +261,19 @@ function setRenderLabel(text) {
   const stopping = text === "停止"
   button.title = stopping ? "停止后面的生成" : "开始生成。右键会先换一个随机种子。生成过程中再点一次，停掉后面的。"
   button.classList.toggle("is-stop", stopping)
+  syncComposerWorkbench()
 }
 
-function settleRender(error) {
+function settleRender(error, jobId = "") {
   const pending = renderDone
-  renderDone = null
   if (!pending) return
+  if (jobId && pending.jobId && jobId !== pending.jobId) return
+  renderDone = null
   if (error) pending.reject(error)
   else pending.resolve()
 }
 
-function armRenderWait() {
+function armRenderWait(jobId) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       if (renderDone && renderDone.reject === reject) {
@@ -230,6 +282,7 @@ function armRenderWait() {
       }
     }, 8 * 60 * 1000)
     renderDone = {
+      jobId,
       resolve: () => {
         clearTimeout(timer)
         resolve()
@@ -240,6 +293,11 @@ function armRenderWait() {
       },
     }
   })
+}
+
+function nextJobId() {
+  const random = Math.random().toString(36).slice(2, 10)
+  return `ps-${Date.now().toString(36)}-${random}`
 }
 
 function plainBounds(bounds) {
@@ -878,7 +936,128 @@ function captureNote(bounds, mode, frame) {
   return `已按文档原像素送出 ${width}×${height}`
 }
 
-async function captureWorkflowInput() {
+function workflowMediaManifest(hasMask) {
+  const media = []
+  const append = (entry) => {
+    media.push({ index: media.length + 1, ...entry })
+  }
+  append({ id: "canvas", role: "canvas", label: "当前画布", name: "" })
+  if (hasMask) {
+    append({
+      id: "mask",
+      role: "mask",
+      label: "编辑 Mask",
+      name: "",
+      semantics: { white: "edit", black: "protect" },
+    })
+  }
+  let fileIndex = 1
+  if (styleReference) {
+    append({
+      id: "style",
+      role: "style",
+      token: "@风格",
+      displayToken: "@风格",
+      label: "风格参考图",
+      name: String(styleReference.name || ""),
+      fileIndex,
+    })
+    fileIndex += 1
+  }
+  referenceFiles.forEach((file, referenceIndex) => {
+    append({
+      id: `reference_${referenceIndex + 1}`,
+      role: "reference",
+      token: `@参考图${referenceIndex + 1}`,
+      displayToken: `@参考图${referenceIndex + 1}`,
+      label: `普通参考图${referenceIndex + 1}`,
+      name: String(file.name || ""),
+      referenceIndex: referenceIndex + 1,
+      fileIndex,
+    })
+    fileIndex += 1
+  })
+  return media
+}
+
+function normalizeMediaMentions(text, media) {
+  const byToken = new Map(media.filter((item) => item.token).map((item) => [item.token, item]))
+  return String(text || "")
+    .replace(/@风格/g, () => {
+      const item = byToken.get("@风格")
+      return item ? `参考图${item.index}` : ""
+    })
+    .replace(/@(?:参考图|图片)(\d+)/g, (_match, raw) => {
+      const item = byToken.get(`@参考图${Number(raw)}`)
+      return item ? `参考图${item.index}` : ""
+    })
+}
+
+function mediaManifestText(media) {
+  return media.map((item) => {
+    if (item.role === "mask") {
+      return `Mask：参考图${item.index}，白色区域允许修改，黑色区域保持参考图1不变。`
+    }
+    if (item.role === "style") {
+      return `风格：参考图${item.index}，只参考视觉风格、色彩、材质和光照，不复制其主体与构图。`
+    }
+    return ""
+  })
+    .filter(Boolean)
+    .join("\n")
+}
+
+function composePromptText(text) {
+  let value = String(text || "")
+  selectedPresetTags().forEach((tag) => {
+    value = stripToken(value, tag.name)
+  })
+  const active = selectedPresetEntries()
+  const prefixes = active.map(({ preset }) => preset.prefix).filter(Boolean)
+  const suffixes = active.map(({ preset }) => preset.suffix).filter(Boolean)
+  return [prefixes.join("\n"), tidyPrompt(value), suffixes.join("\n")]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join("\n")
+}
+
+function compileWorkflowPrompt(hasMask) {
+  const text = String(element("positive")?.value || "")
+  const media = workflowMediaManifest(hasMask)
+  const normalizedText = tidyPrompt(normalizeMediaMentions(text, media))
+  const userPrompt = composePromptText(normalizedText)
+  const positive = [mediaManifestText(media), userPrompt]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join("\n\n")
+  return { text, normalizedText, userPrompt, positive, media }
+}
+
+function promptStructurePayload(compiled) {
+  const activePresets = selectedPresetEntries().map(({ category, preset }) => ({
+    id: preset.id,
+    categoryId: category.id,
+    category: category.name,
+    name: preset.name,
+    prefix: preset.prefix,
+    suffix: preset.suffix,
+  }))
+  const media = Array.isArray(compiled?.media) ? compiled.media : []
+  return {
+    version: 3,
+    text: String(compiled?.text || ""),
+    normalizedText: String(compiled?.normalizedText || ""),
+    userPrompt: String(compiled?.userPrompt || ""),
+    positive: String(compiled?.positive || ""),
+    hasMask: media.some((item) => item.role === "mask"),
+    maskSemantics: { white: "edit", black: "protect" },
+    media,
+    references: media.filter((item) => item.role === "style" || item.role === "reference"),
+    presets: activePresets,
+  }
+}
+
+async function captureWorkflowInput(jobId = "", batchIndex = 0) {
   if (!app.documents.length) throw new Error("请先打开 Photoshop 文档")
   return withPixelRuler(async () => {
   const document = app.activeDocument
@@ -904,8 +1083,10 @@ async function captureWorkflowInput() {
     lastDocumentPpi = Number(document.resolution) || lastDocumentPpi || 72
 
     const canvas = await encodePixels(pixelOptions, frame)
+    const hasMask = Boolean(selection)
     const maskFrame = frame || { width: nativeWidth, height: nativeHeight, padLeft: 0, padTop: 0, resample: false }
-    const maskBase64 = await encodeSelectionMask(document, sourceBounds, maskFrame, selection)
+    const maskBase64 = hasMask ? await encodeSelectionMask(document, sourceBounds, maskFrame, selection) : ""
+    const compiledPrompt = compileWorkflowPrompt(hasMask)
   lastCaptureBounds = sourceBounds
     lastSentFrame = frame
     try {
@@ -918,7 +1099,8 @@ async function captureWorkflowInput() {
     canvasBase64: canvas.encoded,
     maskBase64,
     configdata: {
-      positive: composePrompt(),
+      positive: compiledPrompt.positive,
+      promptStructure: promptStructurePayload(compiledPrompt),
       negative: element("negative").value,
       seed: String(validSeed()),
       pluginVer: PLUGIN_VERSION,
@@ -929,8 +1111,12 @@ async function captureWorkflowInput() {
       background: profile.background,
       size: profile.size,
       group: profile.group,
-      referenceCount: referenceFiles.length,
-      referenceNames: referenceFiles.map((file) => file.name || ""),
+      hasMask,
+      mediaCount: compiledPrompt.media.length,
+      referenceCount: allReferenceFiles().length,
+      referenceNames: allReferenceFiles().map((file) => file.name || ""),
+      jobId,
+      batchIndex,
     },
     queue: true,
   }
@@ -1018,7 +1204,7 @@ function sendWorkflowPayload(payload) {
     }
     : profilePayload(renderProfile)
   sendSocket({ referenceClear: true })
-  referenceFiles.forEach((file, index) => {
+  allReferenceFiles().forEach((file, index) => {
     sendSocket({
       referenceBase64: file.base64,
       referenceIndex: index + 1,
@@ -1027,13 +1213,17 @@ function sendWorkflowPayload(payload) {
   })
   sendSocket({ canvasBase64: payload.canvasBase64 })
   if (payload.maskBase64) sendSocket({ maskBase64: payload.maskBase64 })
+  else sendSocket({ maskClear: true })
   if (Number.isFinite(workflow)) sendSocket({ workflow })
   sendSocket({ renderProfile: profile })
   sendSocket({
+    protocolVersion: WORKFLOW_PROTOCOL_VERSION,
     queue: payload.queue,
+    jobId: payload.configdata.jobId,
+    batchIndex: payload.configdata.batchIndex,
     workflow: Number.isFinite(workflow) ? workflow : 0,
     renderProfile: profile,
-    referenceCount: referenceFiles.length,
+    referenceCount: allReferenceFiles().length,
     configdata: payload.configdata,
   })
 }
@@ -1473,6 +1663,26 @@ async function serverThumb(bytes) {
   }
 }
 
+async function referenceThumbSrc(bytes) {
+  try {
+    const prepared = await serverThumb(bytes)
+    if (prepared) return `data:image/png;base64,${bytesToBase64(new Uint8Array(prepared))}`
+    let small = await bitmapThumb(bytes)
+    if (!small && readPngBytes(bytes)) small = await makeThumbRgb(bytes, 160)
+    if (small) {
+      const encoded = new Uint8Array(encodeThumbPng(small.width, small.height, small.rgb))
+      return `data:image/png;base64,${bytesToBase64(encoded)}`
+    }
+  } catch (_) {}
+  return ""
+}
+
+function referencePreviewSrc(file) {
+  if (!file) return ""
+  if (file.thumbSrc) return file.thumbSrc
+  return file.base64 ? `data:image/png;base64,${file.base64}` : ""
+}
+
 async function writeThumbFile(file, name) {
   const raw = await file.read({ format: storage.formats.binary })
   const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
@@ -1523,6 +1733,12 @@ function ensureThumb(item) {
 
 let historyOpen = false
 let historyHideTimer = null
+let historyPanelOpen = false
+let historyPanelPage = 0
+let historyPanelThumbMount = 0
+let historyPanelEditing = false
+let historyMutationBusy = false
+const historyPanelSelection = new Set()
 
 function historyCardFromEvent(event) {
   let node = event.target
@@ -1534,10 +1750,28 @@ function historyCardFromEvent(event) {
   return null
 }
 
+function historyPanelCardFromEvent(event) {
+  let node = event.target
+  const grid = element("history-panel-grid")
+  while (node && node !== grid) {
+    if (node.classList && node.classList.contains("history-panel-card")) return node
+    node = node.parentNode
+  }
+  return null
+}
+
 function clearHistoryThumbs() {
   const strip = element("history-strip")
   if (!strip) return
   const images = strip.querySelectorAll("img")
+  for (let index = 0; index < images.length; index += 1) images[index].removeAttribute("src")
+}
+
+function clearHistoryPanelThumbs() {
+  historyPanelThumbMount += 1
+  const grid = element("history-panel-grid")
+  if (!grid) return
+  const images = grid.querySelectorAll("img")
   for (let index = 0; index < images.length; index += 1) images[index].removeAttribute("src")
 }
 
@@ -1584,6 +1818,7 @@ function setHistoryOpen(open) {
 }
 
 function showHistoryCards() {
+  if (historyPanelOpen) return
   clearTimeout(historyHideTimer)
   setHistoryOpen(true)
 }
@@ -1644,6 +1879,165 @@ function historyPageCount() {
   return Math.max(1, Math.ceil(renderHistory.length / HISTORY_PAGE_SIZE))
 }
 
+function historyPanelPageCount() {
+  return Math.max(1, Math.ceil(renderHistory.length / HISTORY_PANEL_PAGE_SIZE))
+}
+
+function historyPanelTime(item) {
+  const stamp = renderStamp(item && item.name)
+  if (!stamp) return ""
+  const value = new Date(stamp)
+  if (!Number.isFinite(value.getTime())) return ""
+  const pad = (number) => {
+    const text = String(number)
+    return text.length < 2 ? `0${text}` : text
+  }
+  return `${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}`
+}
+
+function mountHistoryPanelThumbs() {
+  const grid = element("history-panel-grid")
+  if (!grid || !historyPanelOpen) return
+  const token = ++historyPanelThumbMount
+  const cards = grid.querySelectorAll(".history-panel-card")
+  for (let index = 0; index < cards.length; index += 1) {
+    const card = cards[index]
+    const image = card.querySelector("img")
+    const item = renderHistory[Number(card.dataset.index)]
+    if (!image || !item) continue
+    ensureThumb(item).then(() => {
+      if (token !== historyPanelThumbMount || !historyPanelOpen || !card.isConnected) return
+      const url = item.thumbSrc || String(item.thumb && item.thumb.url || "")
+      if (url && image.getAttribute("src") !== url) image.src = url
+    }).catch(() => {
+      image.dataset.failed = "1"
+    })
+  }
+}
+
+function paintHistoryPanel() {
+  const panel = element("history-panel")
+  const grid = element("history-panel-grid")
+  const empty = element("history-panel-empty")
+  const count = element("history-panel-count")
+  const pageLabel = element("history-panel-page")
+  const previous = element("history-panel-prev")
+  const next = element("history-panel-next")
+  const footer = panel && panel.querySelector(".history-panel-footer")
+  const clearButton = element("history-panel-clear")
+  const editButton = element("history-panel-edit")
+  const batch = element("history-panel-batch")
+  const selectedCount = element("history-panel-selected-count")
+  const deleteSelected = element("history-panel-delete-selected")
+  if (!panel || !grid || !empty || !count || !pageLabel || !previous || !next || !footer || !clearButton || !editButton || !batch || !selectedCount || !deleteSelected) return
+  if (!renderHistory.length) {
+    historyPanelEditing = false
+    historyPanelSelection.clear()
+  }
+  historyPanelThumbMount += 1
+  grid.textContent = ""
+  count.textContent = `${renderHistory.length} 张`
+  panel.classList.toggle("is-editing", historyPanelEditing)
+  footer.classList.toggle("editing", historyPanelEditing)
+  batch.classList.toggle("hidden", !historyPanelEditing)
+  editButton.textContent = historyPanelEditing ? "完成" : "编辑"
+  editButton.setAttribute("aria-pressed", historyPanelEditing ? "true" : "false")
+  clearButton.disabled = historyMutationBusy || !renderHistory.length
+  editButton.disabled = historyMutationBusy || !renderHistory.length
+  selectedCount.textContent = `已选 ${historyPanelSelection.size} 张`
+  deleteSelected.disabled = historyMutationBusy || historyPanelSelection.size === 0
+  const pageCount = historyPanelPageCount()
+  historyPanelPage = Math.max(0, Math.min(pageCount - 1, historyPanelPage))
+  pageLabel.textContent = `${historyPanelPage + 1} / ${pageCount}`
+  previous.disabled = historyMutationBusy || !renderHistory.length || historyPanelPage <= 0
+  next.disabled = historyMutationBusy || !renderHistory.length || historyPanelPage >= pageCount - 1
+  empty.classList.toggle("hidden", renderHistory.length > 0)
+  grid.classList.toggle("hidden", renderHistory.length === 0)
+  if (!renderHistory.length) return
+  const start = historyPanelPage * HISTORY_PANEL_PAGE_SIZE
+  const end = Math.min(renderHistory.length, start + HISTORY_PANEL_PAGE_SIZE)
+  for (let index = start; index < end; index += 1) {
+    const item = renderHistory[index]
+    const selected = historyPanelSelection.has(item.name)
+    const card = document.createElement("span")
+    card.className = index === selectedHistoryIndex ? "history-panel-card active" : "history-panel-card"
+    if (selected) card.classList.add("batch-selected")
+    card.setAttribute("role", "button")
+    card.setAttribute("aria-pressed", selected ? "true" : "false")
+    card.tabIndex = 0
+    card.dataset.index = String(index)
+    card.dataset.name = item.name
+
+    const check = document.createElement("span")
+    check.className = "history-panel-check"
+    check.textContent = "✓"
+    card.appendChild(check)
+
+    const image = document.createElement("img")
+    image.alt = ""
+    if (item && item.thumbSrc) image.src = item.thumbSrc
+    card.appendChild(image)
+
+    const label = document.createElement("span")
+    label.className = "history-panel-card-label"
+    const number = document.createElement("span")
+    number.textContent = `#${Number(item && item.number) || index + 1}`
+    const time = document.createElement("span")
+    time.textContent = historyPanelTime(item)
+    label.appendChild(number)
+    label.appendChild(time)
+    card.appendChild(label)
+    grid.appendChild(card)
+  }
+  mountHistoryPanelThumbs()
+}
+
+function showHistoryPanelPage(page) {
+  historyPanelPage = Math.max(0, Math.min(historyPanelPageCount() - 1, Number(page) || 0))
+  paintHistoryPanel()
+}
+
+function setHistoryPanelEditing(editing) {
+  if (historyMutationBusy) return
+  historyPanelEditing = Boolean(editing && renderHistory.length)
+  if (!historyPanelEditing) historyPanelSelection.clear()
+  paintHistoryPanel()
+}
+
+function toggleHistoryPanelSelection(card) {
+  if (!historyPanelEditing || historyMutationBusy || !card) return
+  const name = String(card.dataset.name || "")
+  if (!name) return
+  if (historyPanelSelection.has(name)) historyPanelSelection.delete(name)
+  else historyPanelSelection.add(name)
+  paintHistoryPanel()
+}
+
+function setHistoryPanelOpen(open) {
+  historyPanelOpen = Boolean(open)
+  const panel = element("history-panel")
+  const toggle = element("history-toggle")
+  if (!panel || !toggle) return
+  panel.classList.toggle("hidden", !historyPanelOpen)
+  toggle.classList.toggle("active", historyPanelOpen)
+  if (!historyPanelOpen) {
+    historyPanelEditing = false
+    historyPanelSelection.clear()
+    panel.classList.remove("is-editing")
+    clearHistoryPanelThumbs()
+    focusHistoryKeys()
+    return
+  }
+  setHistoryOpen(false)
+  closeComposerMenus()
+  const settings = element("settings-drawer")
+  if (settings) settings.classList.add("hidden")
+  syncDrawerButtons("")
+  syncComposerOverlay()
+  historyPanelPage = Math.floor(Math.max(0, selectedHistoryIndex) / HISTORY_PANEL_PAGE_SIZE)
+  paintHistoryPanel()
+}
+
 function showHistoryPage(page) {
   const next = Math.max(0, Math.min(historyPageCount() - 1, page))
   if (next === historyPage && element("history-track") && element("history-track").childNodes.length) return
@@ -1659,6 +2053,7 @@ function paintHistoryStrip() {
   if (!renderHistory.length) {
     historyPage = 0
     setHistoryOpen(false)
+    if (historyPanelOpen) paintHistoryPanel()
     return
   }
   historyPage = Math.max(0, Math.min(historyPageCount() - 1, historyPage))
@@ -1681,6 +2076,7 @@ function paintHistoryStrip() {
   }
   if (historyOpen) mountVisibleThumbs()
   warmVisibleThumbs()
+  if (historyPanelOpen) paintHistoryPanel()
 }
 
 function warmVisibleThumbs() {
@@ -1707,10 +2103,18 @@ function onHistoryWheel(event) {
 
 function markActiveHistoryCard() {
   const track = element("history-track")
-  if (!track) return
-  const cards = track.querySelectorAll(".history-card")
-  for (let index = 0; index < cards.length; index += 1) {
-    cards[index].classList.toggle("active", Number(cards[index].dataset.index) === selectedHistoryIndex)
+  if (track) {
+    const cards = track.querySelectorAll(".history-card")
+    for (let index = 0; index < cards.length; index += 1) {
+      cards[index].classList.toggle("active", Number(cards[index].dataset.index) === selectedHistoryIndex)
+    }
+  }
+  const grid = element("history-panel-grid")
+  if (grid) {
+    const panelCards = grid.querySelectorAll(".history-panel-card")
+    for (let index = 0; index < panelCards.length; index += 1) {
+      panelCards[index].classList.toggle("active", Number(panelCards[index].dataset.index) === selectedHistoryIndex)
+    }
   }
 }
 
@@ -1770,7 +2174,7 @@ async function receiveRender(value, thumbBase64) {
   historyPage = 0
   latestRenderFile = file
   renderCount = number
-  showPreview(base64, file.url)
+  showPreview("", file.url)
   element("add-layer").disabled = false
   paintHistoryStrip()
   setProgress("完成")
@@ -1795,16 +2199,19 @@ function refreshHistoryLimit() {
   if (renderHistory.length < HISTORY_WARN_COUNT) {
     historyLimitDismissed = false
     node.classList.add("hidden")
+    syncComposerOverlay()
     return
   }
   text.textContent = `生成图已有 ${renderHistory.length} 张`
   if (!historyLimitDismissed) node.classList.remove("hidden")
+  syncComposerOverlay()
 }
 
 function dismissHistoryLimit() {
   historyLimitDismissed = true
   const node = element("history-limit")
   if (node) node.classList.add("hidden")
+  syncComposerOverlay()
 }
 
 async function deleteEntry(entry) {
@@ -1813,6 +2220,123 @@ async function deleteEntry(entry) {
     return true
   } catch (_) {
     return false
+  }
+}
+
+async function deleteHistoryItemFiles(items) {
+  const root = await storage.localFileSystem.getDataFolder()
+  const thumbs = await thumbFolder()
+  let failures = 0
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index]
+    let renderEntry = null
+    try { renderEntry = await root.getEntry(item.name) } catch (_) {}
+    if (renderEntry && !(await deleteEntry(renderEntry))) failures += 1
+    let thumbEntry = null
+    try { thumbEntry = await thumbs.getEntry(thumbNameFor(item.name)) } catch (_) {}
+    if (thumbEntry && !(await deleteEntry(thumbEntry))) failures += 1
+    item.file = null
+    item.thumb = null
+    item.thumbSrc = ""
+  }
+  return failures
+}
+
+async function deleteAllHistoryFiles() {
+  const root = await storage.localFileSystem.getDataFolder()
+  let failures = 0
+  const entries = await root.getEntries()
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index]
+    if (!entry.isFile || !/^render-\d+\.png$/i.test(entry.name)) continue
+    if (!(await deleteEntry(entry))) failures += 1
+  }
+  const folder = await thumbFolder()
+  const thumbs = await folder.getEntries()
+  for (let index = 0; index < thumbs.length; index += 1) {
+    const entry = thumbs[index]
+    if (!entry.isFile) continue
+    if (!(await deleteEntry(entry))) failures += 1
+  }
+  return failures
+}
+
+function resetEmptyRenderHistory() {
+  selectedHistoryIndex = 0
+  historyPage = 0
+  historyPanelPage = 0
+  latestRenderFile = null
+  renderCount = 0
+  const addLayer = element("add-layer")
+  if (addLayer) addLayer.disabled = true
+  showPreview("", "")
+  paintHistoryStrip()
+}
+
+async function clearAllRenderHistory() {
+  if (historyMutationBusy || !renderHistory.length) return
+  historyMutationBusy = true
+  historyPanelEditing = false
+  historyPanelSelection.clear()
+  clearHistoryThumbs()
+  clearHistoryPanelThumbs()
+  showPreview("", "")
+  paintHistoryPanel()
+  showStatus("正在清空历史记录")
+  try {
+    const failures = await deleteAllHistoryFiles()
+    renderHistory = []
+    saveRenderHistory()
+    resetEmptyRenderHistory()
+    refreshHistoryLimit()
+    showStatus(failures ? `历史记录已清空，${failures} 个文件未能删除` : "历史记录已清空", failures > 0)
+  } catch (error) {
+    showStatus(error.message || "清空历史记录失败", true)
+  } finally {
+    historyMutationBusy = false
+    paintHistoryPanel()
+  }
+}
+
+async function deleteSelectedRenderHistory() {
+  if (historyMutationBusy || !historyPanelSelection.size) return
+  const selectedNames = new Set(historyPanelSelection)
+  const selectedItems = renderHistory.filter((item) => selectedNames.has(item.name))
+  if (!selectedItems.length) return
+  historyMutationBusy = true
+  const current = renderHistory[selectedHistoryIndex]
+  const currentName = current && current.name
+  const currentDeleted = Boolean(currentName && selectedNames.has(currentName))
+  clearHistoryThumbs()
+  clearHistoryPanelThumbs()
+  if (currentDeleted) showPreview("", "")
+  paintHistoryPanel()
+  showStatus(`正在删除 ${selectedItems.length} 张历史记录`)
+  try {
+    const failures = await deleteHistoryItemFiles(selectedItems)
+    renderHistory = renderHistory.filter((item) => !selectedNames.has(item.name))
+    saveRenderHistory()
+    historyPanelSelection.clear()
+    if (!renderHistory.length) {
+      historyPanelEditing = false
+      resetEmptyRenderHistory()
+    } else {
+      let nextIndex = currentName && !currentDeleted
+        ? renderHistory.findIndex((item) => item.name === currentName)
+        : Math.min(selectedHistoryIndex, renderHistory.length - 1)
+      if (nextIndex < 0) nextIndex = 0
+      historyPanelPage = Math.min(historyPanelPage, historyPanelPageCount() - 1)
+      await selectHistory(nextIndex)
+    }
+    refreshHistoryLimit()
+    showStatus(failures
+      ? `已移除 ${selectedItems.length} 张记录，${failures} 个文件未能删除`
+      : `已删除 ${selectedItems.length} 张历史记录`, failures > 0)
+  } catch (error) {
+    showStatus(error.message || "删除历史记录失败", true)
+  } finally {
+    historyMutationBusy = false
+    paintHistoryPanel()
   }
 }
 
@@ -1895,26 +2419,61 @@ async function openRenderFolder() {
 function handleSocketMessage(event) {
   try {
     const message = JSON.parse(event.data)
+    const jobId = String(message.jobId || "")
+    const manualRender = message.manualRender === true
     if (message.render) {
-      receiveRender(message.render, message.thumb).then(() => settleRender()).catch((error) => {
+      if (!jobId) {
+        if (!manualRender || activeJobId || renderDone) return
+      } else {
+        if (!activeJobId || jobId !== activeJobId) return
+        if (!acceptJobPhase(jobId, "result_received")) return
+      }
+      setProgress("正在接收结果")
+      setMarquee(100, true)
+      receiveRender(message.render, message.thumb).then(() => {
+        if (!jobId) return
+        if (!acceptJobPhase(jobId, "completed")) return
+        try {
+          sendSocket({
+            protocolVersion: WORKFLOW_PROTOCOL_VERSION,
+            jobId,
+            jobAck: { phase: "completed" },
+          })
+        } catch (_) {}
+        settleRender(null, jobId)
+      }).catch((error) => {
+        if (jobId) acceptJobPhase(jobId, "error")
         showStatus(error.message, true)
-        settleRender(error)
+        setProgress("失败")
+        setMarquee(0, false)
+        settleRender(error, jobId)
       })
     }
-    if (message.render_status) {
-      const status = String(message.render_status)
-      if (!batchRunning) setProgress(status)
-      if (status === "genrating") setMarquee(0, true)
-      else if (status === "genrated") finishMarquee()
-      else if (status === "genrate_error") {
+    if (message.jobStatus) {
+      if (!jobId || !activeJobId || jobId !== activeJobId) return
+      const status = message.jobStatus || {}
+      const phase = String(status.phase || "")
+      const percent = Number(status.progress)
+      if (!acceptJobPhase(jobId, phase)) return
+      if (phase === "queued") {
+        setProgress("已排队")
+        setMarquee(0, true)
+      } else if (phase === "running") {
+        setProgress(status.message || (Number.isFinite(percent) ? `${percent}%` : "生成中"))
+        setMarquee(Number.isFinite(percent) ? percent : marqueePercent, true)
+      } else if (phase === "result_received") {
+        setProgress("正在接收结果")
+        setMarquee(100, true)
+      } else if (phase === "completed") {
+        setProgress("完成")
+        finishMarquee()
+        settleRender(null, jobId)
+      } else if (phase === "error" || phase === "interrupted") {
+        const text = String(status.message || (phase === "interrupted" ? "生成已停止" : "生成失败"))
+        setProgress(phase === "interrupted" ? "已停止" : "失败")
         setMarquee(0, false)
-        settleRender(new Error("生成失败"))
+        settleRender(new Error(text), jobId)
       }
-    }
-    if (message.progress !== undefined) {
-      const percent = Number(message.progress)
-      setProgress(`${percent}%`)
-      if (!Number.isNaN(percent)) setMarquee(percent, true)
     }
     if (message.Send_workflow) {
       updateOptions("workflow", message.Send_workflow)
@@ -1969,6 +2528,8 @@ function connectSocket() {
     socket.onerror = () => setConnection("连接错误", "error")
     socket.onclose = () => {
       setConnection("已断开", "error")
+      setMarquee(0, false)
+      if (renderDone) settleRender(new Error("Photoshop 与 ComfyUI 的任务连接已断开"), activeJobId)
       reconnectTimer = setTimeout(connectSocket, 4000)
     }
   } catch (error) {
@@ -1990,6 +2551,97 @@ async function connect() {
   }
 }
 
+async function serverIsUp() {
+  const controller = typeof AbortController === "function" ? new AbortController() : null
+  const timer = controller ? setTimeout(() => controller.abort(), 1500) : null
+  try {
+    const response = await fetch(`${serverAddress()}/system_stats`, controller ? { signal: controller.signal } : {})
+    return response.ok
+  } catch (_) {
+    return false
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
+function rememberLaunchPath(path) {
+  element("comfy-launch").value = path
+  localStorage.setItem(`${STORE_PREFIX}comfyLaunch`, path)
+}
+
+async function pickComfyLauncher() {
+  const picked = await storage.localFileSystem.getFileForOpening({ types: ["exe"] })
+  const file = Array.isArray(picked) ? picked[0] : picked
+  const path = file && file.nativePath ? String(file.nativePath) : ""
+  if (!path) return ""
+  if (!/\.exe$/i.test(path)) {
+    showStatus("请选择 Comfy Desktop.exe", true)
+    return ""
+  }
+  rememberLaunchPath(path)
+  return path
+}
+
+function watchComfyStart() {
+  clearInterval(launchTimer)
+  let tries = 0
+  launchTimer = setInterval(async () => {
+    tries += 1
+    if (await serverIsUp()) {
+      clearInterval(launchTimer)
+      launchTimer = null
+      connect()
+      showStatus("ComfyUI 已启动")
+      return
+    }
+    if (tries >= 20) {
+      clearInterval(launchTimer)
+      launchTimer = null
+      showStatus("ComfyUI 还没起来，起来后再点连接", true)
+    }
+  }, 2000)
+}
+
+async function startComfy() {
+  const button = element("start-comfy")
+  try {
+    localStorage.setItem(`${STORE_PREFIX}server`, serverAddress())
+  } catch (error) {
+    showStatus(error.message || "地址不对", true)
+    return
+  }
+  if (button) button.disabled = true
+  try {
+    if (await serverIsUp()) {
+      showStatus("ComfyUI 已在运行")
+      connect()
+      return
+    }
+    let path = String(element("comfy-launch").value || "").trim()
+    if (!path) path = await pickComfyLauncher()
+    if (!path) {
+      showStatus("先选择 Comfy Desktop.exe", true)
+      return
+    }
+    const uxp = loadModule("uxp")
+    if (!uxp.shell || typeof uxp.shell.openPath !== "function") {
+      showStatus("这个 Photoshop 不能启动外部程序", true)
+      return
+    }
+    const result = await uxp.shell.openPath(path, "启动本机 ComfyUI")
+    if (result) {
+      showStatus(String(result), true)
+      return
+    }
+    showStatus("正在启动 ComfyUI")
+    watchComfyStart()
+  } catch (error) {
+    showStatus(error.message || "启动失败", true)
+  } finally {
+    if (button) button.disabled = false
+  }
+}
+
 function normalizeBase64(encoded) {
   if (encoded && typeof encoded === "object") encoded = encoded.base64 || encoded.data || ""
   return String(encoded || "").replace(/^data:image\/[^;]+;base64,/, "")
@@ -1998,10 +2650,30 @@ function normalizeBase64(encoded) {
 async function showCapturedPreview(base64) {
   const previous = capturePreviewFile
   capturePreviewFile = await writeDataFile(`capture-${Date.now()}.png`, base64)
-  showPreview(base64, capturePreviewFile.url)
+  capturePreviewThumbSrc = await canvasReferenceThumb(capturePreviewFile)
+  showPreview("", capturePreviewFile.url)
   showCanvasReference(capturePreviewFile.url)
   if (previous) {
     try { await previous.delete() } catch (_) {}
+  }
+}
+
+async function canvasReferenceThumb(file) {
+  try {
+    const raw = await file.read({ format: storage.formats.binary })
+    const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
+    let encoded = await serverThumb(bytes)
+    if (!encoded) {
+      let small = await bitmapThumb(bytes)
+      if (!small) small = await domThumb(file)
+      if (!small && readPngBytes(bytes)) small = await makeThumbRgb(bytes, 160)
+      if (small) encoded = encodeThumbPng(small.width, small.height, small.rgb)
+    }
+    if (!encoded) return ""
+    const output = encoded instanceof Uint8Array ? encoded : new Uint8Array(encoded)
+    return output.length > 32 ? `data:image/png;base64,${bytesToBase64(output)}` : ""
+  } catch (_) {
+    return ""
   }
 }
 
@@ -2045,14 +2717,13 @@ function showPreview(source, fileUrl) {
   paint()
 }
 
-async function render() {
-  suppressWatchUntil = Date.now() + 1500
+async function render(jobId = activeJobId, batchIndex = activeBatchIndex) {
   setBusy(true)
   setProgress(batchRunning ? element("progress-label").textContent : "读取 Photoshop")
   try {
     if (element("auto-seed").checked) randomSeed()
     const payload = await core.executeAsModal(
-      () => captureWorkflowInput(),
+      () => captureWorkflowInput(jobId, batchIndex),
       { commandName: "Send canvas to ComfyTV" },
     )
     const note = payload.captureNote
@@ -2072,8 +2743,19 @@ async function render() {
 }
 
 function requestInterrupt() {
-  try { sendSocket({ interrupt: true }) } catch (_) {}
-  settleRender(new Error("已停止"))
+  if (!activeJobId) return
+  const phase = String(jobPhases.get(activeJobId) || "")
+  if (phase === "result_received" || phase === "completed") {
+    showStatus("结果已经返回，正在写入 Photoshop")
+    return
+  }
+  if (!acceptJobPhase(activeJobId, "interrupted")) return
+  try {
+    sendSocket({ protocolVersion: WORKFLOW_PROTOCOL_VERSION, interrupt: true, jobId: activeJobId })
+  } catch (_) {}
+  setProgress("已停止")
+  setMarquee(0, false)
+  settleRender(new Error("已停止"), activeJobId)
 }
 
 async function renderBatch(totalOverride) {
@@ -2093,15 +2775,20 @@ async function renderBatch(totalOverride) {
     for (let index = 0; index < total; index += 1) {
       if (batchStop) break
       if (total > 1) setProgress(`第 ${index + 1} / ${total} 张`)
-      const pending = armRenderWait()
+      activeJobId = nextJobId()
+      jobPhaseRanks.set(activeJobId, 0)
+      jobPhases.set(activeJobId, "")
+      activeBatchIndex = index
+      const pending = armRenderWait(activeJobId)
       pending.catch(() => {})
       try {
-        await render()
+        await render(activeJobId, activeBatchIndex)
         await pending
       } catch (error) {
-        settleRender(error)
+        settleRender(error, activeJobId)
         throw error
       }
+      activeJobId = ""
       finished += 1
       if (total > 1) showStatus(`第 ${finished} / ${total} 张已完成`)
     }
@@ -2114,6 +2801,8 @@ async function renderBatch(totalOverride) {
       showStatus(error.message || String(error), true)
     }
   } finally {
+    activeJobId = ""
+    activeBatchIndex = 0
     batchRunning = false
     batchStop = false
     setRenderLabel("渲染")
@@ -2704,6 +3393,26 @@ function syncDrawerButtons(openId) {
   element("settings-toggle").classList.toggle("active", openId === "settings-drawer")
 }
 
+function syncComposerOverlay() {
+  const composer = element("composer")
+  if (!composer) return
+  const stage = document.querySelector(".preview-stage")
+  const wasOpen = composer.classList.contains("overlay-open")
+  const overlayIds = [
+    "settings-drawer",
+    "history-limit",
+  ]
+  const overlayOpen = overlayIds.some((id) => {
+    const node = element(id)
+    return node && !node.classList.contains("hidden")
+  })
+  composer.classList.toggle("overlay-open", overlayOpen)
+  if (stage) stage.classList.toggle("composer-overlay-active", overlayOpen)
+  if (wasOpen && !overlayOpen) {
+    requestAnimationFrame(() => syncComposerWorkbench(true))
+  }
+}
+
 function workflowListReady() {
   const select = element("workflow")
   return select.options.length > 1 || (select.options.length === 1 && select.value !== "")
@@ -2728,13 +3437,24 @@ function toggleDrawer(id) {
   const opening = drawer.classList.contains("hidden")
   document.querySelectorAll(".drawer").forEach((item) => item.classList.add("hidden"))
   if (opening) {
+    setHistoryPanelOpen(false)
     drawer.classList.remove("hidden")
     closeComposerMenus()
   }
   syncDrawerButtons(opening ? id : "")
+  syncComposerOverlay()
 }
 
 const referenceFiles = []
+let styleReference = null
+
+function allReferenceFiles() {
+  return styleReference ? [styleReference].concat(referenceFiles) : referenceFiles.slice()
+}
+
+function referenceCapacityFull() {
+  return allReferenceFiles().length >= 6
+}
 const COUNT_STEPS = [1, 2, 4, 8]
 const RATIO_ORDER = ["1:1", "2:3", "3:2", "4:5", "5:4", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "2:1", "1:2", "3:1", "1:3", "1:4", "4:1", "8:1", "1:8"]
 const GPT_SIZE = {
@@ -3051,6 +3771,7 @@ function syncComposer() {
   const count = batchCount()
   element("batch-count").value = String(count)
   element("count-label").textContent = `${count}x`
+  syncComposerWorkbench()
 }
 
 function syncPromptMirror() {
@@ -3061,11 +3782,15 @@ function syncPromptMirror() {
   mirror.classList.toggle("is-empty", empty)
 }
 
-function closeComposerMenus() {
+function closeComposerMenus(restoreFocus = false) {
   element("model-menu").classList.add("hidden")
   element("mode-menu").classList.add("hidden")
   element("count-menu").classList.add("hidden")
+  element("preset-host-menu").classList.add("hidden")
   element("composer").classList.remove("menu-open")
+  hostPopoverMenu = ""
+  sendHostPopoverState(false, "")
+  if (restoreFocus) focusComposerPrompt()
 }
 
 function fillSelectMenu(menu, select) {
@@ -3086,7 +3811,7 @@ function fillSelectMenu(menu, select) {
       select.value = option.value
       select.dispatchEvent(new Event("change", { bubbles: true }))
       syncComposer()
-      closeComposerMenus()
+      closeComposerMenus(true)
     })
     menu.appendChild(item)
   }
@@ -3113,7 +3838,7 @@ function fillCountMenu(menu) {
       element("batch-count").value = String(count)
       saveSettings()
       syncComposer()
-      closeComposerMenus()
+      closeComposerMenus(true)
     })
     menu.appendChild(item)
   })
@@ -3134,7 +3859,9 @@ function toggleComposerMenu(id) {
   }
   syncPromptMirror()
   menu.classList.remove("hidden")
+  hostPopoverMenu = id === "model-menu" ? "model" : id === "mode-menu" ? "mode" : "count"
   element("composer").classList.add("menu-open")
+  sendHostPopoverState(true, hostPopoverMenu)
 }
 
 function showCanvasReference(url) {
@@ -3148,6 +3875,149 @@ function showCanvasReference(url) {
   }
   img.src = String(url)
   card.classList.add("has-image")
+  syncComposerWorkbench()
+}
+
+let refDrag = null
+let suppressRefClick = false
+
+function referenceMentionMap(length, from, to) {
+  const order = []
+  for (let i = 0; i < length; i += 1) order.push(i)
+  const [item] = order.splice(from, 1)
+  order.splice(to, 0, item)
+  const map = new Map()
+  order.forEach((oldIndex, newIndex) => map.set(oldIndex + 1, newIndex + 1))
+  return map
+}
+
+function referenceRemoveMap(length, removed) {
+  const map = new Map()
+  for (let i = 0; i < length; i += 1) {
+    if (i === removed) map.set(i + 1, null)
+    else map.set(i + 1, i > removed ? i : i + 1)
+  }
+  return map
+}
+
+function referenceInsertMap(length, insertedAt, count = 1) {
+  const map = new Map()
+  for (let index = 0; index < length; index += 1) {
+    map.set(index + 1, index >= insertedAt ? index + count + 1 : index + 1)
+  }
+  return map
+}
+
+function referenceInsertIndex(value) {
+  if (value == null || value === "") return referenceFiles.length
+  const index = Number(value)
+  return Number.isInteger(index)
+    ? Math.max(0, Math.min(index, referenceFiles.length))
+    : referenceFiles.length
+}
+
+function applyReferenceMentionMap(map) {
+  const field = element("positive")
+  if (!field || !map.size) return
+  const text = String(field.value || "")
+  let changed = false
+  const next = text.replace(/@参考图(\d+)/g, (token, raw) => {
+    const n = Number(raw)
+    if (!map.has(n)) return token
+    changed = true
+    const to = map.get(n)
+    return to == null ? "" : `@参考图${to}`
+  })
+  if (!changed) return
+  field.value = tidyPrompt(next)
+  syncPromptMirror()
+}
+
+function clearRefDragClasses() {
+  const row = element("ref-row")
+  if (!row) return
+  row.querySelectorAll(".ref-thumb").forEach((node) => {
+    node.classList.remove("is-dragging", "is-drop-before", "is-drop-after")
+  })
+}
+
+function onRefPointerDown(event) {
+  if (event.button !== 0) return
+  if (event.target.closest && event.target.closest(".ref-remove")) return
+  const card = event.currentTarget
+  if (card.setPointerCapture) {
+    try { card.setPointerCapture(event.pointerId) } catch (_) {}
+  }
+  refDrag = {
+    from: Number(card.dataset.index),
+    over: null,
+    startX: event.clientX,
+    startY: event.clientY,
+    active: false,
+    pointerId: event.pointerId,
+    card,
+  }
+  card.addEventListener("pointermove", onRefPointerMove)
+  card.addEventListener("pointerup", onRefPointerUp)
+  card.addEventListener("pointercancel", onRefPointerCancel)
+}
+
+function onRefPointerMove(event) {
+  const drag = refDrag
+  if (!drag || drag.pointerId !== event.pointerId) return
+  if (!drag.active) {
+    if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 4) return
+    drag.active = true
+  }
+  const cards = [...element("ref-row").querySelectorAll(".ref-thumb")]
+  let over = null
+  cards.forEach((el, i) => {
+    const rect = el.getBoundingClientRect()
+    if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+      over = event.clientX < rect.left + rect.width / 2 ? i : i + 1
+    }
+  })
+  drag.over = over
+  const sameSlot = over === drag.from || over === drag.from + 1
+  cards.forEach((el, i) => {
+    el.classList.toggle("is-dragging", i === drag.from)
+    el.classList.toggle("is-drop-before", !sameSlot && over === i)
+    el.classList.toggle("is-drop-after", !sameSlot && over === cards.length && i === cards.length - 1)
+  })
+}
+
+function endRefPointer(event, commit) {
+  const drag = refDrag
+  if (!drag || (event && drag.pointerId !== event.pointerId)) return
+  refDrag = null
+  drag.card.removeEventListener("pointermove", onRefPointerMove)
+  drag.card.removeEventListener("pointerup", onRefPointerUp)
+  drag.card.removeEventListener("pointercancel", onRefPointerCancel)
+  if (!commit || !drag.active || drag.over == null) {
+    clearRefDragClasses()
+    return
+  }
+  suppressRefClick = true
+  let to = drag.over
+  const from = drag.from
+  if (to > from) to -= 1
+  to = Math.max(0, Math.min(to, referenceFiles.length - 1))
+  if (to === from) {
+    clearRefDragClasses()
+    return
+  }
+  applyReferenceMentionMap(referenceMentionMap(referenceFiles.length, from, to))
+  const [item] = referenceFiles.splice(from, 1)
+  referenceFiles.splice(to, 0, item)
+  paintReferenceRow()
+}
+
+function onRefPointerUp(event) {
+  endRefPointer(event, true)
+}
+
+function onRefPointerCancel(event) {
+  endRefPointer(event, false)
 }
 
 function paintReferenceRow() {
@@ -3157,44 +4027,105 @@ function paintReferenceRow() {
   referenceFiles.forEach((file, index) => {
     const card = document.createElement("span")
     card.className = "ref-card ref-thumb has-image"
+    card.dataset.index = String(index)
     card.setAttribute("role", "button")
     card.tabIndex = 0
-    card.title = `写入 @参考图${index + 1}`
+    card.title = `参考图${index + 1}，拖动排序，点击写入提示词`
+    const face = document.createElement("span")
+    face.className = "ref-face"
     const img = document.createElement("img")
     img.alt = ""
-    img.src = file.src || ""
-    card.appendChild(img)
-    const remove = document.createElement("button")
-    remove.type = "button"
+    img.draggable = false
+    img.src = referencePreviewSrc(file)
+    face.appendChild(img)
+    const badge = document.createElement("span")
+    badge.className = "ref-index"
+    badge.textContent = String(index + 1)
+    face.appendChild(badge)
+    card.appendChild(face)
+    const remove = document.createElement("span")
     remove.className = "ref-remove"
+    remove.setAttribute("role", "button")
+    remove.tabIndex = 0
     remove.textContent = "×"
     remove.title = "移除这张参考图"
+    remove.addEventListener("pointerdown", (event) => event.stopPropagation())
     remove.addEventListener("click", (event) => {
       event.preventDefault()
       event.stopPropagation()
+      applyReferenceMentionMap(referenceRemoveMap(referenceFiles.length, index))
       referenceFiles.splice(index, 1)
       paintReferenceRow()
     })
     card.appendChild(remove)
+    card.addEventListener("pointerdown", onRefPointerDown)
     card.addEventListener("click", (event) => {
       event.stopPropagation()
+      if (suppressRefClick) {
+        suppressRefClick = false
+        return
+      }
       insertMention(`@参考图${index + 1}`)
       showStatus(`已写入 @参考图${index + 1}`)
     })
     row.insertBefore(card, add)
   })
+  syncComposerWorkbench()
 }
 
 async function referenceFromFile(file) {
-  const binary = await file.read({ format: storage.formats.binary })
-  const bytes = new Uint8Array(binary)
-  if (!bytes.length) throw new Error("这张图片是空的")
-  if (bytes.length > 25 * 1024 * 1024) throw new Error("参考图请小于 25MB")
   const name = String(file.name || "reference.png")
   if (!/\.(png|jpe?g|webp)$/i.test(name)) throw new Error("请选择 png、jpg 或 webp")
-  const mime = /\.jpe?g$/i.test(name) ? "image/jpeg" : (/\.webp$/i.test(name) ? "image/webp" : "image/png")
+  const nativePath = String(file.nativePath || "")
+  if (!nativePath) throw new Error("无法读取这张图片的本地路径")
+
+  let response
+  try {
+    response = await fetch(`${serverAddress()}/ps/reference/prepare`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: nativePath, maxEdge: REFERENCE_MAX_EDGE }),
+    })
+  } catch (_) {
+    throw new Error("无法连接 ComfyUI 缩图服务，请确认 ComfyUI 已启动")
+  }
+  if (!response.ok) {
+    if (response.status === 404 || response.status === 405) {
+      throw new Error("缩图服务尚未加载，请重启 ComfyUI 后重试")
+    }
+    let detail = ""
+    try { detail = String(await response.text()).trim() } catch (_) {}
+    throw new Error(detail || `参考图处理失败（HTTP ${response.status}）`)
+  }
+
+  const binary = await response.arrayBuffer()
+  const bytes = new Uint8Array(binary)
+  if (!bytes.length) throw new Error("缩图服务返回了空图片")
+  if (bytes.length > REFERENCE_MAX_BYTES) throw new Error("缩放后的参考图仍然过大")
   const base64 = bytesToBase64(bytes)
-  return { name, base64, src: `data:${mime};base64,${base64}` }
+  const sourceWidth = Number(response.headers.get("X-Source-Width")) || 0
+  const sourceHeight = Number(response.headers.get("X-Source-Height")) || 0
+  const width = Number(response.headers.get("X-Output-Width")) || 0
+  const height = Number(response.headers.get("X-Output-Height")) || 0
+  const thumbSrc = await referenceThumbSrc(bytes)
+  return {
+    name: name.replace(/\.(png|jpe?g|webp)$/i, ".png"),
+    base64,
+    thumbSrc,
+    sourceWidth,
+    sourceHeight,
+    width,
+    height,
+    optimized: sourceWidth > width || sourceHeight > height,
+  }
+}
+
+function referenceImportDetail(file) {
+  if (!file || !file.width || !file.height) return ""
+  if (file.optimized && file.sourceWidth && file.sourceHeight) {
+    return `（${file.sourceWidth}×${file.sourceHeight} → ${file.width}×${file.height}）`
+  }
+  return `（${file.width}×${file.height}）`
 }
 
 async function addReferenceImage() {
@@ -3204,67 +4135,271 @@ async function addReferenceImage() {
     if (!files.length) return
     let added = 0
     for (const file of files) {
-      if (referenceFiles.length >= 6) {
+      if (referenceCapacityFull()) {
         showStatus("参考图最多 6 张", true)
         break
       }
+      showStatus(`正在优化 ${file.name || "参考图"}，最大边 2048px…`)
       referenceFiles.push(await referenceFromFile(file))
       added += 1
     }
     paintReferenceRow()
-    if (added) showStatus(added > 1 ? `已添加 ${added} 张参考图` : `已添加参考图 ${referenceFiles[referenceFiles.length - 1].name}`)
+    if (added) {
+      const latest = referenceFiles[referenceFiles.length - 1]
+      showStatus(added > 1 ? `已添加 ${added} 张参考图` : `已添加参考图 ${latest.name}${referenceImportDetail(latest)}`)
+    }
   } catch (error) {
     const message = error && error.message ? error.message : "无法添加参考图"
     showStatus(/permission|denied|not allowed/i.test(message) ? "没有读取本地图片的权限，请完全退出 Photoshop 后再打开面板" : message, true)
   }
 }
 
-let activeStyleId = localStorage.getItem(`${STORE_PREFIX}promptStyle`) || "style-none"
-let activeFilterId = localStorage.getItem(`${STORE_PREFIX}promptFilter`) || "filter-none"
-let activeCustomName = ""
-
-function libraryItems(kind) {
-  const builtin = kind === "function"
-    ? (typeof FILTER_LIBRARY === "undefined" ? [] : FILTER_LIBRARY)
-    : (typeof STYLE_LIBRARY === "undefined" ? [] : STYLE_LIBRARY)
-  return builtin.concat(readUserLibrary().filter((item) => item.library === kind))
-}
-
-function readUserLibrary() {
+async function addStyleReferenceImage() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(`${STORE_PREFIX}userLibrary`) || "[]")
-    if (!Array.isArray(parsed)) return []
-    return parsed.map((item) => {
-      if (!item || !item.id || !String(item.name || "").trim() || !String(item.group || "").trim()) return null
-      return {
-        id: String(item.id),
-        library: item.library === "function" ? "function" : "style",
-        group: String(item.group).trim(),
-        name: String(item.name).trim(),
-        des: String(item.des || ""),
-        prompt: String(item.prompt || ""),
-        user: true,
-      }
-    }).filter(Boolean)
-  } catch (_) {
-    return []
+    if (!styleReference && referenceCapacityFull()) throw new Error("风格和参考图合计最多 6 张")
+    const picked = await storage.localFileSystem.getFileForOpening({ types: ["png", "jpg", "jpeg", "webp"] })
+    const file = Array.isArray(picked) ? picked[0] : picked
+    if (!file) return
+    showStatus(`正在优化 ${file.name || "风格参考"}，最大边 2048px…`)
+    styleReference = await referenceFromFile(file)
+    paintReferenceRow()
+    showStatus(`已设置风格参考 ${styleReference.name}${referenceImportDetail(styleReference)}`)
+  } catch (error) {
+    const message = error && error.message ? error.message : "无法添加风格参考"
+    showStatus(/permission|denied|not allowed/i.test(message) ? "没有读取本地图片的权限，请完全退出 Photoshop 后再打开面板" : message, true)
   }
 }
 
-function writeUserLibrary(items) {
-  localStorage.setItem(`${STORE_PREFIX}userLibrary`, JSON.stringify(items.slice(0, 80).map((item) => ({
-    id: item.id,
-    library: item.library,
-    group: item.group,
-    name: item.name,
-    des: item.des || "",
-    prompt: item.prompt || "",
-  }))))
+function removeStyleReference() {
+  if (!styleReference) return
+  styleReference = null
+  const field = element("positive")
+  if (field) {
+    field.value = tidyPrompt(String(field.value || "").replace(/@风格/g, ""))
+    syncPromptMirror()
+  }
+  paintReferenceRow()
 }
 
-function activeCustomPreset() {
-  if (!activeCustomName) return null
-  return readPromptPresets().find((item) => item.name === activeCustomName) || null
+async function referenceFromDataUrl(item) {
+  const dataUrl = String(item?.dataUrl || "")
+  const match = /^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$/i.exec(dataUrl)
+  if (!match) throw new Error("只支持 png、jpg 或 webp 参考图")
+  const base64 = match[2]
+  if (!base64) throw new Error("这张图片是空的")
+  if (base64.length > Math.ceil(25 * 1024 * 1024 / 3) * 4) throw new Error("参考图请小于 25MB")
+  const extension = match[1].toLowerCase() === "jpeg" ? "jpg" : match[1].toLowerCase()
+  const name = String(item?.name || `reference.${extension}`)
+  const bytes = new Uint8Array(base64ToBuffer(base64))
+  const thumbSrc = await referenceThumbSrc(bytes)
+  return { name, base64, thumbSrc }
+}
+
+async function addDroppedReferenceFiles(items, insertIndex = null) {
+  try {
+    const available = Math.max(0, 6 - allReferenceFiles().length)
+    const additions = []
+    for (const item of (Array.isArray(items) ? items : []).slice(0, available)) {
+      additions.push(await referenceFromDataUrl(item))
+    }
+    const added = additions.length
+    if (!added) throw new Error(referenceCapacityFull() ? "风格和参考图合计最多 6 张" : "没有可用的图片")
+    const at = referenceInsertIndex(insertIndex)
+    if (at < referenceFiles.length) {
+      applyReferenceMentionMap(referenceInsertMap(referenceFiles.length, at, added))
+    }
+    referenceFiles.splice(at, 0, ...additions)
+    paintReferenceRow()
+    showStatus(added > 1 ? `已在位置 ${at + 1} 添加 ${added} 张参考图` : `已添加参考图 ${additions[0].name}`)
+  } catch (error) {
+    showStatus(error?.message || "无法添加拖入图片", true)
+  }
+}
+
+async function addDroppedStyleReference(items) {
+  try {
+    if (!styleReference && referenceCapacityFull()) throw new Error("风格和参考图合计最多 6 张")
+    const item = Array.isArray(items) ? items[0] : null
+    if (!item) throw new Error("没有可用的图片")
+    styleReference = await referenceFromDataUrl(item)
+    paintReferenceRow()
+    showStatus(`已设置风格参考 ${styleReference.name}`)
+  } catch (error) {
+    showStatus(error?.message || "无法添加风格参考", true)
+  }
+}
+
+let activeLayerReferenceBusy = false
+
+async function captureActiveLayerReference() {
+  if (!app.documents.length) throw new Error("请先打开 Photoshop 文档")
+  const document = app.activeDocument
+  const layer = document.activeLayers?.[0]
+  if (!layer) throw new Error("请先选择一个图层")
+  const layerName = String(layer.name || "未命名")
+  const bounds = clampBounds(plainBounds(layer.boundsNoEffects || layer.bounds), fullDocumentBounds(document))
+  if (!bounds) throw new Error(`图层「${layerName}」没有可用像素`)
+  const width = bounds.right - bounds.left
+  const height = bounds.bottom - bounds.top
+  const scale = Math.min(1, REFERENCE_MAX_EDGE / Math.max(width, height))
+  const options = {
+    documentID: document.id,
+    layerID: layer.id,
+    sourceBounds: bounds,
+    componentSize: 8,
+    colorSpace: "RGB",
+  }
+  if (scale < 1) {
+    options.targetSize = {
+      width: Math.max(1, Math.round(width * scale)),
+      height: Math.max(1, Math.round(height * scale)),
+    }
+  }
+  const image = await encodePixels(options)
+  const thumbSrc = await referenceThumbSrc(new Uint8Array(base64ToBuffer(image.encoded)))
+  return {
+    layerName,
+    name: `${layerName.replace(/[\\/:*?"<>|]/g, "_")}.png`,
+    base64: image.encoded,
+    thumbSrc,
+    documentId: document.id,
+    layerId: layer.id,
+  }
+}
+
+async function addActiveLayerReference(role = "reference", insertIndex = null) {
+  if (activeLayerReferenceBusy) {
+    showStatus("正在读取当前图层")
+    return
+  }
+  activeLayerReferenceBusy = true
+  try {
+    if (!(role === "style" && styleReference) && referenceCapacityFull()) throw new Error("风格和参考图合计最多 6 张")
+    const next = await core.executeAsModal(
+      () => captureActiveLayerReference(),
+      { commandName: "Add active layer as reference" },
+    )
+    if (role === "style") styleReference = next
+    else {
+      const at = referenceInsertIndex(insertIndex)
+      if (at < referenceFiles.length) {
+        applyReferenceMentionMap(referenceInsertMap(referenceFiles.length, at))
+      }
+      referenceFiles.splice(at, 0, next)
+    }
+    paintReferenceRow()
+    showStatus(role === "style"
+      ? `已设置图层风格参考 ${next.layerName}`
+      : `已添加图层参考图 ${next.layerName}`)
+  } catch (error) {
+    showStatus(error?.message || "无法读取当前图层", true)
+  } finally {
+    activeLayerReferenceBusy = false
+  }
+}
+
+const PRESET_LIBRARY_VERSION = 2
+const PRESET_LIBRARY_KEY = `${STORE_PREFIX}presetLibraryV2`
+const PRESET_SELECTION_KEY = `${STORE_PREFIX}presetSelectionV2`
+const PRESET_LEGACY_BACKUP_KEY = `${STORE_PREFIX}presetLegacyBackupV2`
+const DEFAULT_PRESET_CATEGORIES = [
+  { id: "style", name: "风格", pinned: true },
+  { id: "function", name: "功能", pinned: true },
+]
+const PRESET_DATA = globalThis.ComfyTVPresetData
+
+function newPresetId(prefix = "preset") {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+function presetDataOptions() {
+  return { version: PRESET_LIBRARY_VERSION, defaults: DEFAULT_PRESET_CATEGORIES, newId: newPresetId }
+}
+
+function emptyPresetLibrary() {
+  return {
+    version: PRESET_LIBRARY_VERSION,
+    categories: DEFAULT_PRESET_CATEGORIES.map((item, order) => ({ ...item, order })),
+    presets: [],
+  }
+}
+
+function saveLegacyPresetBackup() {
+  if (localStorage.getItem(PRESET_LEGACY_BACKUP_KEY)) return
+  const backup = {
+    savedAt: new Date().toISOString(),
+    promptStyle: localStorage.getItem(`${STORE_PREFIX}promptStyle`),
+    promptFilter: localStorage.getItem(`${STORE_PREFIX}promptFilter`),
+    userLibrary: localStorage.getItem(`${STORE_PREFIX}userLibrary`),
+    promptPresets: localStorage.getItem(`${STORE_PREFIX}promptPresets`),
+  }
+  localStorage.setItem(PRESET_LEGACY_BACKUP_KEY, JSON.stringify(backup))
+}
+
+function normalizePresetLibrary(value) {
+  return PRESET_DATA.normalizeLibrary(value, presetDataOptions())
+}
+
+function writePresetLibrary(value) {
+  presetLibrary = normalizePresetLibrary(value)
+  localStorage.setItem(PRESET_LIBRARY_KEY, JSON.stringify(presetLibrary))
+}
+
+function readPresetLibrary() {
+  try {
+    const raw = localStorage.getItem(PRESET_LIBRARY_KEY)
+    if (raw) return pruneEmptyPresetCategories(normalizePresetLibrary(JSON.parse(raw)))
+  } catch (_) {}
+  saveLegacyPresetBackup()
+  const library = emptyPresetLibrary()
+  localStorage.setItem(PRESET_LIBRARY_KEY, JSON.stringify(library))
+  localStorage.removeItem(`${STORE_PREFIX}promptStyle`)
+  localStorage.removeItem(`${STORE_PREFIX}promptFilter`)
+  return library
+}
+
+function readPresetSelection() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PRESET_SELECTION_KEY) || "{}")
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}
+  } catch (_) {
+    return {}
+  }
+}
+
+function writePresetSelection() {
+  const presetIds = new Set(presetLibrary.presets.map((item) => item.id))
+  Object.keys(selectedPresetIds).forEach((categoryId) => {
+    if (!presetIds.has(selectedPresetIds[categoryId])) delete selectedPresetIds[categoryId]
+  })
+  localStorage.setItem(PRESET_SELECTION_KEY, JSON.stringify(selectedPresetIds))
+}
+
+let presetLibrary = readPresetLibrary()
+let selectedPresetIds = readPresetSelection()
+let pendingPresetImport = null
+let presetImportState = null
+let hostPresetTab = "style"
+let hostPresetView = "list"
+let hostPresetEditor = null
+let hostPresetItemMenuId = ""
+let hostPresetToolsOpen = false
+let hostPresetNotice = ""
+writePresetSelection()
+
+function presetCategory(categoryId) {
+  return presetLibrary.categories.find((item) => item.id === categoryId) || null
+}
+
+function presetItem(presetId) {
+  return presetLibrary.presets.find((item) => item.id === presetId) || null
+}
+
+function selectedPresetEntries() {
+  return presetLibrary.categories.map((category) => {
+    const preset = presetItem(selectedPresetIds[category.id])
+    return preset && preset.categoryId === category.id ? { category, preset } : null
+  }).filter(Boolean)
 }
 
 function escapeRegExp(text) {
@@ -3280,51 +4415,23 @@ function stripToken(text, name) {
   return String(text || "").replace(new RegExp(`(^|\\s)@${escapeRegExp(name)}(?=\\s|$)`, "g"), "$1")
 }
 
-function ensureToken(text, name) {
-  const token = `@${name}`
-  const source = String(text || "")
-  if (new RegExp(`(?:^|\\s)${escapeRegExp(token)}(?=\\s|$)`).test(source)) return tidyPrompt(source)
-  return tidyPrompt(`${token} ${source}`)
-}
-
-function placeKindToken(previousName, nextName) {
+function dropPresetToken(name) {
+  if (!name) return
   const field = element("positive")
-  let text = stripToken(field.value, previousName)
-  if (nextName) text = ensureToken(text, nextName)
-  field.value = tidyPrompt(text)
+  if (!field) return
+  const next = tidyPrompt(stripToken(field.value, name))
+  if (next === field.value) return
+  field.value = next
   syncPromptMirror()
 }
 
-function namedSelection(kind) {
-  if (kind === "style") {
-    const item = libraryItems("style").find((entry) => entry.id === activeStyleId)
-    return item && item.prompt ? item.name : ""
-  }
-  if (kind === "function") {
-    const item = libraryItems("function").find((entry) => entry.id === activeFilterId)
-    return item && item.prompt ? item.name : ""
-  }
-  const custom = activeCustomPreset()
-  return custom && (custom.prefix || custom.suffix) ? custom.name : ""
+function namedSelection(categoryId) {
+  const item = presetItem(selectedPresetIds[categoryId])
+  return item && item.categoryId === categoryId ? item.name : ""
 }
 
-function composePrompt() {
-  let text = String(element("positive").value || "")
-  text = text.replace(/@参考图(\d+)/g, (_, raw) => `图片${Number(raw) + 2}`)
-  const custom = activeCustomPreset()
-  if (custom && custom.name) text = stripToken(text, custom.name)
-  const named = libraryItems("style").concat(libraryItems("function"))
-    .filter((item) => item && item.prompt && item.name)
-    .sort((a, b) => b.name.length - a.name.length)
-  named.forEach((item) => {
-    text = text.replace(new RegExp(`@${escapeRegExp(item.name)}`, "g"), item.prompt)
-  })
-  text = tidyPrompt(text)
-  if (custom && (custom.prefix || custom.suffix)) {
-    text = [custom.prefix, text, custom.suffix].map((part) => String(part || "").trim()).filter(Boolean).join("\n")
-  }
-  return text
-}
+let promptComposing = false
+let lastMentionPick = null
 
 function mentionQuery(field) {
   const value = String(field.value || "")
@@ -3340,15 +4447,30 @@ function mentionQuery(field) {
 function insertMention(token) {
   const field = element("positive")
   const value = String(field.value || "")
+  const now = Date.now()
+  if (lastMentionPick && lastMentionPick.token === token && now - lastMentionPick.time < 200) return
+  lastMentionPick = { token, time: now }
   const found = mentionQuery(field)
-  if (found) field.value = `${value.slice(0, found.start)}${token} ${value.slice(found.end)}`
-  else if (!new RegExp(`(?:^|\\s)${escapeRegExp(token)}(?=\\s|$)`).test(value)) field.value = tidyPrompt(`${value} ${token}`)
+  let caret = value.length
+  if (found) {
+    field.value = `${value.slice(0, found.start)}${token} ${value.slice(found.end)}`
+    caret = found.start + token.length + 1
+  } else if (!new RegExp(`(?:^|\\s)${escapeRegExp(token)}(?=\\s|$)`).test(value)) {
+    field.value = tidyPrompt(`${value} ${token}`)
+    caret = field.value.length
+  }
   syncPromptMirror()
   const menu = element("mention-menu")
   if (menu) menu.classList.add("hidden")
+  field.focus()
+  try {
+    field.selectionStart = caret
+    field.selectionEnd = caret
+  } catch (_) {}
 }
 
 function paintMentionMenu() {
+  if (promptComposing) return
   const menu = element("mention-menu")
   const field = element("positive")
   if (!menu || !field) return
@@ -3358,26 +4480,40 @@ function paintMentionMenu() {
     return
   }
   const query = found.query.trim()
-  const items = referenceFiles.map((_, index) => `参考图${index + 1}`).filter((label) => !query || label.includes(query))
   menu.textContent = ""
-  if (!items.length) {
+  const matches = []
+  referenceFiles.forEach((file, index) => {
+    const label = `参考图${index + 1}`
+    if (!query || label.includes(query)) matches.push({ file, label })
+  })
+  if (!matches.length) {
     const empty = document.createElement("div")
     empty.className = "mention-empty"
     empty.textContent = referenceFiles.length ? "没有匹配的参考图" : "先添加参考图，才能 @参考图1"
     menu.appendChild(empty)
   } else {
-    items.forEach((label) => {
+    matches.forEach((item) => {
       const row = document.createElement("span")
       row.className = "mention-item"
       row.setAttribute("role", "button")
-      row.tabIndex = 0
-      row.textContent = `@${label}`
+      const previewSrc = referencePreviewSrc(item.file)
+      if (previewSrc) {
+        const thumb = document.createElement("img")
+        thumb.className = "mention-thumb"
+        thumb.alt = ""
+        thumb.src = previewSrc
+        row.appendChild(thumb)
+      }
+      row.appendChild(document.createTextNode(`@${item.label}`))
       const pick = (event) => {
         event.preventDefault()
         event.stopPropagation()
-        insertMention(`@${label}`)
+        insertMention(`@${item.label}`)
       }
-      row.addEventListener("mousedown", pick)
+      row.addEventListener("mousedown", (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+      })
       row.addEventListener("click", pick)
       menu.appendChild(row)
     })
@@ -3385,153 +4521,42 @@ function paintMentionMenu() {
   menu.classList.remove("hidden")
 }
 
-function readPromptPresets() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(`${STORE_PREFIX}promptPresets`) || "[]")
-    if (!Array.isArray(parsed)) return []
-    return parsed.map((item) => {
-      if (!item || !String(item.name || "").trim()) return null
-      if (item.prefix || item.suffix) {
-        return { name: String(item.name).trim(), prefix: String(item.prefix || ""), suffix: String(item.suffix || "") }
-      }
-      if (item.text) return { name: String(item.name).trim(), prefix: String(item.text), suffix: "" }
-      return null
-    }).filter(Boolean)
-  } catch (_) {
-    return []
-  }
-}
-
-function writePromptPresets(items) {
-  localStorage.setItem(`${STORE_PREFIX}promptPresets`, JSON.stringify(items.slice(0, 40).map((item) => ({
-    name: String(item.name).trim(),
-    prefix: String(item.prefix || ""),
-    suffix: String(item.suffix || ""),
-  }))))
-}
-
 function syncPresetButton() {
   const button = element("preset-open")
-  const names = []
-  const style = libraryItems("style").find((item) => item.id === activeStyleId)
-  const filter = libraryItems("function").find((item) => item.id === activeFilterId)
-  if (style && style.prompt) names.push(style.name)
-  if (filter && filter.prompt) names.push(filter.name)
-  const custom = activeCustomPreset()
-  if (custom && (custom.prefix || custom.suffix)) names.push(custom.name)
-  button.title = names.length ? `预设：${names.join("、")}` : "预设"
-  button.classList.toggle("is-on", names.length > 0)
+  const names = selectedPresetEntries().map(({ preset }) => preset.name)
+  if (button) {
+    button.title = names.length ? `预设：${names.join("、")}` : "预设"
+    button.classList.toggle("is-on", names.length > 0)
+  }
   paintPromptTags()
-}
-
-function paintLibrary(hostId, items, activeId, onPick) {
-  const host = element(hostId)
-  host.textContent = ""
-  const groups = []
-  items.forEach((item) => {
-    let group = groups.find((entry) => entry.name === item.group)
-    if (!group) {
-      group = { name: item.group, items: [] }
-      groups.push(group)
-    }
-    group.items.push(item)
-  })
-  groups.forEach((group) => {
-    const title = document.createElement("div")
-    title.className = "library-group"
-    title.textContent = group.name
-    host.appendChild(title)
-    const grid = document.createElement("div")
-    grid.className = "library-grid"
-    group.items.forEach((item) => {
-      const card = document.createElement("span")
-      card.className = "library-card"
-      if (item.id === activeId) card.classList.add("is-selected")
-      card.setAttribute("role", "button")
-      card.tabIndex = 0
-      const name = document.createElement("strong")
-      name.textContent = item.name
-      card.appendChild(name)
-      if (item.des) {
-        const des = document.createElement("span")
-        des.textContent = item.des
-        card.appendChild(des)
-      }
-      card.addEventListener("click", () => onPick(item))
-      if (item.user) {
-        const remove = document.createElement("button")
-        remove.type = "button"
-        remove.className = "library-remove"
-        remove.textContent = "删除"
-        remove.addEventListener("click", (event) => {
-          event.stopPropagation()
-          writeUserLibrary(readUserLibrary().filter((entry) => entry.id !== item.id))
-          if (activeStyleId === item.id) {
-            activeStyleId = "style-none"
-            localStorage.setItem(`${STORE_PREFIX}promptStyle`, activeStyleId)
-          }
-          if (activeFilterId === item.id) {
-            activeFilterId = "filter-none"
-            localStorage.setItem(`${STORE_PREFIX}promptFilter`, activeFilterId)
-          }
-          syncPresetButton()
-          paintLibraries()
-        })
-        card.appendChild(remove)
-      }
-      grid.appendChild(card)
-    })
-    host.appendChild(grid)
-  })
-}
-
-function paintLibraries() {
-  paintLibrary("preset-tab-style", libraryItems("style"), activeStyleId, (item) => {
-    const previous = namedSelection("style")
-    activeStyleId = item.id
-    localStorage.setItem(`${STORE_PREFIX}promptStyle`, item.id)
-    placeKindToken(previous, item.prompt ? item.name : "")
-    syncPresetButton()
-    paintLibraries()
-    showStatus(item.prompt ? `已把 @${item.name} 写入提示词` : "已取消风格")
-  })
-  paintLibrary("preset-tab-filter", libraryItems("function"), activeFilterId, (item) => {
-    const previous = namedSelection("function")
-    activeFilterId = item.id
-    localStorage.setItem(`${STORE_PREFIX}promptFilter`, item.id)
-    placeKindToken(previous, item.prompt ? item.name : "")
-    syncPresetButton()
-    paintLibraries()
-    showStatus(item.prompt ? `已把 @${item.name} 写入提示词` : "已取消功能")
-  })
+  selectedPresetTags().forEach((tag) => dropPresetToken(tag.name))
 }
 
 function selectedPresetTags() {
-  const tags = []
-  const style = libraryItems("style").find((item) => item.id === activeStyleId)
-  const filter = libraryItems("function").find((item) => item.id === activeFilterId)
-  const custom = activeCustomPreset()
-  if (style && style.prompt) tags.push({ kind: "style", name: style.name })
-  if (filter && filter.prompt) tags.push({ kind: "function", name: filter.name })
-  if (custom && (custom.prefix || custom.suffix)) tags.push({ kind: "custom", name: custom.name })
-  return tags
+  return selectedPresetEntries().map(({ category, preset }) => ({
+    kind: category.id,
+    category: category.name,
+    name: preset.name,
+  }))
 }
 
-function clearPresetTag(kind) {
-  const previous = namedSelection(kind)
-  if (kind === "style") {
-    activeStyleId = "style-none"
-    localStorage.setItem(`${STORE_PREFIX}promptStyle`, activeStyleId)
-    paintLibraries()
-  } else if (kind === "function") {
-    activeFilterId = "filter-none"
-    localStorage.setItem(`${STORE_PREFIX}promptFilter`, activeFilterId)
-    paintLibraries()
-  } else {
-    activeCustomName = ""
-    paintCustomPresets()
-  }
-  placeKindToken(previous, "")
+function selectedPresetTagPayload() {
+  return selectedPresetEntries().map(({ category, preset }) => ({
+    kind: category.id,
+    category: category.name,
+    name: preset.name,
+    prefix: preset.prefix,
+    suffix: preset.suffix,
+    prompt: [preset.prefix, preset.suffix].filter(Boolean).join("\n"),
+    description: "",
+  }))
+}
+
+function clearPresetTag(categoryId) {
+  const previous = namedSelection(categoryId)
+  delete selectedPresetIds[categoryId]
+  writePresetSelection()
+  dropPresetToken(previous)
   syncPresetButton()
 }
 
@@ -3552,111 +4577,612 @@ function paintPromptTags() {
     remove.addEventListener("click", (event) => {
       event.stopPropagation()
       clearPresetTag(tag.kind)
+      syncComposerWorkbench()
     })
     chip.appendChild(remove)
     host.appendChild(chip)
   })
 }
 
-function customPresetCards() {
-  const none = { id: "", group: "自定义", name: "无", des: "不使用自定义前后缀", prompt: "", user: false }
-  const saved = readPromptPresets().map((item) => ({
-    id: item.name,
-    group: "自定义",
-    name: item.name,
-    des: [item.prefix, item.suffix].filter(Boolean).join(" / "),
-    prompt: [item.prefix, item.suffix].filter(Boolean).join("\n"),
-    user: false,
-  }))
-  return [none].concat(saved)
+function notifyComposerPreset(action, ok, message, extra = {}) {
+  const messagePayload = { type: "composer-preset-result", action, ok, message, ...extra }
+  const view = element("composer-webview")
+  if (!view || !composerWebReady || typeof view.postMessage !== "function") return
+  try { view.postMessage(messagePayload) } catch (_) {}
 }
 
-function paintCustomPresets() {
-  const list = element("custom-preset-list")
-  if (!list) return
-  paintLibrary("custom-preset-list", customPresetCards(), activeCustomName, (item) => {
-    const previous = namedSelection("custom")
-    activeCustomName = item.id
-    placeKindToken(previous, item.prompt ? item.name : "")
-    paintCustomPresets()
-    syncPresetButton()
-    showStatus(item.prompt ? `已把 @${item.name} 写入提示词` : "已取消自定义预设")
+function pruneEmptyPresetCategories(library) {
+  return PRESET_DATA.pruneEmptyCategories(library)
+}
+
+function saveComposerPreset(data) {
+  const result = PRESET_DATA.savePreset(presetLibrary, data, presetDataOptions())
+  if (!result.ok) {
+    notifyComposerPreset("save", false, result.message)
+    return result
+  }
+  writePresetLibrary(result.library)
+  if (result.editing && selectedPresetIds[result.previousCategoryId] === result.preset.id) {
+    delete selectedPresetIds[result.previousCategoryId]
+    selectedPresetIds[result.categoryId] = result.preset.id
+  }
+  writePresetSelection()
+  syncPresetButton()
+  syncComposerWorkbench(true)
+  const message = result.editing ? `已更新预设「${result.preset.name}」` : `已创建预设「${result.preset.name}」`
+  notifyComposerPreset("save", true, message, { categoryId: result.categoryId })
+  showStatus(message)
+  return { ok: true, message, categoryId: result.categoryId }
+}
+
+function deleteComposerPreset(presetId) {
+  const result = PRESET_DATA.deletePreset(presetLibrary, presetId, presetDataOptions())
+  if (!result.ok) {
+    notifyComposerPreset("delete", false, result.message)
+    return result
+  }
+  writePresetLibrary(result.library)
+  if (selectedPresetIds[result.preset.categoryId] === result.preset.id) delete selectedPresetIds[result.preset.categoryId]
+  writePresetSelection()
+  syncPresetButton()
+  syncComposerWorkbench(true)
+  const message = `已删除预设「${result.preset.name}」`
+  notifyComposerPreset("delete", true, message)
+  showStatus(message)
+  return { ok: true, message }
+}
+
+function selectHostPreset(categoryId, presetId) {
+  const item = presetItem(presetId)
+  if (!item || item.categoryId !== categoryId) return
+  const previous = namedSelection(categoryId)
+  if (selectedPresetIds[categoryId] === presetId) delete selectedPresetIds[categoryId]
+  else selectedPresetIds[categoryId] = presetId
+  writePresetSelection()
+  dropPresetToken(previous)
+  syncPresetButton()
+  syncComposerWorkbench(true)
+}
+
+function paintHostPresetMenu() {
+  const menu = element("preset-host-menu")
+  if (!menu) return
+  menu.textContent = ""
+  const categories = Array.isArray(presetLibrary.categories) ? presetLibrary.categories : []
+  if (!categories.some((item) => item.id === hostPresetTab)) {
+    hostPresetTab = categories[0] ? categories[0].id : "style"
+  }
+
+  const header = document.createElement("div")
+  header.className = "preset-header"
+  const tabs = document.createElement("div")
+  tabs.className = "preset-tabs"
+  categories.forEach((category) => {
+    const tab = document.createElement("button")
+    tab.type = "button"
+    tab.className = hostPresetTab === category.id ? "preset-tab is-selected" : "preset-tab"
+    tab.textContent = category.name
+    tab.addEventListener("click", (event) => {
+      event.stopPropagation()
+      hostPresetTab = category.id
+      hostPresetView = "list"
+      hostPresetEditor = null
+      hostPresetItemMenuId = ""
+      paintHostPresetMenu()
+    })
+    tabs.appendChild(tab)
   })
-  list.querySelectorAll(".library-card").forEach((card) => {
-    const name = card.querySelector("strong")
-    const title = name ? name.textContent : ""
-    if (!title || title === "无") return
-    if (card.querySelector(".library-remove")) return
+  header.appendChild(tabs)
+
+  const headerActions = document.createElement("div")
+  headerActions.className = "preset-header-actions"
+  const add = document.createElement("button")
+  add.type = "button"
+  add.className = "preset-icon-button preset-add"
+  add.textContent = "+"
+  add.title = "添加预设"
+  add.addEventListener("click", (event) => {
+    event.stopPropagation()
+    const category = categories.find((item) => item.id === hostPresetTab)
+    hostPresetEditor = { id: "", category: category ? category.name : "", name: "", prefix: "", suffix: "" }
+    hostPresetView = "edit"
+    hostPresetToolsOpen = false
+    hostPresetNotice = ""
+    paintHostPresetMenu()
+  })
+  headerActions.appendChild(add)
+
+  const tools = document.createElement("button")
+  tools.type = "button"
+  tools.className = "preset-icon-button"
+  tools.textContent = "⋯"
+  tools.title = "导入或导出预设"
+  tools.addEventListener("click", (event) => {
+    event.stopPropagation()
+    hostPresetToolsOpen = !hostPresetToolsOpen
+    paintHostPresetMenu()
+  })
+  headerActions.appendChild(tools)
+
+  if (hostPresetToolsOpen) {
+    const toolsMenu = document.createElement("div")
+    toolsMenu.className = "preset-tools-menu"
+    const importButton = document.createElement("button")
+    importButton.type = "button"
+    importButton.textContent = "导入预设"
+    importButton.addEventListener("click", (event) => {
+      event.stopPropagation()
+      hostPresetToolsOpen = false
+      hostPresetView = "import"
+      presetImportState = { status: "loading" }
+      paintHostPresetMenu()
+      importComposerPresets().then(() => {
+        if (!presetImportState) {
+          hostPresetView = "list"
+          hostPresetNotice = "已取消导入"
+        }
+        paintHostPresetMenu()
+      })
+    })
+    const exportButton = document.createElement("button")
+    exportButton.type = "button"
+    exportButton.textContent = "导出全部预设"
+    exportButton.addEventListener("click", (event) => {
+      event.stopPropagation()
+      hostPresetToolsOpen = false
+      paintHostPresetMenu()
+      exportComposerPresets()
+    })
+    toolsMenu.appendChild(importButton)
+    toolsMenu.appendChild(exportButton)
+    headerActions.appendChild(toolsMenu)
+  }
+  header.appendChild(headerActions)
+  if (hostPresetView === "list") menu.appendChild(header)
+
+  const body = document.createElement("div")
+  body.className = "preset-body"
+  if (hostPresetNotice) {
+    const notice = document.createElement("div")
+    notice.className = "preset-notice"
+    notice.textContent = hostPresetNotice
+    body.appendChild(notice)
+  }
+
+  if (hostPresetView === "edit" && hostPresetEditor) {
+    const form = document.createElement("div")
+    form.className = "preset-editor"
+    const title = document.createElement("div")
+    title.className = "preset-view-title"
+    title.textContent = hostPresetEditor.id ? "编辑预设" : "添加预设"
+    form.appendChild(title)
+    const fields = document.createElement("div")
+    fields.className = "preset-editor-fields"
+    const values = {}
+
+    const categoryField = document.createElement("div")
+    categoryField.className = "preset-form-field"
+    const categoryCaption = document.createElement("div")
+    categoryCaption.className = "preset-field-label"
+    categoryCaption.textContent = "分类"
+    const categoryControl = document.createElement("div")
+    categoryControl.className = "preset-category-control"
+    const categoryInput = document.createElement("input")
+    categoryInput.type = "text"
+    categoryInput.className = "preset-input preset-category-input"
+    categoryInput.value = String(hostPresetEditor.category || "")
+    categoryInput.placeholder = "选择已有分类，或直接输入新分类"
+    categoryInput.maxLength = 40
+    const categoryToggle = document.createElement("button")
+    categoryToggle.type = "button"
+    categoryToggle.className = "preset-category-toggle"
+    categoryToggle.textContent = "⌄"
+    categoryToggle.title = "选择已有分类"
+    const categoryOptions = document.createElement("div")
+    categoryOptions.className = "preset-category-options hidden"
+    const setCategoryOptionsOpen = (open) => {
+      categoryOptions.classList.toggle("hidden", !open)
+      categoryToggle.classList.toggle("is-open", open)
+    }
+    const filterCategoryOptions = (inputValue = categoryInput.value) => {
+      const query = String(inputValue || "").trim().toLocaleLowerCase()
+      let visibleCount = 0
+      Array.from(categoryOptions.children).forEach((option) => {
+        const name = String(option.dataset.categoryName || "")
+        const visible = !query || name.toLocaleLowerCase().includes(query)
+        option.classList.toggle("hidden", !visible)
+        if (visible) visibleCount += 1
+      })
+      return visibleCount
+    }
+    categories.forEach((item) => {
+      const option = document.createElement("button")
+      option.type = "button"
+      option.className = "preset-category-option"
+      option.dataset.categoryName = item.name
+      option.textContent = item.name
+      option.addEventListener("click", (event) => {
+        event.stopPropagation()
+        categoryInput.value = item.name
+        hostPresetEditor.category = item.name
+        setCategoryOptionsOpen(false)
+        try { categoryInput.focus() } catch (_) {}
+      })
+      categoryOptions.appendChild(option)
+    })
+    categoryToggle.addEventListener("click", (event) => {
+      event.stopPropagation()
+      const willOpen = categoryOptions.classList.contains("hidden")
+      const optionCount = filterCategoryOptions("")
+      setCategoryOptionsOpen(willOpen && optionCount > 0)
+      if (willOpen) {
+        try { categoryInput.focus() } catch (_) {}
+      }
+    })
+    categoryInput.addEventListener("input", () => {
+      hostPresetEditor.category = String(categoryInput.value || "")
+      setCategoryOptionsOpen(filterCategoryOptions() > 0)
+    })
+    values.category = categoryInput
+    categoryControl.appendChild(categoryInput)
+    categoryControl.appendChild(categoryToggle)
+    categoryControl.appendChild(categoryOptions)
+    categoryField.appendChild(categoryCaption)
+    categoryField.appendChild(categoryControl)
+    fields.appendChild(categoryField)
+
+    const promptFields = document.createElement("div")
+    promptFields.className = "preset-prompt-fields"
+    ;[
+      { key: "name", label: "名称", multiline: false, placeholder: "预设名称" },
+      { key: "prefix", label: "前缀", multiline: true, placeholder: "加在用户提示词前面" },
+      { key: "suffix", label: "后缀", multiline: true, placeholder: "加在用户提示词后面" },
+    ].forEach((field) => {
+      const fieldGroup = document.createElement("div")
+      fieldGroup.className = "preset-form-field"
+      const caption = document.createElement("div")
+      caption.className = "preset-field-label"
+      caption.textContent = field.label
+      const input = document.createElement(field.multiline ? "textarea" : "input")
+      if (!field.multiline) input.type = "text"
+      input.className = field.multiline ? "preset-textarea" : "preset-input"
+      input.value = String(hostPresetEditor[field.key] || "")
+      input.placeholder = field.placeholder
+      input.maxLength = field.multiline ? 2000 : 40
+      input.addEventListener("input", () => { hostPresetEditor[field.key] = String(input.value || "") })
+      values[field.key] = input
+      fieldGroup.appendChild(caption)
+      fieldGroup.appendChild(input)
+      if (field.key === "prefix" || field.key === "suffix") promptFields.appendChild(fieldGroup)
+      else fields.appendChild(fieldGroup)
+    })
+    fields.appendChild(promptFields)
+    const error = document.createElement("div")
+    error.className = "preset-form-error"
+    fields.appendChild(error)
+    form.appendChild(fields)
+    const actions = document.createElement("div")
+    actions.className = "preset-form-actions"
+    const cancel = document.createElement("button")
+    cancel.type = "button"
+    cancel.className = "preset-secondary"
+    cancel.textContent = "取消"
+    cancel.addEventListener("click", (event) => {
+      event.stopPropagation()
+      hostPresetView = "list"
+      hostPresetEditor = null
+      hostPresetNotice = ""
+      paintHostPresetMenu()
+    })
+    const save = document.createElement("button")
+    save.type = "button"
+    save.className = "preset-primary"
+    save.textContent = "保存"
+    save.addEventListener("click", (event) => {
+      event.stopPropagation()
+      try {
+        const result = saveComposerPreset({
+          id: hostPresetEditor.id,
+          category: String(values.category.value || "").trim(),
+          name: String(values.name.value || "").trim(),
+          prefix: String(values.prefix.value || "").trim(),
+          suffix: String(values.suffix.value || "").trim(),
+        })
+        if (!result || !result.ok) {
+          error.textContent = result && result.message ? result.message : "保存预设失败"
+          return
+        }
+        hostPresetTab = result.categoryId
+        hostPresetView = "list"
+        hostPresetEditor = null
+        hostPresetNotice = result.message
+        paintHostPresetMenu()
+      } catch (saveError) {
+        const message = saveError && saveError.message ? saveError.message : "保存预设失败"
+        error.textContent = message
+        showStatus(message, true)
+      }
+    })
+    actions.appendChild(cancel)
+    actions.appendChild(save)
+    form.appendChild(actions)
+    body.appendChild(form)
+  } else if (hostPresetView === "delete" && hostPresetEditor) {
+    const confirmBox = document.createElement("div")
+    confirmBox.className = "preset-confirm"
+    const title = document.createElement("div")
+    title.className = "preset-view-title"
+    title.textContent = "删除预设"
+    const message = document.createElement("p")
+    message.textContent = `确定删除“${hostPresetEditor.name}”吗？此操作不会修改提示词正文。`
+    const actions = document.createElement("div")
+    actions.className = "preset-form-actions"
+    const cancel = document.createElement("button")
+    cancel.type = "button"
+    cancel.className = "preset-secondary"
+    cancel.textContent = "取消"
+    cancel.addEventListener("click", (event) => {
+      event.stopPropagation()
+      hostPresetView = "list"
+      hostPresetEditor = null
+      paintHostPresetMenu()
+    })
     const remove = document.createElement("button")
     remove.type = "button"
-    remove.className = "library-remove"
+    remove.className = "preset-danger"
     remove.textContent = "删除"
     remove.addEventListener("click", (event) => {
       event.stopPropagation()
-      writePromptPresets(readPromptPresets().filter((entry) => entry.name !== title))
-      if (activeCustomName === title) activeCustomName = ""
-      paintCustomPresets()
-      syncPresetButton()
+      const result = deleteComposerPreset(hostPresetEditor.id)
+      hostPresetView = "list"
+      hostPresetEditor = null
+      hostPresetNotice = result && result.message ? result.message : ""
+      paintHostPresetMenu()
     })
-    card.appendChild(remove)
-  })
-}
-
-function showPresetTab(name) {
-  element("preset-tab-style").classList.toggle("hidden", name !== "style")
-  element("preset-tab-filter").classList.toggle("hidden", name !== "filter")
-  element("preset-tab-custom").classList.toggle("hidden", name !== "custom")
-  if (name === "custom") paintCustomPresets()
-  document.querySelectorAll(".preset-tab").forEach((tab) => {
-    tab.classList.toggle("is-active", tab.dataset.presetTab === name)
-  })
-}
-
-function togglePresetPanel() {
-  const panel = element("preset-panel")
-  const opening = panel.classList.contains("hidden")
-  panel.classList.toggle("hidden", !opening)
-  if (!opening) return
-  closeComposerMenus()
-  paintLibraries()
-  paintCustomPresets()
-}
-
-function openPresetDialog() {
-  element("preset-name-input").value = ""
-  element("preset-prefix").value = ""
-  element("preset-suffix").value = ""
-  element("preset-dialog").classList.remove("hidden")
-  element("preset-name-input").focus()
-}
-
-function closePresetDialog() {
-  element("preset-dialog").classList.add("hidden")
-}
-
-function confirmPreset() {
-  const prefix = element("preset-prefix").value.trim()
-  const suffix = element("preset-suffix").value.trim()
-  const name = element("preset-name-input").value.trim()
-  if (!prefix && !suffix) {
-    showStatus("前缀和后缀都是空的", true)
-    return
+    actions.appendChild(cancel)
+    actions.appendChild(remove)
+    confirmBox.appendChild(title)
+    confirmBox.appendChild(message)
+    confirmBox.appendChild(actions)
+    body.appendChild(confirmBox)
+  } else if (hostPresetView === "import") {
+    const importBox = document.createElement("div")
+    importBox.className = "preset-import"
+    const title = document.createElement("div")
+    title.className = "preset-view-title"
+    title.textContent = "导入预设"
+    importBox.appendChild(title)
+    const importContent = document.createElement("div")
+    importContent.className = "preset-import-content"
+    if (!presetImportState || presetImportState.status === "loading") {
+      const loading = document.createElement("p")
+      loading.textContent = "请选择 JSON 预设文件…"
+      importContent.appendChild(loading)
+    } else if (presetImportState.status === "error") {
+      const error = document.createElement("p")
+      error.className = "preset-form-error"
+      error.textContent = presetImportState.message || "无法读取预设文件"
+      importContent.appendChild(error)
+    } else {
+      const summary = presetImportState.summary || {}
+      const file = document.createElement("div")
+      file.className = "preset-import-file"
+      file.textContent = presetImportState.fileName || "预设文件"
+      const stats = document.createElement("div")
+      stats.className = "preset-import-stats"
+      ;[
+        ["新增分类", summary.newCategories || 0],
+        ["新增预设", summary.additions || 0],
+        ["同名冲突", summary.conflicts || 0],
+        ["无效条目", summary.invalid || 0],
+      ].forEach(([label, value]) => {
+        const stat = document.createElement("div")
+        const strong = document.createElement("strong")
+        strong.textContent = String(value)
+        const caption = document.createElement("span")
+        caption.textContent = label
+        stat.appendChild(strong)
+        stat.appendChild(caption)
+        stats.appendChild(stat)
+      })
+      importContent.appendChild(file)
+      importContent.appendChild(stats)
+    }
+    importBox.appendChild(importContent)
+    const actions = document.createElement("div")
+    actions.className = "preset-form-actions"
+    const cancel = document.createElement("button")
+    cancel.type = "button"
+    cancel.className = "preset-secondary"
+    cancel.textContent = "取消"
+    cancel.addEventListener("click", (event) => {
+      event.stopPropagation()
+      hostPresetView = "list"
+      cancelComposerPresetImport()
+      paintHostPresetMenu()
+    })
+    actions.appendChild(cancel)
+    if (presetImportState && presetImportState.status === "ready") {
+      const applyImport = (mode) => {
+        applyComposerPresetImport(mode)
+        hostPresetView = "list"
+        hostPresetNotice = mode === "overwrite" ? "预设已导入，同名项已覆盖" : "预设已导入，同名项已跳过"
+        paintHostPresetMenu()
+      }
+      const skip = document.createElement("button")
+      skip.type = "button"
+      skip.className = "preset-secondary"
+      skip.textContent = "跳过同名"
+      skip.addEventListener("click", (event) => {
+        event.stopPropagation()
+        applyImport("skip")
+      })
+      const overwrite = document.createElement("button")
+      overwrite.type = "button"
+      overwrite.className = "preset-primary"
+      overwrite.textContent = "覆盖同名"
+      overwrite.addEventListener("click", (event) => {
+        event.stopPropagation()
+        applyImport("overwrite")
+      })
+      actions.appendChild(skip)
+      actions.appendChild(overwrite)
+    }
+    importBox.appendChild(actions)
+    body.appendChild(importBox)
+  } else {
+    const grid = document.createElement("div")
+    grid.className = "preset-grid"
+    const items = presetLibrary.presets.filter((item) => item.categoryId === hostPresetTab)
+    if (!items.length) {
+      const empty = document.createElement("div")
+      empty.className = "preset-empty"
+      empty.textContent = "这个分类还没有预设"
+      grid.appendChild(empty)
+    }
+    items.forEach((item) => {
+      const row = document.createElement("div")
+      row.className = "preset-option-row"
+      const button = document.createElement("button")
+      button.type = "button"
+      button.className = selectedPresetIds[hostPresetTab] === item.id ? "preset-option is-selected" : "preset-option"
+      button.textContent = item.name || "未命名"
+      button.title = [item.prefix, item.suffix].filter(Boolean).join("\n")
+      button.addEventListener("click", (event) => {
+        event.stopPropagation()
+        selectHostPreset(hostPresetTab, item.id)
+        hostPresetItemMenuId = ""
+        paintHostPresetMenu()
+      })
+      row.appendChild(button)
+      const more = document.createElement("button")
+      more.type = "button"
+      more.className = "preset-item-more"
+      more.textContent = "⋯"
+      more.title = `管理 ${item.name}`
+      more.addEventListener("click", (event) => {
+        event.stopPropagation()
+        hostPresetItemMenuId = hostPresetItemMenuId === item.id ? "" : item.id
+        paintHostPresetMenu()
+      })
+      row.appendChild(more)
+      if (hostPresetItemMenuId === item.id) {
+        const itemMenu = document.createElement("div")
+        itemMenu.className = "preset-item-menu"
+        const edit = document.createElement("button")
+        edit.type = "button"
+        edit.textContent = "编辑"
+        edit.addEventListener("click", (event) => {
+          event.stopPropagation()
+          const category = categories.find((entry) => entry.id === item.categoryId)
+          hostPresetEditor = { ...item, category: category ? category.name : "" }
+          hostPresetView = "edit"
+          hostPresetItemMenuId = ""
+          hostPresetNotice = ""
+          paintHostPresetMenu()
+        })
+        const remove = document.createElement("button")
+        remove.type = "button"
+        remove.textContent = "删除"
+        remove.addEventListener("click", (event) => {
+          event.stopPropagation()
+          hostPresetEditor = { ...item }
+          hostPresetView = "delete"
+          hostPresetItemMenuId = ""
+          paintHostPresetMenu()
+        })
+        itemMenu.appendChild(edit)
+        itemMenu.appendChild(remove)
+        row.appendChild(itemMenu)
+      }
+      grid.appendChild(row)
+    })
+    body.appendChild(grid)
   }
-  if (!name) {
-    showStatus("请先给预设起个名字", true)
-    return
+  menu.appendChild(body)
+}
+
+function presetExportPayload() {
+  return {
+    schema: "comfytv-preset-library",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    categories: presetLibrary.categories.map((category) => ({
+      name: category.name,
+      presets: presetLibrary.presets.filter((item) => item.categoryId === category.id).map((item) => ({
+        name: item.name,
+        prefix: item.prefix,
+        suffix: item.suffix,
+      })),
+    })),
   }
-  const items = readPromptPresets().filter((item) => item.name !== name)
-  items.unshift({ name, prefix, suffix })
-  writePromptPresets(items)
-  const previous = namedSelection("custom")
-  activeCustomName = name
-  placeKindToken(previous, name)
-  showPresetTab("custom")
-  paintCustomPresets()
+}
+
+async function exportComposerPresets() {
+  try {
+    const file = await storage.localFileSystem.getFileForSaving("comfytv-presets.json", { types: ["json"] })
+    if (!file) return
+    await file.write(JSON.stringify(presetExportPayload(), null, 2))
+    notifyComposerPreset("export", true, "全部预设已导出")
+    showStatus("全部预设已导出")
+  } catch (error) {
+    const message = error?.message || "导出预设失败"
+    notifyComposerPreset("export", false, message)
+    showStatus(message, true)
+  }
+}
+
+function parsePresetImport(raw) {
+  return PRESET_DATA.parseImport(raw)
+}
+
+function summarizePresetImport(parsed) {
+  return PRESET_DATA.summarizeImport(presetLibrary, parsed)
+}
+
+async function importComposerPresets() {
+  try {
+    const picked = await storage.localFileSystem.getFileForOpening({ types: ["json"] })
+    const file = Array.isArray(picked) ? picked[0] : picked
+    if (!file) {
+      pendingPresetImport = null
+      presetImportState = null
+      syncComposerWorkbench(true)
+      notifyComposerPreset("import", true, "已取消导入")
+      return
+    }
+    const parsed = parsePresetImport(await file.read())
+    pendingPresetImport = parsed
+    presetImportState = {
+      status: "ready",
+      fileName: file.name || "预设文件",
+      summary: summarizePresetImport(parsed),
+    }
+    syncComposerWorkbench(true)
+  } catch (error) {
+    pendingPresetImport = null
+    presetImportState = { status: "error", message: error?.message || "无法读取预设文件" }
+    syncComposerWorkbench(true)
+    showStatus(presetImportState.message, true)
+  }
+}
+
+function applyComposerPresetImport(mode) {
+  if (!pendingPresetImport || !["overwrite", "skip"].includes(mode)) return
+  const next = PRESET_DATA.applyImport(presetLibrary, pendingPresetImport, mode, presetDataOptions())
+  writePresetLibrary(next)
+  writePresetSelection()
+  pendingPresetImport = null
+  presetImportState = null
   syncPresetButton()
-  closePresetDialog()
-  showStatus(`已选用预设「${name}」`)
+  syncComposerWorkbench(true)
+  notifyComposerPreset("import", true, mode === "overwrite" ? "预设已导入，同名项已覆盖" : "预设已导入，同名项已跳过")
+}
+
+function cancelComposerPresetImport() {
+  pendingPresetImport = null
+  presetImportState = null
+  syncComposerWorkbench(true)
 }
 
 function paintToggle(button, on) {
@@ -3680,73 +5206,510 @@ function bindCheckToggle(buttonId, inputId, afterClick) {
   paint()
 }
 
-function scheduleLiveRender() {
-  if (batchRunning) return
-  if (!element("render-on-change").checked || element("render").disabled) return
-  clearTimeout(liveTimer)
-  liveTimer = setTimeout(() => {
-    if (batchRunning || element("render").disabled) return
-    renderBatch(1)
-  }, 700)
-}
-
-function historyMarker(document) {
-  const state = document.activeHistoryState
-  if (!state) return ""
-  return `${state.id ?? ""}:${state.name ?? ""}`
-}
-
-function startDocumentWatch() {
-  if (watchTimer) return
-  lastHistoryMarker = null
-  lastSelectionKey = null
-  watchTimer = setInterval(() => {
-    watchDocument().catch(() => {})
-  }, 400)
-}
-
-function stopDocumentWatch() {
-  clearInterval(watchTimer)
-  watchTimer = null
-}
-
-function applyLiveRender(enabled, announce) {
-  paintToggle(element("live-toggle"), enabled)
-  if (enabled) startDocumentWatch()
-  else stopDocumentWatch()
-  if (announce) showStatus(enabled ? "文档变化时会自动渲染" : "已关闭自动渲染")
-}
-
-async function watchDocument() {
-  if (!element("render-on-change").checked || !app?.documents?.length) return
-  if (batchRunning || Date.now() < suppressWatchUntil || element("render").disabled) return
-  const document = app.activeDocument
-  const marker = historyMarker(document)
-  const selection = await activeSelection(document)
-  const key = selection ? `${selection.left},${selection.top},${selection.right},${selection.bottom}` : ""
-  if (lastHistoryMarker === null) {
-    lastHistoryMarker = marker
-    lastSelectionKey = key
-    return
-  }
-  const historyChanged = marker !== lastHistoryMarker
-  const selectionChanged = key !== lastSelectionKey
-  const name = marker.slice(marker.indexOf(":") + 1)
-  lastHistoryMarker = marker
-  lastSelectionKey = key
-  if (/ComfyTV|Mask Sent to AI/i.test(name)) return
-  if (historyChanged || (selectionChanged && element("crop-selection").checked)) {
-    suppressWatchUntil = Date.now() + 1200
-    renderBatch(1)
-  }
-}
+let embeddedComfyMounted = false
 
 function mountEmbeddedComfy() {
   const view = document.getElementById("comfy-webview")
   if (!view) return
+  embeddedComfyMounted = true
   let src = EMBEDDED_COMFY
   try { src = serverAddress() } catch (_) {}
+  src += `${src.includes("?") ? "&" : "?"}comfytv_ps_client=${encodeURIComponent(clientId)}`
   if ((view.getAttribute("src") || "") !== src) view.setAttribute("src", src)
+}
+
+function refreshEmbeddedComfy() {
+  if (embeddedComfyMounted) mountEmbeddedComfy()
+}
+
+function encodeSecureText(value) {
+  if (typeof TextEncoder === "function") return new TextEncoder().encode(value)
+  const encoded = unescape(encodeURIComponent(value))
+  const bytes = new Uint8Array(encoded.length)
+  for (let index = 0; index < encoded.length; index += 1) bytes[index] = encoded.charCodeAt(index)
+  return bytes
+}
+
+function decodeSecureText(value) {
+  const bytes = value instanceof Uint8Array ? value : new Uint8Array(value || [])
+  if (typeof TextDecoder === "function") return new TextDecoder().decode(bytes)
+  let encoded = ""
+  for (let index = 0; index < bytes.length; index += 1) encoded += String.fromCharCode(bytes[index])
+  return decodeURIComponent(escape(encoded))
+}
+
+function validComfyAuthEnvelope(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {}
+  const rawLocal = source.localStorage && typeof source.localStorage === "object"
+    ? source.localStorage
+    : source
+  const localStorageEntries = {}
+  Object.keys(rawLocal).forEach((key) => {
+    const item = rawLocal[key]
+    if (!key.startsWith(COMFY_AUTH_PREFIX) || typeof item !== "string") return
+    localStorageEntries[key] = item
+  })
+  const indexedDb = Array.isArray(source.indexedDb)
+    ? source.indexedDb.filter((item) => item && typeof item === "object" && "key" in item && "value" in item).slice(0, 128)
+    : []
+  const envelope = { version: 2, localStorage: localStorageEntries, indexedDb }
+  if (typeof source.token === "string" && source.token) envelope.token = source.token
+  if (typeof source.apiKey === "string" && source.apiKey) envelope.apiKey = source.apiKey
+  return envelope
+}
+
+function comfyAuthEnvelopeHasData(envelope) {
+  return Boolean(
+    Object.keys(envelope.localStorage || {}).length
+    || (envelope.indexedDb || []).length
+    || envelope.token
+    || envelope.apiKey,
+  )
+}
+
+async function readComfyAuthBackup() {
+  const secureStorage = storage && storage.secureStorage
+  if (!secureStorage || typeof secureStorage.getItem !== "function") return {}
+  try {
+    let bytes = await secureStorage.getItem(COMFY_AUTH_STORAGE_KEY)
+    if (!bytes || !bytes.length) bytes = await secureStorage.getItem(COMFY_AUTH_LEGACY_KEY)
+    if (!bytes || !bytes.length) return validComfyAuthEnvelope({})
+    return validComfyAuthEnvelope(JSON.parse(decodeSecureText(bytes)))
+  } catch (_) {
+    return validComfyAuthEnvelope({})
+  }
+}
+
+async function writeComfyAuthBackup(value) {
+  const secureStorage = storage && storage.secureStorage
+  if (!secureStorage) return
+  const envelope = validComfyAuthEnvelope(value)
+  if (!comfyAuthEnvelopeHasData(envelope)) {
+    if (typeof secureStorage.removeItem === "function") {
+      try { await secureStorage.removeItem(COMFY_AUTH_STORAGE_KEY) } catch (_) {}
+    }
+    return
+  }
+  const bytes = encodeSecureText(JSON.stringify(envelope))
+  if (bytes.length > COMFY_AUTH_MAX_BYTES) throw new Error("ComfyUI login data is too large to store securely")
+  if (typeof secureStorage.setItem === "function") {
+    await secureStorage.setItem(COMFY_AUTH_STORAGE_KEY, bytes)
+    if (typeof secureStorage.removeItem === "function") {
+      try { await secureStorage.removeItem(COMFY_AUTH_LEGACY_KEY) } catch (_) {}
+    }
+  }
+}
+
+let comfyAuthWriteQueue = Promise.resolve()
+
+function onComfyAuthMessage(event) {
+  let data = event.data
+  if (typeof data === "string") {
+    try { data = JSON.parse(data) } catch (_) { return }
+  }
+  if (!data || typeof data !== "object" || !String(data.type || "").startsWith("comfytv-auth-")) return
+  const view = document.getElementById("comfy-webview")
+  if (!view || (event.source && event.source !== view)) return
+
+  if (data.type === "comfytv-auth-restore-request") {
+    readComfyAuthBackup().then((envelope) => {
+      if (typeof view.postMessage === "function") view.postMessage({ type: "comfytv-auth-restore", envelope })
+    }).catch(() => {
+      if (typeof view.postMessage === "function") view.postMessage({ type: "comfytv-auth-restore", envelope: { version: 2, localStorage: {}, indexedDb: [] } })
+    })
+    return
+  }
+  if (data.type === "comfytv-auth-snapshot") {
+    comfyAuthWriteQueue = comfyAuthWriteQueue
+      .catch(() => {})
+      .then(() => writeComfyAuthBackup(data.envelope || { localStorage: data.entries || {} }))
+      .catch((error) => console.warn("[ComfyTV] Failed to persist ComfyUI login", error))
+    return
+  }
+  if (data.type === "comfytv-auth-open-external") {
+    const transferId = String(data.transferId || "")
+    const provider = data.provider === "github" ? "github" : "google"
+    if (!/^[A-Za-z0-9_-]{32,128}$/.test(transferId)) return
+    let root = EMBEDDED_COMFY
+    try { root = serverAddress() } catch (_) {}
+    const url = `${String(root).replace(/\/+$/, "")}/?comfytv_auth_transfer=${encodeURIComponent(transferId)}&comfytv_auth_provider=${provider}`
+    const uxp = loadModule("uxp")
+    if (!uxp.shell || typeof uxp.shell.openExternal !== "function") {
+      showStatus("当前 Photoshop 版本无法打开系统浏览器，请改用邮箱登录", true)
+      return
+    }
+    Promise.resolve(uxp.shell.openExternal(url, "在系统浏览器完成 ComfyUI 登录并同步回 Photoshop")).then((result) => {
+      if (result) {
+        showStatus(String(result), true)
+        return
+      }
+      showStatus(`请在系统浏览器完成 ${provider === "github" ? "GitHub" : "Google"} 登录`)
+    }).catch((error) => showStatus(error?.message || "无法打开系统浏览器", true))
+    return
+  }
+  if (data.type === "comfytv-auth-transfer-complete") {
+    showStatus("ComfyUI 登录已同步")
+    return
+  }
+  if (data.type === "comfytv-auth-transfer-timeout") {
+    showStatus("登录同步已超时，请重新点击登录", true)
+  }
+}
+
+function composerWorkbenchUrl() {
+  let root = EMBEDDED_COMFY
+  try { root = serverAddress() } catch (_) {}
+  return `${root}/comfytv/photoshop/composer`
+}
+
+function composerReferenceSignature(items) {
+  return items.map((item) => {
+    const src = String(item && item.src || "")
+    return `${item && item.name || ""}:${src.length}:${src.slice(-24)}`
+  }).join("|")
+}
+
+function composerModels() {
+  const select = element("workflow")
+  if (!select) return []
+  return Array.from(select.options).filter((option) => option.value !== "").map((option) => ({
+    value: option.value,
+    label: option.textContent.trim(),
+  }))
+}
+
+function composerModeOptions(profile) {
+  const family = RENDER_FAMILIES[profile.family] || RENDER_FAMILIES.nanobanana
+  return {
+    sizes: profile.family === "gpt" ? GPT_NODE_SIZES.slice() : [],
+    aspects: profile.family === "gpt" ? [] : orderedAspects(aspectChoices(profile)),
+    resolutions: profile.family === "gpt" ? [] : family.resolutions.slice(),
+    qualities: family.qualities.map((item) => ({ value: item.value, label: item.label })),
+    backgrounds: family.backgrounds.map((item) => ({ value: item.value, label: item.label })),
+  }
+}
+
+function composerControls() {
+  const model = element("workflow")
+  const option = model && model.options[model.selectedIndex]
+  const profile = normalizeProfile(renderProfile)
+  const render = element("render")
+  return {
+    models: composerModels(),
+    model: model ? model.value : "",
+    modelLabel: option && model.value !== "" ? option.textContent.trim() : "模型",
+    modeLabel: modeButtonLabel(profile),
+    profile,
+    modeOptions: composerModeOptions(profile),
+    count: batchCount(),
+    countSteps: COUNT_STEPS.slice(),
+    crop: Boolean(element("crop-selection") && element("crop-selection").checked),
+    progress: element("progress-label") ? element("progress-label").textContent : "就绪",
+    progressActive: Boolean(element("progress-frame") && element("progress-frame").classList.contains("active")),
+    progressPercent: marqueePercent,
+    busy: Boolean(render && render.disabled),
+    stopping: Boolean(render && render.classList.contains("is-stop")),
+  }
+}
+
+function syncComposerWorkbench(force = false) {
+  const view = element("composer-webview")
+  if (!view || !composerWebReady || typeof view.postMessage !== "function") return
+  if (force) composerStateSignatures = Object.create(null)
+  try {
+    const payload = {
+      type: "composer-state",
+      protocolVersion: COMPOSER_PROTOCOL_VERSION,
+      controls: composerControls(),
+    }
+    const promptValue = element("positive")?.value || ""
+    if (force || composerStateSignatures.prompt !== promptValue) {
+      payload.prompt = promptValue
+      composerStateSignatures.prompt = promptValue
+    }
+    const references = referenceFiles.map((file) => ({ name: file.name || "", src: referencePreviewSrc(file) }))
+    const referenceSignature = composerReferenceSignature(references)
+    if (force || composerStateSignatures.references !== referenceSignature) {
+      payload.references = references
+      composerStateSignatures.references = referenceSignature
+    }
+    const stylePayload = styleReference ? { name: styleReference.name || "", src: referencePreviewSrc(styleReference) } : null
+    const styleSignature = composerReferenceSignature(stylePayload ? [stylePayload] : [])
+    if (force || composerStateSignatures.styleReference !== styleSignature) {
+      payload.styleReference = stylePayload
+      composerStateSignatures.styleReference = styleSignature
+    }
+    const canvasReference = capturePreviewThumbSrc ? { src: capturePreviewThumbSrc } : null
+    const canvasSignature = canvasReference ? canvasReference.src : ""
+    if (force || composerStateSignatures.canvasReference !== canvasSignature) {
+      payload.canvasReference = canvasReference
+      composerStateSignatures.canvasReference = canvasSignature
+    }
+    const presetData = {
+      version: PRESET_LIBRARY_VERSION,
+      categories: presetLibrary.categories.map((item) => ({ ...item })),
+      presets: presetLibrary.presets.map((item) => ({ ...item })),
+    }
+    const presetSignature = JSON.stringify(presetData)
+    if (force || composerStateSignatures.presets !== presetSignature) {
+      payload.presetLibrary = presetData
+      composerStateSignatures.presets = presetSignature
+    }
+    const selectedPresets = { ...selectedPresetIds }
+    const selectedTags = selectedPresetTagPayload()
+    const selectionSignature = JSON.stringify({ selectedPresets, selectedTags, presetImportState })
+    if (force || composerStateSignatures.selection !== selectionSignature) {
+      payload.selectedPresets = selectedPresets
+      payload.selectedTags = selectedTags
+      payload.presetImport = presetImportState
+      composerStateSignatures.selection = selectionSignature
+    }
+    view.postMessage(payload)
+  } catch (_) {}
+}
+
+function sendHostPopoverState(open, menu) {
+  const view = element("composer-webview")
+  if (!view || !composerWebReady || typeof view.postMessage !== "function") return
+  try { view.postMessage({ type: "composer-overlay-state", open, menu: open ? String(menu || "") : "" }) } catch (_) {}
+}
+
+function openHostPopover(menuName) {
+  const menu = String(menuName || "")
+  if (!['model', 'mode', 'count', 'preset'].includes(menu)) return
+  if (hostPopoverMenu === menu) {
+    closeComposerMenus(true)
+    return
+  }
+  closeComposerMenus()
+  if (menu === "model") {
+    if (!workflowListReady()) announceWorkflowList()
+    fillSelectMenu(element("model-menu"), element("workflow"))
+    element("model-menu").classList.remove("hidden")
+  } else if (menu === "mode") {
+    fillModeSheet(element("mode-menu"))
+    element("mode-menu").classList.remove("hidden")
+  } else if (menu === "count") {
+    fillCountMenu(element("count-menu"))
+    element("count-menu").classList.remove("hidden")
+  } else {
+    paintHostPresetMenu()
+    element("preset-host-menu").classList.remove("hidden")
+  }
+  hostPopoverMenu = menu
+  sendHostPopoverState(true, menu)
+}
+
+function mountComposerWorkbench() {
+  const view = element("composer-webview")
+  if (!view) return
+  const src = composerWorkbenchUrl()
+  if ((view.getAttribute("src") || "") !== src) {
+    composerWebReady = false
+    composerStateSignatures = Object.create(null)
+    element("composer").classList.remove("web-composer-ready")
+    view.setAttribute("src", src)
+  }
+}
+
+function focusComposerPrompt() {
+  const view = element("composer-webview")
+  if (!view) return
+  const finish = () => {
+    ;[0, 80, 240].forEach((delay) => setTimeout(() => {
+      try {
+        view.focus()
+        if (composerWebReady && typeof view.postMessage === "function") {
+          view.postMessage({ type: "composer-focus-ready", delay })
+        }
+      } catch (_) {}
+    }, delay))
+  }
+  try {
+    if (app && typeof app.bringToFront === "function") {
+      const result = app.bringToFront()
+      if (result && typeof result.then === "function") {
+        result.then(finish).catch(finish)
+        return
+      }
+    }
+  } catch (_) {}
+  finish()
+}
+
+function onComposerMessage(event) {
+  const view = element("composer-webview")
+  if (!view) return
+  let data = event.data
+  if (typeof data === "string") {
+    try { data = JSON.parse(data) } catch (_) { return }
+  }
+  if (!data || typeof data !== "object" || !String(data.type || "").startsWith("composer-")) return
+  if (event.source && event.source !== view) return
+  if (data.type === "composer-ready") {
+    composerWebReady = true
+    element("composer").classList.add("web-composer-ready")
+    syncComposerWorkbench(true)
+    sendHostPopoverState(Boolean(hostPopoverMenu), hostPopoverMenu)
+    return
+  }
+  if (data.type === "composer-prompt") {
+    const value = String(data.value || "")
+    element("positive").value = value
+    composerStateSignatures.prompt = value
+    localStorage.setItem(`${STORE_PREFIX}positive`, value)
+    syncPromptMirror()
+    return
+  }
+  if (data.type === "composer-request-focus") {
+    focusComposerPrompt()
+    return
+  }
+  if (data.type === "composer-open-overlay") {
+    openHostPopover(String(data.menu || "preset"))
+    return
+  }
+  if (data.type === "composer-select-model") {
+    const select = element("workflow")
+    const value = String(data.value || "")
+    if (!select || !Array.from(select.options).some((option) => option.value === value)) return
+    select.value = value
+    select.dispatchEvent(new Event("change", { bubbles: true }))
+    syncComposer()
+    return
+  }
+  if (data.type === "composer-set-profile") {
+    const incoming = data.patch && typeof data.patch === "object" ? data.patch : {}
+    const patch = {}
+    ;["aspect", "resolution", "quality", "background"].forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(incoming, key)) patch[key] = String(incoming[key])
+    })
+    if (Object.keys(patch).length) chooseRenderProfile(patch)
+    return
+  }
+  if (data.type === "composer-set-count") {
+    const count = Math.max(1, Math.min(BATCH_MAX, Number(data.value) || 1))
+    element("batch-count").value = String(count)
+    saveSettings()
+    syncComposer()
+    return
+  }
+  if (data.type === "composer-toggle-crop") {
+    element("crop-toggle").click()
+    saveSettings()
+    syncComposerWorkbench()
+    return
+  }
+  if (data.type === "composer-render" || data.type === "composer-render-random") {
+    if (data.type === "composer-render-random") randomSeed()
+    element("render").click()
+    return
+  }
+  if (data.type === "composer-select-preset") {
+    const categoryId = String(data.categoryId || "")
+    const id = String(data.id || "")
+    const item = presetItem(id)
+    if (!item || item.categoryId !== categoryId) return
+    const previous = namedSelection(categoryId)
+    if (selectedPresetIds[categoryId] === id) delete selectedPresetIds[categoryId]
+    else selectedPresetIds[categoryId] = id
+    writePresetSelection()
+    dropPresetToken(previous)
+    syncPresetButton()
+    syncComposerWorkbench()
+    showStatus(selectedPresetIds[categoryId] ? `已选用 ${item.name}` : `已取消 ${item.name}`)
+    return
+  }
+  if (data.type === "composer-save-preset") {
+    try {
+      saveComposerPreset(data)
+    } catch (error) {
+      const message = error?.message || "保存预设失败"
+      notifyComposerPreset("save", false, message)
+      showStatus(message, true)
+    }
+    return
+  }
+  if (data.type === "composer-delete-preset") {
+    deleteComposerPreset(data.id)
+    return
+  }
+  if (data.type === "composer-clear-preset") {
+    const categoryId = String(data.categoryId || "")
+    if (!presetCategory(categoryId)) return
+    clearPresetTag(categoryId)
+    syncComposerWorkbench()
+    return
+  }
+  if (data.type === "composer-export-presets") {
+    exportComposerPresets()
+    return
+  }
+  if (data.type === "composer-import-presets") {
+    importComposerPresets()
+    return
+  }
+  if (data.type === "composer-apply-preset-import") {
+    applyComposerPresetImport(String(data.mode || ""))
+    return
+  }
+  if (data.type === "composer-cancel-preset-import") {
+    cancelComposerPresetImport()
+    return
+  }
+  if (data.type === "composer-pick-reference") {
+    addReferenceImage()
+    return
+  }
+  if (data.type === "composer-pick-style-reference") {
+    addStyleReferenceImage()
+    return
+  }
+  if (data.type === "composer-add-files") {
+    addDroppedReferenceFiles(data.files, data.index)
+    return
+  }
+  if (data.type === "composer-add-style-files") {
+    addDroppedStyleReference(data.files)
+    return
+  }
+  if (data.type === "composer-add-active-layer") {
+    addActiveLayerReference("reference", data.index)
+    return
+  }
+  if (data.type === "composer-add-active-layer-style") {
+    addActiveLayerReference("style")
+    return
+  }
+  if (data.type === "composer-remove-reference") {
+    const index = Number(data.index)
+    if (!Number.isInteger(index) || index < 0 || index >= referenceFiles.length) return
+    applyReferenceMentionMap(referenceRemoveMap(referenceFiles.length, index))
+    referenceFiles.splice(index, 1)
+    paintReferenceRow()
+    return
+  }
+  if (data.type === "composer-reorder-reference") {
+    const from = Number(data.from)
+    const to = Number(data.to)
+    if (!Number.isInteger(from) || !Number.isInteger(to)) return
+    if (from < 0 || to < 0 || from >= referenceFiles.length || to >= referenceFiles.length || from === to) return
+    applyReferenceMentionMap(referenceMentionMap(referenceFiles.length, from, to))
+    const [item] = referenceFiles.splice(from, 1)
+    referenceFiles.splice(to, 0, item)
+    paintReferenceRow()
+    showStatus(`参考图已移动到位置 ${to + 1}`)
+    return
+  }
+  if (data.type === "composer-remove-style-reference") {
+    removeStyleReference()
+    return
+  }
+  if (data.type === "composer-canvas") {
+    showStatus("生成时使用当前 Photoshop 画面")
+    return
+  }
+  if (data.type === "composer-error") showStatus(String(data.message || "WebView 操作失败"), true)
 }
 
 async function openComfyUI() {
@@ -3777,14 +5740,15 @@ function saveSettings() {
     cropSelection: element("crop-selection").checked,
     cropPad: element("crop-pad").value,
     autoSeed: element("auto-seed").checked,
-    liveRender: element("render-on-change").checked,
     batchCount: batchCount(),
+    comfyLaunch: element("comfy-launch").value,
   }
   Object.entries(values).forEach(([key, value]) => localStorage.setItem(`${STORE_PREFIX}${key}`, String(value)))
 }
 
 function restoreSettings() {
   element("server").value = localStorage.getItem(`${STORE_PREFIX}server`) || DEFAULT_SERVER
+  element("comfy-launch").value = localStorage.getItem(`${STORE_PREFIX}comfyLaunch`) || DEFAULT_LAUNCH
   const textIds = ["positive", "negative", "seed"]
   textIds.forEach((id) => {
     const saved = localStorage.getItem(`${STORE_PREFIX}${id}`)
@@ -3799,12 +5763,12 @@ function restoreSettings() {
   const checks = [
     ["crop-selection", "cropSelection", true],
     ["auto-seed", "autoSeed", false],
-    ["render-on-change", "liveRender", false],
   ]
   checks.forEach(([id, key, fallback]) => {
     const saved = localStorage.getItem(`${STORE_PREFIX}${key}`)
     element(id).checked = saved === null ? fallback : saved === "true"
   })
+  localStorage.removeItem(`${STORE_PREFIX}liveRender`)
   const savedBatch = Number.parseInt(localStorage.getItem(`${STORE_PREFIX}batchCount`) || "1", 10)
   element("batch-count").value = String(Number.isFinite(savedBatch) ? Math.max(1, Math.min(BATCH_MAX, savedBatch)) : 1)
   setPreviewFit(localStorage.getItem(`${STORE_PREFIX}fitContain`) === "true")
@@ -3819,12 +5783,50 @@ function initialize() {
     if (element("progress-frame").classList.contains("active")) paintMarquee()
   })
   restoreSettings()
+  window.addEventListener("message", onComposerMessage)
+  mountComposerWorkbench()
   element("settings-toggle").addEventListener("click", () => toggleDrawer("settings-drawer"))
   element("web-toggle").addEventListener("click", () => { openComfyUI() })
+  element("history-toggle").addEventListener("click", (event) => {
+    event.stopPropagation()
+    setHistoryPanelOpen(!historyPanelOpen)
+  })
+  element("history-panel-close").addEventListener("click", () => setHistoryPanelOpen(false))
+  element("history-panel-clear").addEventListener("click", () => {
+    clearAllRenderHistory().catch((error) => showStatus(error.message || "清空历史记录失败", true))
+  })
+  element("history-panel-edit").addEventListener("click", () => setHistoryPanelEditing(!historyPanelEditing))
+  element("history-panel-edit-done").addEventListener("click", () => setHistoryPanelEditing(false))
+  element("history-panel-delete-selected").addEventListener("click", () => {
+    deleteSelectedRenderHistory().catch((error) => showStatus(error.message || "删除历史记录失败", true))
+  })
+  element("history-panel-prev").addEventListener("click", () => showHistoryPanelPage(historyPanelPage - 1))
+  element("history-panel-next").addEventListener("click", () => showHistoryPanelPage(historyPanelPage + 1))
+  element("history-panel-grid").addEventListener("click", (event) => {
+    const card = historyPanelCardFromEvent(event)
+    if (!card) return
+    if (historyPanelEditing) {
+      toggleHistoryPanelSelection(card)
+      return
+    }
+    selectHistory(Number(card.dataset.index)).catch((error) => showStatus(error.message, true))
+  })
+  element("history-panel-grid").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return
+    const card = historyPanelCardFromEvent(event)
+    if (!card) return
+    event.preventDefault()
+    if (historyPanelEditing) {
+      toggleHistoryPanelSelection(card)
+      return
+    }
+    selectHistory(Number(card.dataset.index)).catch((error) => showStatus(error.message, true))
+  })
   document.querySelectorAll("[data-close]").forEach((button) => {
     button.addEventListener("click", () => {
       element(button.dataset.close).classList.add("hidden")
       syncDrawerButtons("")
+      syncComposerOverlay()
     })
   })
   element("fit-toggle").addEventListener("click", () => {
@@ -3832,16 +5834,7 @@ function initialize() {
     setPreviewFit(contain)
     localStorage.setItem(`${STORE_PREFIX}fitContain`, String(contain))
   })
-  bindCheckToggle("crop-toggle", "crop-selection", () => scheduleLiveRender())
-  element("live-toggle").addEventListener("click", () => {
-    const input = element("render-on-change")
-    input.checked = !input.checked
-    input.dispatchEvent(new Event("change", { bubbles: true }))
-  })
-  element("render-on-change").addEventListener("change", () => {
-    applyLiveRender(element("render-on-change").checked, true)
-  })
-  applyLiveRender(element("render-on-change").checked, false)
+  bindCheckToggle("crop-toggle", "crop-selection")
   element("randomize").addEventListener("click", randomSeed)
   element("model-trigger").addEventListener("click", (event) => {
     event.stopPropagation()
@@ -3864,29 +5857,46 @@ function initialize() {
     addReferenceImage()
   })
   document.addEventListener("click", (event) => {
-    if (event.target.closest && event.target.closest(".composer-menu, #model-trigger, #mode-trigger, #count-trigger")) return
+    if (event.target.closest && event.target.closest(".composer-menu, .host-preset-menu, #model-trigger, #mode-trigger, #count-trigger")) return
     closeComposerMenus()
   })
-  element("preset-save-chip").addEventListener("click", openPresetDialog)
-  element("preset-open").addEventListener("click", togglePresetPanel)
-  element("preset-panel-close").addEventListener("click", (event) => {
-    event.stopPropagation()
-    element("preset-panel").classList.add("hidden")
-  })
-  document.querySelectorAll(".preset-tab").forEach((tab) => {
-    tab.addEventListener("click", () => showPresetTab(tab.dataset.presetTab))
-  })
-  element("preset-dialog-close").addEventListener("click", closePresetDialog)
-  element("preset-dialog-ok").addEventListener("click", confirmPreset)
-  element("preset-name-input").addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !hostPopoverMenu) return
     event.preventDefault()
-    confirmPreset()
+    closeComposerMenus(true)
+  }, true)
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !historyPanelOpen) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (historyPanelEditing) {
+      setHistoryPanelEditing(false)
+      return
+    }
+    setHistoryPanelOpen(false)
+  }, true)
+  element("positive").addEventListener("compositionstart", () => {
+    promptComposing = true
   })
-  element("positive").addEventListener("input", paintMentionMenu)
-  element("positive").addEventListener("keyup", paintMentionMenu)
+  element("positive").addEventListener("compositionend", () => {
+    promptComposing = false
+    const field = element("positive")
+    setTimeout(() => {
+      if (document.activeElement !== field) field.focus()
+      paintMentionMenu()
+    }, 0)
+  })
+  element("positive").addEventListener("input", (event) => {
+    if (promptComposing || event.isComposing) return
+    paintMentionMenu()
+  })
+  element("positive").addEventListener("keyup", (event) => {
+    if (promptComposing || event.isComposing || event.keyCode === 229) return
+    paintMentionMenu()
+  })
   element("positive").addEventListener("click", paintMentionMenu)
   element("positive").addEventListener("keydown", (event) => {
+    if (promptComposing || event.isComposing || event.keyCode === 229) return
     const menu = element("mention-menu")
     if (!menu || menu.classList.contains("hidden")) return
     if (event.key === "Escape") {
@@ -3900,10 +5910,6 @@ function initialize() {
     first.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }))
   })
   syncPresetButton()
-  ;["style", "function", "custom"].forEach((kind) => {
-    const name = namedSelection(kind)
-    if (name) placeKindToken("", name)
-  })
   let suppressRenderClick = false
   element("render").addEventListener("click", () => {
     if (suppressRenderClick) {
@@ -3924,12 +5930,23 @@ function initialize() {
   })
   element("send-layer").addEventListener("click", sendLayer)
   element("connect").addEventListener("click", connect)
+  element("pick-comfy").addEventListener("click", () => {
+    pickComfyLauncher().catch((error) => showStatus(error.message || "没有选到程序", true))
+  })
+  element("start-comfy").addEventListener("click", startComfy)
+  element("server").addEventListener("change", () => {
+    try {
+      localStorage.setItem(`${STORE_PREFIX}server`, serverAddress())
+      refreshEmbeddedComfy()
+      mountComposerWorkbench()
+    } catch (error) {
+      showStatus(error.message || "地址不对", true)
+    }
+  })
   element("add-layer").addEventListener("click", addResultLayer)
   element("preview-hit").addEventListener("click", addResultLayer)
   element("empty-preview").addEventListener("click", addResultLayer)
-  element("positive").addEventListener("input", scheduleLiveRender)
-  element("negative").addEventListener("input", scheduleLiveRender)
-  element("seed").addEventListener("change", scheduleLiveRender)
+  element("positive").addEventListener("input", syncComposerWorkbench)
   element("workflow").addEventListener("change", (event) => {
     if (event.target.value === "") return
     syncProfileToModel()
@@ -3937,7 +5954,6 @@ function initialize() {
       sendSocket({ workflow: Number(event.target.value) })
       pushRenderProfile()
       showStatus("已切换模型")
-      scheduleLiveRender()
     } catch (error) {
       showStatus(error.message, true)
     }
@@ -3965,8 +5981,6 @@ function initialize() {
   })
   window.addEventListener("beforeunload", () => {
     clearTimeout(reconnectTimer)
-    clearTimeout(liveTimer)
-    stopDocumentWatch()
     if (socket) socket.close()
   })
   const historyHover = element("history-hover")
@@ -4011,6 +6025,7 @@ function bootMain() {
 
 function boot() {
   const uxp = loadModule("uxp")
+  window.addEventListener("message", onComfyAuthMessage)
   try {
     if (uxp.entrypoints && typeof uxp.entrypoints.setup === "function") {
       uxp.entrypoints.setup({
@@ -4020,7 +6035,7 @@ function boot() {
             show() { bootMain() },
           },
           [WEB_PANEL_ID]: {
-            create() { mountEmbeddedComfy() },
+            create() {},
             show() { mountEmbeddedComfy() },
           },
         },

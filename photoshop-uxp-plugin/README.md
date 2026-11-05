@@ -25,10 +25,10 @@ Load this directory with Adobe UXP Developer Tool while Photoshop is running:
 D:\ComfyUI\ComfyUI\custom_nodes\ComfyTV\photoshop-uxp-plugin
 ```
 
-The working copy is also deployed to:
+Photoshop's registered production folder is a Junction to this source folder:
 
 ```text
-C:\Users\Administrator\AppData\Roaming\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.2.2
+C:\Users\Administrator\AppData\Roaming\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.3.1
 ```
 
 Open `Plugins > ComfyTV`, start ComfyUI, and load the Photoshop workflow. Render
@@ -40,7 +40,24 @@ does not treat `127.0.0.1` as an allow-listed domain, so a request to that IP
 fails with "Manifest entry not found" before it reaches ComfyUI. Network calls
 rewrite that address to `localhost` on the same port. The embedded ComfyUI panel uses the webview permission for those same local origins. It does
 not request clipboard or unrestricted network access.
-Manifest edits apply only after Photoshop is fully quit and reopened.
+When using the installed production copy, manifest edits apply after Photoshop
+is fully quit and reopened. During development, UDT can apply them with
+`Unload` followed by `Load & Watch` without restarting Photoshop.
+
+## Hot update
+
+Double-click `photoshop-hot-update.cmd` in the ComfyTV folder after editing the
+plugin. The script validates the source and installation Junctions, JavaScript,
+Python, Adobe registration, workflow links, frontend bridge, and running server.
+It does not copy files. It reports whether Comfy Desktop or Photoshop needs one
+restart for backend, node-schema, manifest, or UXP host changes. The embedded
+composer still polls its local revision endpoint and reloads ordinary composer
+HTML, CSS, and JavaScript changes without a restart.
+
+For changes to the UXP shell (`main.js`, `index.html`, or `styles.css`), install
+Adobe UXP Developer Tool once, add this folder's `manifest.json`, and select
+`Load & Watch`. Adobe reloads those files without restarting Photoshop. A
+manifest change still requires `Unload` followed by `Load & Watch` in UDT.
 
 ## Panel painting (Photoshop 2024)
 
@@ -79,7 +96,8 @@ What crashes Photoshop:
   crashed `Photoshop.exe` (`0xc0000005`, offset `0x5291b7`). One extra JPEG was
   fine. Do not give each icon its own image file.
 
-Reload rule: Photoshop reads
-`%AppData%\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.2.2`, not this
-source folder. Copy the edited files there and fully quit Photoshop before
-checking. Open ComfyTV → Ai Panel. The other Ai Panel is Comfyui Photoshop.
+Reload rule: Photoshop reads the versioned `0.3.1` Junction registered in
+`%AppData%\Adobe\UXP\PluginsInfo\v1\PS.json`. Do not copy the plugin into a
+second folder. Fully quit and reopen Photoshop after manifest or UXP host
+changes; ordinary composer assets can use the hot-update refresh path. Open
+ComfyTV → Ai Panel. The other Ai Panel is Comfyui Photoshop.

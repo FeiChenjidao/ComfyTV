@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./composer.css">
+    <title>ComfyTV Composer</title>
+  </head>
+  <body>
+    <main id="workspace">
+      <svg id="composer-progress-frame" class="composer-progress-frame" aria-hidden="true">
+        <rect id="composer-progress-stroke"></rect>
+      </svg>
+      <div id="drop-target" class="references" aria-label="参考图">
+        <button id="canvas" class="reference action" type="button" title="生成时使用当前 Photoshop 画面">
+          <span id="canvas-placeholder" class="action-icon">▣</span>
+          <img id="canvas-image" alt="" hidden>
+          <span class="card-label">画布</span>
+        </button>
+        <button id="active-layer" class="reference action layer-source" type="button" title="拖动当前选中图层到参考图位置" hidden aria-hidden="true">
+          <span class="action-icon">▧</span><span class="card-label">图层</span>
+        </button>
+        <button id="style-reference" class="reference action style-reference" type="button" title="添加风格参考图">
+          <span id="style-placeholder" class="action-icon">◇</span>
+          <img id="style-image" alt="" hidden>
+          <span class="card-label">风格</span>
+          <span id="style-remove" class="remove" role="button" title="移除风格参考" hidden>×</span>
+        </button>
+        <div id="reference-list" class="reference-list"></div>
+        <button id="add" class="reference action" type="button" title="添加参考图，也可以把 Photoshop 图层拖到这里">
+          <span class="action-icon">＋</span><span class="card-label">添加</span>
+        </button>
+      </div>
+      <div id="preset-strip" class="preset-strip" hidden></div>
+      <div class="prompt-wrap">
+        <div id="mentions" class="mentions" hidden></div>
+        <div id="prompt" class="prompt" contenteditable="true" tabindex="0" role="textbox" aria-multiline="true" data-placeholder="描述你想要生成的内容，输入 @ 引用参考图"></div>
+      </div>
+      <div id="progress" class="progress">就绪</div>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button id="model-trigger" class="select-trigger" type="button" title="选择工作流">
+            <span id="model-label">模型</span><span class="caret">⌄</span>
+          </button>
+          <button id="mode-trigger" class="select-trigger" type="button" title="选择尺寸和生成参数">
+            <span id="mode-label">模式</span><span class="caret">⌄</span>
+          </button>
+          <button id="crop-toggle" class="tool-button" type="button" title="有选区时裁切到选区">⌗</button>
+          <button id="preset-open" class="tool-button preset-button" type="button" title="打开预设">预设</button>
+        </div>
+        <div class="toolbar-right">
+          <button id="count-trigger" class="select-trigger count-trigger" type="button" title="生成数量">
+            <span id="count-label">1x</span><span class="caret">⌄</span>
+          </button>
+          <button id="render" class="render-button" type="button" title="开始生成。右键先更换随机种子。">↑</button>
+        </div>
+      </div>
+    </main>
+    <script src="./composer.js"></script>
+  </body>
+</html>

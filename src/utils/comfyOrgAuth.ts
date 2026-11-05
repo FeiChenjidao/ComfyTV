@@ -124,3 +124,19 @@ export async function attachComfyOrgAuth(api: any): Promise<void> {
     if (key) api.apiKey = key
   }
 }
+
+export async function readComfyOrgAuthSnapshot(api: any): Promise<{
+  token?: string
+  apiKey?: string
+}> {
+  if (!api || typeof api !== 'object') return {}
+  try {
+    await api.waitForAuthInitialization?.()
+  } catch { /* desktop / unauthenticated */ }
+  const token = await resolveAuthToken(api)
+  const apiKey = resolveApiKey(api)
+  return {
+    ...(token ? { token } : {}),
+    ...(apiKey ? { apiKey } : {}),
+  }
+}

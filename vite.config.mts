@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import cssInjectedByJs from 'vite-plugin-css-injected-by-js'
 import Icons from 'unplugin-icons/vite'
 import { resolve } from 'path'
-import { existsSync, cpSync } from 'fs'
+import { existsSync, cpSync, readFileSync, writeFileSync } from 'fs'
 
 function copyNodeDocs() {
   return {
@@ -15,6 +15,23 @@ function copyNodeDocs() {
       if (existsSync(src)) {
         cpSync(src, dest, { recursive: true })
       }
+    }
+  }
+}
+
+function attachPhotoshopRuntimeBridge() {
+  return {
+    name: 'attach-photoshop-runtime-bridge',
+    closeBundle() {
+      const entry = resolve(__dirname, 'js/main.js')
+      const bridgeSource = resolve(__dirname, 'runtime/photoshop-runtime-bridge.js')
+      const bridgeTarget = resolve(__dirname, 'js/photoshop-runtime-bridge.js')
+      if (!existsSync(entry)) return
+      if (!existsSync(bridgeSource)) throw new Error('Missing runtime/photoshop-runtime-bridge.js')
+      cpSync(bridgeSource, bridgeTarget)
+      const source = readFileSync(entry, 'utf8')
+      const statement = 'import "./photoshop-runtime-bridge.js";\n'
+      if (!source.includes(statement.trim())) writeFileSync(entry, `${statement}${source}`, 'utf8')
     }
   }
 }
@@ -34,7 +51,8 @@ export default defineConfig({
     tailwindcss(),
     Icons({ compiler: 'vue3', autoInstall: false }),
     cssInjectedByJs(),
-    copyNodeDocs()
+    copyNodeDocs(),
+    attachPhotoshopRuntimeBridge()
   ],
   resolve: {
     alias: [
