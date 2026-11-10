@@ -10,6 +10,10 @@ ICONS["ref-frame"] = { size: 16, viewBox: "0 0 24 24", paths: [{ d: "M4 9V4H9V6H
 ICONS.caret = { size: 12, viewBox: "0 0 24 24", paths: [{ d: "M6 8H18L12 16Z", fill: "#a0a0a0" }] }
 ICONS["render-up"] = { size: 18, viewBox: "0 0 24 24", paths: [{ d: "M11 20V11H6L12 4L18 11H13V20H11Z", fill: "#171719" }] }
 ICONS["preset-open"] = { size: 16, viewBox: "0 0 24 24", paths: [{ d: "M3 3H10V10H3V3ZM14 3H21V10H14V3ZM3 14H10V21H3V14ZM16 14H18V17H21V19H18V22H16V19H13V17H16V14Z", fill: "#a0a0a0" }] }
+ICONS["preset-edit"] = { size: 14, viewBox: "0 0 24 24", paths: [
+  { d: "M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25Z", fill: "#ffffff" },
+  { d: "M20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z", fill: "#ffffff" },
+] }
 ICONS["history-toggle"] = { size: 20, viewBox: "0 0 24 24", paths: [
   { d: "M12 3C7.03 3 3 7.03 3 12H1L4 15L7 12H5C5 8.13 8.13 5 12 5C15.87 5 19 8.13 19 12C19 15.87 15.87 19 12 19C9.61 19 7.5 17.81 6.24 16H3.85C5.34 19.02 8.43 21 12 21C16.97 21 21 16.97 21 12C21 7.03 16.97 3 12 3Z", fill: "#a0a0a0" },
   { d: "M11 7H13V11.8L16.5 13.8L15.5 15.5L11 12.9V7Z", fill: "#a0a0a0" },

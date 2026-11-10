@@ -70,9 +70,58 @@ function rows(kind) {
   return (muter(kind)?.widgets || []).filter((widget) => typeof widget.doModeChange === 'function' && rowName(widget))
 }
 
+function setNodeWidget(node, name, value) {
+  if (!node || value === undefined || value === null || value === '') return
+  const widget = (node.widgets || []).find((item) => String(item?.name || item?.label || '') === name)
+  if (!widget) return
+  widget.value = value
+  if (node.widgets_values_named && typeof node.widgets_values_named === 'object') {
+    node.widgets_values_named[name] = value
+  }
+  try { widget.callback?.(value, app()?.canvas, node) } catch (_) {}
+}
+
+function profileNode(profile) {
+  if (profile?.family === 'nanobanana') {
+    return nodes().find((item) => nodeType(item) === 'GeminiNanoBanana2V2' || String(item?.title || '') === 'NanoBanana')
+  }
+  if (profile?.family === 'pro') {
+    return nodes().find((item) => nodeType(item) === 'GeminiImage2Node' || String(item?.title || '') === 'NanoBanana Pro')
+  }
+  if (profile?.family === 'gpt') {
+    return nodes().find((item) => nodeType(item) === 'OpenAIGPTImageNodeV2' || String(item?.title || '') === 'GPT')
+  }
+  return null
+}
+
+function applyNodeProfile(profile) {
+  const node = profileNode(profile)
+  if (!node) return
+  setNodeWidget(node, 'model', profile.model)
+  if (profile.family === 'nanobanana') {
+    setNodeWidget(node, 'model.aspect_ratio', profile.aspect || 'auto')
+    setNodeWidget(node, 'model.resolution', profile.resolution || '2K')
+    setNodeWidget(node, 'model.thinking_level', profile.quality || 'MINIMAL')
+    return
+  }
+  if (profile.family === 'pro') {
+    setNodeWidget(node, 'aspect_ratio', profile.aspect || 'auto')
+    setNodeWidget(node, 'resolution', profile.resolution || '2K')
+    return
+  }
+  setNodeWidget(node, 'model.size', profile.size || profile.resolution || 'auto')
+  if ((profile.size || profile.resolution) === 'Custom') {
+    setNodeWidget(node, 'model.custom_width', Math.max(1, Number.parseInt(profile.customWidth, 10) || 1))
+    setNodeWidget(node, 'model.custom_height', Math.max(1, Number.parseInt(profile.customHeight, 10) || 1))
+  }
+  setNodeWidget(node, 'model.background', profile.background || 'auto')
+  setNodeWidget(node, 'model.quality', profile.quality || 'high')
+}
+
 function applyProfile(profile) {
   if (!profile?.group) return
   rows('mode').find((widget) => rowName(widget) === profile.group)?.doModeChange?.(true)
+  applyNodeProfile(profile)
   app()?.graph?.setDirtyCanvas?.(true, true)
 }
 

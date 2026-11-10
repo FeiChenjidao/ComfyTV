@@ -12,25 +12,39 @@ const { storage } = loadModule("uxp")
 const DEFAULT_SERVER = "http://127.0.0.1:8188"
 const DEFAULT_LAUNCH = "D:\\ComfyUI_Desktop\\Comfy Desktop\\Comfy Desktop.exe"
 const WEB_PANEL_ID = "com.comfytv.photoshop.web"
+const HISTORY_PANEL_ID = "com.comfytv.photoshop.history"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.3.2"
-const COMPOSER_PROTOCOL_VERSION = 2
+const PLUGIN_VERSION = "0.3.8"
+const COMPOSER_PROTOCOL_VERSION = 3
 const WORKFLOW_PROTOCOL_VERSION = 3
+const RUNTIME_DIRECT = "direct"
+const RUNTIME_COMFYUI = "comfyui"
+const UPDATE_RELEASE_PAGE = "https://github.com/FeiChenjidao/ComfyTV-Photoshop/releases"
+const DIRECT_API_KEY_STORAGE_KEY = "comfytv.direct-api-key.v1"
 const COMFY_AUTH_STORAGE_KEY = "comfytv.comfyui.auth-envelope.v2"
 const COMFY_AUTH_LEGACY_KEY = "comfytv.comfyui.firebase-auth.v1"
 const COMFY_AUTH_PREFIX = "firebase:authUser:"
 const COMFY_AUTH_MAX_BYTES = 1024 * 1024
 const REFERENCE_MAX_EDGE = 2048
 const REFERENCE_MAX_BYTES = 25 * 1024 * 1024
+const THUMB_DECODE_TIMEOUT_MS = 1500
 const clientId = `comfytv-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
 let socket = null
+let runtimeMode = ""
+let directApiKey = ""
+let directAbortController = null
+let directElapsedTimer = 0
+let pluginUpdateInfo = null
+let pluginUpdateBusy = false
 let reconnectTimer = null
 let modelPullTimer = null
 let modelListSynced = false
 let toastTimer = null
 let latestRenderFile = null
+let latestRenderPlacement = null
+let activeRenderPlacement = null
 let capturePreviewFile = null
 let capturePreviewThumbSrc = ""
 let lastCaptureBounds = null
@@ -40,10 +54,16 @@ let renderCount = 0
 let renderHistory = []
 let selectedHistoryIndex = 0
 let historyPage = 0
+let historyCategories = []
+let selectedHistoryCategoryId = ""
+let activeRenderHistoryCategoryId = null
+let historyPanelFilter = "__all__"
 const HISTORY_PAGE_SIZE = 8
 const HISTORY_PANEL_PAGE_SIZE = 36
 const HISTORY_WARN_COUNT = 380
 const HISTORY_KEEP_MS = 7 * 24 * 60 * 60 * 1000
+const HISTORY_ALL_CATEGORY = "__all__"
+const HISTORY_UNCATEGORIZED_LABEL = "未分类"
 let launchTimer = null
 let composerWebReady = false
 let hostPopoverMenu = ""
@@ -82,8 +102,9 @@ function setConnection(message, state = "") {
 }
 
 function setProgress(message) {
-  element("progress-label").textContent = message
-  syncComposerWorkbench()
+  const label = element("progress-label")
+  if (label.textContent !== message) label.textContent = message
+  syncComposerProgress()
 }
 
 const MARQUEE_THICK = 4
@@ -92,6 +113,7 @@ let marqueePercent = 0
 let marqueeOffset = 0
 let marqueeTimer = 0
 let marqueeHideTimer = 0
+let marqueeGeometry = null
 
 function setEdge(id, size, along) {
   const edge = element(id)
@@ -145,26 +167,42 @@ function placeMarqueeHead(distance, width, height) {
   head.style.height = span + "px"
 }
 
-function paintMarquee() {
+function refreshMarqueeGeometry() {
   const frame = element("progress-frame")
   const width = frame.clientWidth
   const height = frame.clientHeight
-  if (width < 8 || height < 8) return
+  if (width < 8 || height < 8) {
+    marqueeGeometry = null
+    return null
+  }
   const perimeter = 2 * (width + height)
   const lit = perimeter * (Math.max(0, Math.min(100, marqueePercent)) / 100)
   setEdge("pf-top", Math.min(lit, width), "width")
   setEdge("pf-right", Math.min(Math.max(lit - width, 0), height), "height")
   setEdge("pf-bottom", Math.min(Math.max(lit - width - height, 0), width), "width")
   setEdge("pf-left", Math.min(Math.max(lit - width - height - width, 0), height), "height")
+  marqueeGeometry = { width, height, lit }
+  return marqueeGeometry
+}
+
+function paintMarqueeHead() {
+  const geometry = marqueeGeometry || refreshMarqueeGeometry()
+  if (!geometry) return
+  const { width, height, lit } = geometry
   const travel = lit > MARQUEE_HEAD ? (marqueeOffset % Math.max(1, lit - MARQUEE_HEAD)) + MARQUEE_HEAD : lit
   placeMarqueeHead(travel, width, height)
+}
+
+function paintMarquee() {
+  refreshMarqueeGeometry()
+  paintMarqueeHead()
 }
 
 function ensureMarqueeClock() {
   if (marqueeTimer) return
   marqueeTimer = setInterval(() => {
     marqueeOffset += 10
-    paintMarquee()
+    paintMarqueeHead()
   }, 40)
 }
 
@@ -175,14 +213,15 @@ function setMarquee(percent, running) {
     frame.classList.remove("active")
     clearInterval(marqueeTimer)
     marqueeTimer = 0
-    syncComposerWorkbench()
+    marqueeGeometry = null
+    syncComposerProgress()
     return
   }
   marqueePercent = Math.max(0, Math.min(100, Number(percent) || 0))
   frame.classList.add("active")
   paintMarquee()
   ensureMarqueeClock()
-  syncComposerWorkbench()
+  syncComposerProgress()
 }
 
 function finishMarquee() {
@@ -203,10 +242,15 @@ function setBusy(busy) {
   element("send-layer").disabled = busy
   const wrap = document.querySelector(".generate-wrap")
   if (wrap) wrap.classList.toggle("is-disabled", busy)
-  if (busy) setConnection("读取图像", "busy")
+  if (busy) setConnection(runtimeMode === RUNTIME_DIRECT ? "直接生成" : "读取图像", "busy")
+  else if (runtimeMode === RUNTIME_DIRECT) setConnection(directApiKey ? "API 已就绪" : "需要 API Key", directApiKey ? "connected" : "error")
   else if (socket?.readyState === WebSocket.OPEN) setConnection("已连接", "connected")
   else setConnection("未连接", "error")
-  syncComposerWorkbench()
+  syncComposerProgress()
+}
+
+function renderInFlight() {
+  return Boolean(activeJobId || renderDone || directAbortController)
 }
 
 const BATCH_MAX = 8
@@ -261,7 +305,7 @@ function setRenderLabel(text) {
   const stopping = text === "停止"
   button.title = stopping ? "停止后面的生成" : "开始生成。右键会先换一个随机种子。生成过程中再点一次，停掉后面的。"
   button.classList.toggle("is-stop", stopping)
-  syncComposerWorkbench()
+  syncComposerProgress()
 }
 
 function settleRender(error, jobId = "") {
@@ -390,6 +434,7 @@ function clampBounds(bounds, limit) {
 
 const GPT_MIN_PIXELS = 655360
 const GPT_MAX_PIXELS = 8294400
+const GPT_INPUT_MAX_PIXELS = 2048 * 2048
 const GPT_MAX_EDGE = 3840
 const GPT_MIN_EDGE = 480
 const GPT_MAX_RATIO = 3
@@ -401,51 +446,11 @@ function edgeLimit(value, fallback) {
   return Math.max(GPT_STEP, Math.min(GPT_MAX_EDGE, number))
 }
 
-function snapStep(value) {
-  return Math.max(GPT_STEP, Math.round(value / GPT_STEP) * GPT_STEP)
-}
-
 function fitGptImageSize(width, height) {
-  let w = Math.max(1, width)
-  let h = Math.max(1, height)
-  if (w / h > GPT_MAX_RATIO) w = h * GPT_MAX_RATIO
-  else if (h / w > GPT_MAX_RATIO) h = w * GPT_MAX_RATIO
-
-  let scale = 1
-  if (Math.max(w, h) > GPT_MAX_EDGE) scale = Math.min(scale, GPT_MAX_EDGE / Math.max(w, h))
-  if (w * h > GPT_MAX_PIXELS) scale = Math.min(scale, Math.sqrt(GPT_MAX_PIXELS / (w * h)))
-  if (w * h * scale * scale < GPT_MIN_PIXELS) scale = Math.max(scale, Math.sqrt(GPT_MIN_PIXELS / (w * h)))
-  if (Math.min(w, h) * scale < GPT_MIN_EDGE) scale = Math.max(scale, GPT_MIN_EDGE / Math.min(w, h))
-  if (Math.max(w, h) * scale > GPT_MAX_EDGE) scale = Math.min(scale, GPT_MAX_EDGE / Math.max(w, h))
-  w *= scale
-  h *= scale
-
-  // 只把长边收到 16 的倍数，短边按原比例再收一次。两边一起变，比例不会被拉扁。
-  const aspect = w / h
-  let snappedW = snapStep(Math.min(GPT_MAX_EDGE, w))
-  let snappedH = snapStep(snappedW / aspect)
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const pixels = snappedW * snappedH
-    const edge = Math.max(snappedW, snappedH)
-    const shortEdge = Math.min(snappedW, snappedH)
-    if (pixels < GPT_MIN_PIXELS || shortEdge < GPT_MIN_EDGE) {
-      const grow = Math.max(Math.sqrt(GPT_MIN_PIXELS / pixels), GPT_MIN_EDGE / shortEdge)
-      snappedW = snapStep(snappedW * grow)
-      snappedH = snapStep(snappedW / aspect)
-      continue
-    }
-    if (pixels > GPT_MAX_PIXELS || edge > GPT_MAX_EDGE || edge / shortEdge > GPT_MAX_RATIO + 1e-6) {
-      const shrink = Math.min(Math.sqrt(GPT_MAX_PIXELS / pixels), GPT_MAX_EDGE / edge)
-      snappedW = snapStep(Math.max(GPT_STEP, snappedW * shrink))
-      snappedH = snapStep(snappedW / aspect)
-      continue
-    }
-    break
-  }
-  return {
-    width: Math.max(GPT_STEP, Math.min(GPT_MAX_EDGE, snappedW)),
-    height: Math.max(GPT_STEP, Math.min(GPT_MAX_EDGE, snappedH)),
-  }
+  const fit = globalThis.ComfyDirectApi?.fitGptSize
+  if (typeof fit !== "function") throw new Error("GPT 尺寸处理模块没有加载")
+  const maxPixels = renderProfile?.family === "gpt" ? GPT_INPUT_MAX_PIXELS : GPT_MAX_PIXELS
+  return fit(width, height, { maxPixels })
 }
 
 function placeWindow(originStart, originSize, targetSize, containerStart, containerEnd, coverStart, coverEnd) {
@@ -492,7 +497,8 @@ function overMaxFrame(width, height) {
   const shortest = Math.min(width, height)
   const ratio = longest / Math.max(1, shortest)
   const userOk = longest <= maxRes && shortest >= minRes
-  const hardOk = width <= GPT_MAX_EDGE && height <= GPT_MAX_EDGE && width * height <= GPT_MAX_PIXELS
+  const pixelLimit = renderProfile?.family === "gpt" ? GPT_INPUT_MAX_PIXELS : GPT_MAX_PIXELS
+  const hardOk = width <= GPT_MAX_EDGE && height <= GPT_MAX_EDGE && width * height <= pixelLimit
     && shortest >= GPT_MIN_EDGE && width * height >= GPT_MIN_PIXELS && ratio <= GPT_MAX_RATIO + 1e-6
   if (userOk && hardOk) return null
   const fitted = captureSize({ left: 0, top: 0, right: width, bottom: height })
@@ -508,9 +514,7 @@ function overMaxFrame(width, height) {
   }
 }
 
-function sentPlaceBounds() {
-  const bounds = lastCaptureBounds
-  const frame = lastSentFrame
+function sentPlaceBounds(bounds = lastCaptureBounds, frame = lastSentFrame) {
   if (!bounds) return null
   if (!frame || frame.resample) return bounds
   return {
@@ -542,14 +546,16 @@ function captureSize(bounds) {
   return fitGptImageSize(width, height)
 }
 
-async function encodePixels(options, frame) {
+async function encodePixels(options, frame, onStage = null, label = "\u753b\u5e03") {
   let result
   try {
+    if (onStage) onStage(`\u8bfb\u53d6${label}\u50cf\u7d20`)
     // 不调用 applyAlpha，避免把透明乘进颜色。透明通道单独写进 PNG。
     // Photoshop 2024 的 encodeImageData 遇到透明通道会报 jpeg 错误，所以自己写 PNG。
     result = await imaging.getPixels({ ...options, applyAlpha: false })
     const width = result.imageData.width
     const height = result.imageData.height
+    if (onStage) onStage(`\u7f16\u7801${label}`)
     const encoded = await rgbPngFromImageData(result.imageData, frame, frame?.fill || "edge", frame?.opaque === true)
     const imageBase64 = normalizeBase64(encoded)
     if (!imageBase64) throw new Error("Photoshop 没有返回可用图像")
@@ -881,14 +887,13 @@ function fillCommand(color) {
   }
 }
 
-async function encodeSelectionMask(document, sourceBounds, frame, selection) {
+async function encodeSelectionMask(document, sourceBounds, frame, selection, onStage = null) {
   const size = { width: frame.width, height: frame.height }
   if (!selection) return solidWhitePng(size.width, size.height)
 
-  // 只在选区里填白会留下透明像素，编码时触发 alpha/jpeg 报错，位置也不对。
-  // 先铺满不透明黑，再把选区填白，按和画布相同的范围取样，然后收回历史。
   const history = document.activeHistoryState
   try {
+    if (onStage) onStage("\u8bfb\u53d6\u9009\u533a\u906e\u7f69")
     await action.batchPlay([
       {
         _obj: "duplicate",
@@ -917,10 +922,9 @@ async function encodeSelectionMask(document, sourceBounds, frame, selection) {
       colorSpace: "RGB",
     }
     if (frame.resample) pixelOptions.targetSize = size
-    const image = await encodePixels(pixelOptions, { ...frame, fill: "black", opaque: true })
+    const image = await encodePixels(pixelOptions, { ...frame, fill: "black", opaque: true }, onStage, "\u9009\u533a\u906e\u7f69")
     if (image.encoded) return image.encoded
   } catch (_) {
-    // 历史会在 finally 里收回，失败时退回整张白遮罩。
   } finally {
     try { document.activeHistoryState = history } catch (_) {}
   }
@@ -941,7 +945,14 @@ function workflowMediaManifest(hasMask) {
   const append = (entry) => {
     media.push({ index: media.length + 1, ...entry })
   }
-  append({ id: "canvas", role: "canvas", label: "当前画布", name: "" })
+  append({
+    id: "canvas",
+    role: "canvas",
+    token: "@画布",
+    displayToken: "@画布",
+    label: "当前画布",
+    name: "",
+  })
   if (hasMask) {
     append({
       id: "mask",
@@ -983,6 +994,10 @@ function workflowMediaManifest(hasMask) {
 function normalizeMediaMentions(text, media) {
   const byToken = new Map(media.filter((item) => item.token).map((item) => [item.token, item]))
   return String(text || "")
+    .replace(/@画布/g, () => {
+      const item = byToken.get("@画布")
+      return item ? `需要编辑的基础图（参考图${item.index}）` : ""
+    })
     .replace(/@风格/g, () => {
       const item = byToken.get("@风格")
       return item ? `参考图${item.index}` : ""
@@ -996,7 +1011,7 @@ function normalizeMediaMentions(text, media) {
 function mediaManifestText(media) {
   return media.map((item) => {
     if (item.role === "mask") {
-      return `Mask：参考图${item.index}，白色区域允许修改，黑色区域保持参考图1不变。`
+      return `Mask：参考图${item.index} 是与参考图1逐像素对齐的隐藏编辑控制图，不属于画面，也不是视觉参考。只允许修改白色区域对应的参考图1内容；黑色区域对应的内容必须尽可能保持不变。Mask 的形状、边缘和黑白颜色没有任何构图含义，最终图像中绝对不能出现白块、黑块、矩形边框、方框、选区轮廓、裁切框或 Mask 形状的痕迹。`
     }
     if (item.role === "style") {
       return `风格：参考图${item.index}，只参考视觉风格、色彩、材质和光照，不复制其主体与构图。`
@@ -1057,10 +1072,11 @@ function promptStructurePayload(compiled) {
   }
 }
 
-async function captureWorkflowInput(jobId = "", batchIndex = 0) {
+async function captureWorkflowInput(jobId = "", batchIndex = 0, onStage = null) {
   if (!app.documents.length) throw new Error("请先打开 Photoshop 文档")
   return withPixelRuler(async () => {
   const document = app.activeDocument
+  if (onStage) onStage("\u8bfb\u53d6\u9009\u533a")
   const selection = await activeSelection(document)
     const limit = fullDocumentBounds(document)
     if (!limit) throw new Error("无法读取当前文档尺寸")
@@ -1082,10 +1098,11 @@ async function captureWorkflowInput(jobId = "", batchIndex = 0) {
     if (frame?.resample) pixelOptions.targetSize = { width: frame.width, height: frame.height }
     lastDocumentPpi = Number(document.resolution) || lastDocumentPpi || 72
 
-    const canvas = await encodePixels(pixelOptions, frame)
+    const canvas = await encodePixels(pixelOptions, frame, onStage, "\u753b\u5e03")
     const hasMask = Boolean(selection)
     const maskFrame = frame || { width: nativeWidth, height: nativeHeight, padLeft: 0, padTop: 0, resample: false }
-    const maskBase64 = hasMask ? await encodeSelectionMask(document, sourceBounds, maskFrame, selection) : ""
+    const maskBase64 = hasMask ? await encodeSelectionMask(document, sourceBounds, maskFrame, selection, onStage) : ""
+    if (onStage) onStage("\u51c6\u5907\u751f\u6210\u8bf7\u6c42")
     const compiledPrompt = compileWorkflowPrompt(hasMask)
   lastCaptureBounds = sourceBounds
     lastSentFrame = frame
@@ -1093,11 +1110,21 @@ async function captureWorkflowInput(jobId = "", batchIndex = 0) {
       await rememberBlendSelection(Boolean(selection))
     } catch (_) {}
 
-    const profile = profilePayload(renderProfile)
+    const profile = profilePayload(renderProfile, { width: canvas.width, height: canvas.height })
   return {
       captureNote: captureNote(sourceBounds, mode, frame),
     canvasBase64: canvas.encoded,
     maskBase64,
+    placement: {
+      bounds: plainBounds(sourceBounds),
+      frame: frame ? {
+        width: frame.width,
+        height: frame.height,
+        padLeft: frame.padLeft,
+        padTop: frame.padTop,
+        resample: Boolean(frame.resample),
+      } : null,
+    },
     configdata: {
       positive: compiledPrompt.positive,
       promptStructure: promptStructurePayload(compiledPrompt),
@@ -1110,6 +1137,8 @@ async function captureWorkflowInput(jobId = "", batchIndex = 0) {
       quality: profile.quality,
       background: profile.background,
       size: profile.size,
+      customWidth: profile.customWidth,
+      customHeight: profile.customHeight,
       group: profile.group,
       hasMask,
       mediaCount: compiledPrompt.media.length,
@@ -1200,6 +1229,8 @@ function sendWorkflowPayload(payload) {
       quality: payload.configdata.quality,
       background: payload.configdata.background,
       size: payload.configdata.size,
+      customWidth: payload.configdata.customWidth,
+      customHeight: payload.configdata.customHeight,
       group: payload.configdata.group,
     }
     : profilePayload(renderProfile)
@@ -1315,6 +1346,117 @@ function historyKey() {
   return `${STORE_PREFIX}renderHistory`
 }
 
+function historyCategoriesKey() {
+  return `${STORE_PREFIX}renderHistoryCategories.v1`
+}
+
+function historySelectedCategoryKey() {
+  return `${STORE_PREFIX}renderHistorySelectedCategory.v1`
+}
+
+function historyPanelFilterKey() {
+  return `${STORE_PREFIX}renderHistoryFilter.v1`
+}
+
+function historyCategory(categoryId) {
+  const id = String(categoryId || "")
+  return historyCategories.find((item) => item.id === id) || null
+}
+
+function validHistoryCategoryId(categoryId) {
+  const id = String(categoryId || "")
+  return id && historyCategory(id) ? id : ""
+}
+
+function historyCategoryName(categoryId) {
+  const category = historyCategory(categoryId)
+  return category ? category.name : HISTORY_UNCATEGORIZED_LABEL
+}
+
+function normalizeHistoryCategories(value) {
+  const source = Array.isArray(value) ? value : []
+  const ids = new Set()
+  const names = new Set()
+  const result = []
+  source.forEach((item) => {
+    const id = String(item && item.id || "").trim()
+    const name = String(item && item.name || "").trim().slice(0, 20)
+    const key = name.toLocaleLowerCase()
+    if (!id || !name || ids.has(id) || names.has(key)) return
+    ids.add(id)
+    names.add(key)
+    result.push({ id, name })
+  })
+  return result
+}
+
+function readHistoryCategories() {
+  try {
+    return normalizeHistoryCategories(JSON.parse(localStorage.getItem(historyCategoriesKey()) || "[]"))
+  } catch (_) {
+    return []
+  }
+}
+
+function saveHistoryCategories() {
+  localStorage.setItem(historyCategoriesKey(), JSON.stringify(historyCategories))
+  localStorage.setItem(historySelectedCategoryKey(), selectedHistoryCategoryId)
+  localStorage.setItem(historyPanelFilterKey(), historyPanelFilter)
+}
+
+function restoreHistoryCategories() {
+  historyCategories = readHistoryCategories()
+  selectedHistoryCategoryId = validHistoryCategoryId(localStorage.getItem(historySelectedCategoryKey()) || "")
+  const storedFilter = String(localStorage.getItem(historyPanelFilterKey()) || HISTORY_ALL_CATEGORY)
+  historyPanelFilter = storedFilter === HISTORY_ALL_CATEGORY ? HISTORY_ALL_CATEGORY : validHistoryCategoryId(storedFilter)
+}
+
+function newHistoryCategoryId() {
+  return `history-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+function addHistoryCategory(name) {
+  const cleanName = String(name || "").trim().slice(0, 20)
+  if (!cleanName) throw new Error("请输入分类名称")
+  const duplicate = historyCategories.find((item) => item.name.toLocaleLowerCase() === cleanName.toLocaleLowerCase())
+  if (duplicate) throw new Error("已经有同名分类")
+  const category = { id: newHistoryCategoryId(), name: cleanName }
+  historyCategories.push(category)
+  selectedHistoryCategoryId = category.id
+  historyPanelFilter = category.id
+  saveHistoryCategories()
+  syncHistoryCategoryControls(true)
+  return category
+}
+
+function fillHistoryCategorySelect(select, options = {}) {
+  if (!select) return
+  const includeAll = Boolean(options.includeAll)
+  const selected = String(options.selected || "")
+  select.textContent = ""
+  const append = (value, label) => {
+    const option = document.createElement("option")
+    option.value = value
+    option.textContent = label
+    option.selected = value === selected
+    select.appendChild(option)
+  }
+  if (includeAll) append(HISTORY_ALL_CATEGORY, "全部分类")
+  append("", HISTORY_UNCATEGORIZED_LABEL)
+  historyCategories.forEach((item) => append(item.id, item.name))
+  select.value = selected
+}
+
+function syncHistoryCategoryControls(syncWorkbench = false) {
+  selectedHistoryCategoryId = validHistoryCategoryId(selectedHistoryCategoryId)
+  if (historyPanelFilter !== HISTORY_ALL_CATEGORY) historyPanelFilter = validHistoryCategoryId(historyPanelFilter)
+  const label = element("history-category-label")
+  if (label) label.textContent = historyCategoryName(selectedHistoryCategoryId)
+  fillHistoryCategorySelect(element("history-panel-filter"), { includeAll: true, selected: historyPanelFilter })
+  fillHistoryCategorySelect(element("history-panel-move-target"), { selected: "" })
+  if (syncWorkbench) syncComposerWorkbench(true)
+}
+
 function nextRenderNumber() {
   let max = 0
   for (const item of renderHistory) max = Math.max(max, Number(item.number) || 0)
@@ -1322,7 +1464,12 @@ function nextRenderNumber() {
 }
 
 function saveRenderHistory() {
-  const stored = renderHistory.map((item) => ({ name: item.name, number: item.number }))
+  const stored = renderHistory.map((item) => ({
+    name: item.name,
+    number: item.number,
+    categoryId: validHistoryCategoryId(item.categoryId),
+    placement: item.placement || null,
+  }))
   localStorage.setItem(historyKey(), JSON.stringify(stored))
 }
 
@@ -1330,9 +1477,38 @@ function readRenderHistory() {
   try {
     const parsed = JSON.parse(localStorage.getItem(historyKey()) || "[]")
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((item) => item && item.name && Number(item.number) > 0)
+    return parsed
+      .filter((item) => item && item.name && Number(item.number) > 0)
+      .map((item) => ({
+        name: item.name,
+        number: item.number,
+        categoryId: validHistoryCategoryId(item.categoryId),
+        placement: normalizeRenderPlacement(item.placement),
+      }))
   } catch (_) {
     return []
+  }
+}
+
+function normalizeRenderPlacement(value) {
+  const bounds = plainBounds(value?.bounds)
+  if (!bounds) return null
+  const frame = value?.frame
+  if (!frame || frame.resample) return { bounds, frame: null }
+  const width = Number(frame.width)
+  const height = Number(frame.height)
+  const padLeft = Number(frame.padLeft)
+  const padTop = Number(frame.padTop)
+  if (![width, height, padLeft, padTop].every(Number.isFinite)) return { bounds, frame: null }
+  return {
+    bounds,
+    frame: {
+      width,
+      height,
+      padLeft,
+      padTop,
+      resample: false,
+    },
   }
 }
 
@@ -1573,14 +1749,30 @@ function pixelsFromDrawable(source, sourceWidth, sourceHeight) {
 async function bitmapThumb(bytes) {
   if (typeof createImageBitmap !== "function" || typeof Blob !== "function") return null
   let bitmap = null
+  let timer = 0
+  let timedOut = false
   try {
     const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
-    bitmap = await createImageBitmap(new Blob([copy], { type: "image/png" }))
-    if (!bitmap.width || !bitmap.height) return null
+    const decode = Promise.resolve(createImageBitmap(new Blob([copy], { type: "image/png" }))).then((value) => {
+      if (!timedOut) return value
+      if (value && typeof value.close === "function") value.close()
+      return null
+    }, () => null)
+    bitmap = await Promise.race([
+      decode,
+      new Promise((resolve) => {
+        timer = setTimeout(() => {
+          timedOut = true
+          resolve(null)
+        }, THUMB_DECODE_TIMEOUT_MS)
+      }),
+    ])
+    if (!bitmap || !bitmap.width || !bitmap.height) return null
     return pixelsFromDrawable(bitmap, bitmap.width, bitmap.height)
   } catch (_) {
     return null
   } finally {
+    if (timer) clearTimeout(timer)
     if (bitmap && typeof bitmap.close === "function") bitmap.close()
   }
 }
@@ -1597,7 +1789,12 @@ function loadThumbImage(url) {
   }
   image.removeAttribute("src")
   return new Promise((resolve, reject) => {
+    let settled = false
+    let timer = 0
     const finish = (ok) => {
+      if (settled) return
+      settled = true
+      if (timer) clearTimeout(timer)
       image.onload = null
       image.onerror = null
       if (ok) resolve(image)
@@ -1605,6 +1802,10 @@ function loadThumbImage(url) {
     }
     image.onload = () => finish(true)
     image.onerror = () => finish(false)
+    timer = setTimeout(() => {
+      image.removeAttribute("src")
+      finish(false)
+    }, THUMB_DECODE_TIMEOUT_MS)
     image.src = url
   })
 }
@@ -1644,29 +1845,8 @@ async function writePreparedThumb(name, base64) {
   return { entry, src: `data:image/png;base64,${clean}` }
 }
 
-async function serverThumb(bytes) {
-  try {
-    const copy = bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
-      ? bytes.buffer
-      : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
-    const response = await fetch(`${serverAddress()}/ps/thumb`, {
-      method: "POST",
-      headers: { "Content-Type": "application/octet-stream" },
-      body: copy,
-    })
-    if (!response.ok) return null
-    const buffer = await response.arrayBuffer()
-    if (!buffer || buffer.byteLength < 32) return null
-    return buffer
-  } catch (_) {
-    return null
-  }
-}
-
 async function referenceThumbSrc(bytes) {
   try {
-    const prepared = await serverThumb(bytes)
-    if (prepared) return `data:image/png;base64,${bytesToBase64(new Uint8Array(prepared))}`
     let small = await bitmapThumb(bytes)
     if (!small && readPngBytes(bytes)) small = await makeThumbRgb(bytes, 160)
     if (small) {
@@ -1686,8 +1866,6 @@ function referencePreviewSrc(file) {
 async function writeThumbFile(file, name) {
   const raw = await file.read({ format: storage.formats.binary })
   const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
-  const prepared = await serverThumb(bytes)
-  if (prepared) return storeThumbBytes(name, prepared)
   let small = await bitmapThumb(bytes)
   if (!small) small = await domThumb(file)
   if (!small && readPngBytes(bytes)) small = await makeThumbRgb(bytes, 160)
@@ -1739,6 +1917,19 @@ let historyPanelThumbMount = 0
 let historyPanelEditing = false
 let historyMutationBusy = false
 const historyPanelSelection = new Set()
+let historyPanelSelectionAnchor = ""
+
+function historyPanelEntries() {
+  const entries = []
+  for (let index = 0; index < renderHistory.length; index += 1) {
+    const item = renderHistory[index]
+    const categoryId = validHistoryCategoryId(item.categoryId)
+    if (historyPanelFilter === HISTORY_ALL_CATEGORY || categoryId === historyPanelFilter) {
+      entries.push({ item, index })
+    }
+  }
+  return entries
+}
 
 function historyCardFromEvent(event) {
   let node = event.target
@@ -1880,7 +2071,7 @@ function historyPageCount() {
 }
 
 function historyPanelPageCount() {
-  return Math.max(1, Math.ceil(renderHistory.length / HISTORY_PANEL_PAGE_SIZE))
+  return Math.max(1, Math.ceil(historyPanelEntries().length / HISTORY_PANEL_PAGE_SIZE))
 }
 
 function historyPanelTime(item) {
@@ -1929,35 +2120,46 @@ function paintHistoryPanel() {
   const batch = element("history-panel-batch")
   const selectedCount = element("history-panel-selected-count")
   const deleteSelected = element("history-panel-delete-selected")
-  if (!panel || !grid || !empty || !count || !pageLabel || !previous || !next || !footer || !clearButton || !editButton || !batch || !selectedCount || !deleteSelected) return
+  const moveSelected = element("history-panel-move-selected")
+  if (!panel || !grid || !empty || !count || !pageLabel || !previous || !next || !footer || !clearButton || !editButton || !batch || !selectedCount || !deleteSelected || !moveSelected) return
   if (!renderHistory.length) {
     historyPanelEditing = false
     historyPanelSelection.clear()
+    historyPanelSelectionAnchor = ""
   }
+  syncHistoryCategoryControls(false)
+  const entries = historyPanelEntries()
   historyPanelThumbMount += 1
   grid.textContent = ""
-  count.textContent = `${renderHistory.length} 张`
+  count.textContent = historyPanelFilter === HISTORY_ALL_CATEGORY
+    ? `${renderHistory.length} 张`
+    : `${entries.length} / ${renderHistory.length} 张`
   panel.classList.toggle("is-editing", historyPanelEditing)
   footer.classList.toggle("editing", historyPanelEditing)
   batch.classList.toggle("hidden", !historyPanelEditing)
   editButton.textContent = historyPanelEditing ? "完成" : "编辑"
   editButton.setAttribute("aria-pressed", historyPanelEditing ? "true" : "false")
-  clearButton.disabled = historyMutationBusy || !renderHistory.length
-  editButton.disabled = historyMutationBusy || !renderHistory.length
+  const historyBusy = historyMutationBusy || renderInFlight()
+  clearButton.disabled = historyBusy || !renderHistory.length
+  editButton.disabled = historyBusy || !renderHistory.length
   selectedCount.textContent = `已选 ${historyPanelSelection.size} 张`
-  deleteSelected.disabled = historyMutationBusy || historyPanelSelection.size === 0
+  deleteSelected.disabled = historyBusy || historyPanelSelection.size === 0
+  moveSelected.disabled = historyBusy || historyPanelSelection.size === 0
   const pageCount = historyPanelPageCount()
   historyPanelPage = Math.max(0, Math.min(pageCount - 1, historyPanelPage))
   pageLabel.textContent = `${historyPanelPage + 1} / ${pageCount}`
-  previous.disabled = historyMutationBusy || !renderHistory.length || historyPanelPage <= 0
-  next.disabled = historyMutationBusy || !renderHistory.length || historyPanelPage >= pageCount - 1
-  empty.classList.toggle("hidden", renderHistory.length > 0)
-  grid.classList.toggle("hidden", renderHistory.length === 0)
-  if (!renderHistory.length) return
+  previous.disabled = historyBusy || !renderHistory.length || historyPanelPage <= 0
+  next.disabled = historyBusy || !renderHistory.length || historyPanelPage >= pageCount - 1
+  empty.textContent = renderHistory.length ? "这个分类还没有图片" : "暂无生成记录"
+  empty.classList.toggle("hidden", entries.length > 0)
+  grid.classList.toggle("hidden", entries.length === 0)
+  if (!entries.length) return
   const start = historyPanelPage * HISTORY_PANEL_PAGE_SIZE
-  const end = Math.min(renderHistory.length, start + HISTORY_PANEL_PAGE_SIZE)
-  for (let index = start; index < end; index += 1) {
-    const item = renderHistory[index]
+  const end = Math.min(entries.length, start + HISTORY_PANEL_PAGE_SIZE)
+  for (let position = start; position < end; position += 1) {
+    const entry = entries[position]
+    const item = entry.item
+    const index = entry.index
     const selected = historyPanelSelection.has(item.name)
     const card = document.createElement("span")
     card.className = index === selectedHistoryIndex ? "history-panel-card active" : "history-panel-card"
@@ -1983,13 +2185,19 @@ function paintHistoryPanel() {
     const number = document.createElement("span")
     number.textContent = `#${Number(item && item.number) || index + 1}`
     const time = document.createElement("span")
-    time.textContent = historyPanelTime(item)
+    const category = historyCategoryName(item.categoryId)
+    time.textContent = `${category} · ${historyPanelTime(item)}`
+    time.title = category
     label.appendChild(number)
     label.appendChild(time)
     card.appendChild(label)
     grid.appendChild(card)
   }
   mountHistoryPanelThumbs()
+}
+
+function refreshHistoryPanelIfOpen() {
+  if (historyPanelOpen) paintHistoryPanel()
 }
 
 function showHistoryPanelPage(page) {
@@ -2000,17 +2208,68 @@ function showHistoryPanelPage(page) {
 function setHistoryPanelEditing(editing) {
   if (historyMutationBusy) return
   historyPanelEditing = Boolean(editing && renderHistory.length)
-  if (!historyPanelEditing) historyPanelSelection.clear()
+  if (!historyPanelEditing) {
+    historyPanelSelection.clear()
+    historyPanelSelectionAnchor = ""
+  }
   paintHistoryPanel()
 }
 
-function toggleHistoryPanelSelection(card) {
+function toggleHistoryPanelSelection(card, event = null) {
   if (!historyPanelEditing || historyMutationBusy || !card) return
   const name = String(card.dataset.name || "")
   if (!name) return
-  if (historyPanelSelection.has(name)) historyPanelSelection.delete(name)
-  else historyPanelSelection.add(name)
+  if (event && event.shiftKey && historyPanelSelectionAnchor) {
+    const entries = historyPanelEntries()
+    const from = entries.findIndex((entry) => entry.item.name === historyPanelSelectionAnchor)
+    const to = entries.findIndex((entry) => entry.item.name === name)
+    if (from >= 0 && to >= 0) {
+      const start = Math.min(from, to)
+      const end = Math.max(from, to)
+      for (let index = start; index <= end; index += 1) historyPanelSelection.add(entries[index].item.name)
+    } else {
+      historyPanelSelection.add(name)
+    }
+  } else {
+    if (historyPanelSelection.has(name)) historyPanelSelection.delete(name)
+    else historyPanelSelection.add(name)
+    historyPanelSelectionAnchor = name
+  }
   paintHistoryPanel()
+}
+
+function createHistoryCategoryFromPanel() {
+  const input = element("history-category-name")
+  try {
+    const category = addHistoryCategory(input && input.value)
+    if (input) input.value = ""
+    historyPanelPage = 0
+    paintHistoryPanel()
+    showStatus(`已创建分类「${category.name}」，后续生成将自动归入该分类`)
+  } catch (error) {
+    showStatus(error.message || "创建分类失败", true)
+  }
+}
+
+function moveSelectedRenderHistory() {
+  if (historyMutationBusy || renderInFlight() || !historyPanelSelection.size) {
+    if (renderInFlight()) showStatus("生成完成前不能修改历史记录", true)
+    return
+  }
+  const target = validHistoryCategoryId(element("history-panel-move-target")?.value || "")
+  let moved = 0
+  renderHistory.forEach((item) => {
+    if (!historyPanelSelection.has(item.name)) return
+    item.categoryId = target
+    moved += 1
+  })
+  if (!moved) return
+  saveRenderHistory()
+  historyPanelSelection.clear()
+  historyPanelSelectionAnchor = ""
+  historyPanelPage = Math.min(historyPanelPage, historyPanelPageCount() - 1)
+  paintHistoryPanel()
+  showStatus(`已将 ${moved} 张图片移动到「${historyCategoryName(target)}」`)
 }
 
 function setHistoryPanelOpen(open) {
@@ -2023,6 +2282,7 @@ function setHistoryPanelOpen(open) {
   if (!historyPanelOpen) {
     historyPanelEditing = false
     historyPanelSelection.clear()
+    historyPanelSelectionAnchor = ""
     panel.classList.remove("is-editing")
     clearHistoryPanelThumbs()
     focusHistoryKeys()
@@ -2030,11 +2290,8 @@ function setHistoryPanelOpen(open) {
   }
   setHistoryOpen(false)
   closeComposerMenus()
-  const settings = element("settings-drawer")
-  if (settings) settings.classList.add("hidden")
-  syncDrawerButtons("")
-  syncComposerOverlay()
-  historyPanelPage = Math.floor(Math.max(0, selectedHistoryIndex) / HISTORY_PANEL_PAGE_SIZE)
+  const selectedPosition = historyPanelEntries().findIndex((entry) => entry.index === selectedHistoryIndex)
+  historyPanelPage = Math.floor(Math.max(0, selectedPosition) / HISTORY_PANEL_PAGE_SIZE)
   paintHistoryPanel()
 }
 
@@ -2053,7 +2310,6 @@ function paintHistoryStrip() {
   if (!renderHistory.length) {
     historyPage = 0
     setHistoryOpen(false)
-    if (historyPanelOpen) paintHistoryPanel()
     return
   }
   historyPage = Math.max(0, Math.min(historyPageCount() - 1, historyPage))
@@ -2076,7 +2332,6 @@ function paintHistoryStrip() {
   }
   if (historyOpen) mountVisibleThumbs()
   warmVisibleThumbs()
-  if (historyPanelOpen) paintHistoryPanel()
 }
 
 function warmVisibleThumbs() {
@@ -2126,10 +2381,11 @@ async function selectHistory(index) {
   selectedHistoryIndex = index
   historyPage = page
   if (pageChanged) paintHistoryStrip()
-  else markActiveHistoryCard()
+  markActiveHistoryCard()
   const file = await historyFile(item)
   if (selectedHistoryIndex !== index) return
   latestRenderFile = file
+  latestRenderPlacement = item.placement || null
   renderCount = Number(item.number) || index + 1
   element("add-layer").disabled = false
   showPreview("", file.url)
@@ -2141,7 +2397,13 @@ async function restoreRenderHistory() {
   for (const item of stored) {
     try {
       const file = await historyFile(item)
-      kept.push({ name: item.name, number: item.number, file })
+       kept.push({
+         name: item.name,
+         number: item.number,
+         categoryId: validHistoryCategoryId(item.categoryId),
+         placement: item.placement || null,
+         file,
+       })
     } catch (_) {}
   }
   renderHistory = kept
@@ -2149,6 +2411,7 @@ async function restoreRenderHistory() {
   retireLooseThumbs().then(() => trimThumbFolder()).catch(() => {})
   selectedHistoryIndex = 0
   paintHistoryStrip()
+  refreshHistoryPanelIfOpen()
   if (kept.length) await selectHistory(0)
   refreshHistoryLimit()
 }
@@ -2159,7 +2422,16 @@ async function receiveRender(value, thumbBase64) {
   const number = nextRenderNumber()
   const name = `render-${Date.now()}.png`
   const file = await writeDataFile(name, base64)
-  const item = { name, number, file }
+  const categoryId = activeRenderHistoryCategoryId === null
+    ? selectedHistoryCategoryId
+    : activeRenderHistoryCategoryId
+  const item = {
+    name,
+    number,
+    categoryId: validHistoryCategoryId(categoryId),
+    placement: activeRenderPlacement || null,
+    file,
+  }
   renderHistory.unshift(item)
   saveRenderHistory()
   if (thumbBase64) {
@@ -2173,10 +2445,13 @@ async function receiveRender(value, thumbBase64) {
   selectedHistoryIndex = 0
   historyPage = 0
   latestRenderFile = file
+  latestRenderPlacement = item.placement
+  activeRenderPlacement = null
   renderCount = number
   showPreview("", file.url)
   element("add-layer").disabled = false
   paintHistoryStrip()
+  refreshHistoryPanelIfOpen()
   setProgress("完成")
   finishMarquee()
   showStatus("生成结果已收到")
@@ -2266,18 +2541,24 @@ function resetEmptyRenderHistory() {
   historyPage = 0
   historyPanelPage = 0
   latestRenderFile = null
+  latestRenderPlacement = null
   renderCount = 0
   const addLayer = element("add-layer")
   if (addLayer) addLayer.disabled = true
   showPreview("", "")
   paintHistoryStrip()
+  refreshHistoryPanelIfOpen()
 }
 
 async function clearAllRenderHistory() {
-  if (historyMutationBusy || !renderHistory.length) return
+  if (historyMutationBusy || renderInFlight() || !renderHistory.length) {
+    if (renderInFlight()) showStatus("生成完成前不能修改历史记录", true)
+    return
+  }
   historyMutationBusy = true
   historyPanelEditing = false
   historyPanelSelection.clear()
+  historyPanelSelectionAnchor = ""
   clearHistoryThumbs()
   clearHistoryPanelThumbs()
   showPreview("", "")
@@ -2299,7 +2580,10 @@ async function clearAllRenderHistory() {
 }
 
 async function deleteSelectedRenderHistory() {
-  if (historyMutationBusy || !historyPanelSelection.size) return
+  if (historyMutationBusy || renderInFlight() || !historyPanelSelection.size) {
+    if (renderInFlight()) showStatus("生成完成前不能修改历史记录", true)
+    return
+  }
   const selectedNames = new Set(historyPanelSelection)
   const selectedItems = renderHistory.filter((item) => selectedNames.has(item.name))
   if (!selectedItems.length) return
@@ -2317,6 +2601,7 @@ async function deleteSelectedRenderHistory() {
     renderHistory = renderHistory.filter((item) => !selectedNames.has(item.name))
     saveRenderHistory()
     historyPanelSelection.clear()
+    historyPanelSelectionAnchor = ""
     if (!renderHistory.length) {
       historyPanelEditing = false
       resetEmptyRenderHistory()
@@ -2341,6 +2626,10 @@ async function deleteSelectedRenderHistory() {
 }
 
 async function cleanOldRenders() {
+  if (historyMutationBusy || renderInFlight()) {
+    if (renderInFlight()) showStatus("生成完成前不能修改历史记录", true)
+    return
+  }
   const button = element("history-clean")
   if (button) button.disabled = true
   const removed = new Set()
@@ -2392,6 +2681,7 @@ async function cleanOldRenders() {
     } else {
       await selectHistory(0)
     }
+    refreshHistoryPanelIfOpen()
     showStatus(removed.size ? `已清理 ${removed.size} 张七天前的图片` : "没有七天前的图片")
     refreshHistoryLimit()
   } catch (error) {
@@ -2507,6 +2797,7 @@ function requestModelList() {
 }
 
 function connectSocket() {
+  if (runtimeMode !== RUNTIME_COMFYUI) return
   clearTimeout(reconnectTimer)
   if (socket) {
     socket.onclose = null
@@ -2527,6 +2818,7 @@ function connectSocket() {
     socket.onmessage = handleSocketMessage
     socket.onerror = () => setConnection("连接错误", "error")
     socket.onclose = () => {
+      if (runtimeMode !== RUNTIME_COMFYUI) return
       setConnection("已断开", "error")
       setMarquee(0, false)
       if (renderDone) settleRender(new Error("Photoshop 与 ComfyUI 的任务连接已断开"), activeJobId)
@@ -2540,6 +2832,7 @@ function connectSocket() {
 }
 
 async function connect() {
+  if (runtimeMode !== RUNTIME_COMFYUI) return
   try {
     localStorage.setItem(`${STORE_PREFIX}server`, serverAddress())
     setConnection("检查服务", "busy")
@@ -2548,6 +2841,24 @@ async function connect() {
   } catch (error) {
     setConnection("连接错误", "error")
     showStatus(error.message || String(error), true)
+  }
+}
+
+function disconnectComfy() {
+  clearTimeout(reconnectTimer)
+  reconnectTimer = null
+  if (launchTimer) {
+    clearInterval(launchTimer)
+    launchTimer = null
+  }
+  if (modelPullTimer) {
+    clearInterval(modelPullTimer)
+    modelPullTimer = null
+  }
+  if (socket) {
+    socket.onclose = null
+    try { socket.close() } catch (_) {}
+    socket = null
   }
 }
 
@@ -2650,11 +2961,23 @@ function normalizeBase64(encoded) {
 async function showCapturedPreview(base64) {
   const previous = capturePreviewFile
   capturePreviewFile = await writeDataFile(`capture-${Date.now()}.png`, base64)
-  capturePreviewThumbSrc = await canvasReferenceThumb(capturePreviewFile)
-  showPreview("", capturePreviewFile.url)
-  showCanvasReference(capturePreviewFile.url)
+  const current = capturePreviewFile
+  capturePreviewThumbSrc = ""
+  showPreview("", current.url)
+  showCanvasReference(current.url)
+  setTimeout(() => {
+    canvasReferenceThumb(current).then((src) => {
+      if (!src || capturePreviewFile !== current) return
+      capturePreviewThumbSrc = src
+      syncComposerWorkbench()
+      const menu = element("mention-menu")
+      if (menu && !menu.classList.contains("hidden")) paintMentionMenu()
+    }).catch(() => {})
+  }, 0)
   if (previous) {
-    try { await previous.delete() } catch (_) {}
+    setTimeout(() => {
+      try { Promise.resolve(previous.delete()).catch(() => {}) } catch (_) {}
+    }, 0)
   }
 }
 
@@ -2662,13 +2985,10 @@ async function canvasReferenceThumb(file) {
   try {
     const raw = await file.read({ format: storage.formats.binary })
     const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
-    let encoded = await serverThumb(bytes)
-    if (!encoded) {
-      let small = await bitmapThumb(bytes)
-      if (!small) small = await domThumb(file)
-      if (!small && readPngBytes(bytes)) small = await makeThumbRgb(bytes, 160)
-      if (small) encoded = encodeThumbPng(small.width, small.height, small.rgb)
-    }
+    let small = await bitmapThumb(bytes)
+    if (!small) small = await domThumb(file)
+    if (!small && readPngBytes(bytes)) small = await makeThumbRgb(bytes, 160)
+    const encoded = small ? encodeThumbPng(small.width, small.height, small.rgb) : null
     if (!encoded) return ""
     const output = encoded instanceof Uint8Array ? encoded : new Uint8Array(encoded)
     return output.length > 32 ? `data:image/png;base64,${bytesToBase64(output)}` : ""
@@ -2717,18 +3037,131 @@ function showPreview(source, fileUrl) {
   paint()
 }
 
+function directInputImages(payload) {
+  const images = [{ role: "canvas", label: "画布", base64: payload.canvasBase64, mimeType: "image/png" }]
+  if (payload.maskBase64) images.push({ role: "mask", label: "Mask", base64: payload.maskBase64, mimeType: "image/png" })
+  allReferenceFiles().forEach((file, index) => {
+    images.push({
+      role: styleReference && index === 0 ? "style" : "reference",
+      label: styleReference && index === 0 ? "风格" : `参考图${styleReference ? index : index + 1}`,
+      base64: file.base64,
+      mimeType: "image/png",
+    })
+  })
+  return images
+}
+
+function directPrompt(configdata) {
+  const positive = String(configdata?.positive || "").trim()
+  const negative = String(configdata?.negative || "").trim()
+  if (!negative || /^(null|undefined)$/i.test(negative)) return positive
+  return `${positive}\n\nNegative prompt: ${negative}`
+}
+
+function stopDirectElapsed() {
+  if (directElapsedTimer) clearInterval(directElapsedTimer)
+  directElapsedTimer = 0
+}
+
+function startDirectElapsed(startedAt) {
+  stopDirectElapsed()
+  const paint = () => {
+    const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
+    setProgress(`等待生成 · ${seconds}秒`)
+  }
+  paint()
+  directElapsedTimer = setInterval(paint, 1000)
+}
+
+async function renderDirect(payload, jobId, batchIndex) {
+  if (!globalThis.ComfyDirectApi) throw new Error("直接 API 客户端没有加载")
+  if (!directApiKey) directApiKey = await readDirectApiKey()
+  if (!directApiKey) {
+    if (element("settings-drawer")?.classList.contains("hidden")) toggleDrawer("settings-drawer")
+    throw new Error("请先在设置中验证并保存 Comfy API Key")
+  }
+  const controller = new AbortController()
+  directAbortController = controller
+  acceptJobPhase(jobId, "queued")
+  setProgress("上传请求")
+  // Direct API does not expose a real progress percentage. Keep the UI indeterminate
+  // until the response arrives instead of showing a misleading completed bar.
+  setMarquee(0, true)
+  const startedAt = Date.now()
+  try {
+    acceptJobPhase(jobId, "running")
+    startDirectElapsed(startedAt)
+    const result = await globalThis.ComfyDirectApi.generate({
+      apiKey: directApiKey,
+      jobId,
+      batchIndex,
+      prompt: payload.configdata.positive,
+      profile: payload.configdata,
+      images: directInputImages(payload),
+      seed: payload.configdata.seed,
+      signal: controller.signal,
+    }, {
+      onRetry: ({ attempt, status }) => {
+        setProgress(status ? `服务繁忙，正在第 ${attempt} 次重试` : `网络重试 ${attempt}`)
+      },
+    })
+    if (!result.images?.length) throw new Error("Comfy API 没有返回图像")
+    if (batchStop || controller.signal.aborted) throw new Error("已停止")
+    acceptJobPhase(jobId, "result_received")
+    stopDirectElapsed()
+    setProgress("接收结果")
+    await receiveRender(result.images[0].base64)
+    acceptJobPhase(jobId, "completed")
+    settleRender(null, jobId)
+    if (result.credits) showStatus(`生成结果已收到，消耗 ${result.credits} credits`)
+  } catch (error) {
+    stopDirectElapsed()
+    const stopped = controller.signal.aborted || error?.code === "aborted" || error?.message === "已停止"
+    acceptJobPhase(jobId, stopped ? "interrupted" : "error")
+    setProgress(stopped ? "已停止" : "失败")
+    setMarquee(0, false)
+    const next = stopped ? new Error("已停止") : error
+    settleRender(next, jobId)
+    throw next
+  } finally {
+    if (directAbortController === controller) directAbortController = null
+  }
+}
+
 async function render(jobId = activeJobId, batchIndex = activeBatchIndex) {
+  if (!runtimeMode) throw new Error("请先选择运行模式")
+  if (historyMutationBusy) throw new Error("历史记录正在修改，请稍后再生成")
+  latestRenderFile = null
+  latestRenderPlacement = null
+  activeRenderPlacement = null
+  element("add-layer").disabled = true
   setBusy(true)
-  setProgress(batchRunning ? element("progress-label").textContent : "读取 Photoshop")
+  const currentProgress = element("progress-label").textContent
+  setProgress(/^第 \d+ \/ \d+ 张$/.test(currentProgress) ? currentProgress : "读取 Photoshop")
+  setMarquee(5, true)
+  let captureBusy = true
   try {
     if (element("auto-seed").checked) randomSeed()
+    const updateCaptureStage = (stage) => {
+      setProgress(stage)
+      setMarquee(Math.min(35, marqueePercent + 5), true)
+    }
     const payload = await core.executeAsModal(
-      () => captureWorkflowInput(jobId, batchIndex),
-      { commandName: "Send canvas to ComfyTV" },
+      () => captureWorkflowInput(jobId, batchIndex, updateCaptureStage),
+      { commandName: "Send canvas to ComfyTV", timeOut: 10000 },
     )
     const note = payload.captureNote
     delete payload.captureNote
+    activeRenderPlacement = normalizeRenderPlacement(payload.placement)
+    delete payload.placement
+    setProgress("准备预览")
     await showCapturedPreview(payload.canvasBase64)
+    if (runtimeMode === RUNTIME_DIRECT) {
+      setBusy(false)
+      captureBusy = false
+      await renderDirect(payload, jobId, batchIndex)
+      return
+    }
     setProgress("等待 ComfyUI")
     sendWorkflowPayload(payload)
     showStatus(note || "已提交到 ComfyUI")
@@ -2738,7 +3171,7 @@ async function render(jobId = activeJobId, batchIndex = activeBatchIndex) {
     showStatus(error.message || String(error), true)
     throw error
   } finally {
-    setBusy(false)
+    if (captureBusy) setBusy(false)
   }
 }
 
@@ -2750,6 +3183,15 @@ function requestInterrupt() {
     return
   }
   if (!acceptJobPhase(activeJobId, "interrupted")) return
+  if (runtimeMode === RUNTIME_DIRECT) {
+    batchStop = true
+    if (directAbortController) directAbortController.abort()
+    stopDirectElapsed()
+    setProgress("已停止")
+    setMarquee(0, false)
+    settleRender(new Error("已停止"), activeJobId)
+    return
+  }
   try {
     sendSocket({ protocolVersion: WORKFLOW_PROTOCOL_VERSION, interrupt: true, jobId: activeJobId })
   } catch (_) {}
@@ -2765,10 +3207,20 @@ async function renderBatch(totalOverride) {
     showStatus("正在停止")
     return
   }
+  if (!runtimeMode) {
+    element("runtime-mode-picker")?.classList.remove("hidden")
+    showStatus("请先选择运行模式", true)
+    return
+  }
+  if (historyMutationBusy) {
+    showStatus("历史记录正在修改，请稍后再生成", true)
+    return
+  }
   const total = Number.isFinite(totalOverride) ? totalOverride : batchCount()
   if (!Number.isFinite(totalOverride)) element("batch-count").value = String(total)
   batchRunning = true
   batchStop = false
+  activeRenderHistoryCategoryId = validHistoryCategoryId(selectedHistoryCategoryId)
   setRenderLabel("停止")
   let finished = 0
   try {
@@ -2803,6 +3255,7 @@ async function renderBatch(totalOverride) {
   } finally {
     activeJobId = ""
     activeBatchIndex = 0
+    activeRenderHistoryCategoryId = null
     batchRunning = false
     batchStop = false
     setRenderLabel("渲染")
@@ -3332,6 +3785,10 @@ async function maskPlacedLayer() {
 }
 
 async function addResultLayer() {
+  if (renderInFlight()) {
+    showStatus("生成完成前不能添加结果", true)
+    return
+  }
   if (!latestRenderFile) {
     showStatus("还没有可添加的生成结果", true)
     return
@@ -3340,6 +3797,8 @@ async function addResultLayer() {
     showStatus("请先打开 Photoshop 文档", true)
     return
   }
+  const renderFile = latestRenderFile
+  const renderPlacement = latestRenderPlacement
   element("add-layer").disabled = true
   showStatus("正在添加到图层")
   try {
@@ -3358,8 +3817,8 @@ async function addResultLayer() {
           }
         } catch (_) {}
         const ppi = Number(document.resolution) || lastDocumentPpi || 72
-        try { await stampPngPpi(latestRenderFile, ppi) } catch (_) {}
-      const token = await storage.localFileSystem.createSessionToken(latestRenderFile)
+        try { await stampPngPpi(renderFile, ppi) } catch (_) {}
+      const token = await storage.localFileSystem.createSessionToken(renderFile)
         const placedResult = await action.batchPlay([{
         _obj: "placeEvent",
         target: { _path: token, _kind: "local" },
@@ -3371,7 +3830,9 @@ async function addResultLayer() {
           await selectLayer(placed)
           placed.name = layerName
         }
-        const placedNote = await fitPlacedLayer(sentPlaceBounds() || fullDocumentBounds(document))
+        const placedNote = await fitPlacedLayer(
+          sentPlaceBounds(renderPlacement?.bounds, renderPlacement?.frame) || fullDocumentBounds(document),
+        )
         try { await maskPlacedLayer() } catch (_) {}
         return placedNote
       })
@@ -3399,7 +3860,6 @@ function syncComposerOverlay() {
   const stage = document.querySelector(".preview-stage")
   const wasOpen = composer.classList.contains("overlay-open")
   const overlayIds = [
-    "settings-drawer",
     "history-limit",
   ]
   const overlayOpen = overlayIds.some((id) => {
@@ -3416,6 +3876,27 @@ function syncComposerOverlay() {
 function workflowListReady() {
   const select = element("workflow")
   return select.options.length > 1 || (select.options.length === 1 && select.value !== "")
+}
+
+function setDirectModelOptions() {
+  const select = element("workflow")
+  if (!select) return
+  const family = normalizeProfile(renderProfile).family
+  const models = [
+    { name: "NanoBanana", family: "nanobanana" },
+    { name: "NanoBanana Pro", family: "pro" },
+    { name: "GPT", family: "gpt" },
+  ]
+  select.textContent = ""
+  models.forEach((model, index) => {
+    const option = document.createElement("option")
+    option.value = String(index)
+    option.textContent = model.name
+    option.selected = model.family === family
+    select.appendChild(option)
+  })
+  modelListSynced = true
+  syncComposer()
 }
 
 function announceWorkflowList() {
@@ -3437,7 +3918,6 @@ function toggleDrawer(id) {
   const opening = drawer.classList.contains("hidden")
   document.querySelectorAll(".drawer").forEach((item) => item.classList.add("hidden"))
   if (opening) {
-    setHistoryPanelOpen(false)
     drawer.classList.remove("hidden")
     closeComposerMenus()
   }
@@ -3482,6 +3962,13 @@ const RENDER_FAMILIES = {
     short: "Nano",
     aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9", "1:4", "4:1", "8:1", "1:8"],
     resolutions: ["1K", "2K", "4K"],
+    models: [
+      { value: "Gemini Nano Banana 2.1", label: "Nano Banana 2.1", resolutions: ["1K", "2K", "4K"], qualities: [{ value: "MINIMAL", label: "低" }, { value: "MEDIUM", label: "中" }, { value: "HIGH", label: "高" }], defaultResolution: "2K", defaultQuality: "MEDIUM" },
+      { value: "Nano Banana 2 (Gemini 3.1 Flash Image)", label: "Nano Banana 2", resolutions: ["1K", "2K", "4K"], qualities: [{ value: "MINIMAL", label: "低" }, { value: "HIGH", label: "高" }], defaultResolution: "2K", defaultQuality: "MINIMAL" },
+      { value: "Nano Banana 2 Lite", label: "Nano Banana 2 Lite", resolutions: ["1K"], qualities: [{ value: "MINIMAL", label: "低" }, { value: "HIGH", label: "高" }], defaultResolution: "1K", defaultQuality: "MINIMAL" },
+    ],
+    defaultModel: "Nano Banana 2 (Gemini 3.1 Flash Image)",
+    qualityLabel: "思考强度",
     qualities: [{ value: "MINIMAL", label: "低" }, { value: "HIGH", label: "高" }],
     backgrounds: [],
     defaultResolution: "2K",
@@ -3492,6 +3979,12 @@ const RENDER_FAMILIES = {
     short: "Pro",
     aspects: ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
     resolutions: ["1K", "2K", "4K"],
+    models: [
+      { value: "gemini-3-pro-image-preview", label: "Gemini 3 Pro Image" },
+      { value: "Nano Banana 2 (Gemini 3.1 Flash Image)", label: "Nano Banana 2" },
+    ],
+    defaultModel: "gemini-3-pro-image-preview",
+    qualityLabel: "",
     qualities: [],
     backgrounds: [],
     defaultResolution: "2K",
@@ -3501,6 +3994,15 @@ const RENDER_FAMILIES = {
     label: "GPT",
     short: "GPT",
     resolutions: ["auto", "1K", "2K", "4K"],
+    models: [
+      { value: "gpt-image-2.5-flare", label: "GPT Image 2.5 Flare", resolutions: GPT_NODE_SIZES.slice(), qualities: ["low", "medium", "high", "xhigh", "max"], backgrounds: ["auto", "opaque", "transparent"] },
+      { value: "gpt-image-2.5-sunburst", label: "GPT Image 2.5 Sunburst", resolutions: GPT_NODE_SIZES.slice(), qualities: ["low", "medium", "high", "xhigh", "max"], backgrounds: ["auto", "opaque", "transparent"] },
+      { value: "gpt-image-2", label: "GPT Image 2", resolutions: GPT_NODE_SIZES.slice(), qualities: ["low", "medium", "high"], backgrounds: ["auto", "opaque"] },
+      { value: "gpt-image-1.5", label: "GPT Image 1.5", resolutions: ["auto", "1024x1024", "1024x1536", "1536x1024"], qualities: ["low", "medium", "high"], backgrounds: ["auto", "opaque", "transparent"] },
+      { value: "gpt-image-1", label: "GPT Image 1", resolutions: ["auto", "1024x1024", "1024x1536", "1536x1024"], qualities: ["low", "medium", "high"], backgrounds: ["auto", "opaque", "transparent"] },
+    ],
+    defaultModel: "gpt-image-2.5-flare",
+    qualityLabel: "质量",
     qualities: [
       { value: "low", label: "低" },
       { value: "medium", label: "中" },
@@ -3520,10 +4022,13 @@ const RENDER_FAMILIES = {
 }
 let renderProfile = {
   family: "nanobanana",
+  model: "Nano Banana 2 (Gemini 3.1 Flash Image)",
   aspect: "auto",
   resolution: "2K",
   quality: "MINIMAL",
   background: "",
+  customWidth: 1024,
+  customHeight: 1024,
 }
 
 function gptSizeLabel(value) {
@@ -3535,6 +4040,40 @@ function gptResolution(raw) {
   if (GPT_NODE_SIZES.includes(resolution)) return resolution
   const mapped = (GPT_SIZE[resolution] || {})[raw && raw.aspect]
   return GPT_NODE_SIZES.includes(mapped) ? mapped : "auto"
+}
+
+function familyModel(family, value) {
+  const models = Array.isArray(family && family.models) ? family.models : []
+  return models.find((item) => item.value === value) || models.find((item) => item.value === family.defaultModel) || models[0] || null
+}
+
+function profileModel(profile) {
+  const family = RENDER_FAMILIES[profile && profile.family] || RENDER_FAMILIES.nanobanana
+  return familyModel(family, profile && profile.model)
+}
+
+function profileQualities(profile) {
+  const family = RENDER_FAMILIES[profile.family]
+  const model = profileModel(profile)
+  if (!model || !Array.isArray(model.qualities)) return family.qualities
+  return model.qualities.map((value) => typeof value === "string"
+    ? (family.qualities.find((item) => item.value === value) || { value, label: value })
+    : value)
+}
+
+function profileBackgrounds(profile) {
+  const family = RENDER_FAMILIES[profile.family]
+  const model = profileModel(profile)
+  if (!model || !Array.isArray(model.backgrounds)) return family.backgrounds
+  return model.backgrounds.map((value) => typeof value === "string"
+    ? (family.backgrounds.find((item) => item.value === value) || { value, label: value })
+    : value)
+}
+
+function profileResolutions(profile) {
+  const family = RENDER_FAMILIES[profile.family]
+  const model = profileModel(profile)
+  return model && Array.isArray(model.resolutions) ? model.resolutions : family.resolutions
 }
 
 function aspectChoices(profile) {
@@ -3550,15 +4089,27 @@ function orderedAspects(values) {
 function normalizeProfile(raw) {
   const familyId = RENDER_FAMILIES[raw && raw.family] ? raw.family : "nanobanana"
   const family = RENDER_FAMILIES[familyId]
-  const resolution = familyId === "gpt"
-    ? gptResolution(raw)
-    : (family.resolutions.includes(raw && raw.resolution) ? raw.resolution : family.defaultResolution)
-  const draft = { family: familyId, resolution }
+  const modelInfo = familyModel(family, raw && raw.model)
+  const model = modelInfo ? modelInfo.value : ""
+  const allowedResolutions = modelInfo && Array.isArray(modelInfo.resolutions) ? modelInfo.resolutions : family.resolutions
+  const requestedResolution = familyId === "gpt" ? gptResolution(raw) : (raw && raw.resolution)
+  const resolution = allowedResolutions.includes(requestedResolution)
+    ? requestedResolution
+    : (modelInfo && modelInfo.defaultResolution) || family.defaultResolution || allowedResolutions[0]
+  const draft = { family: familyId, model, resolution }
   const aspects = aspectChoices(draft)
   const aspect = familyId === "gpt" ? aspects[0] : (aspects.includes(raw && raw.aspect) ? raw.aspect : aspects[0])
-  const quality = family.qualities.some((item) => item.value === (raw && raw.quality)) ? raw.quality : (family.defaultQuality || "")
-  const background = family.backgrounds.some((item) => item.value === (raw && raw.background)) ? raw.background : (family.defaultBackground || "")
-  return { family: familyId, aspect, resolution, quality, background }
+  const qualities = profileQualities(draft)
+  const backgrounds = profileBackgrounds(draft)
+  const quality = qualities.some((item) => item.value === (raw && raw.quality))
+    ? raw.quality
+    : (modelInfo && modelInfo.defaultQuality) || family.defaultQuality || (qualities[0] && qualities[0].value) || ""
+  const background = backgrounds.some((item) => item.value === (raw && raw.background))
+    ? raw.background
+    : family.defaultBackground || (backgrounds[0] && backgrounds[0].value) || ""
+  const customWidth = Math.max(480, Math.min(3840, Number.parseInt(raw?.customWidth, 10) || 1024))
+  const customHeight = Math.max(480, Math.min(3840, Number.parseInt(raw?.customHeight, 10) || 1024))
+  return { family: familyId, model, aspect, resolution, quality, background, customWidth, customHeight }
 }
 
 function profileGroupName(profile) {
@@ -3568,8 +4119,14 @@ function profileGroupName(profile) {
   return `GPT ${background}`
 }
 
-function profilePayload(profile) {
+function profilePayload(profile, imageSize = null) {
   const normalized = normalizeProfile(profile)
+  if (normalized.family === "gpt" && normalized.resolution === "Custom" && imageSize) {
+    const width = Number.parseInt(imageSize.width, 10)
+    const height = Number.parseInt(imageSize.height, 10)
+    if (Number.isFinite(width) && width > 0) normalized.customWidth = width
+    if (Number.isFinite(height) && height > 0) normalized.customHeight = height
+  }
   const size = normalized.family === "gpt" ? normalized.resolution : ""
   return { ...normalized, group: profileGroupName(normalized), size }
 }
@@ -3671,14 +4228,28 @@ function fillModeSheet(menu) {
   renderProfile = profile
   menu.textContent = ""
 
+  const modelSection = appendSection(menu, "模型")
+  const modelRow = document.createElement("div")
+  modelRow.className = "mode-chip-row"
+  RENDER_FAMILIES[profile.family].models.forEach((item) => {
+    appendChip(modelRow, item.label, profile.model === item.value, () => chooseRenderProfile({ model: item.value }))
+  })
+  modelSection.appendChild(modelRow)
+
   if (profile.family === "gpt") {
     const sizeSection = appendSection(menu, "尺寸")
     const sizeRow = document.createElement("div")
     sizeRow.className = "mode-chip-row"
-    GPT_NODE_SIZES.forEach((value) => {
+    profileResolutions(profile).forEach((value) => {
       appendChip(sizeRow, gptSizeLabel(value), profile.resolution === value, () => chooseRenderProfile({ resolution: value }))
     })
     sizeSection.appendChild(sizeRow)
+    if (profile.resolution === "Custom") {
+      const note = document.createElement("div")
+      note.className = "mode-custom-size-note"
+      note.textContent = "自动使用实际发送图片的宽高"
+      sizeSection.appendChild(note)
+    }
   }
 
   if (profile.family !== "gpt") {
@@ -3734,15 +4305,15 @@ function fillModeSheet(menu) {
   const resolutionSection = appendSection(menu, "分辨率")
   const resolutionRow = document.createElement("div")
   resolutionRow.className = "mode-chip-row"
-  RENDER_FAMILIES[profile.family].resolutions.forEach((value) => {
+  profileResolutions(profile).forEach((value) => {
     appendChip(resolutionRow, optionLabel(value), profile.resolution === value, () => chooseRenderProfile({ resolution: value }))
   })
   resolutionSection.appendChild(resolutionRow)
   }
 
-  const qualities = RENDER_FAMILIES[profile.family].qualities
+  const qualities = profileQualities(profile)
   if (qualities.length) {
-    const qualitySection = appendSection(menu, "质量")
+    const qualitySection = appendSection(menu, RENDER_FAMILIES[profile.family].qualityLabel || "质量")
     const qualityRow = document.createElement("div")
     qualityRow.className = "mode-chip-row"
     qualities.forEach((item) => {
@@ -3751,7 +4322,7 @@ function fillModeSheet(menu) {
     qualitySection.appendChild(qualityRow)
   }
 
-  const backgrounds = RENDER_FAMILIES[profile.family].backgrounds
+  const backgrounds = profileBackgrounds(profile)
   if (backgrounds.length) {
     const backgroundSection = appendSection(menu, "输出背景")
     const backgroundRow = document.createElement("div")
@@ -3786,6 +4357,7 @@ function closeComposerMenus(restoreFocus = false) {
   element("model-menu").classList.add("hidden")
   element("mode-menu").classList.add("hidden")
   element("count-menu").classList.add("hidden")
+  element("history-category-menu").classList.add("hidden")
   element("preset-host-menu").classList.add("hidden")
   element("composer").classList.remove("menu-open")
   hostPopoverMenu = ""
@@ -3842,6 +4414,32 @@ function fillCountMenu(menu) {
     })
     menu.appendChild(item)
   })
+}
+
+function fillHistoryCategoryMenu(menu) {
+  menu.textContent = ""
+  const options = [{ id: "", name: HISTORY_UNCATEGORIZED_LABEL }, ...historyCategories]
+  options.forEach((category) => {
+    const item = document.createElement("span")
+    item.className = "composer-option"
+    item.setAttribute("role", "button")
+    item.tabIndex = 0
+    item.textContent = category.name
+    if (category.id === selectedHistoryCategoryId) item.classList.add("is-selected")
+    item.addEventListener("click", (event) => {
+      event.stopPropagation()
+      selectedHistoryCategoryId = validHistoryCategoryId(category.id)
+      saveHistoryCategories()
+      syncHistoryCategoryControls(true)
+      closeComposerMenus(true)
+      showStatus(`生成结果将保存到「${historyCategoryName(selectedHistoryCategoryId)}」`)
+    })
+    menu.appendChild(item)
+  })
+  const hint = document.createElement("span")
+  hint.className = "composer-option history-category-hint"
+  hint.textContent = "可在历史记录窗口新建分类"
+  menu.appendChild(hint)
 }
 
 function toggleComposerMenu(id) {
@@ -4076,47 +4674,55 @@ function paintReferenceRow() {
 async function referenceFromFile(file) {
   const name = String(file.name || "reference.png")
   if (!/\.(png|jpe?g|webp)$/i.test(name)) throw new Error("请选择 png、jpg 或 webp")
-  const nativePath = String(file.nativePath || "")
-  if (!nativePath) throw new Error("无法读取这张图片的本地路径")
-
-  let response
-  try {
-    response = await fetch(`${serverAddress()}/ps/reference/prepare`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: nativePath, maxEdge: REFERENCE_MAX_EDGE }),
-    })
-  } catch (_) {
-    throw new Error("无法连接 ComfyUI 缩图服务，请确认 ComfyUI 已启动")
-  }
-  if (!response.ok) {
-    if (response.status === 404 || response.status === 405) {
-      throw new Error("缩图服务尚未加载，请重启 ComfyUI 后重试")
+  let opened = null
+  const prepared = await core.executeAsModal(async () => {
+    try {
+      opened = await app.open(file)
+      if (!opened) throw new Error("Photoshop 无法打开这张图片")
+      const bounds = fullDocumentBounds(opened)
+      const sourceWidth = bounds.right
+      const sourceHeight = bounds.bottom
+      const scale = Math.min(1, REFERENCE_MAX_EDGE / Math.max(sourceWidth, sourceHeight))
+      const options = {
+        documentID: opened.id,
+        sourceBounds: bounds,
+        componentSize: 8,
+        colorSpace: "RGB",
+      }
+      if (scale < 1) {
+        options.targetSize = {
+          width: Math.max(1, Math.round(sourceWidth * scale)),
+          height: Math.max(1, Math.round(sourceHeight * scale)),
+        }
+      }
+      const image = await encodePixels(options)
+      return {
+        base64: image.encoded,
+        sourceWidth,
+        sourceHeight,
+        width: options.targetSize?.width || sourceWidth,
+        height: options.targetSize?.height || sourceHeight,
+      }
+    } finally {
+      if (opened) {
+        if (typeof opened.closeWithoutSaving === "function") await opened.closeWithoutSaving()
+        else await action.batchPlay([{ _obj: "close", saving: { _enum: "yesNo", _value: "no" }, _options: { dialogOptions: "dontDisplay" } }], {})
+      }
     }
-    let detail = ""
-    try { detail = String(await response.text()).trim() } catch (_) {}
-    throw new Error(detail || `参考图处理失败（HTTP ${response.status}）`)
-  }
-
-  const binary = await response.arrayBuffer()
-  const bytes = new Uint8Array(binary)
-  if (!bytes.length) throw new Error("缩图服务返回了空图片")
+  }, { commandName: "Prepare reference image" })
+  const bytes = new Uint8Array(base64ToBuffer(prepared.base64))
+  if (!bytes.length) throw new Error("参考图处理结果为空")
   if (bytes.length > REFERENCE_MAX_BYTES) throw new Error("缩放后的参考图仍然过大")
-  const base64 = bytesToBase64(bytes)
-  const sourceWidth = Number(response.headers.get("X-Source-Width")) || 0
-  const sourceHeight = Number(response.headers.get("X-Source-Height")) || 0
-  const width = Number(response.headers.get("X-Output-Width")) || 0
-  const height = Number(response.headers.get("X-Output-Height")) || 0
   const thumbSrc = await referenceThumbSrc(bytes)
   return {
     name: name.replace(/\.(png|jpe?g|webp)$/i, ".png"),
-    base64,
+    base64: prepared.base64,
     thumbSrc,
-    sourceWidth,
-    sourceHeight,
-    width,
-    height,
-    optimized: sourceWidth > width || sourceHeight > height,
+    sourceWidth: prepared.sourceWidth,
+    sourceHeight: prepared.sourceHeight,
+    width: prepared.width,
+    height: prepared.height,
+    optimized: prepared.sourceWidth > prepared.width || prepared.sourceHeight > prepared.height,
   }
 }
 
@@ -4191,8 +4797,18 @@ async function referenceFromDataUrl(item) {
   const extension = match[1].toLowerCase() === "jpeg" ? "jpg" : match[1].toLowerCase()
   const name = String(item?.name || `reference.${extension}`)
   const bytes = new Uint8Array(base64ToBuffer(base64))
-  const thumbSrc = await referenceThumbSrc(bytes)
-  return { name, base64, thumbSrc }
+  const folder = await storage.localFileSystem.getTemporaryFolder()
+  const temporary = await folder.createFile(`comfytv-reference-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${extension}`, { overwrite: true })
+  try {
+    await temporary.write(bytes.buffer, { format: storage.formats.binary })
+    const prepared = await referenceFromFile(temporary)
+    prepared.name = name.replace(/\.(png|jpe?g|webp)$/i, ".png")
+    return prepared
+  } finally {
+    if (temporary && typeof temporary.delete === "function") {
+      try { await temporary.delete() } catch (_) {}
+    }
+  }
 }
 
 async function addDroppedReferenceFiles(items, insertIndex = null) {
@@ -4382,7 +4998,6 @@ let presetImportState = null
 let hostPresetTab = "style"
 let hostPresetView = "list"
 let hostPresetEditor = null
-let hostPresetItemMenuId = ""
 let hostPresetToolsOpen = false
 let hostPresetNotice = ""
 writePresetSelection()
@@ -4482,21 +5097,24 @@ function paintMentionMenu() {
   const query = found.query.trim()
   menu.textContent = ""
   const matches = []
+  if (!query || "画布".includes(query)) {
+    matches.push({ label: "画布", previewSrc: capturePreviewThumbSrc || "" })
+  }
   referenceFiles.forEach((file, index) => {
     const label = `参考图${index + 1}`
-    if (!query || label.includes(query)) matches.push({ file, label })
+    if (!query || label.includes(query)) matches.push({ file, label, previewSrc: referencePreviewSrc(file) })
   })
   if (!matches.length) {
     const empty = document.createElement("div")
     empty.className = "mention-empty"
-    empty.textContent = referenceFiles.length ? "没有匹配的参考图" : "先添加参考图，才能 @参考图1"
+    empty.textContent = "没有匹配的图像"
     menu.appendChild(empty)
   } else {
     matches.forEach((item) => {
       const row = document.createElement("span")
       row.className = "mention-item"
       row.setAttribute("role", "button")
-      const previewSrc = referencePreviewSrc(item.file)
+      const previewSrc = item.previewSrc || ""
       if (previewSrc) {
         const thumb = document.createElement("img")
         thumb.className = "mention-thumb"
@@ -4667,7 +5285,6 @@ function paintHostPresetMenu() {
       hostPresetTab = category.id
       hostPresetView = "list"
       hostPresetEditor = null
-      hostPresetItemMenuId = ""
       paintHostPresetMenu()
     })
     tabs.appendChild(tab)
@@ -4863,6 +5480,19 @@ function paintHostPresetMenu() {
     form.appendChild(fields)
     const actions = document.createElement("div")
     actions.className = "preset-form-actions"
+    if (hostPresetEditor.id) {
+      const remove = document.createElement("button")
+      remove.type = "button"
+      remove.className = "preset-danger"
+      remove.textContent = "删除"
+      remove.addEventListener("click", (event) => {
+        event.stopPropagation()
+        hostPresetEditor = { ...hostPresetEditor }
+        hostPresetView = "delete"
+        paintHostPresetMenu()
+      })
+      actions.appendChild(remove)
+    }
     const cancel = document.createElement("button")
     cancel.type = "button"
     cancel.className = "preset-secondary"
@@ -5042,64 +5672,57 @@ function paintHostPresetMenu() {
     }
     items.forEach((item) => {
       const row = document.createElement("div")
-      row.className = "preset-option-row"
-      const button = document.createElement("button")
-      button.type = "button"
-      button.className = selectedPresetIds[hostPresetTab] === item.id ? "preset-option is-selected" : "preset-option"
+      const selected = selectedPresetIds[hostPresetTab] === item.id
+      row.className = selected ? "preset-option-row is-selected" : "preset-option-row"
+      const button = document.createElement("span")
+      button.className = selected ? "preset-option is-selected" : "preset-option"
+      button.setAttribute("role", "button")
+      button.tabIndex = 0
       button.textContent = item.name || "未命名"
       button.title = [item.prefix, item.suffix].filter(Boolean).join("\n")
-      button.addEventListener("click", (event) => {
+      const selectPreset = (event) => {
         event.stopPropagation()
         selectHostPreset(hostPresetTab, item.id)
-        hostPresetItemMenuId = ""
         paintHostPresetMenu()
+      }
+      button.addEventListener("click", selectPreset)
+      button.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return
+        event.preventDefault()
+        selectPreset(event)
       })
       row.appendChild(button)
-      const more = document.createElement("button")
-      more.type = "button"
-      more.className = "preset-item-more"
-      more.textContent = "⋯"
-      more.title = `管理 ${item.name}`
-      more.addEventListener("click", (event) => {
+      const edit = document.createElement("span")
+      edit.className = "preset-item-edit"
+      edit.setAttribute("role", "button")
+      edit.tabIndex = 0
+      const editIcon = document.createElement("span")
+      editIcon.className = "icon-slot preset-edit-icon"
+      editIcon.setAttribute("data-icon", "preset-edit")
+      edit.appendChild(editIcon)
+      edit.title = `编辑 ${item.name}`
+      edit.setAttribute("aria-label", `编辑 ${item.name}`)
+      const editPreset = (event) => {
         event.stopPropagation()
-        hostPresetItemMenuId = hostPresetItemMenuId === item.id ? "" : item.id
+        const category = categories.find((entry) => entry.id === item.categoryId)
+        hostPresetEditor = { ...item, category: category ? category.name : "" }
+        hostPresetView = "edit"
+        hostPresetNotice = ""
         paintHostPresetMenu()
-      })
-      row.appendChild(more)
-      if (hostPresetItemMenuId === item.id) {
-        const itemMenu = document.createElement("div")
-        itemMenu.className = "preset-item-menu"
-        const edit = document.createElement("button")
-        edit.type = "button"
-        edit.textContent = "编辑"
-        edit.addEventListener("click", (event) => {
-          event.stopPropagation()
-          const category = categories.find((entry) => entry.id === item.categoryId)
-          hostPresetEditor = { ...item, category: category ? category.name : "" }
-          hostPresetView = "edit"
-          hostPresetItemMenuId = ""
-          hostPresetNotice = ""
-          paintHostPresetMenu()
-        })
-        const remove = document.createElement("button")
-        remove.type = "button"
-        remove.textContent = "删除"
-        remove.addEventListener("click", (event) => {
-          event.stopPropagation()
-          hostPresetEditor = { ...item }
-          hostPresetView = "delete"
-          hostPresetItemMenuId = ""
-          paintHostPresetMenu()
-        })
-        itemMenu.appendChild(edit)
-        itemMenu.appendChild(remove)
-        row.appendChild(itemMenu)
       }
+      edit.addEventListener("click", editPreset)
+      edit.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return
+        event.preventDefault()
+        editPreset(event)
+      })
+      row.appendChild(edit)
       grid.appendChild(row)
     })
     body.appendChild(grid)
   }
   menu.appendChild(body)
+  paintIcons()
 }
 
 function presetExportPayload() {
@@ -5195,15 +5818,16 @@ function paintToggle(button, on) {
 function bindCheckToggle(buttonId, inputId, afterClick) {
   const button = element(buttonId)
   const input = element(inputId)
-  const paint = () => paintToggle(button, input.checked)
+  const commit = () => {
+    paintToggle(button, input.checked)
+    if (afterClick) afterClick(input.checked)
+  }
   button.addEventListener("click", () => {
     input.checked = !input.checked
     input.dispatchEvent(new Event("change", { bubbles: true }))
-    paint()
-    if (afterClick) afterClick(input.checked)
   })
-  input.addEventListener("change", paint)
-  paint()
+  input.addEventListener("change", commit)
+  commit()
 }
 
 let embeddedComfyMounted = false
@@ -5211,6 +5835,11 @@ let embeddedComfyMounted = false
 function mountEmbeddedComfy() {
   const view = document.getElementById("comfy-webview")
   if (!view) return
+  if (runtimeMode !== RUNTIME_COMFYUI) {
+    embeddedComfyMounted = false
+    if ((view.getAttribute("src") || "") !== "about:blank") view.setAttribute("src", "about:blank")
+    return
+  }
   embeddedComfyMounted = true
   let src = EMBEDDED_COMFY
   try { src = serverAddress() } catch (_) {}
@@ -5236,6 +5865,240 @@ function decodeSecureText(value) {
   let encoded = ""
   for (let index = 0; index < bytes.length; index += 1) encoded += String.fromCharCode(bytes[index])
   return decodeURIComponent(escape(encoded))
+}
+
+function directApiStatus(message, state = "") {
+  const node = element("direct-api-status")
+  if (!node) return
+  node.textContent = message
+  node.className = `direct-api-status${state ? ` ${state}` : ""}`
+}
+
+async function readDirectApiKey() {
+  const secureStorage = storage && storage.secureStorage
+  if (!secureStorage || typeof secureStorage.getItem !== "function") return ""
+  try {
+    const bytes = await secureStorage.getItem(DIRECT_API_KEY_STORAGE_KEY)
+    return bytes && bytes.length ? decodeSecureText(bytes).trim() : ""
+  } catch (_) {
+    return ""
+  }
+}
+
+async function writeDirectApiKey(value) {
+  const secureStorage = storage && storage.secureStorage
+  if (!secureStorage || typeof secureStorage.setItem !== "function") {
+    throw new Error("当前 Photoshop 不支持安全凭证存储")
+  }
+  const key = String(value || "").trim()
+  if (!key) throw new Error("API Key 不能为空")
+  await secureStorage.setItem(DIRECT_API_KEY_STORAGE_KEY, encodeSecureText(key))
+  directApiKey = key
+}
+
+async function clearDirectApiKey() {
+  const secureStorage = storage && storage.secureStorage
+  if (secureStorage && typeof secureStorage.removeItem === "function") {
+    try { await secureStorage.removeItem(DIRECT_API_KEY_STORAGE_KEY) } catch (_) {}
+  }
+  directApiKey = ""
+  const input = element("direct-api-key")
+  if (input) {
+    input.value = ""
+    input.placeholder = "输入 Comfy API Key"
+  }
+  directApiStatus("尚未保存 API Key")
+  if (runtimeMode === RUNTIME_DIRECT) setConnection("需要 API Key", "error")
+  showStatus("已清除 Comfy API Key")
+}
+
+async function loadDirectCredentialState() {
+  directApiKey = await readDirectApiKey()
+  const input = element("direct-api-key")
+  if (input) {
+    input.value = ""
+    input.placeholder = directApiKey ? "已安全保存；输入新 Key 可替换" : "输入 Comfy API Key"
+  }
+  directApiStatus(directApiKey ? "已从 Photoshop 安全存储读取" : "尚未保存 API Key", directApiKey ? "ok" : "")
+  if (runtimeMode === RUNTIME_DIRECT) setConnection(directApiKey ? "API 已就绪" : "需要 API Key", directApiKey ? "connected" : "error")
+}
+
+async function validateAndSaveDirectApiKey() {
+  const button = element("direct-api-validate")
+  const input = element("direct-api-key")
+  const candidate = String(input?.value || "").trim() || directApiKey
+  if (!candidate) {
+    directApiStatus("请先输入 API Key", "error")
+    return
+  }
+  if (!globalThis.ComfyDirectApi) {
+    directApiStatus("直接 API 客户端没有加载", "error")
+    return
+  }
+  if (button) button.disabled = true
+  directApiStatus("正在验证…")
+  try {
+    const account = await globalThis.ComfyDirectApi.validateApiKey(candidate)
+    await writeDirectApiKey(candidate)
+    if (input) {
+      input.value = ""
+      input.placeholder = "已安全保存；输入新 Key 可替换"
+    }
+    const identity = account?.email || account?.name || account?.id || "账号有效"
+    directApiStatus(`验证成功：${identity}`, "ok")
+    if (runtimeMode === RUNTIME_DIRECT) setConnection("API 已就绪", "connected")
+    showStatus("Comfy API Key 已验证并安全保存")
+  } catch (error) {
+    directApiStatus(error.message || "API Key 验证失败", "error")
+    showStatus(error.message || "API Key 验证失败", true)
+  } finally {
+    if (button) button.disabled = false
+  }
+}
+
+function openComfyPlatform() {
+  const uxp = loadModule("uxp")
+  if (!uxp.shell || typeof uxp.shell.openExternal !== "function") {
+    showStatus("当前 Photoshop 无法打开系统浏览器", true)
+    return
+  }
+  Promise.resolve(uxp.shell.openExternal("https://platform.comfy.org/", "打开 Comfy API 平台"))
+    .catch((error) => showStatus(error.message || "无法打开 Comfy API 平台", true))
+}
+
+function pluginUpdateStatus(message, state = "") {
+  const status = element("update-status")
+  if (!status) return
+  status.textContent = String(message || "")
+  status.classList.toggle("available", state === "available")
+  status.classList.toggle("error", state === "error")
+}
+
+function openPluginReleasePage(url = UPDATE_RELEASE_PAGE) {
+  const uxp = loadModule("uxp")
+  if (!uxp.shell || typeof uxp.shell.openExternal !== "function") {
+    showStatus("当前 Photoshop 无法打开系统浏览器", true)
+    return
+  }
+  Promise.resolve(uxp.shell.openExternal(String(url || UPDATE_RELEASE_PAGE), "打开 ComfyTV Photoshop 发布页面"))
+    .catch((error) => showStatus(error.message || "无法打开发布页面", true))
+}
+
+async function checkPluginUpdate(options = {}) {
+  if (pluginUpdateBusy) return pluginUpdateInfo
+  const updater = globalThis.ComfyTvUpdater
+  const checkButton = element("update-check")
+  const installButton = element("update-install")
+  if (!updater) {
+    pluginUpdateStatus("更新模块没有加载", "error")
+    return null
+  }
+  pluginUpdateBusy = true
+  if (checkButton) checkButton.disabled = true
+  if (installButton) installButton.classList.add("hidden")
+  pluginUpdateStatus("正在检查独立发布仓库…")
+  try {
+    pluginUpdateInfo = await updater.checkForUpdate(PLUGIN_VERSION)
+    if (pluginUpdateInfo.state === "no_release") {
+      pluginUpdateStatus(`当前版本 ${PLUGIN_VERSION}；发布仓库还没有公开安装包`)
+      return pluginUpdateInfo
+    }
+    if (pluginUpdateInfo.state === "current") {
+      pluginUpdateStatus(`当前已是最新版本 ${PLUGIN_VERSION}`)
+      return pluginUpdateInfo
+    }
+    const suffix = pluginUpdateInfo.installable ? "可以下载并安装" : "安装附件还不完整"
+    pluginUpdateStatus(`发现新版本 ${pluginUpdateInfo.version}，${suffix}`, pluginUpdateInfo.installable ? "available" : "error")
+    if (installButton) installButton.classList.toggle("hidden", !pluginUpdateInfo.installable)
+    if (!options.silent) showStatus(`发现 ComfyTV Photoshop ${pluginUpdateInfo.version}`)
+    else showStatus(`发现插件更新 ${pluginUpdateInfo.version}`)
+    return pluginUpdateInfo
+  } catch (error) {
+    pluginUpdateStatus(error.message || "检查更新失败", "error")
+    if (!options.silent) showStatus(error.message || "检查更新失败", true)
+    return null
+  } finally {
+    pluginUpdateBusy = false
+    if (checkButton) checkButton.disabled = false
+  }
+}
+
+async function updateDownloadFolder() {
+  const root = await storage.localFileSystem.getDataFolder()
+  try {
+    const existing = await root.getEntry("updates")
+    if (existing && existing.isFolder) return existing
+  } catch (_) {}
+  return root.createFolder("updates")
+}
+
+async function downloadAndInstallPluginUpdate() {
+  if (pluginUpdateBusy) return
+  if (!pluginUpdateInfo || pluginUpdateInfo.state !== "update") {
+    await checkPluginUpdate()
+  }
+  if (!pluginUpdateInfo || !pluginUpdateInfo.installable) {
+    showStatus("当前没有可以安装的更新包", true)
+    return
+  }
+  const updater = globalThis.ComfyTvUpdater
+  const installButton = element("update-install")
+  pluginUpdateBusy = true
+  if (installButton) installButton.disabled = true
+  pluginUpdateStatus(`正在下载 ${pluginUpdateInfo.packageName}…`, "available")
+  try {
+    const downloaded = await updater.downloadAndVerify(pluginUpdateInfo)
+    pluginUpdateStatus("SHA256 校验通过，正在打开 Adobe 安装器…", "available")
+    const folder = await updateDownloadFolder()
+    const file = await folder.createFile(downloaded.name, { overwrite: true })
+    await file.write(downloaded.bytes.buffer, { format: storage.formats.binary })
+    const uxp = loadModule("uxp")
+    if (uxp.shell && typeof uxp.shell.openPath === "function" && file.nativePath) {
+      const result = await uxp.shell.openPath(file.nativePath, "安装 ComfyTV Photoshop 更新")
+      if (result) throw new Error(String(result))
+      pluginUpdateStatus(`已打开 ${pluginUpdateInfo.version} 安装器；安装完成后重启 Photoshop`, "available")
+      showStatus("更新包校验完成，请在 Adobe 安装器中确认安装")
+      return
+    }
+    openPluginReleasePage(pluginUpdateInfo.packageUrl || pluginUpdateInfo.releaseUrl)
+    pluginUpdateStatus("更新包已校验，但当前 Photoshop 不能直接启动安装器；已打开下载页面", "available")
+  } catch (error) {
+    pluginUpdateStatus(error.message || "下载更新失败", "error")
+    showStatus(error.message || "下载更新失败", true)
+  } finally {
+    pluginUpdateBusy = false
+    if (installButton) installButton.disabled = false
+  }
+}
+
+async function switchRuntimeMode(mode, options = {}) {
+  if (mode !== RUNTIME_DIRECT && mode !== RUNTIME_COMFYUI) return
+  if (batchRunning && runtimeMode && runtimeMode !== mode) {
+    showStatus("请先停止当前生成，再切换运行模式", true)
+    return
+  }
+  const changed = runtimeMode !== mode
+  runtimeMode = mode
+  element("runtime-mode-picker")?.classList.add("hidden")
+  element("direct-settings")?.classList.toggle("hidden", mode !== RUNTIME_DIRECT)
+  element("comfyui-settings")?.classList.toggle("hidden", mode !== RUNTIME_COMFYUI)
+  element("web-toggle")?.classList.toggle("hidden", mode !== RUNTIME_COMFYUI)
+  element("send-layer")?.classList.toggle("hidden", mode !== RUNTIME_COMFYUI)
+  element("settings-direct-mode")?.classList.toggle("active", mode === RUNTIME_DIRECT)
+  element("settings-comfyui-mode")?.classList.toggle("active", mode === RUNTIME_COMFYUI)
+  if (mode === RUNTIME_DIRECT) {
+    disconnectComfy()
+    mountEmbeddedComfy()
+    setDirectModelOptions()
+    await loadDirectCredentialState()
+    setConnection(directApiKey ? "API 已就绪" : "需要 API Key", directApiKey ? "connected" : "error")
+  } else {
+    modelListSynced = false
+    setConnection("未连接", "error")
+    mountEmbeddedComfy()
+    if (options.connect !== false) connect()
+  }
+  if (changed && !options.silent) showStatus(mode === RUNTIME_DIRECT ? "已切换到直接模式" : "已切换到 ComfyUI 模式")
 }
 
 function validComfyAuthEnvelope(value) {
@@ -5357,15 +6220,7 @@ function onComfyAuthMessage(event) {
 }
 
 function composerWorkbenchUrl() {
-  const uxp = loadModule("uxp")
-  const uxpMajor = Number.parseInt(String(uxp.versions && uxp.versions.uxp || ""), 10)
-  const photoshopMajor = Number.parseInt(String(app && app.version || ""), 10)
-  if ((Number.isFinite(uxpMajor) && uxpMajor >= 8) || (!Number.isFinite(uxpMajor) && photoshopMajor >= 26)) {
-    return "plugin:/composer-web/index.html"
-  }
-  let root = EMBEDDED_COMFY
-  try { root = serverAddress() } catch (_) {}
-  return `${root}/comfytv/photoshop/composer`
+  return "plugin:/composer-web/index.html"
 }
 
 function composerReferenceSignature(items) {
@@ -5387,11 +6242,13 @@ function composerModels() {
 function composerModeOptions(profile) {
   const family = RENDER_FAMILIES[profile.family] || RENDER_FAMILIES.nanobanana
   return {
-    sizes: profile.family === "gpt" ? GPT_NODE_SIZES.slice() : [],
+    models: family.models.map((item) => ({ value: item.value, label: item.label })),
+    sizes: profile.family === "gpt" ? profileResolutions(profile).slice() : [],
     aspects: profile.family === "gpt" ? [] : orderedAspects(aspectChoices(profile)),
-    resolutions: profile.family === "gpt" ? [] : family.resolutions.slice(),
-    qualities: family.qualities.map((item) => ({ value: item.value, label: item.label })),
-    backgrounds: family.backgrounds.map((item) => ({ value: item.value, label: item.label })),
+    resolutions: profile.family === "gpt" ? [] : profileResolutions(profile).slice(),
+    qualityLabel: family.qualityLabel || "质量",
+    qualities: profileQualities(profile).map((item) => ({ value: item.value, label: item.label })),
+    backgrounds: profileBackgrounds(profile).map((item) => ({ value: item.value, label: item.label })),
   }
 }
 
@@ -5409,6 +6266,9 @@ function composerControls() {
     modeOptions: composerModeOptions(profile),
     count: batchCount(),
     countSteps: COUNT_STEPS.slice(),
+    historyCategory: selectedHistoryCategoryId,
+    historyCategoryLabel: historyCategoryName(selectedHistoryCategoryId),
+    historyCategories: [{ id: "", name: HISTORY_UNCATEGORIZED_LABEL }, ...historyCategories.map((item) => ({ ...item }))],
     crop: Boolean(element("crop-selection") && element("crop-selection").checked),
     progress: element("progress-label") ? element("progress-label").textContent : "就绪",
     progressActive: Boolean(element("progress-frame") && element("progress-frame").classList.contains("active")),
@@ -5416,6 +6276,33 @@ function composerControls() {
     busy: Boolean(render && render.disabled),
     stopping: Boolean(render && render.classList.contains("is-stop")),
   }
+}
+
+function composerProgressState() {
+  const render = element("render")
+  return {
+    progress: element("progress-label") ? element("progress-label").textContent : "就绪",
+    progressActive: Boolean(element("progress-frame") && element("progress-frame").classList.contains("active")),
+    progressPercent: marqueePercent,
+    busy: Boolean(render && render.disabled),
+    stopping: Boolean(render && render.classList.contains("is-stop")),
+  }
+}
+
+function syncComposerProgress(force = false) {
+  const view = element("composer-webview")
+  if (!view || !composerWebReady || typeof view.postMessage !== "function") return
+  const state = composerProgressState()
+  const signature = JSON.stringify(state)
+  if (!force && composerStateSignatures.progress === signature) return
+  composerStateSignatures.progress = signature
+  try {
+    view.postMessage({
+      type: "composer-progress",
+      protocolVersion: COMPOSER_PROTOCOL_VERSION,
+      progress: state,
+    })
+  } catch (_) {}
 }
 
 function syncComposerWorkbench(force = false) {
@@ -5428,6 +6315,7 @@ function syncComposerWorkbench(force = false) {
       protocolVersion: COMPOSER_PROTOCOL_VERSION,
       controls: composerControls(),
     }
+    composerStateSignatures.progress = JSON.stringify(composerProgressState())
     const promptValue = element("positive")?.value || ""
     if (force || composerStateSignatures.prompt !== promptValue) {
       payload.prompt = promptValue
@@ -5482,7 +6370,7 @@ function sendHostPopoverState(open, menu) {
 
 function openHostPopover(menuName) {
   const menu = String(menuName || "")
-  if (!['model', 'mode', 'count', 'preset'].includes(menu)) return
+  if (!['model', 'mode', 'count', 'preset', 'history-category'].includes(menu)) return
   if (hostPopoverMenu === menu) {
     closeComposerMenus(true)
     return
@@ -5498,6 +6386,9 @@ function openHostPopover(menuName) {
   } else if (menu === "count") {
     fillCountMenu(element("count-menu"))
     element("count-menu").classList.remove("hidden")
+  } else if (menu === "history-category") {
+    fillHistoryCategoryMenu(element("history-category-menu"))
+    element("history-category-menu").classList.remove("hidden")
   } else {
     paintHostPresetMenu()
     element("preset-host-menu").classList.remove("hidden")
@@ -5551,7 +6442,7 @@ function onComposerMessage(event) {
     try { data = JSON.parse(data) } catch (_) { return }
   }
   if (!data || typeof data !== "object" || !String(data.type || "").startsWith("composer-")) return
-  if (event.source && event.source !== view) return
+  if (data.surface && data.surface !== "composer") return
   if (data.type === "composer-ready") {
     composerWebReady = true
     element("composer").classList.add("web-composer-ready")
@@ -5587,7 +6478,7 @@ function onComposerMessage(event) {
   if (data.type === "composer-set-profile") {
     const incoming = data.patch && typeof data.patch === "object" ? data.patch : {}
     const patch = {}
-    ;["aspect", "resolution", "quality", "background"].forEach((key) => {
+    ;["model", "aspect", "resolution", "quality", "background"].forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(incoming, key)) patch[key] = String(incoming[key])
     })
     if (Object.keys(patch).length) chooseRenderProfile(patch)
@@ -5600,15 +6491,20 @@ function onComposerMessage(event) {
     syncComposer()
     return
   }
+  if (data.type === "composer-select-history-category") {
+    selectedHistoryCategoryId = validHistoryCategoryId(data.value)
+    saveHistoryCategories()
+    syncHistoryCategoryControls(true)
+    showStatus(`生成结果将保存到「${historyCategoryName(selectedHistoryCategoryId)}」`)
+    return
+  }
   if (data.type === "composer-toggle-crop") {
     element("crop-toggle").click()
-    saveSettings()
-    syncComposerWorkbench()
     return
   }
   if (data.type === "composer-render" || data.type === "composer-render-random") {
     if (data.type === "composer-render-random") randomSeed()
-    element("render").click()
+    renderBatch()
     return
   }
   if (data.type === "composer-select-preset") {
@@ -5712,13 +6608,18 @@ function onComposerMessage(event) {
     return
   }
   if (data.type === "composer-canvas") {
-    showStatus("生成时使用当前 Photoshop 画面")
+    insertMention("@画布")
+    showStatus("已写入 @画布（实际输入的参考图1）")
     return
   }
   if (data.type === "composer-error") showStatus(String(data.message || "WebView 操作失败"), true)
 }
 
 async function openComfyUI() {
+  if (runtimeMode !== RUNTIME_COMFYUI) {
+    showStatus("请先切换到 ComfyUI 模式", true)
+    return
+  }
   try {
     const uxp = loadModule("uxp")
     const plugins = uxp.pluginManager && uxp.pluginManager.plugins
@@ -5732,6 +6633,25 @@ async function openComfyUI() {
     await plugin.showPanel(WEB_PANEL_ID)
     showStatus("已在 Photoshop 中打开 ComfyUI")
   } catch (error) {
+    showStatus(error.message || String(error), true)
+  }
+}
+
+async function openHistoryPanel() {
+  try {
+    const uxp = loadModule("uxp")
+    const plugins = uxp.pluginManager && uxp.pluginManager.plugins
+    const list = plugins ? Array.from(plugins) : []
+    const info = uxp.entrypoints && uxp.entrypoints._pluginInfo
+    const plugin = list.find((item) => item && (item.id === "com.comfytv.photoshop.uxp" || (info && item.id === info.id)))
+    if (!plugin || typeof plugin.showPanel !== "function") {
+      showStatus("\u6253\u4e0d\u5f00\u5386\u53f2\u8bb0\u5f55\u7a97\u53e3", true)
+      return
+    }
+    await plugin.showPanel(HISTORY_PANEL_ID)
+    setHistoryPanelOpen(true)
+  } catch (error) {
+    setHistoryPanelOpen(false)
     showStatus(error.message || String(error), true)
   }
 }
@@ -5753,6 +6673,7 @@ function saveSettings() {
 }
 
 function restoreSettings() {
+  restoreHistoryCategories()
   element("server").value = localStorage.getItem(`${STORE_PREFIX}server`) || DEFAULT_SERVER
   element("comfy-launch").value = localStorage.getItem(`${STORE_PREFIX}comfyLaunch`) || DEFAULT_LAUNCH
   const textIds = ["positive", "negative", "seed"]
@@ -5779,6 +6700,7 @@ function restoreSettings() {
   element("batch-count").value = String(Number.isFinite(savedBatch) ? Math.max(1, Math.min(BATCH_MAX, savedBatch)) : 1)
   setPreviewFit(localStorage.getItem(`${STORE_PREFIX}fitContain`) === "true")
   loadRenderProfile()
+  syncHistoryCategoryControls(false)
   syncComposer()
 }
 
@@ -5791,18 +6713,46 @@ function initialize() {
   restoreSettings()
   window.addEventListener("message", onComposerMessage)
   mountComposerWorkbench()
+  element("runtime-mode-picker").classList.remove("hidden")
+  setConnection("选择运行模式", "busy")
+  setTimeout(() => element("choose-direct-mode")?.focus(), 0)
   element("settings-toggle").addEventListener("click", () => toggleDrawer("settings-drawer"))
   element("web-toggle").addEventListener("click", () => { openComfyUI() })
+  element("choose-direct-mode").addEventListener("click", () => switchRuntimeMode(RUNTIME_DIRECT))
+  element("choose-comfyui-mode").addEventListener("click", () => switchRuntimeMode(RUNTIME_COMFYUI))
+  element("settings-direct-mode").addEventListener("click", () => switchRuntimeMode(RUNTIME_DIRECT))
+  element("settings-comfyui-mode").addEventListener("click", () => switchRuntimeMode(RUNTIME_COMFYUI))
+  element("direct-api-validate").addEventListener("click", validateAndSaveDirectApiKey)
+  element("direct-api-clear").addEventListener("click", () => clearDirectApiKey())
+  element("open-comfy-platform").addEventListener("click", openComfyPlatform)
+  element("update-current-version").textContent = `v${PLUGIN_VERSION}`
+  element("update-check").addEventListener("click", () => checkPluginUpdate())
+  element("update-install").addEventListener("click", () => downloadAndInstallPluginUpdate())
+  element("update-open-releases").addEventListener("click", () => openPluginReleasePage(pluginUpdateInfo?.releaseUrl))
+  setTimeout(() => checkPluginUpdate({ silent: true }), 2500)
   element("history-toggle").addEventListener("click", (event) => {
     event.stopPropagation()
-    setHistoryPanelOpen(!historyPanelOpen)
+    openHistoryPanel()
   })
-  element("history-panel-close").addEventListener("click", () => setHistoryPanelOpen(false))
   element("history-panel-clear").addEventListener("click", () => {
     clearAllRenderHistory().catch((error) => showStatus(error.message || "清空历史记录失败", true))
   })
   element("history-panel-edit").addEventListener("click", () => setHistoryPanelEditing(!historyPanelEditing))
   element("history-panel-edit-done").addEventListener("click", () => setHistoryPanelEditing(false))
+  element("history-panel-filter").addEventListener("change", (event) => {
+    const value = String(event.target.value || "")
+    historyPanelFilter = value === HISTORY_ALL_CATEGORY ? HISTORY_ALL_CATEGORY : validHistoryCategoryId(value)
+    historyPanelPage = 0
+    saveHistoryCategories()
+    paintHistoryPanel()
+  })
+  element("history-category-add").addEventListener("click", createHistoryCategoryFromPanel)
+  element("history-category-name").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return
+    event.preventDefault()
+    createHistoryCategoryFromPanel()
+  })
+  element("history-panel-move-selected").addEventListener("click", moveSelectedRenderHistory)
   element("history-panel-delete-selected").addEventListener("click", () => {
     deleteSelectedRenderHistory().catch((error) => showStatus(error.message || "删除历史记录失败", true))
   })
@@ -5812,7 +6762,7 @@ function initialize() {
     const card = historyPanelCardFromEvent(event)
     if (!card) return
     if (historyPanelEditing) {
-      toggleHistoryPanelSelection(card)
+      toggleHistoryPanelSelection(card, event)
       return
     }
     selectHistory(Number(card.dataset.index)).catch((error) => showStatus(error.message, true))
@@ -5823,7 +6773,7 @@ function initialize() {
     if (!card) return
     event.preventDefault()
     if (historyPanelEditing) {
-      toggleHistoryPanelSelection(card)
+      toggleHistoryPanelSelection(card, event)
       return
     }
     selectHistory(Number(card.dataset.index)).catch((error) => showStatus(error.message, true))
@@ -5840,7 +6790,10 @@ function initialize() {
     setPreviewFit(contain)
     localStorage.setItem(`${STORE_PREFIX}fitContain`, String(contain))
   })
-  bindCheckToggle("crop-toggle", "crop-selection")
+  bindCheckToggle("crop-toggle", "crop-selection", () => {
+    saveSettings()
+    syncComposerWorkbench()
+  })
   element("randomize").addEventListener("click", randomSeed)
   element("model-trigger").addEventListener("click", (event) => {
     event.stopPropagation()
@@ -5854,8 +6807,13 @@ function initialize() {
     event.stopPropagation()
     toggleComposerMenu("count-menu")
   })
+  element("history-category-trigger").addEventListener("click", (event) => {
+    event.stopPropagation()
+    openHostPopover("history-category")
+  })
   element("ref-doc").addEventListener("click", () => {
-    showStatus("生成时使用当前 Photoshop 画面")
+    insertMention("@画布")
+    showStatus("已写入 @画布（实际输入的参考图1）")
   })
   element("ref-add-btn").addEventListener("click", (event) => {
     event.preventDefault()
@@ -5863,7 +6821,7 @@ function initialize() {
     addReferenceImage()
   })
   document.addEventListener("click", (event) => {
-    if (event.target.closest && event.target.closest(".composer-menu, .host-preset-menu, #model-trigger, #mode-trigger, #count-trigger")) return
+    if (event.target.closest && event.target.closest(".composer-menu, .host-preset-menu, #model-trigger, #mode-trigger, #count-trigger, #history-category-trigger")) return
     closeComposerMenus()
   })
   document.addEventListener("keydown", (event) => {
@@ -5872,14 +6830,10 @@ function initialize() {
     closeComposerMenus(true)
   }, true)
   document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !historyPanelOpen) return
+    if (event.key !== "Escape" || !historyPanelOpen || !historyPanelEditing) return
     event.preventDefault()
     event.stopPropagation()
-    if (historyPanelEditing) {
-      setHistoryPanelEditing(false)
-      return
-    }
-    setHistoryPanelOpen(false)
+    setHistoryPanelEditing(false)
   }, true)
   element("positive").addEventListener("compositionstart", () => {
     promptComposing = true
@@ -5956,6 +6910,10 @@ function initialize() {
   element("workflow").addEventListener("change", (event) => {
     if (event.target.value === "") return
     syncProfileToModel()
+    if (runtimeMode === RUNTIME_DIRECT) {
+      showStatus("已切换模型")
+      return
+    }
     try {
       sendSocket({ workflow: Number(event.target.value) })
       pushRenderProfile()
@@ -5987,6 +6945,8 @@ function initialize() {
   })
   window.addEventListener("beforeunload", () => {
     clearTimeout(reconnectTimer)
+    stopDirectElapsed()
+    if (directAbortController) directAbortController.abort()
     if (socket) socket.close()
   })
   const historyHover = element("history-hover")
@@ -6013,9 +6973,7 @@ function initialize() {
   element("history-open-folder").addEventListener("click", () => {
     openRenderFolder().catch((error) => showStatus(error.message, true))
   })
-  restoreRenderHistory()
-    .catch((error) => showStatus(error.message, true))
-    .then(() => connect())
+  restoreRenderHistory().catch((error) => showStatus(error.message, true))
 }
 
 let panelBooted = false
@@ -6039,6 +6997,14 @@ function boot() {
           "com.comfytv.photoshop.panel": {
             create() { bootMain() },
             show() { bootMain() },
+          },
+          [HISTORY_PANEL_ID]: {
+            create() { bootMain() },
+            show() {
+              bootMain()
+              setHistoryPanelOpen(true)
+            },
+            hide() { setHistoryPanelOpen(false) },
           },
           [WEB_PANEL_ID]: {
             create() {},

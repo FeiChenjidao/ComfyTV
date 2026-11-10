@@ -12,7 +12,7 @@
         <rect id="composer-progress-stroke"></rect>
       </svg>
       <div id="drop-target" class="references" aria-label="参考图">
-        <button id="canvas" class="reference action" type="button" title="生成时使用当前 Photoshop 画面">
+        <button id="canvas" class="reference action" type="button" title="点击引用 @画布；生成时它始终是参考图1">
           <span id="canvas-placeholder" class="action-icon">▣</span>
           <img id="canvas-image" alt="" hidden>
           <span class="card-label">画布</span>
@@ -47,6 +47,9 @@
           </button>
           <button id="crop-toggle" class="tool-button" type="button" title="有选区时裁切到选区">⌗</button>
           <button id="preset-open" class="tool-button preset-button" type="button" title="打开预设">预设</button>
+          <button id="history-category-trigger" class="select-trigger history-category-trigger" type="button" title="选择生成图片的历史分类">
+            <span id="history-category-label">未分类</span><span class="caret">⌄</span>
+          </button>
         </div>
         <div class="toolbar-right">
           <button id="count-trigger" class="select-trigger count-trigger" type="button" title="生成数量">

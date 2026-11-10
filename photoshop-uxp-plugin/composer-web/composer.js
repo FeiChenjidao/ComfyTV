@@ -23,6 +23,8 @@ const countTrigger = document.getElementById("count-trigger")
 const countLabel = document.getElementById("count-label")
 const cropToggle = document.getElementById("crop-toggle")
 const presetOpen = document.getElementById("preset-open")
+const historyCategoryTrigger = document.getElementById("history-category-trigger")
+const historyCategoryLabel = document.getElementById("history-category-label")
 const renderButton = document.getElementById("render")
 const composerSurface = "composer"
 const maxReferenceEdge = 2048
@@ -46,6 +48,9 @@ let controls = {
   modeOptions: {},
   count: 1,
   countSteps: [1, 2, 4, 8],
+  historyCategory: "",
+  historyCategoryLabel: "未分类",
+  historyCategories: [{ id: "", name: "未分类" }],
   crop: true,
   progress: "就绪",
   progressActive: false,
@@ -65,10 +70,31 @@ let promptSyncTimer = 0
 let promptComposing = false
 let progressOffset = 0
 let progressTimer = 0
+let progressGeometry = null
+let paintedProgressActive = null
+let paintedProgressPercent = null
+const pendingHostMessages = []
+let hostMessageTimer = 0
 
 function send(message) {
+  const payload = { ...message, surface: composerSurface }
   if (window.uxpHost && typeof window.uxpHost.postMessage === "function") {
-    window.uxpHost.postMessage({ ...message, surface: composerSurface })
+    window.uxpHost.postMessage(payload)
+    return
+  }
+  if (payload.type === "composer-prompt") {
+    const previous = pendingHostMessages.findIndex((item) => item.type === "composer-prompt")
+    if (previous >= 0) pendingHostMessages.splice(previous, 1)
+  }
+  if (pendingHostMessages.length >= 40) pendingHostMessages.shift()
+  pendingHostMessages.push(payload)
+  if (!hostMessageTimer) {
+    hostMessageTimer = setInterval(() => {
+      if (!window.uxpHost || typeof window.uxpHost.postMessage !== "function") return
+      clearInterval(hostMessageTimer)
+      hostMessageTimer = 0
+      while (pendingHostMessages.length) window.uxpHost.postMessage(pendingHostMessages.shift())
+    }, 100)
   }
 }
 
@@ -153,11 +179,14 @@ function paintCanvasReference() {
   }
 }
 
-function paintComposerProgress() {
+function refreshComposerProgressGeometry() {
   if (!progressFrame.classList.contains("active")) return
   const width = Math.max(0, workspace.clientWidth)
   const height = Math.max(0, workspace.clientHeight)
-  if (width < 8 || height < 8) return
+  if (width < 8 || height < 8) {
+    progressGeometry = null
+    return
+  }
   const inset = 2
   const pathWidth = Math.max(1, width - inset * 2)
   const pathHeight = Math.max(1, height - inset * 2)
@@ -175,22 +204,40 @@ function paintComposerProgress() {
   progressStroke.setAttribute("rx", "6")
   progressStroke.setAttribute("ry", "6")
   progressStroke.style.strokeDasharray = `${lit} ${Math.max(0.01, perimeter - lit)}`
+  progressGeometry = { perimeter, percent }
+}
+
+function paintComposerProgress() {
+  if (!progressFrame.classList.contains("active")) return
+  if (!progressGeometry) refreshComposerProgressGeometry()
+  if (!progressGeometry) return
+  const { perimeter, percent } = progressGeometry
   progressStroke.style.strokeDashoffset = percent >= 100 ? "0" : String(-(progressOffset % perimeter))
 }
 
 function setComposerProgress(active, percent) {
   const running = Boolean(active)
   const value = Math.max(0, Math.min(100, Number(percent) || 0))
-  progress.classList.toggle("is-active", running)
-  progress.classList.toggle("is-indeterminate", running && value <= 0)
-  progress.style.setProperty("--progress-scale", String(value / 100))
-  progressFrame.classList.toggle("active", running)
+  const changed = paintedProgressActive !== running || paintedProgressPercent !== value
+  if (changed) {
+    paintedProgressActive = running
+    paintedProgressPercent = value
+    progress.classList.toggle("is-active", running)
+    progress.classList.toggle("is-indeterminate", running && value <= 0)
+    progress.style.setProperty("--progress-scale", String(value / 100))
+    progressFrame.classList.toggle("active", running)
+    progressGeometry = null
+  }
   if (!running) {
     clearInterval(progressTimer)
     progressTimer = 0
+    progressGeometry = null
     return
   }
-  paintComposerProgress()
+  if (changed) {
+    refreshComposerProgressGeometry()
+    paintComposerProgress()
+  }
   if (!progressTimer && value < 100) {
     progressTimer = setInterval(() => {
       progressOffset += 8
@@ -202,17 +249,30 @@ function setComposerProgress(active, percent) {
   }
 }
 
+function paintProgressControls() {
+  const text = controls.progress || "就绪"
+  if (progress.textContent !== text) progress.textContent = text
+  const busy = Boolean(controls.busy)
+  const stopping = Boolean(controls.stopping)
+  renderButton.disabled = busy && !stopping
+  renderButton.classList.toggle("is-stop", stopping)
+  const label = stopping ? "■" : "↑"
+  if (renderButton.textContent !== label) renderButton.textContent = label
+  setComposerProgress(controls.progressActive, controls.progressPercent)
+}
 
 function paintControls() {
-  modelLabel.textContent = controls.modelLabel || "模型"
-  modeLabel.textContent = controls.modeLabel || "模式"
-  countLabel.textContent = `${Number(controls.count) || 1}x`
-  progress.textContent = controls.progress || "就绪"
+  const nextModel = controls.modelLabel || "模型"
+  const nextMode = controls.modeLabel || "模式"
+  const nextCount = `${Number(controls.count) || 1}x`
+  const nextHistoryCategory = controls.historyCategoryLabel || "未分类"
+  if (modelLabel.textContent !== nextModel) modelLabel.textContent = nextModel
+  if (modeLabel.textContent !== nextMode) modeLabel.textContent = nextMode
+  if (countLabel.textContent !== nextCount) countLabel.textContent = nextCount
+  if (historyCategoryLabel.textContent !== nextHistoryCategory) historyCategoryLabel.textContent = nextHistoryCategory
+  historyCategoryTrigger.title = `历史分类：${nextHistoryCategory}`
   cropToggle.classList.toggle("is-on", Boolean(controls.crop))
-  renderButton.disabled = Boolean(controls.busy && !controls.stopping)
-  renderButton.classList.toggle("is-stop", Boolean(controls.stopping))
-  renderButton.textContent = controls.stopping ? "■" : "↑"
-  setComposerProgress(controls.progressActive, controls.progressPercent)
+  paintProgressControls()
 }
 
 function queuePromptSync(immediate = false) {
@@ -520,6 +580,11 @@ function paintPresets() {
 }
 
 function mentionMeta(token) {
+  if (token === "@画布") return {
+    token,
+    label: "画布",
+    src: canvasReference && canvasReference.src ? canvasReference.src : "",
+  }
   if (token === "@风格") return styleReference
     ? { token, label: "风格", src: styleReference.src || "" }
     : null
@@ -551,7 +616,7 @@ function createMention(meta) {
 function renderPrompt(value) {
   const text = String(value || "")
   prompt.textContent = ""
-  const expression = /@(?:风格|(?:参考图|图片)\d+)/g
+  const expression = /@(?:画布|风格|(?:参考图|图片)\d+)/g
   let cursor = 0
   for (const match of text.matchAll(expression)) {
     if (match.index > cursor) prompt.appendChild(document.createTextNode(text.slice(cursor, match.index)))
@@ -632,7 +697,11 @@ function mentionQuery() {
 }
 
 function mentionChoices() {
-  const choices = []
+  const choices = [{
+    token: "@画布",
+    label: "画布",
+    src: canvasReference && canvasReference.src ? canvasReference.src : "",
+  }]
   if (styleReference) choices.push({ token: "@风格", label: "风格", src: styleReference.src || "" })
   references.forEach((item, index) => choices.push({
     token: `@参考图${index + 1}`,
@@ -762,10 +831,19 @@ window.addEventListener("message", (event) => {
     modeTrigger.classList.toggle("is-active", menu === "mode")
     countTrigger.classList.toggle("is-active", menu === "count")
     presetOpen.classList.toggle("is-active", menu === "preset")
+    historyCategoryTrigger.classList.toggle("is-active", menu === "history-category")
     return
   }
   if (data.type === "composer-focus-ready") {
     restorePromptFocus()
+    return
+  }
+  if (data.type === "composer-progress") {
+    if (Number(data.protocolVersion) > 0) hostProtocolVersion = Number(data.protocolVersion)
+    if (data.progress && typeof data.progress === "object") {
+      controls = { ...controls, ...data.progress }
+      paintProgressControls()
+    }
     return
   }
   if (data.type !== "composer-state") return
@@ -855,10 +933,14 @@ window.addEventListener("focus", () => {
   if (document.activeElement === prompt) restorePromptFocus()
 })
 
-window.addEventListener("resize", paintComposerProgress)
+window.addEventListener("resize", () => {
+  progressGeometry = null
+  refreshComposerProgressGeometry()
+  paintComposerProgress()
+})
 
 document.getElementById("add").addEventListener("click", () => send({ type: "composer-pick-reference" }))
-document.getElementById("canvas").addEventListener("click", () => send({ type: "composer-canvas" }))
+document.getElementById("canvas").addEventListener("click", () => insertMention("@画布"))
 layerSource.addEventListener("pointerdown", beginLayerSourceDrag)
 layerSource.addEventListener("click", (event) => {
   if (suppressLayerSourceClick) {
@@ -892,6 +974,10 @@ cropToggle.addEventListener("click", () => send({ type: "composer-toggle-crop" }
 presetOpen.addEventListener("click", (event) => {
   event.stopPropagation()
   requestSurfaceMenu("preset")
+})
+historyCategoryTrigger.addEventListener("click", (event) => {
+  event.stopPropagation()
+  requestSurfaceMenu("history-category")
 })
 renderButton.addEventListener("click", () => send({ type: "composer-render" }))
 renderButton.addEventListener("contextmenu", (event) => {

@@ -10,6 +10,21 @@
   <uxp-panel panelid="com.comfytv.photoshop.panel">
     <span id="connection-state" class="connection-state">未连接</span>
     <main class="panel-shell">
+      <section id="runtime-mode-picker" class="runtime-mode-picker hidden" aria-label="选择运行模式">
+        <div class="runtime-mode-dialog">
+          <div class="runtime-mode-kicker">ComfyTV 直接版</div>
+          <h1>选择运行模式</h1>
+          <p>本次 Photoshop 会话内保持选择，之后可在设置中切换。</p>
+          <button id="choose-direct-mode" class="runtime-mode-card primary" type="button">
+            <strong>直接模式</strong>
+            <span>直接连接 Comfy API，不需要启动 ComfyUI。</span>
+          </button>
+          <button id="choose-comfyui-mode" class="runtime-mode-card" type="button">
+            <strong>ComfyUI 模式</strong>
+            <span>保留工作流、自定义节点和本地模型链路。</span>
+          </button>
+        </div>
+      </section>
       <section class="preview-stage" tabindex="-1">
         <div id="empty-preview" class="empty-preview">
           <img class="empty-image" src="preview-default.jpg" alt="">
@@ -47,80 +62,116 @@
             <strong>设置</strong>
             <button class="close-button" data-close="settings-drawer" type="button" title="关闭">&#215;</button>
           </div>
-          <div class="field-row">
-            <label for="server">ComfyUI 地址</label>
-            <div class="server-row">
-              <input id="server" value="http://127.0.0.1:8188" spellcheck="false">
-              <button id="connect" type="button">连接</button>
+          <div class="settings-grid">
+            <div class="settings-column">
+          <div class="settings-section runtime-section">
+            <div class="settings-section-head">
+              <strong>运行方式</strong>
+              <span>选择生成链路</span>
+            </div>
+            <div class="runtime-setting">
+              <div class="runtime-segmented">
+                <button id="settings-direct-mode" type="button">直接模式</button>
+                <button id="settings-comfyui-mode" type="button">ComfyUI</button>
+              </div>
             </div>
           </div>
-          <div class="field-row">
-            <label for="comfy-launch">启动程序</label>
+          <div id="direct-settings" class="settings-section direct-settings hidden">
+            <div class="settings-section-head">
+              <strong>Comfy API</strong>
+              <span>密钥仅保存在本机</span>
+            </div>
+            <div class="field-row api-key-row">
+              <label for="direct-api-key">API Key</label>
+              <input id="direct-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="输入或替换已保存的 Key">
+            </div>
             <div class="server-row">
-              <input id="comfy-launch" spellcheck="false" placeholder="Comfy Desktop.exe">
-              <button id="pick-comfy" type="button">选择</button>
+              <button id="direct-api-validate" type="button">验证并保存</button>
+              <button id="direct-api-clear" type="button">清除</button>
+            </div>
+            <button id="open-comfy-platform" class="secondary-button" type="button">打开 Comfy API 平台</button>
+            <div id="direct-api-status" class="direct-api-status">尚未保存 API Key</div>
+          </div>
+          <div id="comfyui-settings" class="settings-section comfyui-settings">
+            <div class="settings-section-head">
+              <strong>ComfyUI 服务</strong>
+              <span>高级工作流模式</span>
+            </div>
+            <div class="field-row">
+              <label for="server">ComfyUI 地址</label>
+              <div class="server-row">
+                <input id="server" value="http://127.0.0.1:8188" spellcheck="false">
+                <button id="connect" type="button">连接</button>
+              </div>
+            </div>
+            <div class="field-row">
+              <label for="comfy-launch">启动程序</label>
+              <div class="server-row">
+                <input id="comfy-launch" spellcheck="false" placeholder="Comfy Desktop.exe">
+                <button id="pick-comfy" type="button">选择</button>
+              </div>
+            </div>
+            <button id="start-comfy" class="secondary-button" type="button">启动 ComfyUI</button>
+          </div>
+          <div class="settings-section update-settings">
+            <div class="settings-section-head">
+              <strong>插件更新</strong>
+              <span id="update-current-version">当前版本</span>
+            </div>
+            <div id="update-status" class="update-status">尚未检查更新</div>
+            <div class="server-row update-actions">
+              <button id="update-check" type="button">检查更新</button>
+              <button id="update-install" class="hidden" type="button">下载并安装</button>
+            </div>
+            <button id="update-open-releases" class="secondary-button" type="button">打开发布页面</button>
+          </div>
+            </div>
+            <div class="settings-column">
+          <div class="settings-section image-settings">
+            <div class="settings-section-head">
+              <strong>图像处理</strong>
+              <span>发送前处理</span>
+            </div>
+            <div class="field-row field-stack">
+              <label for="negative">负面提示词</label>
+              <textarea id="negative" rows="3" placeholder="可选"></textarea>
+            </div>
+            <div class="field-row">
+              <label for="max-res">大图最长边</label>
+              <input id="max-res" type="number" min="16" max="3840" step="16" value="1024">
+            </div>
+            <div class="field-row">
+              <label for="min-res">小图最短边</label>
+              <input id="min-res" type="number" min="16" max="3840" step="16" value="512">
+            </div>
+            <label class="check-row"><input id="crop-selection" type="checkbox" checked><span>有选区时裁切到选区</span></label>
+            <div class="field-row">
+              <label for="crop-pad">选区外扩 (%)</label>
+              <input id="crop-pad" type="number" min="0" max="200" step="1" value="32" title="裁切时每边按选区尺寸的这个百分比向外扩，把周围一起传进去">
             </div>
           </div>
-          <button id="start-comfy" class="secondary-button" type="button">启动 ComfyUI</button>
-          <div class="field-row">
-            <label for="negative">负面提示词</label>
-            <textarea id="negative" rows="3" placeholder="可选"></textarea>
+          <div class="settings-section general-settings">
+            <div class="settings-section-head">
+              <strong>常规</strong>
+              <span>生成与结果</span>
+            </div>
+            <div class="field-row">
+              <label for="seed">种子</label>
+              <div class="server-row seed-setting-row">
+                <input id="seed" type="number" min="0" max="2147483647" value="1379">
+                <button id="randomize" type="button">随机</button>
+              </div>
+            </div>
+            <label class="check-row"><input id="auto-seed" type="checkbox"><span>每次自动随机种子</span></label>
+            <button id="send-layer" class="secondary-button" type="button">发送当前图层到 ComfyTV</button>
+            <button id="add-layer" class="secondary-button" type="button" disabled>把结果添加为图层</button>
           </div>
-          <div class="field-row">
-            <label for="max-res">更大则缩小</label>
-            <input id="max-res" type="number" min="16" max="3840" step="16" value="1024">
-          </div>
-          <div class="field-row">
-            <label for="min-res">更小则放大</label>
-            <input id="min-res" type="number" min="16" max="3840" step="16" value="512">
-          </div>
-          <label class="check-row"><input id="crop-selection" type="checkbox" checked><span>有选区时裁切到选区</span></label>
-          <div class="field-row">
-            <label for="crop-pad">选区外扩 %</label>
-            <input id="crop-pad" type="number" min="0" max="200" step="1" value="32" title="裁切时每边按选区尺寸的这个百分比向外扩，把周围一起传进去">
-          </div>
-          <div class="field-row">
-            <label for="seed">种子</label>
-            <div class="server-row">
-              <input id="seed" type="number" min="0" max="2147483647" value="1379">
-              <button id="randomize" type="button">随机</button>
             </div>
           </div>
-          <label class="check-row"><input id="auto-seed" type="checkbox"><span>每次自动随机种子</span></label>
-          <button id="send-layer" class="secondary-button" type="button">发送当前图层到 ComfyTV</button>
-          <button id="add-layer" class="secondary-button" type="button" disabled>把结果添加为图层</button>
         </section>
 
 
         <div id="status-toast" class="status-toast glass hidden"></div>
-
-        <section id="history-panel" class="history-panel hidden" aria-label="历史记录">
-          <header class="history-panel-header">
-            <div class="history-panel-title">
-              <strong>历史记录</strong>
-              <span id="history-panel-count">0 张</span>
-            </div>
-            <div class="history-panel-actions">
-              <button id="history-panel-clear" class="history-panel-action danger" type="button">清空</button>
-              <button id="history-panel-edit" class="history-panel-action" type="button">编辑</button>
-              <button id="history-panel-close" class="close-button" type="button" title="关闭">&#215;</button>
-            </div>
-          </header>
-          <div id="history-panel-grid" class="history-panel-grid"></div>
-          <div id="history-panel-empty" class="history-panel-empty hidden">暂无生成记录</div>
-          <footer class="history-panel-footer">
-            <div class="history-panel-pagination">
-              <button id="history-panel-prev" type="button">上一页</button>
-              <span id="history-panel-page">1 / 1</span>
-              <button id="history-panel-next" type="button">下一页</button>
-            </div>
-            <div id="history-panel-batch" class="history-panel-batch hidden">
-              <span id="history-panel-selected-count">已选 0 张</span>
-              <button id="history-panel-delete-selected" class="danger" type="button" disabled>删除所选</button>
-              <button id="history-panel-edit-done" type="button">完成</button>
-            </div>
-          </footer>
-        </section>
 
         <section id="history-limit" class="history-limit hidden">
           <div class="history-limit-title">
@@ -144,6 +195,7 @@
           <div id="model-menu" class="composer-menu host-model-menu hidden"></div>
           <div id="mode-menu" class="composer-menu mode-sheet host-mode-menu hidden"></div>
           <div id="count-menu" class="composer-menu composer-count-menu host-count-menu hidden"></div>
+          <div id="history-category-menu" class="composer-menu host-history-category-menu hidden"></div>
           <div id="preset-host-menu" class="host-preset-menu hidden"></div>
         </div>
 
@@ -185,6 +237,10 @@
               <span id="preset-open" class="tiny-btn" role="button" tabindex="0" title="预设">
                 <span class="icon-slot" data-icon="preset-open"></span>
               </span>
+              <span id="history-category-trigger" class="composer-select history-category-trigger" role="button" tabindex="0" title="选择生成图片的历史分类">
+                <span id="history-category-label">未分类</span>
+                <span class="icon-slot" data-icon="caret"></span>
+              </span>
             </div>
             <div class="composer-bar-right">
               <span id="count-trigger" class="composer-count" role="button" tabindex="0" title="生成数量。上一张回来后再生成下一张。">
@@ -208,6 +264,48 @@
       </section>
     </main>
   </uxp-panel>
+  <uxp-panel panelid="com.comfytv.photoshop.history">
+    <main class="history-window-shell">
+      <section id="history-panel" class="history-panel hidden" aria-label="历史记录">
+        <header class="history-panel-header">
+          <div class="history-panel-title">
+            <strong>历史记录</strong>
+            <span id="history-panel-count">0 张</span>
+          </div>
+          <div class="history-panel-actions">
+            <button id="history-panel-clear" class="history-panel-action danger" type="button">清空</button>
+            <button id="history-panel-edit" class="history-panel-action" type="button">编辑</button>
+          </div>
+        </header>
+        <div class="history-panel-category-bar">
+          <label class="history-category-filter-wrap">
+            <span>分类</span>
+            <select id="history-panel-filter" aria-label="筛选历史分类"></select>
+          </label>
+          <div class="history-category-create">
+            <input id="history-category-name" type="text" maxlength="20" placeholder="新分类名称">
+            <button id="history-category-add" type="button">新建分类</button>
+          </div>
+        </div>
+        <div id="history-panel-grid" class="history-panel-grid"></div>
+        <div id="history-panel-empty" class="history-panel-empty hidden">暂无生成记录</div>
+        <footer class="history-panel-footer">
+          <div class="history-panel-pagination">
+            <button id="history-panel-prev" type="button">上一页</button>
+            <span id="history-panel-page">1 / 1</span>
+            <button id="history-panel-next" type="button">下一页</button>
+          </div>
+          <div id="history-panel-batch" class="history-panel-batch hidden">
+            <span id="history-panel-selected-count">已选 0 张</span>
+            <select id="history-panel-move-target" aria-label="移动到分类"></select>
+            <button id="history-panel-move-selected" type="button" disabled>移动</button>
+            <button id="history-panel-delete-selected" class="danger" type="button" disabled>删除所选</button>
+            <button id="history-panel-edit-done" type="button">完成</button>
+          </div>
+        </footer>
+      </section>
+    </main>
+  </uxp-panel>
   <uxp-panel panelid="com.comfytv.photoshop.web">
     <div class="web-shell">
       <webview id="comfy-webview" src="about:blank"></webview>
@@ -216,6 +314,8 @@
     <script src="icons.js"></script>
     <script src="glass.js"></script>
     <script src="preset-data.js"></script>
+    <script src="direct-api.js"></script>
+    <script src="updater.js"></script>
     <script src="main.js"></script>
   </body>
 </html>

@@ -5,6 +5,20 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $pluginRoot = Join-Path $projectRoot "photoshop-uxp-plugin"
 $manifest = Get-Content -LiteralPath (Join-Path $pluginRoot "manifest.json") -Raw | ConvertFrom-Json
 $version = [string] $manifest.version
+$minimumPhotoshop = [version] ([string] $manifest.host.minVersion)
+if ($minimumPhotoshop -lt [version] "26.0.0") {
+    throw "Photoshop 26.0 or newer is required for the local Composer WebView"
+}
+if ([string] $manifest.requiredPermissions.webview.allowLocalRendering -ne "yes") {
+    throw "manifest requiredPermissions.webview.allowLocalRendering must be the string 'yes'"
+}
+$mainSource = Get-Content -LiteralPath (Join-Path $pluginRoot "main.js") -Raw
+if ($mainSource -notmatch ('const PLUGIN_VERSION = "' + [regex]::Escape($version) + '"')) {
+    throw "main.js PLUGIN_VERSION does not match manifest version $version"
+}
+if ($mainSource -match '/comfytv/photoshop/composer') {
+    throw "The Composer must load from the plugin package, not from ComfyUI"
+}
 $desktopRoot = "D:\Comfy-Desktop\ComfyUI-Installs\ComfyUI\ComfyUI"
 $liveRoot = Join-Path $desktopRoot "custom_nodes\ComfyTV"
 $userRoot = Join-Path $desktopRoot "user\comfytv\photoshop"
@@ -76,8 +90,10 @@ if ($BuildFrontend) { Invoke-Checked "npm" @("run", "build:fast") }
 Invoke-Checked "node" @("--check", (Join-Path $projectRoot "runtime\photoshop-runtime-bridge.js"))
 Invoke-Checked "node" @("--check", (Join-Path $projectRoot "js\photoshop-runtime-bridge.js"))
 Invoke-Checked "node" @("--check", (Join-Path $pluginRoot "preset-data.js"))
+Invoke-Checked "node" @("--check", (Join-Path $pluginRoot "direct-api.js"))
 Invoke-Checked "node" @("--check", (Join-Path $pluginRoot "main.js"))
 Invoke-Checked "node" @("--check", (Join-Path $pluginRoot "composer-web\composer.js"))
+Invoke-Checked "node" @("--test", (Join-Path $projectRoot "tests\direct_api.test.js"))
 Invoke-Checked "python" @("-m", "py_compile", (Join-Path $projectRoot "photoshop\backend.py"), (Join-Path $projectRoot "photoshop\nodes.py"), (Join-Path $projectRoot "api\photoshop.py"))
 
 $workflows = @(
@@ -90,7 +106,7 @@ Invoke-Checked "node" (@((Join-Path $projectRoot "scripts\verify-photoshop-workf
 
 $hostRestartFiles = @(
     (Join-Path $pluginRoot "manifest.json"), (Join-Path $pluginRoot "index.html"),
-    (Join-Path $pluginRoot "main.js"), (Join-Path $pluginRoot "preset-data.js"),
+    (Join-Path $pluginRoot "main.js"), (Join-Path $pluginRoot "direct-api.js"), (Join-Path $pluginRoot "preset-data.js"),
     (Join-Path $pluginRoot "styles.css")
 )
 $composerFiles = @(

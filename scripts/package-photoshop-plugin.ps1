@@ -9,6 +9,16 @@ $distRoot = Join-Path $projectRoot "dist"
 $manifestPath = Join-Path $pluginRoot "manifest.json"
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $version = [string] $manifest.version
+if ([version] ([string] $manifest.host.minVersion) -lt [version] "26.0.0") {
+    throw "Photoshop 26.0 or newer is required for the local Composer WebView"
+}
+$mainSource = Get-Content -LiteralPath (Join-Path $pluginRoot "main.js") -Raw
+if ($mainSource -notmatch ('const PLUGIN_VERSION = "' + [regex]::Escape($version) + '"')) {
+    throw "main.js PLUGIN_VERSION does not match manifest version $version"
+}
+if ($mainSource -match '/comfytv/photoshop/composer') {
+    throw "The Composer must load from the plugin package, not from ComfyUI"
+}
 $nodeMetadata = Get-Content -LiteralPath (Join-Path $projectRoot "package.json") -Raw | ConvertFrom-Json
 $nodeVersion = [string] $nodeMetadata.version
 $packageBase = "ComfyTV-photoshop-$version"
@@ -64,6 +74,8 @@ function Assert-RequiredFiles([string] $Root) {
         'manifest.json',
         'index.html',
         'main.js',
+        'direct-api.js',
+        'updater.js',
         'styles.css',
         'icons.js',
         'glass.js',
@@ -213,6 +225,8 @@ $unexpected = Get-ChildItem -LiteralPath $stageRoot -Recurse | Where-Object {
 if ($unexpected) { throw "Development-only files entered the package: $($unexpected.FullName -join ', ')" }
 
 Invoke-NodeCheck (Join-Path $stageRoot 'main.js')
+Invoke-NodeCheck (Join-Path $stageRoot 'direct-api.js')
+Invoke-NodeCheck (Join-Path $stageRoot 'updater.js')
 Invoke-NodeCheck (Join-Path $stageRoot 'preset-data.js')
 Invoke-NodeCheck (Join-Path $stageRoot 'composer-web\composer.js')
 Invoke-NodeCheck (Join-Path $nodeStageRoot 'runtime\photoshop-runtime-bridge.js')
@@ -272,6 +286,9 @@ Write-Host "ComfyTV runtime: $nodePackagePath ($nodePackageSize bytes, $($nodeEx
 Write-Host "Bundle: $bundlePath ($bundleSize bytes)"
 Write-Host "SHA256: $ccxHash"
 Write-Host "Bundle SHA256: $bundleHash"
+Write-Host "Release repository: https://github.com/FeiChenjidao/ComfyTV-Photoshop/releases"
+Write-Host "Release tag: v$version"
+Write-Host "Upload assets: $(Split-Path $ccxPath -Leaf), $(Split-Path $packageHashPath -Leaf)"
 
 if ($KeepStaging) {
     Write-Host "Staging kept at: $tempRoot"

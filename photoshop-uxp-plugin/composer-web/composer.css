@@ -457,6 +457,19 @@ body.is-reordering * {
   font-size: 11px !important;
 }
 
+.history-category-trigger {
+  flex: 0 1 150px;
+  width: auto;
+  max-width: 150px;
+  margin-left: 5px !important;
+  border-left: 1px solid #333 !important;
+  color: #c9c9c9 !important;
+}
+
+.history-category-trigger.is-active {
+  color: #ccff00 !important;
+}
+
 .count-trigger {
   max-width: 54px;
   padding: 0 3px;
@@ -488,4 +501,5 @@ body.is-reordering * {
 @media (max-width: 520px) {
   .select-trigger { max-width: 88px; }
   .preset-button { padding: 0 4px; font-size: 10px !important; }
+  .history-category-trigger { flex-basis: 84px; max-width: 84px; margin-left: 2px !important; }
 }
