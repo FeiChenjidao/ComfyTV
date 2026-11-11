@@ -627,6 +627,16 @@ function renderPrompt(value) {
   if (cursor < text.length) prompt.appendChild(document.createTextNode(text.slice(cursor)))
 }
 
+function renderPromptPreservingFocus(value) {
+  const focused = document.activeElement === prompt
+  const offset = focused ? caretOffset() : 0
+  renderPrompt(value)
+  if (!focused) return
+  prompt.focus({ preventScroll: true })
+  setCaretOffset(offset)
+  rememberPromptFocus()
+}
+
 function promptText() {
   let text = ""
   const visit = (node) => {
@@ -848,18 +858,21 @@ window.addEventListener("message", (event) => {
   }
   if (data.type !== "composer-state") return
   if (Number(data.protocolVersion) > 0) hostProtocolVersion = Number(data.protocolVersion)
+  let mentionSourcesChanged = false
   if (Object.prototype.hasOwnProperty.call(data, "references")) {
     references = Array.isArray(data.references) ? data.references : []
     paintReferences()
-    paintMentions()
+    mentionSourcesChanged = true
   }
   if (Object.prototype.hasOwnProperty.call(data, "styleReference")) {
     styleReference = data.styleReference && typeof data.styleReference === "object" ? data.styleReference : null
     paintStyleReference()
+    mentionSourcesChanged = true
   }
   if (Object.prototype.hasOwnProperty.call(data, "canvasReference")) {
     canvasReference = data.canvasReference && typeof data.canvasReference === "object" ? data.canvasReference : null
     paintCanvasReference()
+    mentionSourcesChanged = true
   }
   if (data.presetLibrary && typeof data.presetLibrary === "object") presetLibrary = data.presetLibrary
   if (data.selectedPresets && typeof data.selectedPresets === "object") selectedPresets = data.selectedPresets
@@ -868,8 +881,11 @@ window.addEventListener("message", (event) => {
     paintPresets()
     paintStyleReference()
   }
-  if (typeof data.prompt === "string" && data.prompt !== promptText() && document.activeElement !== prompt) {
-    renderPrompt(data.prompt)
+  const currentPrompt = promptText()
+  const incomingPrompt = typeof data.prompt === "string" ? data.prompt : currentPrompt
+  const promptChanged = incomingPrompt !== currentPrompt
+  if (mentionSourcesChanged || (promptChanged && document.activeElement !== prompt)) {
+    renderPromptPreservingFocus(incomingPrompt)
     paintMentions()
   }
   if (data.controls && typeof data.controls === "object") {

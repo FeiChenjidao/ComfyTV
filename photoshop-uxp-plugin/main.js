@@ -15,7 +15,7 @@ const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const HISTORY_PANEL_ID = "com.comfytv.photoshop.history"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.3.18"
+const PLUGIN_VERSION = "0.3.19"
 const COMPOSER_PROTOCOL_VERSION = 3
 const WORKFLOW_PROTOCOL_VERSION = 3
 const RUNTIME_DIRECT = "direct"
@@ -6095,6 +6095,7 @@ function paintHostPresetMenu() {
   const menu = element("preset-host-menu")
   if (!menu) return
   menu.textContent = ""
+  menu.classList.toggle("is-editor-view", hostPresetView === "edit")
   const categories = Array.isArray(presetLibrary.categories) ? presetLibrary.categories : []
   if (!categories.some((item) => item.id === hostPresetTab)) {
     hostPresetTab = categories[0] ? categories[0].id : "style"

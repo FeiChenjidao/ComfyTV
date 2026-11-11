@@ -92,6 +92,9 @@ test('preset editor defaults to suffix content and preserves advanced prefix pre
   assert.match(editorSource, /前缀权重更高/)
   assert.match(editorSource, /prefix: hostPresetEditor\.advanced[^]*: ""/)
   assert.match(editorSource, /String\(values\.content\.value \|\| ""\)\.trim\(\)/)
+  assert.match(mainSource, /menu\.classList\.toggle\("is-editor-view", hostPresetView === "edit"\)/)
+  const styleSource = readFileSync(new URL('../photoshop-uxp-plugin/styles.css', import.meta.url), 'utf8')
+  assert.match(styleSource, /\.host-preset-menu\.is-editor-view\s*\{\s*height: min\(420px, 100%\);/)
 })
 
 test('Seedream layers use the Photoshop DOM grouping API without native group dialogs', () => {

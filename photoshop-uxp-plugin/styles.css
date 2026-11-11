@@ -3180,6 +3180,10 @@ footer.composer.menu-open .composer-prompt-mirror {
   display: none;
 }
 
+.host-preset-menu.is-editor-view {
+  height: min(420px, 100%);
+}
+
 .host-preset-menu .preset-header {
   position: relative;
   display: flex;

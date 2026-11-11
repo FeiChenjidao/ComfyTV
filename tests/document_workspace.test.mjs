@@ -4,6 +4,7 @@ import test from 'node:test'
 import vm from 'node:vm'
 
 const source = readFileSync(new URL('../photoshop-uxp-plugin/main.js', import.meta.url), 'utf8')
+const composerSource = readFileSync(new URL('../photoshop-uxp-plugin/composer-web/composer.js', import.meta.url), 'utf8')
 
 test('document workspace identity follows saved PSD paths and unsaved session ids', () => {
   const start = source.indexOf('function documentPathValue(')
@@ -46,4 +47,12 @@ test('document workspaces persist prompt, model parameters, presets, and binary 
   assert.match(source, /documentWorkspaceTimer = setInterval\(checkActiveDocumentWorkspace, 400\)/)
   assert.match(source, /data\.type === "composer-prompt"[\s\S]*scheduleDocumentWorkspaceSave\(\)/)
   assert.match(source, /await initializeDocumentWorkspaces\(\)[\s\S]*await restoreRenderHistory\(\)/)
+})
+
+test('document workspace switches refresh inline reference mentions', () => {
+  assert.match(composerSource, /function renderPromptPreservingFocus\(value\)/)
+  assert.match(composerSource, /let mentionSourcesChanged = false/)
+  assert.match(composerSource, /hasOwnProperty\.call\(data, "references"\)[\s\S]*mentionSourcesChanged = true/)
+  assert.match(composerSource, /mentionSourcesChanged \|\| \(promptChanged && document\.activeElement !== prompt\)/)
+  assert.match(composerSource, /renderPromptPreservingFocus\(incomingPrompt\)/)
 })
