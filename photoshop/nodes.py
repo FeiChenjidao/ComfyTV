@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import os
@@ -10,7 +11,7 @@ from comfy_api.latest import io
 from nodes import SaveImage
 from PIL import Image, ImageOps
 
-from .backend import PS_INPUTS, send_render_file
+from .backend import PS_INPUTS, send_render_file, send_render_payload, thumb_png_bytes
 
 
 def _file_hash(name):
@@ -198,4 +199,94 @@ class SendToPhotoshop(io.ComfyNode):
         return io.NodeOutput()
 
 
-PHOTOSHOP_NODES = [PhotoshopFromPanel, SendToPhotoshop]
+def _tensor_image(value):
+    tensor = value.detach().cpu()
+    if tensor.ndim == 4:
+        tensor = tensor[0]
+    array = tensor.clamp(0, 1).numpy()
+    if array.ndim == 2:
+        array = np.stack([array, array, array], axis=-1)
+    if array.shape[-1] == 1:
+        array = np.repeat(array, 3, axis=-1)
+    return (array[..., :3] * 255.0 + 0.5).astype(np.uint8)
+
+
+def _tensor_mask(value, size):
+    if value is None:
+        return np.full((size[1], size[0]), 255, dtype=np.uint8)
+    tensor = value.detach().cpu()
+    if tensor.ndim == 3:
+        tensor = tensor[0]
+    mask = Image.fromarray((tensor.clamp(0, 1).numpy() * 255.0 + 0.5).astype(np.uint8), mode="L")
+    if mask.size != size:
+        mask = mask.resize(size, Image.Resampling.BILINEAR)
+    return 255 - np.array(mask, dtype=np.uint8)
+
+
+def _png_base64(image, mask=None):
+    rgb = _tensor_image(image)
+    pil = Image.fromarray(rgb, mode="RGB")
+    if mask is not None:
+        pil = pil.convert("RGBA")
+        pil.putalpha(Image.fromarray(_tensor_mask(mask, pil.size), mode="L"))
+    buffer = BytesIO()
+    pil.save(buffer, format="PNG", compress_level=4)
+    return base64.b64encode(buffer.getvalue()).decode("ascii"), buffer.getvalue(), pil.size
+
+
+def _layered_payload(layer_stack):
+    source = layer_stack if isinstance(layer_stack, dict) else {}
+    canvas = source.get("canvas") or (0, 0)
+    width = max(1, int(canvas[0] or 1))
+    height = max(1, int(canvas[1] or 1))
+    layers = []
+    for index, item in enumerate(source.get("layers") or []):
+        if not isinstance(item, dict) or item.get("image") is None:
+            continue
+        encoded, _, size = _png_base64(item["image"], item.get("mask"))
+        layers.append({
+            "name": str(item.get("name") or ("background" if index == 0 else f"layer {index}"))[:120],
+            "base64": encoded,
+            "x": int(round(float(item.get("x") or 0))),
+            "y": int(round(float(item.get("y") or 0))),
+            "width": int(size[0]),
+            "height": int(size[1]),
+            "zIndex": int(item.get("z_index") if item.get("z_index") is not None else index),
+        })
+    if not layers:
+        raise ValueError("Seedream returned no Photoshop layers")
+    layers.sort(key=lambda item: item["zIndex"])
+    return {"canvas": {"width": width, "height": height}, "layers": layers}
+
+
+class SendLayersToPhotoshop(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="🔹SendLayersTo Photoshop Plugin",
+            display_name="分层送回 Photoshop",
+            category="Photoshop",
+            description="Send a layered Seedream result back to Photoshop as editable layers.",
+            inputs=[io.Layers.Input("layers"), io.Image.Input("preview")],
+            is_output_node=True,
+        )
+
+    @classmethod
+    async def execute(cls, layers, preview, prompt=None, extra_pnginfo=None):
+        preview_base64, preview_bytes, _ = _png_base64(preview)
+        job_id = ""
+        try:
+            with open(os.path.join(PS_INPUTS, "config.json"), "r", encoding="utf-8") as file:
+                job_id = str(json.load(file).get("jobId") or "")
+        except (OSError, ValueError):
+            pass
+        thumb = ""
+        try:
+            thumb = base64.b64encode(thumb_png_bytes(preview_bytes)).decode("ascii")
+        except Exception:
+            pass
+        await send_render_payload(preview_base64, job_id, thumb, _layered_payload(layers))
+        return io.NodeOutput()
+
+
+PHOTOSHOP_NODES = [PhotoshopFromPanel, SendToPhotoshop, SendLayersToPhotoshop]

@@ -166,6 +166,28 @@ def test_manual_render_is_marked_and_only_sent_without_active_jobs(tmp_path, mon
     asyncio.run(run())
 
 
+def test_layered_render_is_sent_only_to_the_owning_photoshop_client():
+    async def run():
+        reset_state()
+        owner = add_client("ps-owner", "ps")
+        other = add_client("ps-other", "ps")
+        add_client("cm", "cm", ready=True)
+        backend.active_jobs["job-layered"] = {
+            "ps_client_id": "ps-owner",
+            "cm_client_id": "cm",
+        }
+        layered = {
+            "canvas": {"width": 1024, "height": 1024},
+            "layers": [{"name": "subject", "base64": "layer"}],
+        }
+        payload = await backend.send_render_payload("preview", "job-layered", "thumb", layered)
+        assert payload["layered"] == layered
+        assert owner.messages[-1]["layered"] == layered
+        assert other.messages == []
+
+    asyncio.run(run())
+
+
 def test_mask_clear_removes_previous_mask(tmp_path, monkeypatch):
     async def run():
         reset_state()

@@ -13,6 +13,7 @@ from aiohttp import WSMsgType, web
 from server import PromptServer
 
 ROOT = os.path.dirname(os.path.realpath(__file__))
+PHOTOSHOP_WORKFLOW = os.path.join(os.path.dirname(ROOT), "workflows", "image", "PS_NanoBanana_GPTImage.json")
 LEGACY_PS_INPUTS = os.path.join(ROOT, "data", "ps_inputs")
 USER_DIRECTORY = folder_paths.get_user_directory()
 PS_INPUTS = os.path.join(USER_DIRECTORY, "comfytv", "photoshop", "ps_inputs")
@@ -354,24 +355,20 @@ async def inputs_file(request):
     return web.FileResponse(file)
 
 
-async def send_render_file(filename, job_id=""):
-    filename = os.path.basename(filename or "")
+async def send_render_payload(encoded, job_id="", thumb="", layered=None):
     job_id = str(job_id or "")
-    if not filename:
-        raise ValueError("Missing render filename")
-    path = os.path.join(folder_paths.get_temp_directory(), filename)
-    with open(path, "rb") as image_file:
-        encoded = base64.b64encode(image_file.read()).decode("utf-8")
+    if not encoded:
+        raise ValueError("Missing render payload")
     payload = {
         "protocolVersion": PROTOCOL_VERSION,
         "jobId": job_id,
         "render": encoded,
         "jobStatus": {"phase": "result_received", "progress": 100},
     }
-    try:
-        payload["thumb"] = thumb_png_base64(path)
-    except Exception as error:
-        print(f"# PS: thumb skipped: {error}")
+    if thumb:
+        payload["thumb"] = thumb
+    if layered:
+        payload["layered"] = layered
     job = active_jobs.get(job_id)
     if job:
         await send_to_client(job["ps_client_id"], payload)
@@ -382,6 +379,32 @@ async def send_render_file(filename, job_id=""):
         payload["manualRender"] = True
         await send_message(photoshop_users, "", json.dumps(payload))
     return payload
+
+
+async def send_render_file(filename, job_id=""):
+    filename = os.path.basename(filename or "")
+    if not filename:
+        raise ValueError("Missing render filename")
+    path = os.path.join(folder_paths.get_temp_directory(), filename)
+    with open(path, "rb") as image_file:
+        raw = image_file.read()
+    encoded = base64.b64encode(raw).decode("utf-8")
+    thumb = ""
+    try:
+        thumb = base64.b64encode(thumb_png_bytes(raw)).decode("ascii")
+    except Exception as error:
+        print(f"# PS: thumb skipped: {error}")
+    return await send_render_payload(encoded, job_id, thumb)
+
+
+async def photoshop_workflow(request):
+    if not _is_loopback_request(request):
+        raise web.HTTPForbidden(text="Photoshop workflow is only available locally")
+    if not os.path.isfile(PHOTOSHOP_WORKFLOW):
+        raise web.HTTPNotFound(text="Photoshop workflow is missing")
+    response = web.FileResponse(PHOTOSHOP_WORKFLOW)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 async def render_done(request):
@@ -612,6 +635,7 @@ def register_routes():
         routes.get("/ps/ws")(websocket_handler)
         routes.get("/ps/inputs/{filename}")(inputs_file)
         routes.get("/ps/renderdone")(render_done)
+        routes.get("/comfytv/photoshop/workflow")(photoshop_workflow)
         routes.post("/ps/thumb")(make_thumb)
         routes.post("/ps/reference/prepare")(prepare_reference)
         routes.get("/comfytv/photoshop/auth-transfer/{transfer_id}")(auth_transfer_read)

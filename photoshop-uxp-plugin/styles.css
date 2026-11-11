@@ -1310,8 +1310,12 @@ footer.composer.menu-open .composer-prompt-mirror {
   border: 1px solid #383b40;
   border-radius: 8px;
   background: #181818;
+  color: inherit;
+  font: inherit;
   line-height: 0;
   cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .tool-rail .rail-btn:hover {
@@ -1689,16 +1693,6 @@ footer.composer.menu-open .composer-prompt-mirror {
   pointer-events: none;
 }
 
-.btn-hit {
-  position: absolute;
-  z-index: 3;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: transparent;
-}
-
 .render-wrap {
   position: relative;
   display: flex;
@@ -1961,6 +1955,23 @@ footer.composer.menu-open .composer-prompt-mirror {
   border-radius: 8px;
   background: transparent;
   color: rgba(255, 255, 255, 0.78);
+}
+
+.drawer:not(.hidden),
+.composer-menu:not(.hidden),
+.host-preset-menu:not(.hidden) {
+  animation: panel-enter 110ms ease-out both;
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .drawer-title {

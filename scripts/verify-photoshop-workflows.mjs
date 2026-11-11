@@ -2,6 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const NODE_TYPE = '🔹Photoshop ComfyUI Plugin'
+const SEEDREAM_TYPE = 'ByteDanceSeedreamLayerSeparationNode'
+const LAYER_SEND_TYPE = '🔹SendLayersTo Photoshop Plugin'
 const EXPECTED_OUTPUTS = [
   'Canvas', 'Mask', 'Ref1', 'Ref2', 'Ref3', 'Ref4', 'Ref5', 'Ref6',
   'Media Batch', 'Has Mask', 'Seed', '+', '-', 'W', 'H',
@@ -35,6 +37,38 @@ function verify(file) {
   }
   const photoshop = photoshopNodes[0]
   const linksById = new Map(links.map((link) => [link[0], link]))
+  const seedreamNodes = [...nodes.values()].filter((node) => node.type === SEEDREAM_TYPE)
+  const layeredSendNodes = [...nodes.values()].filter((node) => node.type === LAYER_SEND_TYPE)
+  if (seedreamNodes.length !== 1) throw new Error(`${file}: expected one Seedream layer-separation node`)
+  if (layeredSendNodes.length !== 1) throw new Error(`${file}: expected one layered Photoshop send node`)
+  const muter = [...nodes.values()].find((node) => node.type === 'Fast Groups Muter (rgthree)' && String(node.title || '').includes('工作流'))
+  if (!String(muter?.properties?.matchTitle || '').includes('Seedream 图层分离')) {
+    throw new Error(`${file}: workflow selector does not include Seedream 图层分离`)
+  }
+
+  const verifyInput = (target, inputName, outputName) => {
+    const inputSlot = (target.inputs || []).findIndex((input) => input.name === inputName)
+    const sourceSlot = names.indexOf(outputName)
+    const link = inputSlot >= 0 ? linksById.get(target.inputs[inputSlot].link) : null
+    if (!link || link[1] !== photoshop.id || link[2] !== sourceSlot || link[3] !== target.id || link[4] !== inputSlot) {
+      throw new Error(`${file}: ${target.title || target.type} ${inputName} is not connected to Photoshop ${outputName}`)
+    }
+  }
+
+  const seedream = seedreamNodes[0]
+  verifyInput(seedream, 'image', 'Canvas')
+  verifyInput(seedream, 'prompt', '+')
+  verifyInput(seedream, 'size', '分辨率')
+  verifyInput(seedream, 'seed', 'Seed')
+  const layeredSend = layeredSendNodes[0]
+  verifyInput(layeredSend, 'preview', 'Canvas')
+  const layerOutputSlot = (seedream.outputs || []).findIndex((output) => output.name === 'layer_stack')
+  const layerInputSlot = (layeredSend.inputs || []).findIndex((input) => input.name === 'layers')
+  const layerLink = layerInputSlot >= 0 ? linksById.get(layeredSend.inputs[layerInputSlot].link) : null
+  if (!layerLink || layerLink[1] !== seedream.id || layerLink[2] !== layerOutputSlot || layerLink[3] !== layeredSend.id || layerLink[4] !== layerInputSlot) {
+    throw new Error(`${file}: Seedream layer_stack is not connected to layered Photoshop send`)
+  }
+
   for (const node of nodes.values()) {
     const inputs = node.inputs || []
     const customInputs = [

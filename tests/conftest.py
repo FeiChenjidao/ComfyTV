@@ -38,11 +38,16 @@ def _ensure_comfyui_stubs():
     if "nodes" not in sys.modules:
         class _OutputNode:
             OUTPUT_NODE = True
+
+        class _SaveImage:
+            pass
+
         _make_module(
             "nodes",
             NODE_CLASS_MAPPINGS={},
             NODE_DISPLAY_NAME_MAPPINGS={},
             _OutputNode=_OutputNode,
+            SaveImage=_SaveImage,
         )
 
     if "folder_paths" not in sys.modules:
@@ -168,6 +173,14 @@ def _ensure_comfyui_stubs():
             Input = _Input
             Output = _Input
 
+        class _Image(_Input):
+            Input = _Input
+            Output = _Input
+
+        class _Layers(_Input):
+            Input = _Input
+            Output = _Input
+
         class _Compositor(_Input):
             Input = _Input
 
@@ -175,7 +188,7 @@ def _ensure_comfyui_stubs():
             Int=_Int, Float=_Float, Boolean=_Boolean, String=_String,
             Combo=_Combo, Custom=_Custom, Autogrow=_Autogrow,
             Color=_Color, NumberDisplay=_NumDisplay, MultiType=_MultiType,
-            Mask=_Mask, Compositor=_Compositor,
+            Image=_Image, Layers=_Layers, Mask=_Mask, Compositor=_Compositor,
             NodeOutput=_NodeOutput,
             ComfyNode=_ComfyNode, Schema=_Schema,
             UploadType=_UploadType, FolderType=_FolderType, Hidden=_Hidden,

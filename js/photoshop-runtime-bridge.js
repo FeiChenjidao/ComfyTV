@@ -2,12 +2,16 @@ const PS_PROTOCOL = 3
 const PS_NODE = '🔹Photoshop ComfyUI Plugin'
 const SEND_NODE = '🔹SendTo Photoshop Plugin'
 const clientId = globalThis.crypto?.randomUUID?.() || String(Date.now())
-const preferredPsClientId = new URLSearchParams(location.search).get('comfytv_ps_client') || ''
+const searchParams = new URLSearchParams(location.search)
+const preferredPsClientId = searchParams.get('comfytv_ps_client') || ''
+const shouldAutoloadWorkflow = searchParams.get('comfytv_ps_autoload') === '1'
 let socket = null
 let reconnectTimer = 0
 let lastModels = ''
 let listenersReady = false
 let activeJob = null
+let workflowAutoloadAttempts = 0
+let workflowAutoloadComplete = false
 
 const app = () => window.comfyAPI?.app?.app
 const nodes = () => app()?.graph?._nodes || app()?.graph?.nodes || []
@@ -28,8 +32,37 @@ function workflowState() {
     hash = Math.imul(hash, 16777619)
   }
   return {
-    ready: types.includes(PS_NODE) && types.includes(SEND_NODE),
+    ready: types.includes(PS_NODE)
+      && types.includes(SEND_NODE)
+      && (!shouldAutoloadWorkflow || photoshopWorkflowReady()),
     workflowFingerprint: (hash >>> 0).toString(16).padStart(8, '0'),
+  }
+}
+
+function photoshopWorkflowReady() {
+  const types = nodes().map(nodeType)
+  const modelMuter = nodes().find((node) => nodeType(node) === 'Fast Groups Muter (rgthree)' && String(node?.title || '').includes('工作流'))
+  return types.includes(PS_NODE)
+    && types.includes(SEND_NODE)
+    && types.includes('ByteDanceSeedreamLayerSeparationNode')
+    && types.includes('🔹SendLayersTo Photoshop Plugin')
+    && String(modelMuter?.properties?.matchTitle || '').includes('Seedream 图层分离')
+}
+
+async function autoloadPhotoshopWorkflow() {
+  if (!shouldAutoloadWorkflow || workflowAutoloadComplete || workflowAutoloadAttempts >= 20 || !app()) return
+  workflowAutoloadAttempts += 1
+  try {
+    const response = await fetch('/comfytv/photoshop/workflow', { cache: 'no-store' })
+    if (!response.ok) throw new Error(`workflow ${response.status}`)
+    const workflow = await response.json()
+    await app().loadGraphData(workflow)
+    workflowAutoloadComplete = photoshopWorkflowReady()
+    if (!workflowAutoloadComplete) throw new Error('workflow nodes are not ready')
+    publishHello()
+    publishModels(true)
+  } catch (error) {
+    console.error('photoshop workflow autoload', error)
   }
 }
 
@@ -91,6 +124,9 @@ function profileNode(profile) {
   if (profile?.family === 'gpt') {
     return nodes().find((item) => nodeType(item) === 'OpenAIGPTImageNodeV2' || String(item?.title || '') === 'GPT')
   }
+  if (profile?.family === 'seedream') {
+    return nodes().find((item) => nodeType(item) === 'ByteDanceSeedreamLayerSeparationNode' || String(item?.title || '') === 'Seedream 图层分离')
+  }
   return null
 }
 
@@ -107,6 +143,11 @@ function applyNodeProfile(profile) {
   if (profile.family === 'pro') {
     setNodeWidget(node, 'aspect_ratio', profile.aspect || 'auto')
     setNodeWidget(node, 'resolution', profile.resolution || '2K')
+    return
+  }
+  if (profile.family === 'seedream') {
+    setNodeWidget(node, 'size', profile.resolution || 'auto')
+    setNodeWidget(node, 'prompt_optimization', profile.quality || 'standard')
     return
   }
   setNodeWidget(node, 'model.size', profile.size || profile.resolution || 'auto')
@@ -282,6 +323,7 @@ function connectBridge() {
     }
   }
   socket.onopen = () => {
+    autoloadPhotoshopWorkflow()
     publishHello()
     publishModels(true)
   }
@@ -292,6 +334,7 @@ function connectBridge() {
 }
 
 window.setInterval(() => publishModels(false), 2000)
+window.setInterval(() => autoloadPhotoshopWorkflow(), 3000)
 window.setInterval(() => attachProgressListeners(), 1000)
 window.setInterval(publishHello, 5000)
 attachProgressListeners()

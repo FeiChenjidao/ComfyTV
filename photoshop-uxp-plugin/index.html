@@ -38,23 +38,19 @@
         </div>
 
         <nav class="tool-rail" aria-label="面板工具">
-          <span id="settings-toggle" class="rail-btn" role="button" tabindex="0" title="设置">
+          <span id="settings-toggle" class="rail-btn" role="button" tabindex="0" title="设置" aria-label="设置">
             <span class="icon-slot" data-icon="settings-toggle"></span>
-            <span class="btn-hit"></span>
           </span>
-          <span id="web-toggle" class="rail-btn" role="button" tabindex="0" title="在 Photoshop 中打开 ComfyUI">
+          <span id="web-toggle" class="rail-btn" role="button" tabindex="0" title="在 Photoshop 中打开 ComfyUI" aria-label="在 Photoshop 中打开 ComfyUI">
             <span class="icon-slot" data-icon="web-toggle"></span>
-            <span class="btn-hit"></span>
           </span>
-          <span id="fit-toggle" class="rail-btn" role="button" tabindex="0" title="切换预览适配">
+          <span id="fit-toggle" class="rail-btn" role="button" tabindex="0" title="切换预览适配" aria-label="切换预览适配">
             <span class="icon-slot" data-icon="fit-toggle"></span>
-            <span class="btn-hit"></span>
           </span>
         </nav>
 
-        <span id="history-toggle" class="rail-btn history-toggle" role="button" tabindex="0" title="历史记录">
+        <span id="history-toggle" class="rail-btn history-toggle" role="button" tabindex="0" title="历史记录" aria-label="历史记录">
           <span class="icon-slot" data-icon="history-toggle"></span>
-          <span class="btn-hit"></span>
         </span>
 
         <section id="settings-drawer" class="drawer glass hidden">
@@ -138,7 +134,7 @@
             </div>
             <div class="field-row">
               <label for="max-res">大图最长边</label>
-              <input id="max-res" type="number" min="16" max="3840" step="16" value="1024">
+              <input id="max-res" type="number" min="16" max="3840" step="16" value="3840">
             </div>
             <div class="field-row">
               <label for="min-res">小图最短边</label>
@@ -162,7 +158,7 @@
                 <button id="randomize" type="button">随机</button>
               </div>
             </div>
-            <label class="check-row"><input id="auto-seed" type="checkbox"><span>每次自动随机种子</span></label>
+            <label class="check-row"><input id="auto-seed" type="checkbox" checked><span>每次自动随机种子</span></label>
             <button id="send-layer" class="secondary-button" type="button">发送当前图层到 ComfyTV</button>
             <button id="add-layer" class="secondary-button" type="button" disabled>把结果添加为图层</button>
           </div>
@@ -258,6 +254,7 @@
             <option value="0" selected>NanoBanana</option>
             <option value="1">NanoBanana Pro</option>
             <option value="2">GPT</option>
+            <option value="3">Seedream 图层分离</option>
           </select>
           <input id="batch-count" class="composer-native" type="number" min="1" max="8" step="1" value="1">
         </footer>

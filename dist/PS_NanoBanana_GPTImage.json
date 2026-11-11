@@ -1,8 +1,8 @@
 {
   "id": "c94f279c-fb3c-42d5-be0b-54a56ac25f84",
   "revision": 0,
-  "last_node_id": 32,
-  "last_link_id": 133,
+  "last_node_id": 34,
+  "last_link_id": 139,
   "nodes": [
     {
       "id": 1,
@@ -25,7 +25,9 @@
           "type": "IMAGE",
           "links": [
             111,
-            122
+            122,
+            134,
+            139
           ],
           "slot_index": 0
         },
@@ -112,7 +114,8 @@
           "links": [
             45,
             132,
-            133
+            133,
+            137
           ],
           "slot_index": 10
         },
@@ -122,7 +125,8 @@
           "links": [
             110,
             119,
-            121
+            121,
+            135
           ],
           "slot_index": 11
         },
@@ -171,7 +175,8 @@
           "type": "COMBO",
           "links": [
             74,
-            57
+            57,
+            136
           ],
           "slot_index": 17
         },
@@ -223,7 +228,7 @@
       "title": "📁工作流",
       "properties": {
         "matchColors": "",
-        "matchTitle": "^(NanoBanana Pro|NanoBanana|GPT)$",
+        "matchTitle": "^(NanoBanana Pro|NanoBanana|GPT|Seedream 图层分离)$",
         "showNav": true,
         "showAllGraphs": true,
         "sort": "position",
@@ -905,6 +910,173 @@
       "properties": {
         "Node name for S&R": "🔹SendTo Photoshop Plugin"
       }
+    },
+    {
+      "id": 33,
+      "type": "ByteDanceSeedreamLayerSeparationNode",
+      "pos": [
+        1555,
+        1160
+      ],
+      "size": [
+        420,
+        430
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 2,
+      "inputs": [
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 134
+        },
+        {
+          "localized_name": "提示词",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 135
+        },
+        {
+          "localized_name": "尺寸",
+          "name": "size",
+          "type": "COMBO",
+          "widget": {
+            "name": "size"
+          },
+          "link": 136
+        },
+        {
+          "localized_name": "种子",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": 137
+        },
+        {
+          "localized_name": "提示词优化",
+          "name": "prompt_optimization",
+          "type": "COMBO",
+          "widget": {
+            "name": "prompt_optimization"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "水印",
+          "name": "watermark",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "watermark"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "裁剪图层",
+          "name": "crop_layers",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "crop_layers"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "base_image",
+          "name": "base_image",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "localized_name": "base_mask",
+          "name": "base_mask",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "localized_name": "图层",
+          "name": "layers",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "localized_name": "蒙版",
+          "name": "masks",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "localized_name": "边界框",
+          "name": "bboxes",
+          "type": "BOUNDING_BOX",
+          "links": null
+        },
+        {
+          "localized_name": "layer_stack",
+          "name": "layer_stack",
+          "type": "LAYERS",
+          "links": [
+            138
+          ]
+        }
+      ],
+      "title": "Seedream 图层分离",
+      "properties": {
+        "Node name for S&R": "ByteDanceSeedreamLayerSeparationNode",
+        "cnr_id": "comfy-core"
+      },
+      "widgets_values": [
+        "",
+        "auto",
+        42,
+        "fixed",
+        "standard",
+        false,
+        false
+      ],
+      "color": "#6b572c",
+      "bgcolor": "#7b6738"
+    },
+    {
+      "id": 34,
+      "type": "🔹SendLayersTo Photoshop Plugin",
+      "pos": [
+        2035,
+        1260
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 2,
+      "inputs": [
+        {
+          "localized_name": "图层",
+          "name": "layers",
+          "type": "LAYERS",
+          "link": 138
+        },
+        {
+          "localized_name": "预览",
+          "name": "preview",
+          "type": "IMAGE",
+          "link": 139
+        }
+      ],
+      "outputs": [],
+      "title": "Seedream 图层分离",
+      "properties": {
+        "Node name for S&R": "🔹SendLayersTo Photoshop Plugin"
+      }
     }
   ],
   "links": [
@@ -1195,6 +1367,54 @@
       24,
       17,
       "INT"
+    ],
+    [
+      134,
+      1,
+      0,
+      33,
+      0,
+      "IMAGE"
+    ],
+    [
+      135,
+      1,
+      11,
+      33,
+      1,
+      "STRING"
+    ],
+    [
+      136,
+      1,
+      17,
+      33,
+      2,
+      "COMBO"
+    ],
+    [
+      137,
+      1,
+      10,
+      33,
+      3,
+      "INT"
+    ],
+    [
+      138,
+      33,
+      5,
+      34,
+      0,
+      "LAYERS"
+    ],
+    [
+      139,
+      1,
+      0,
+      34,
+      1,
+      "IMAGE"
     ]
   ],
   "groups": [

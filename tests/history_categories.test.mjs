@@ -79,6 +79,33 @@ test('old history records migrate to uncategorized while categories persist', ()
   assert.deepEqual(items.map((item) => item.categoryId), ['', 'style', ''])
 })
 
+test('layered history keeps its own canvas geometry and placement metadata', () => {
+  const state = createState()
+  state.renderHistory = [{
+    name: 'render-10.png',
+    number: 10,
+    categoryId: 'style',
+    placement: { bounds: { left: 20, top: 30, right: 620, bottom: 430 }, frame: null },
+    layered: {
+      canvas: { width: 1200, height: 800 },
+      layers: [{ fileName: 'render-10-layer-00.png', name: 'subject', x: 100, y: 80, width: 400, height: 500, zIndex: 2 }],
+    },
+  }]
+  state.saveRenderHistory()
+  const restored = JSON.parse(JSON.stringify(state.readRenderHistory()[0]))
+  assert.deepEqual(restored.placement.bounds, { left: 20, top: 30, right: 620, bottom: 430 })
+  assert.deepEqual(restored.layered.canvas, { width: 1200, height: 800 })
+  assert.deepEqual(restored.layered.layers[0], {
+    fileName: 'render-10-layer-00.png',
+    name: 'subject',
+    x: 100,
+    y: 80,
+    width: 400,
+    height: 500,
+    zIndex: 2,
+  })
+})
+
 test('history filtering keeps original indexes for preview selection', () => {
   const state = createState()
   state.renderHistory = [
@@ -139,6 +166,7 @@ test('opening settings does not close the independent history panel', () => {
     syncComposerOverlay() {},
   }
   vm.createContext(context)
+  vm.runInContext(sliceBetween('function closeDrawers()', 'function syncComposerOverlay'), context)
   vm.runInContext(sliceBetween('function toggleDrawer(id)', 'const referenceFiles'), context)
   context.toggleDrawer('settings-drawer')
   assert.equal(classes.has('hidden'), false)

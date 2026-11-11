@@ -10,7 +10,21 @@ function response(status, payload, headers = {}) {
     status,
     headers: { get: (name) => headers[String(name).toLowerCase()] || null },
     async text() { return payload == null ? "" : JSON.stringify(payload) },
+    async arrayBuffer() {
+      const bytes = payload instanceof Uint8Array ? payload : new Uint8Array(payload || [])
+      return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    },
   }
+}
+
+function pngHeader(width, height) {
+  const bytes = new Uint8Array(24)
+  bytes.set([137, 80, 78, 71, 13, 10, 26, 10], 0)
+  bytes.set([0, 0, 0, 13, 73, 72, 68, 82], 8)
+  const view = new DataView(bytes.buffer)
+  view.setUint32(16, width)
+  view.setUint32(20, height)
+  return bytes
 }
 
 test("validates a Comfy API key without persisting it", async () => {
@@ -160,6 +174,58 @@ test("reuses the idempotency key across retry attempts", async () => {
   })
   assert.equal(keys.length, 2)
   assert.equal(keys[0], keys[1])
+})
+
+test("uploads and returns Seedream layer separation results", async () => {
+  const source = pngHeader(1200, 900)
+  const calls = []
+  const result = await api.generate({
+    apiKey: "secret",
+    jobId: "job-seedream",
+    prompt: "separate the character and effects",
+    profile: { family: "seedream", model: "seedream 5.0 pro", resolution: "2K", quality: "fast" },
+    images: [{ role: "canvas", base64: Buffer.from(source).toString("base64") }],
+    seed: 42,
+  }, {
+    attempts: 1,
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url, options })
+      if (url === "https://api.comfy.org/customers/storage") {
+        return response(200, { upload_url: "https://upload.test/source", download_url: "https://download.test/source" })
+      }
+      if (url === "https://upload.test/source") return response(200, null)
+      if (url === "https://api.comfy.org/proxy/byteplus/api/v3/images/generations") {
+        return response(200, { data: [
+          { url: "https://download.test/base", name: "background", z_index: 0 },
+          { url: "https://download.test/layer", name: "character", z_index: 2, bounding_box: { absolute: [100, 120, 500, 720] } },
+        ] })
+      }
+      if (url === "https://download.test/base") return response(200, pngHeader(1200, 900))
+      if (url === "https://download.test/layer") return response(200, pngHeader(400, 600))
+      throw new Error(`unexpected request ${url}`)
+    },
+  })
+
+  const upload = calls.find((item) => item.url === "https://upload.test/source")
+  assert.equal(upload.options.method, "PUT")
+  assert.deepEqual(Array.from(upload.options.body), Array.from(source))
+  const generation = calls.find((item) => item.url.includes("/proxy/byteplus/"))
+  const body = JSON.parse(generation.options.body)
+  assert.equal(body.model, "seedream-5-0-pro-260628")
+  assert.equal(body.layer_decomposition, true)
+  assert.equal(body.optimize_prompt_options.mode, "fast")
+  assert.equal(result.images[0].base64, Buffer.from(source).toString("base64"))
+  assert.deepEqual(result.layered.canvas, { width: 1200, height: 900 })
+  assert.equal(result.layered.layers.length, 2)
+  assert.deepEqual(result.layered.layers[1], {
+    name: "character",
+    base64: Buffer.from(pngHeader(400, 600)).toString("base64"),
+    x: 100,
+    y: 120,
+    width: 400,
+    height: 600,
+    zIndex: 2,
+  })
 })
 
 test("maps authentication errors without exposing the key", async () => {

@@ -15,7 +15,7 @@ const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const HISTORY_PANEL_ID = "com.comfytv.photoshop.history"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.3.8"
+const PLUGIN_VERSION = "0.3.9"
 const COMPOSER_PROTOCOL_VERSION = 3
 const WORKFLOW_PROTOCOL_VERSION = 3
 const RUNTIME_DIRECT = "direct"
@@ -29,6 +29,7 @@ const COMFY_AUTH_MAX_BYTES = 1024 * 1024
 const REFERENCE_MAX_EDGE = 2048
 const REFERENCE_MAX_BYTES = 25 * 1024 * 1024
 const THUMB_DECODE_TIMEOUT_MS = 1500
+const DEFAULT_MAX_RES = 3840
 const clientId = `comfytv-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
 let socket = null
@@ -44,6 +45,7 @@ let modelListSynced = false
 let toastTimer = null
 let latestRenderFile = null
 let latestRenderPlacement = null
+let latestRenderLayered = null
 let activeRenderPlacement = null
 let capturePreviewFile = null
 let capturePreviewThumbSrc = ""
@@ -490,7 +492,7 @@ function alignBoundsToStep(bounds, limit, shrink, cover) {
 }
 
 function overMaxFrame(width, height) {
-  let maxRes = edgeLimit(element("max-res").value, 1024)
+  let maxRes = edgeLimit(element("max-res").value, DEFAULT_MAX_RES)
   let minRes = edgeLimit(element("min-res").value, 512)
   if (minRes > maxRes) minRes = maxRes
   const longest = Math.max(width, height)
@@ -528,7 +530,7 @@ function sentPlaceBounds(bounds = lastCaptureBounds, frame = lastSentFrame) {
 function captureSize(bounds) {
   const sourceWidth = Math.max(1, bounds.right - bounds.left)
   const sourceHeight = Math.max(1, bounds.bottom - bounds.top)
-  let maxRes = edgeLimit(element("max-res").value, 1024)
+  let maxRes = edgeLimit(element("max-res").value, DEFAULT_MAX_RES)
   let minRes = edgeLimit(element("min-res").value, 512)
   if (minRes > maxRes) minRes = maxRes
 
@@ -1469,6 +1471,7 @@ function saveRenderHistory() {
     number: item.number,
     categoryId: validHistoryCategoryId(item.categoryId),
     placement: item.placement || null,
+    layered: item.layered || null,
   }))
   localStorage.setItem(historyKey(), JSON.stringify(stored))
 }
@@ -1484,6 +1487,7 @@ function readRenderHistory() {
         number: item.number,
         categoryId: validHistoryCategoryId(item.categoryId),
         placement: normalizeRenderPlacement(item.placement),
+        layered: normalizeLayeredResult(item.layered),
       }))
   } catch (_) {
     return []
@@ -1510,6 +1514,56 @@ function normalizeRenderPlacement(value) {
       resample: false,
     },
   }
+}
+
+function normalizeLayeredResult(value) {
+  if (!value || typeof value !== "object") return null
+  const width = Number(value.canvas?.width)
+  const height = Number(value.canvas?.height)
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1) return null
+  const layers = (Array.isArray(value.layers) ? value.layers : []).map((item, index) => {
+    const fileName = String(item?.fileName || "")
+    if (!fileName) return null
+    const layerWidth = Number(item.width)
+    const layerHeight = Number(item.height)
+    return {
+      fileName,
+      name: String(item.name || (index === 0 ? "background" : `layer ${index}`)).slice(0, 120),
+      x: Number.isFinite(Number(item.x)) ? Number(item.x) : 0,
+      y: Number.isFinite(Number(item.y)) ? Number(item.y) : 0,
+      width: Number.isFinite(layerWidth) && layerWidth > 0 ? layerWidth : width,
+      height: Number.isFinite(layerHeight) && layerHeight > 0 ? layerHeight : height,
+      zIndex: Number.isFinite(Number(item.zIndex)) ? Number(item.zIndex) : index,
+    }
+  }).filter(Boolean)
+  return layers.length ? { canvas: { width, height }, layers } : null
+}
+
+async function writeLayeredResult(renderName, value) {
+  if (!value || typeof value !== "object") return null
+  const width = Number(value.canvas?.width)
+  const height = Number(value.canvas?.height)
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1) return null
+  const source = Array.isArray(value.layers) ? value.layers : []
+  const layers = []
+  const baseName = String(renderName || "render.png").replace(/\.png$/i, "")
+  for (let index = 0; index < source.length; index += 1) {
+    const item = source[index]
+    const encoded = String(item?.base64 || "").replace(/^data:image\/[^;]+;base64,/, "")
+    if (!encoded) continue
+    const fileName = `${baseName}-layer-${String(index).padStart(2, "0")}.png`
+    await writeDataFile(fileName, encoded)
+    layers.push({
+      fileName,
+      name: String(item.name || (index === 0 ? "background" : `layer ${index}`)).slice(0, 120),
+      x: Number.isFinite(Number(item.x)) ? Number(item.x) : 0,
+      y: Number.isFinite(Number(item.y)) ? Number(item.y) : 0,
+      width: Number.isFinite(Number(item.width)) && Number(item.width) > 0 ? Number(item.width) : width,
+      height: Number.isFinite(Number(item.height)) && Number(item.height) > 0 ? Number(item.height) : height,
+      zIndex: Number.isFinite(Number(item.zIndex)) ? Number(item.zIndex) : index,
+    })
+  }
+  return normalizeLayeredResult({ canvas: { width, height }, layers })
 }
 
 async function historyFile(item) {
@@ -2386,6 +2440,7 @@ async function selectHistory(index) {
   if (selectedHistoryIndex !== index) return
   latestRenderFile = file
   latestRenderPlacement = item.placement || null
+  latestRenderLayered = item.layered || null
   renderCount = Number(item.number) || index + 1
   element("add-layer").disabled = false
   showPreview("", file.url)
@@ -2394,16 +2449,26 @@ async function selectHistory(index) {
 async function restoreRenderHistory() {
   const stored = readRenderHistory()
   const kept = []
+  const root = await storage.localFileSystem.getDataFolder()
   for (const item of stored) {
     try {
-      const file = await historyFile(item)
-       kept.push({
-         name: item.name,
-         number: item.number,
-         categoryId: validHistoryCategoryId(item.categoryId),
-         placement: item.placement || null,
-         file,
-       })
+      const file = await root.getEntry(item.name)
+      let layered = item.layered || null
+      if (layered) {
+        try {
+          await Promise.all(layered.layers.map((layer) => root.getEntry(layer.fileName)))
+        } catch (_) {
+          layered = null
+        }
+      }
+      kept.push({
+        name: item.name,
+        number: item.number,
+        categoryId: validHistoryCategoryId(item.categoryId),
+        placement: item.placement || null,
+        layered,
+        file,
+      })
     } catch (_) {}
   }
   renderHistory = kept
@@ -2416,12 +2481,13 @@ async function restoreRenderHistory() {
   refreshHistoryLimit()
 }
 
-async function receiveRender(value, thumbBase64) {
+async function receiveRender(value, thumbBase64, layeredValue) {
   const base64 = String(value || "").replace(/^data:image\/[^;]+;base64,/, "")
   if (!base64) return
   const number = nextRenderNumber()
   const name = `render-${Date.now()}.png`
   const file = await writeDataFile(name, base64)
+  const layered = await writeLayeredResult(name, layeredValue)
   const categoryId = activeRenderHistoryCategoryId === null
     ? selectedHistoryCategoryId
     : activeRenderHistoryCategoryId
@@ -2430,6 +2496,7 @@ async function receiveRender(value, thumbBase64) {
     number,
     categoryId: validHistoryCategoryId(categoryId),
     placement: activeRenderPlacement || null,
+    layered,
     file,
   }
   renderHistory.unshift(item)
@@ -2446,6 +2513,7 @@ async function receiveRender(value, thumbBase64) {
   historyPage = 0
   latestRenderFile = file
   latestRenderPlacement = item.placement
+  latestRenderLayered = item.layered
   activeRenderPlacement = null
   renderCount = number
   showPreview("", file.url)
@@ -2507,6 +2575,12 @@ async function deleteHistoryItemFiles(items) {
     let renderEntry = null
     try { renderEntry = await root.getEntry(item.name) } catch (_) {}
     if (renderEntry && !(await deleteEntry(renderEntry))) failures += 1
+    const layerFiles = item.layered?.layers || []
+    for (let layerIndex = 0; layerIndex < layerFiles.length; layerIndex += 1) {
+      let layerEntry = null
+      try { layerEntry = await root.getEntry(layerFiles[layerIndex].fileName) } catch (_) {}
+      if (layerEntry && !(await deleteEntry(layerEntry))) failures += 1
+    }
     let thumbEntry = null
     try { thumbEntry = await thumbs.getEntry(thumbNameFor(item.name)) } catch (_) {}
     if (thumbEntry && !(await deleteEntry(thumbEntry))) failures += 1
@@ -2523,7 +2597,7 @@ async function deleteAllHistoryFiles() {
   const entries = await root.getEntries()
   for (let index = 0; index < entries.length; index += 1) {
     const entry = entries[index]
-    if (!entry.isFile || !/^render-\d+\.png$/i.test(entry.name)) continue
+    if (!entry.isFile || !/^render-\d+(?:-layer-\d+)?\.png$/i.test(entry.name)) continue
     if (!(await deleteEntry(entry))) failures += 1
   }
   const folder = await thumbFolder()
@@ -2542,6 +2616,7 @@ function resetEmptyRenderHistory() {
   historyPanelPage = 0
   latestRenderFile = null
   latestRenderPlacement = null
+  latestRenderLayered = null
   renderCount = 0
   const addLayer = element("add-layer")
   if (addLayer) addLayer.disabled = true
@@ -2639,7 +2714,7 @@ async function cleanOldRenders() {
     const entries = await root.getEntries()
     for (let index = 0; index < entries.length; index += 1) {
       const entry = entries[index]
-      if (!entry.isFile || !/^render-\d+\.png$/i.test(entry.name)) continue
+      if (!entry.isFile || !/^render-\d+(?:-layer-\d+)?\.png$/i.test(entry.name)) continue
       const stamp = renderStamp(entry.name)
       if (!stamp || stamp >= cutoff) continue
       if (await deleteEntry(entry)) removed.add(entry.name)
@@ -2670,6 +2745,8 @@ async function cleanOldRenders() {
       selectedHistoryIndex = 0
       historyPage = 0
       latestRenderFile = null
+      latestRenderPlacement = null
+      latestRenderLayered = null
       renderCount = 0
       element("add-layer").disabled = true
       showPreview("", "")
@@ -2720,7 +2797,7 @@ function handleSocketMessage(event) {
       }
       setProgress("正在接收结果")
       setMarquee(100, true)
-      receiveRender(message.render, message.thumb).then(() => {
+      receiveRender(message.render, message.thumb, message.layered).then(() => {
         if (!jobId) return
         if (!acceptJobPhase(jobId, "completed")) return
         try {
@@ -3095,7 +3172,9 @@ async function renderDirect(payload, jobId, batchIndex) {
       apiKey: directApiKey,
       jobId,
       batchIndex,
-      prompt: payload.configdata.positive,
+      prompt: payload.configdata.family === "seedream"
+        ? String(payload.configdata.positive || "").trim()
+        : directPrompt(payload.configdata),
       profile: payload.configdata,
       images: directInputImages(payload),
       seed: payload.configdata.seed,
@@ -3110,7 +3189,7 @@ async function renderDirect(payload, jobId, batchIndex) {
     acceptJobPhase(jobId, "result_received")
     stopDirectElapsed()
     setProgress("接收结果")
-    await receiveRender(result.images[0].base64)
+    await receiveRender(result.images[0].base64, "", result.layered)
     acceptJobPhase(jobId, "completed")
     settleRender(null, jobId)
     if (result.credits) showStatus(`生成结果已收到，消耗 ${result.credits} credits`)
@@ -3133,6 +3212,7 @@ async function render(jobId = activeJobId, batchIndex = activeBatchIndex) {
   if (historyMutationBusy) throw new Error("历史记录正在修改，请稍后再生成")
   latestRenderFile = null
   latestRenderPlacement = null
+  latestRenderLayered = null
   activeRenderPlacement = null
   element("add-layer").disabled = true
   setBusy(true)
@@ -3658,7 +3738,7 @@ async function scaleLayer(layerId, percentW, percentH) {
   }
 }
 
-async function fitPlacedLayer(bounds) {
+async function fitPlacedLayer(bounds, sourceFile = latestRenderFile) {
   if (!bounds) return ""
   const document = app.activeDocument
   const layer = document.activeLayers[0]
@@ -3671,9 +3751,9 @@ async function fitPlacedLayer(bounds) {
 
   let pngSize = null
   let insets = { left: 0, top: 0, right: 0, bottom: 0 }
-  try { pngSize = await pngInfo(latestRenderFile) } catch (_) {}
+  try { pngSize = await pngInfo(sourceFile) } catch (_) {}
   if (pngSize && (pngSize.colorType === 4 || pngSize.colorType === 6)) {
-    try { insets = await readPngAlphaInsets(latestRenderFile) || insets } catch (_) {}
+    try { insets = await readPngAlphaInsets(sourceFile) || insets } catch (_) {}
   }
   const layerNow = () => layerById(document, layerId) || document.activeLayers[0]
   const current = domBounds(layerNow())
@@ -3799,11 +3879,15 @@ async function addResultLayer() {
   }
   const renderFile = latestRenderFile
   const renderPlacement = latestRenderPlacement
+  const layered = latestRenderLayered
   element("add-layer").disabled = true
   showStatus("正在添加到图层")
   try {
     const placedNote = await core.executeAsModal(async () => {
       return withPixelRuler(async () => {
+        if (layered?.layers?.length) {
+          return addLayeredResult(app.activeDocument, layered, renderPlacement)
+        }
         const layerName = `ComfyTV ${renderCount}`
         const document = app.activeDocument
         const previousIds = new Set()
@@ -3832,6 +3916,7 @@ async function addResultLayer() {
         }
         const placedNote = await fitPlacedLayer(
           sentPlaceBounds(renderPlacement?.bounds, renderPlacement?.frame) || fullDocumentBounds(document),
+          renderFile,
         )
         try { await maskPlacedLayer() } catch (_) {}
         return placedNote
@@ -3846,12 +3931,92 @@ async function addResultLayer() {
   }
 }
 
+function layeredBounds(item, layered, placement, document) {
+  const canvasWidth = Number(layered?.canvas?.width) || 1
+  const canvasHeight = Number(layered?.canvas?.height) || 1
+  const target = sentPlaceBounds(placement?.bounds, placement?.frame) || fullDocumentBounds(document)
+  const targetWidth = target.right - target.left
+  const targetHeight = target.bottom - target.top
+  const x = Number(item?.x) || 0
+  const y = Number(item?.y) || 0
+  const width = Math.max(1, Number(item?.width) || canvasWidth)
+  const height = Math.max(1, Number(item?.height) || canvasHeight)
+  return {
+    left: target.left + x * targetWidth / canvasWidth,
+    top: target.top + y * targetHeight / canvasHeight,
+    right: target.left + (x + width) * targetWidth / canvasWidth,
+    bottom: target.top + (y + height) * targetHeight / canvasHeight,
+  }
+}
+
+async function placeLayerFile(document, file, name, bounds) {
+  const previousIds = new Set()
+  for (let index = 0; index < document.layers.length; index += 1) previousIds.add(document.layers[index].id)
+  const ppi = Number(document.resolution) || lastDocumentPpi || 72
+  try { await stampPngPpi(file, ppi) } catch (_) {}
+  const token = await storage.localFileSystem.createSessionToken(file)
+  const result = await action.batchPlay([{
+    _obj: "placeEvent",
+    target: { _path: token, _kind: "local" },
+    _options: { dialogOptions: "dontDisplay" },
+  }], { modalBehavior: "execute" })
+  const placedId = result?.[0]?.layerID || result?.[0]?.ID
+  const placed = (placedId && layerById(document, placedId)) || newestLayer(document, previousIds)
+  if (!placed) throw new Error(`无法创建图层：${name}`)
+  await selectLayer(placed)
+  placed.name = name
+  await fitPlacedLayer(bounds, file)
+  return placed.id
+}
+
+async function groupPlacedLayers(layerIds, name) {
+  if (!layerIds.length) return false
+  try {
+    const commands = layerIds.map((id, index) => ({
+      _obj: "select",
+      _target: [{ _ref: "layer", _id: id }],
+      ...(index ? { selectionModifier: { _enum: "selectionModifierType", _value: "addToSelection" } } : {}),
+      makeVisible: false,
+      _options: { dialogOptions: "dontDisplay" },
+    }))
+    commands.push({ _obj: "groupLayersEvent", _options: { dialogOptions: "dontDisplay" } })
+    await action.batchPlay(commands, { modalBehavior: "execute" })
+    const group = app.activeDocument.activeLayers[0]
+    if (group) group.name = name
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
+async function addLayeredResult(document, layered, placement) {
+  const root = await storage.localFileSystem.getDataFolder()
+  const layers = layered.layers.slice().sort((left, right) => left.zIndex - right.zIndex)
+  const placedIds = []
+  for (let index = 0; index < layers.length; index += 1) {
+    const item = layers[index]
+    const file = await root.getEntry(item.fileName)
+    const label = String(item.name || (index === 0 ? "background" : `layer ${index}`))
+    placedIds.push(await placeLayerFile(document, file, label, layeredBounds(item, layered, placement, document)))
+  }
+  const grouped = await groupPlacedLayers(placedIds, `Seedream 图层分离 ${renderCount}`)
+  return grouped
+    ? `已添加 ${placedIds.length} 个可编辑图层并建立图层组`
+    : `已添加 ${placedIds.length} 个可编辑透明图层`
+}
+
 function closePrompt() {
   closeComposerMenus()
 }
 
 function syncDrawerButtons(openId) {
   element("settings-toggle").classList.toggle("active", openId === "settings-drawer")
+}
+
+function closeDrawers() {
+  document.querySelectorAll(".drawer").forEach((item) => item.classList.add("hidden"))
+  syncDrawerButtons("")
+  syncComposerOverlay()
 }
 
 function syncComposerOverlay() {
@@ -3886,6 +4051,7 @@ function setDirectModelOptions() {
     { name: "NanoBanana", family: "nanobanana" },
     { name: "NanoBanana Pro", family: "pro" },
     { name: "GPT", family: "gpt" },
+    { name: "Seedream 图层分离", family: "seedream" },
   ]
   select.textContent = ""
   models.forEach((model, index) => {
@@ -3916,10 +4082,10 @@ function setPreviewFit(contain) {
 function toggleDrawer(id) {
   const drawer = element(id)
   const opening = drawer.classList.contains("hidden")
-  document.querySelectorAll(".drawer").forEach((item) => item.classList.add("hidden"))
+  closeDrawers()
   if (opening) {
-    drawer.classList.remove("hidden")
     closeComposerMenus()
+    drawer.classList.remove("hidden")
   }
   syncDrawerButtons(opening ? id : "")
   syncComposerOverlay()
@@ -3989,6 +4155,21 @@ const RENDER_FAMILIES = {
     backgrounds: [],
     defaultResolution: "2K",
     defaultQuality: "",
+  },
+  seedream: {
+    label: "Seedream 图层分离",
+    short: "Seedream",
+    aspects: ["auto"],
+    resolutions: ["auto", "1K", "1.5K", "2K"],
+    models: [
+      { value: "seedream 5.0 pro", label: "Seedream 5.0 Pro", resolutions: ["auto", "1K", "1.5K", "2K"], qualities: [{ value: "standard", label: "标准" }, { value: "fast", label: "快速" }] },
+    ],
+    defaultModel: "seedream 5.0 pro",
+    qualityLabel: "提示词优化",
+    qualities: [{ value: "standard", label: "标准" }, { value: "fast", label: "快速" }],
+    backgrounds: [],
+    defaultResolution: "auto",
+    defaultQuality: "standard",
   },
   gpt: {
     label: "GPT",
@@ -4115,6 +4296,7 @@ function normalizeProfile(raw) {
 function profileGroupName(profile) {
   if (profile.family === "nanobanana") return `NanoBanana ${profile.resolution}`
   if (profile.family === "pro") return `NanoBanana Pro ${profile.resolution}`
+  if (profile.family === "seedream") return "Seedream 图层分离"
   const background = { auto: "自动", opaque: "不透明", transparent: "半透明" }[profile.background] || "自动"
   return `GPT ${background}`
 }
@@ -4127,17 +4309,19 @@ function profilePayload(profile, imageSize = null) {
     if (Number.isFinite(width) && width > 0) normalized.customWidth = width
     if (Number.isFinite(height) && height > 0) normalized.customHeight = height
   }
-  const size = normalized.family === "gpt" ? normalized.resolution : ""
+  const size = normalized.family === "gpt" || normalized.family === "seedream" ? normalized.resolution : ""
   return { ...normalized, group: profileGroupName(normalized), size }
 }
 
 function modeButtonLabel(profile) {
   if (profile.family === "gpt") return gptSizeLabel(profile.resolution)
+  if (profile.family === "seedream") return optionLabel(profile.resolution)
   return `${optionLabel(profile.aspect)} · ${optionLabel(profile.resolution)}`
 }
 
 function familyFromModelName(name) {
   const text = String(name || "")
+  if (text.includes("Seedream")) return "seedream"
   if (text.includes("Pro")) return "pro"
   if (text.includes("GPT")) return "gpt"
   if (text.includes("Nano")) return "nanobanana"
@@ -4253,10 +4437,11 @@ function fillModeSheet(menu) {
   }
 
   if (profile.family !== "gpt") {
+  const aspects = aspectChoices(profile)
+  if (aspects.length > 1) {
   const ratioSection = appendSection(menu, "比例")
   const layout = document.createElement("div")
   layout.className = "ratio-layout"
-  const aspects = aspectChoices(profile)
   if (aspects.includes("auto")) {
     const auto = document.createElement("span")
     auto.className = profile.aspect === "auto" ? "ratio-auto is-on" : "ratio-auto"
@@ -4301,6 +4486,7 @@ function fillModeSheet(menu) {
   })
   layout.appendChild(grid)
   ratioSection.appendChild(layout)
+  }
 
   const resolutionSection = appendSection(menu, "分辨率")
   const resolutionRow = document.createElement("div")
@@ -5844,6 +6030,7 @@ function mountEmbeddedComfy() {
   let src = EMBEDDED_COMFY
   try { src = serverAddress() } catch (_) {}
   src += `${src.includes("?") ? "&" : "?"}comfytv_ps_client=${encodeURIComponent(clientId)}`
+  src += "&comfytv_ps_autoload=1"
   if ((view.getAttribute("src") || "") !== src) view.setAttribute("src", src)
 }
 
@@ -6375,6 +6562,7 @@ function openHostPopover(menuName) {
     closeComposerMenus(true)
     return
   }
+  closeDrawers()
   closeComposerMenus()
   if (menu === "model") {
     if (!workflowListReady()) announceWorkflowList()
@@ -6689,7 +6877,7 @@ function restoreSettings() {
   if (savedPad !== null) element("crop-pad").value = savedPad
   const checks = [
     ["crop-selection", "cropSelection", true],
-    ["auto-seed", "autoSeed", false],
+    ["auto-seed", "autoSeed", true],
   ]
   checks.forEach(([id, key, fallback]) => {
     const saved = localStorage.getItem(`${STORE_PREFIX}${key}`)
@@ -6716,7 +6904,18 @@ function initialize() {
   element("runtime-mode-picker").classList.remove("hidden")
   setConnection("选择运行模式", "busy")
   setTimeout(() => element("choose-direct-mode")?.focus(), 0)
-  element("settings-toggle").addEventListener("click", () => toggleDrawer("settings-drawer"))
+  element("settings-toggle").addEventListener("pointerdown", (event) => {
+    if (typeof event.button === "number" && event.button !== 0) return
+    event.preventDefault()
+    event.stopPropagation()
+    toggleDrawer("settings-drawer")
+  })
+  element("settings-toggle").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return
+    event.preventDefault()
+    event.stopPropagation()
+    toggleDrawer("settings-drawer")
+  })
   element("web-toggle").addEventListener("click", () => { openComfyUI() })
   element("choose-direct-mode").addEventListener("click", () => switchRuntimeMode(RUNTIME_DIRECT))
   element("choose-comfyui-mode").addEventListener("click", () => switchRuntimeMode(RUNTIME_COMFYUI))
@@ -6779,10 +6978,9 @@ function initialize() {
     selectHistory(Number(card.dataset.index)).catch((error) => showStatus(error.message, true))
   })
   document.querySelectorAll("[data-close]").forEach((button) => {
-    button.addEventListener("click", () => {
-      element(button.dataset.close).classList.add("hidden")
-      syncDrawerButtons("")
-      syncComposerOverlay()
+    button.addEventListener("click", (event) => {
+      event.stopPropagation()
+      closeDrawers()
     })
   })
   element("fit-toggle").addEventListener("click", () => {

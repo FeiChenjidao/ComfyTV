@@ -101,6 +101,23 @@
     return bytes
   }
 
+  function bytesBase64(value) {
+    const bytes = value instanceof Uint8Array ? value : new Uint8Array(value || [])
+    let binary = ""
+    const chunk = 0x8000
+    for (let offset = 0; offset < bytes.length; offset += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + chunk))
+    }
+    return btoa(binary)
+  }
+
+  function pngSize(value) {
+    const bytes = value instanceof Uint8Array ? value : new Uint8Array(value || [])
+    if (bytes.length < 24 || bytes[0] !== 137 || bytes[1] !== 80 || bytes[2] !== 78 || bytes[3] !== 71) return null
+    const read = (offset) => (((bytes[offset] << 24) >>> 0) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3]) >>> 0
+    return { width: read(16), height: read(20) }
+  }
+
   function requestId(jobId, batchIndex) {
     const base = String(jobId || `direct-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`)
     return `${base}-${Number(batchIndex) || 0}`.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 240)
@@ -217,6 +234,24 @@
         }
       }
       throw new DirectApiError("network", "无法连接 Comfy API，请检查网络")
+    } finally {
+      timeout.dispose()
+    }
+  }
+
+  async function fetchAbsolute(url, options = {}) {
+    const fetchImpl = options.fetchImpl || fetch
+    const timeout = linkedController(options.signal, options.timeoutMs)
+    try {
+      const response = await fetchImpl(String(url || ""), { ...(options.request || {}), signal: timeout.signal })
+      if (!response.ok) throw new DirectApiError("storage_error", `文件传输失败（${response.status}）`, response.status)
+      return response
+    } catch (error) {
+      if (timeout.signal.aborted) {
+        if (timeout.timedOut() && !options.signal?.aborted) throw new DirectApiError("timeout", "文件传输超时，请稍后重试")
+        throw mapNetworkError(error)
+      }
+      throw mapNetworkError(error)
     } finally {
       timeout.dispose()
     }
@@ -370,12 +405,112 @@
     return form
   }
 
+  async function uploadSeedreamImage(job, options, idempotencyKey) {
+    const canvas = (job.images || []).find((item) => item?.role === "canvas" && item.base64)
+    if (!canvas) throw new DirectApiError("invalid_request", "Seedream 图层分离需要 Photoshop 画布")
+    const created = await fetchWithRetry("/customers/storage", {
+      fetchImpl: options.fetchImpl,
+      signal: job.signal,
+      timeoutMs: job.timeoutMs || options.timeoutMs,
+      attempts: options.attempts || 3,
+      onRetry: options.onRetry,
+      buildRequest: () => ({
+        method: "POST",
+        headers: authHeaders(job.apiKey, `${idempotencyKey}-upload`, true),
+        body: JSON.stringify({ file_name: "photoshop-seedream.png", content_type: "image/png" }),
+      }),
+    })
+    const uploadUrl = String(created.payload?.upload_url || "")
+    const downloadUrl = String(created.payload?.download_url || "")
+    if (!uploadUrl || !downloadUrl) throw new DirectApiError("invalid_response", "Comfy API 没有返回图片上传地址")
+    await fetchAbsolute(uploadUrl, {
+      fetchImpl: options.fetchImpl,
+      signal: job.signal,
+      timeoutMs: job.timeoutMs || options.timeoutMs,
+      request: {
+        method: "PUT",
+        headers: { "Content-Type": "image/png" },
+        body: base64Bytes(canvas.base64),
+      },
+    })
+    return { canvas, downloadUrl }
+  }
+
+  async function downloadSeedreamLayer(item, index, job, options) {
+    const url = String(item?.url || "")
+    if (!url) throw new DirectApiError("invalid_response", `Seedream 第 ${index + 1} 个图层没有下载地址`)
+    const response = await fetchAbsolute(url, {
+      fetchImpl: options.fetchImpl,
+      signal: job.signal,
+      timeoutMs: job.timeoutMs || options.timeoutMs,
+    })
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    const dimensions = pngSize(bytes)
+    if (!dimensions) throw new DirectApiError("invalid_response", `Seedream 第 ${index + 1} 个图层不是有效 PNG`)
+    const absolute = Array.isArray(item?.bounding_box?.absolute) ? item.bounding_box.absolute : null
+    const left = absolute && Number.isFinite(Number(absolute[0])) ? Math.round(Number(absolute[0])) : 0
+    const top = absolute && Number.isFinite(Number(absolute[1])) ? Math.round(Number(absolute[1])) : 0
+    const right = absolute && Number.isFinite(Number(absolute[2])) ? Math.round(Number(absolute[2])) : left + dimensions.width
+    const bottom = absolute && Number.isFinite(Number(absolute[3])) ? Math.round(Number(absolute[3])) : top + dimensions.height
+    return {
+      name: String(item?.name || (index === 0 ? "background" : `layer ${index}`)).slice(0, 120),
+      base64: bytesBase64(bytes),
+      x: index === 0 ? 0 : left,
+      y: index === 0 ? 0 : top,
+      width: index === 0 ? dimensions.width : Math.max(1, right - left),
+      height: index === 0 ? dimensions.height : Math.max(1, bottom - top),
+      zIndex: Number.isFinite(Number(item?.z_index)) ? Math.round(Number(item.z_index)) : index,
+    }
+  }
+
+  async function generateSeedream(job, options, idempotencyKey) {
+    const uploaded = await uploadSeedreamImage(job, options, idempotencyKey)
+    const response = await fetchWithRetry("/proxy/byteplus/api/v3/images/generations", {
+      fetchImpl: options.fetchImpl,
+      signal: job.signal,
+      timeoutMs: job.timeoutMs || options.timeoutMs,
+      attempts: options.attempts || 3,
+      onRetry: options.onRetry,
+      buildRequest: () => ({
+        method: "POST",
+        headers: authHeaders(job.apiKey, idempotencyKey, true),
+        body: JSON.stringify({
+          model: "seedream-5-0-pro-260628",
+          prompt: String(job.prompt || "").trim() || null,
+          image: uploaded.downloadUrl,
+          size: String(job.profile?.resolution || "auto"),
+          seed: Math.max(0, Math.min(2147483647, Math.floor(Number(job.seed) || 0))),
+          response_format: "url",
+          output_format: "png",
+          layer_decomposition: true,
+          watermark: false,
+          optimize_prompt_options: { mode: job.profile?.quality === "fast" ? "fast" : "standard" },
+        }),
+      }),
+    })
+    if (response.payload?.error?.message) throw new DirectApiError("server_error", String(response.payload.error.message))
+    const items = Array.isArray(response.payload?.data) ? response.payload.data.filter((item) => item?.url) : []
+    if (items.length < 2) throw new DirectApiError("invalid_response", "Seedream 没有返回可分离的图层")
+    const layers = []
+    for (let index = 0; index < items.length; index += 1) {
+      layers.push(await downloadSeedreamLayer(items[index], index, job, options))
+    }
+    layers.sort((left, right) => left.zIndex - right.zIndex)
+    const canvas = pngSize(base64Bytes(uploaded.canvas.base64)) || { width: layers[0].width, height: layers[0].height }
+    return {
+      images: [{ base64: cleanBase64(uploaded.canvas.base64), mimeType: "image/png", text: "" }],
+      layered: { canvas, layers },
+      credits: response.response?.headers?.get?.("x-comfy-credits-used") || "",
+      idempotencyKey,
+    }
+  }
+
   async function generate(job, options = {}) {
     const apiKey = String(job?.apiKey || "").trim()
     if (!apiKey) throw new DirectApiError("missing_key", "请先在设置中保存 Comfy API Key")
     const prompt = String(job?.prompt || "").trim()
-    if (!prompt) throw new DirectApiError("invalid_request", "提示词不能为空")
     const profile = job.profile || {}
+    if (!prompt && profile.family !== "seedream") throw new DirectApiError("invalid_request", "提示词不能为空")
     const idempotencyKey = requestId(job.jobId, job.batchIndex)
     const common = {
       fetchImpl: options.fetchImpl,
@@ -384,6 +519,7 @@
       attempts: options.attempts || 3,
       onRetry: options.onRetry,
     }
+    if (profile.family === "seedream") return generateSeedream(job, options, idempotencyKey)
     let response
     if (profile.family === "gpt") {
       response = await fetchWithRetry("/proxy/openai/images/edits", {
@@ -419,7 +555,7 @@
     validateApiKey,
     validateGptSize,
     generate,
-    _test: { geminiBody, geminiImageParts, gptForm, parseGemini, parseGpt, mapHttpError, requestId },
+    _test: { geminiBody, geminiImageParts, gptForm, parseGemini, parseGpt, mapHttpError, requestId, pngSize },
   }
 
   root.ComfyDirectApi = api
