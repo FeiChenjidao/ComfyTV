@@ -249,8 +249,22 @@ export const useStageStore = defineStore('comfytv-stage', () => {
       const slotted = srcState.outputs?.[srcSlot]
       if (slotted != null && String(slotted).length > 0) return String(slotted)
       if (srcSlot === 0 && srcState.output) return String(srcState.output)
+      // batch stages publish the group on slot 0 and the picked still on slot 1;
+      // payloads that omit `picked` leave slot 1 unwritten, so derive it here.
+      const derived = pickedStillFromBatch(srcState, srcSlot)
+      if (derived) return derived
     }
     return null
+  }
+
+  /** Slot-0 batch of a stage that emitted no picked still → resolve the still on demand. */
+  function pickedStillFromBatch(srcState: StageState, srcSlot: number): string | null {
+    if (srcSlot <= 0) return null
+    if (srcState.kind !== 'image-batch' && srcState.outputType !== 'COMFYTV_IMAGES') return null
+    const batch = srcState.outputs?.[0] ?? srcState.output
+    if (!batch) return null
+    const picked = computePickedFromBatch(toImagePoolJson(String(batch)), srcState.pickedIndex ?? 1)
+    return picked && picked.length > 0 ? picked : null
   }
 
   function refreshStageInputs(node: any, state: StageState, app: any) {

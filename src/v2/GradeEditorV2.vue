@@ -113,6 +113,7 @@ import ComfyTVToggle from '@/components/widgets/ComfyTVToggle.vue'
 import GradientSlider from '@/components/widgets/GradientSlider.vue'
 import CurveEditor from '@/components/widgets/curve/CurveEditor.vue'
 import { pickSourceImageUrl } from '@/composables/stages/stageInputs'
+import { resolveMediaSrc } from '@/utils/mediaSrc'
 import { useColorGradeState } from '@/composables/stages/useColorGradeState'
 import { useGradePreview } from '@/composables/stages/useGradePreview'
 import { useTransformPipeline } from '@/composables/widgets/useTransformPipeline'
@@ -127,7 +128,7 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const sourceImageUrl = computed(() => pickSourceImageUrl(props.state.inputs))
+const sourceImageUrl = computed(() => resolveMediaSrc(pickSourceImageUrl(props.state.inputs)))
 
 const {
   effectId,

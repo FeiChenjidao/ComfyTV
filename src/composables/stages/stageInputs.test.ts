@@ -35,6 +35,23 @@ describe('pickSourceImageUrl', () => {
   it('returns null for an empty input list', () => {
     expect(pickSourceImageUrl([])).toBeNull()
   })
+
+  it('unwraps a batch wired into an image slot to the first still', () => {
+    const batch = JSON.stringify({
+      images: [
+        { index: '1', image_url: '/view?filename=one.png&type=output' },
+        { index: '2', image_url: '/view?filename=two.png&type=output' },
+      ],
+    })
+    expect(pickSourceImageUrl([input({ type: 'COMFYTV_IMAGES', content: batch })]))
+      .toBe('/view?filename=one.png&type=output')
+  })
+
+  it('leaves non-image slots untouched even when the payload is JSON', () => {
+    const payload = JSON.stringify({ notes: ['a'] })
+    expect(pickSourceImageUrl([input({ slot: 'midi', type: 'COMFYTV_TEXT', content: payload })], 'midi'))
+      .toBe(payload)
+  })
 })
 
 describe('coerceImageUrl', () => {

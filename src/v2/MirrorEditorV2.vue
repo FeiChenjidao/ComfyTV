@@ -51,6 +51,7 @@ import { computed, watch } from 'vue'
 
 import { mirrorPreviewStyle, mirrorToCanvas } from '@/composables/stages/imageOrientPreview'
 import { pickSourceImageUrl } from '@/composables/stages/stageInputs'
+import { resolveMediaSrc } from '@/utils/mediaSrc'
 import { useTransformPipeline } from '@/composables/widgets/useTransformPipeline'
 import { useBoolWidget } from '@/composables/widgets/useWidgetModel'
 import type { LGraphNode } from '@/lib/comfyApp'
@@ -61,7 +62,7 @@ const props = defineProps<{
   state: StageState
 }>()
 
-const sourceImageUrl = computed(() => pickSourceImageUrl(props.state.inputs))
+const sourceImageUrl = computed(() => resolveMediaSrc(pickSourceImageUrl(props.state.inputs)))
 const flipH = useBoolWidget(props.node, 'flip_horizontal', false)
 const flipV = useBoolWidget(props.node, 'flip_vertical', false)
 const previewStyle = computed(() => mirrorPreviewStyle(flipH.value, flipV.value))

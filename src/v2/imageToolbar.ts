@@ -1,6 +1,7 @@
 import { t } from '@/i18n'
 import { app } from '@/lib/comfyApp'
 import { I, el } from '@/v2/shellCommon'
+import { downloadBlob } from '@/utils/download'
 import type { StageKind, StageState } from '@/stores/stageStore'
 
 const ICON_GENERATE = I(`<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M8 14l2.2-3 1.8 2.2L15 10l3 4"/><path d="M17.5 3.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z" fill="currentColor" stroke="none"/>`)
@@ -20,26 +21,96 @@ export function isImageOutputKind(kind: StageKind): boolean {
   return kind === 'image' || kind === 'image-batch' || kind === 'image-picker'
 }
 
-export function outputImageUrl(state: StageState): string {
+export interface OutputImageItem {
+  url: string
+  label: string
+}
+
+/** Every image in a batch payload, or the raw output when it is a single URL. */
+export function outputImageItems(state: Pick<StageState, 'output'>): OutputImageItem[] {
   const raw = String(state.output ?? '')
-  if (!raw.trim().startsWith('{')) return raw
+  if (!raw.trim().startsWith('{')) {
+    return raw.trim() ? [{ url: raw, label: '' }] : []
+  }
   let images: any[] = []
   try {
     const parsed = JSON.parse(raw)
     if (Array.isArray(parsed?.images)) images = parsed.images
   } catch { }
-  if (images.length === 0) return ''
+  const items: OutputImageItem[] = []
+  for (const im of images) {
+    const url = String(im?.image_url ?? im?.url ?? '').trim()
+    if (!url) continue
+    items.push({ url, label: String(im?.label ?? im?.index ?? '') })
+  }
+  return items
+}
+
+export function outputImageUrl(state: StageState): string {
+  const items = outputImageItems(state)
+  if (items.length === 0) return ''
+  if (items.length === 1) return items[0]!.url
   const idx = Number(state.pickedIndex)
-  const i = Number.isFinite(idx) && idx >= 1 ? Math.min(idx, images.length) : 1
-  return String(images[i - 1]?.image_url ?? '')
+  const i = Number.isFinite(idx) && idx >= 1 ? Math.min(idx, items.length) : 1
+  return items[i - 1]?.url ?? items[0]!.url
+}
+
+export function resolveDownloadHref(url: string): string {
+  return (app as any).api.apiURL(url.replace(/^\/api/, ''))
+}
+
+export function filenameFromUrl(url: string, fallback = 'output'): string {
+  const fromQuery = url.split('filename=')[1]?.split('&')[0]
+  const raw = fromQuery || url.split('/').pop() || fallback
+  try { return decodeURIComponent(raw) } catch { return raw }
 }
 
 export function downloadUrl(url: string) {
   if (!url) return
   const a = document.createElement('a')
-  a.href = (app as any).api.apiURL(url.replace(/^\/api/, ''))
-  a.download = decodeURIComponent(url.split('filename=')[1]?.split('&')[0] || url.split('/').pop() || 'output')
+  a.href = resolveDownloadHref(url)
+  a.download = filenameFromUrl(url)
   a.click()
+}
+
+function uniqueZipName(name: string, used: Set<string>): string {
+  const safe = (name || 'output.png').split(/[\\/]/).pop() || 'output.png'
+  const dot = safe.lastIndexOf('.')
+  const base = dot > 0 ? safe.slice(0, dot) : safe
+  const ext = dot > 0 ? safe.slice(dot) : ''
+  let candidate = safe
+  let n = 2
+  while (used.has(candidate)) {
+    candidate = `${base || 'output'}-${n}${ext}`
+    n += 1
+  }
+  used.add(candidate)
+  return candidate
+}
+
+/**
+ * Download every crop / batch image. A single result stays a plain file;
+ * two or more are packed into one zip so the browser does not keep only the last.
+ */
+export async function downloadOutputImages(state: StageState): Promise<void> {
+  const items = outputImageItems(state)
+  if (items.length === 0) return
+  if (items.length === 1) {
+    downloadUrl(items[0]!.url)
+    return
+  }
+  const { zipSync } = await import('fflate')
+  const files: Record<string, Uint8Array> = {}
+  const used = new Set<string>()
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]!
+    const res = await fetch(resolveDownloadHref(item.url))
+    if (!res.ok) throw new Error(`download fetch ${res.status}`)
+    const bytes = new Uint8Array(await res.arrayBuffer())
+    files[uniqueZipName(filenameFromUrl(item.url, `crop-${i + 1}.png`), used)] = bytes
+  }
+  const zipped = zipSync(files)
+  downloadBlob('crops.zip', new Blob([zipped], { type: 'application/zip' }))
 }
 
 export function buildToolbar(dispatch: (actionId: string) => void) {
@@ -93,7 +164,9 @@ export function attachImageToolbar(
 ) {
   if (!isImageOutputKind(kind)) return null
   const bar = buildToolbar((actionId) => {
-    if (actionId === 'download') downloadUrl(outputImageUrl(state))
+    if (actionId === 'download') void downloadOutputImages(state).catch((e) => {
+      console.error('[ComfyTV] batch download failed', e)
+    })
     else onAction(actionId)
   })
   card.appendChild(bar)

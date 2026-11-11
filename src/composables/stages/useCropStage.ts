@@ -4,6 +4,7 @@ import type { LGraphNode } from '@/lib/comfyApp'
 import { pickSourceImageUrl } from '@/composables/stages/stageInputs'
 import type { Bounds } from '@/composables/widgets/useImageCrop'
 import { useStageStore, type StageState } from '@/stores/stageStore'
+import { resolveMediaSrc } from '@/utils/mediaSrc'
 import { uploadCanvas } from '@/utils/uploadCanvas'
 import {
   bindWidgetCallback,
@@ -126,7 +127,8 @@ export function defaultCropBox(natW: number, natH: number, offset = 0): CropBox 
 
 export function useCropStage(node: LGraphNode, state: StageState) {
   const store = useStageStore()
-  const sourceImageUrl = computed(() => pickSourceImageUrl(state.inputs))
+  // Upstream value → a src the browser can load (batch JSON unwrapped, /api prefixed).
+  const sourceImageUrl = computed(() => resolveMediaSrc(pickSourceImageUrl(state.inputs)))
   const computing = ref(false)
 
   function readInitialBoxes(): CropBox[] {

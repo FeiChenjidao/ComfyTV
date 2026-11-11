@@ -183,6 +183,69 @@ describe('stageStore.refreshStageInputs (output-slot resolution)', () => {
       slot: 'image', type: 'COMFYTV_IMAGE', source: 'upstream', content: 'slot0url',
     })
   })
+
+  it('derives the picked still when a batch stage only filled slot 0', () => {
+    const store = useStageStore()
+    const up = {}
+    const upState = store.registerStage(up, 'image-batch')
+    const batch = JSON.stringify({
+      images: [
+        { index: '1', image_url: '/view?filename=one.png&type=output' },
+        { index: '2', image_url: '/view?filename=two.png&type=output' },
+      ],
+    })
+    // Executed payload carried the batch but no picked URL: outputs stays [batch].
+    upState.outputs = [batch]
+    upState.output = batch
+    upState.pickedIndex = 2
+
+    const links = new Map([[1, { origin_id: 'u1', origin_slot: 1 }]])
+    const down: any = { inputs: [{ name: 'image', type: 'COMFYTV_IMAGE', link: 1 }] }
+    const state = freshState()
+    store.refreshStageInputs(down, state, {
+      graph: { links, getNodeById: () => up },
+    })
+    expect(state.inputs[0]).toEqual({
+      slot: 'image',
+      type: 'COMFYTV_IMAGE',
+      source: 'upstream',
+      content: '/view?filename=two.png&type=output',
+    })
+  })
+
+  it('derives the picked still for a single-item batch', () => {
+    const store = useStageStore()
+    const up = {}
+    const upState = store.registerStage(up, 'image-batch')
+    const batch = JSON.stringify({
+      images: [{ index: '1', image_url: '/view?filename=only.png&type=output' }],
+    })
+    upState.outputs = [batch]
+
+    const links = new Map([[1, { origin_id: 'u1', origin_slot: 1 }]])
+    const down: any = { inputs: [{ name: 'image', type: 'COMFYTV_IMAGE', link: 1 }] }
+    const state = freshState()
+    store.refreshStageInputs(down, state, {
+      graph: { links, getNodeById: () => up },
+    })
+    expect(state.inputs[0].content).toBe('/view?filename=only.png&type=output')
+  })
+
+  it('keeps the slot empty while the batch stage has produced nothing', () => {
+    const store = useStageStore()
+    const up = {}
+    store.registerStage(up, 'image-batch')
+
+    const links = new Map([[1, { origin_id: 'u1', origin_slot: 1 }]])
+    const down: any = { inputs: [{ name: 'image', type: 'COMFYTV_IMAGE', link: 1 }] }
+    const state = freshState()
+    store.refreshStageInputs(down, state, {
+      graph: { links, getNodeById: () => up },
+    })
+    expect(state.inputs[0]).toEqual({
+      slot: 'image', type: 'COMFYTV_IMAGE', source: 'upstream-pending', content: null,
+    })
+  })
 })
 
 describe('stageStore.refreshStageInputs (fx passthrough resolution)', () => {

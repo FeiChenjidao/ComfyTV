@@ -78,6 +78,7 @@ import { computed, watch } from 'vue'
 
 import { rotatePreviewStyle, rotateToCanvas } from '@/composables/stages/imageOrientPreview'
 import { pickSourceImageUrl } from '@/composables/stages/stageInputs'
+import { resolveMediaSrc } from '@/utils/mediaSrc'
 import { useTransformPipeline } from '@/composables/widgets/useTransformPipeline'
 import { useBoolWidget, useNumWidget } from '@/composables/widgets/useWidgetModel'
 import type { LGraphNode } from '@/lib/comfyApp'
@@ -95,7 +96,7 @@ const props = defineProps<{
   state: StageState
 }>()
 
-const sourceImageUrl = computed(() => pickSourceImageUrl(props.state.inputs))
+const sourceImageUrl = computed(() => resolveMediaSrc(pickSourceImageUrl(props.state.inputs)))
 const angle = useNumWidget(props.node, 'angle', 0)
 const flipH = useBoolWidget(props.node, 'flip_horizontal', false)
 const flipV = useBoolWidget(props.node, 'flip_vertical', false)

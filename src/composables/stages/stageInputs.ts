@@ -1,10 +1,25 @@
-import type { ResolvedInput } from '@/stores/stageStore'
+import type { ResolvedInput, TypedValueType } from '@/stores/stageStore'
 import { computePickedFromBatch, toImagePoolJson } from '@/stores/stageStore'
 
+const IMAGE_TYPES: ReadonlySet<string> = new Set<TypedValueType>([
+  'COMFYTV_IMAGE',
+  'COMFYTV_IMAGES',
+  'COMFYTV_PANORAMA',
+])
+
+/**
+ * Upstream value for a display slot.
+ *
+ * Image slots may be wired to a batch socket (`COMFYTV_IMAGES`): the payload is
+ * then `{ images: [...] }` JSON, which no `<img src>` can load, so unwrap it to
+ * the picked still. Non-image slots are returned untouched.
+ */
 export function pickSourceImageUrl(inputs: ResolvedInput[], slot = 'image'): string | null {
   const inp = inputs.find(i => i.slot === slot)
   if (!inp || inp.source !== 'upstream' || !inp.content) return null
-  return inp.content
+  const raw = String(inp.content)
+  if (!IMAGE_TYPES.has(String(inp.type ?? ''))) return raw
+  return coerceImageUrl(raw) ?? raw
 }
 
 /** Plain COMFYTV_IMAGE URL or COMFYTV_IMAGES batch JSON → a single view URL. */

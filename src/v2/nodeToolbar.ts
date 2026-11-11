@@ -17,8 +17,7 @@ import type { StageKind, StageState } from '@/stores/stageStore'
 import { createIslandGroup } from '@/v2/islands'
 import {
   attachImageToolbar,
-  downloadUrl,
-  outputImageUrl,
+  downloadOutputImages,
 } from '@/v2/imageToolbar'
 import MediaToolbarV2, { type MediaToolbarFlavor } from '@/v2/MediaToolbarV2.vue'
 import { I, el } from '@/v2/shellCommon'
@@ -195,7 +194,9 @@ export function attachConfiguredToolbar(opts: {
   const bar = buildToolbarFromItems(resolved, (id) => {
     if (dispatchToolbarAction(opts.node, id)) return
     if (id === 'download') {
-      downloadUrl(outputImageUrl(opts.state))
+      void downloadOutputImages(opts.state).catch((e) => {
+        console.error('[ComfyTV] batch download failed', e)
+      })
       return
     }
     opts.onAction(id)
