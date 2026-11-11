@@ -15,7 +15,7 @@ const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const HISTORY_PANEL_ID = "com.comfytv.photoshop.history"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.3.17"
+const PLUGIN_VERSION = "0.3.18"
 const COMPOSER_PROTOCOL_VERSION = 3
 const WORKFLOW_PROTOCOL_VERSION = 3
 const RUNTIME_DIRECT = "direct"
@@ -2383,19 +2383,6 @@ function toggleHistoryPanelSelection(card, event = null) {
     historyPanelSelectionAnchor = name
   }
   paintHistoryPanel()
-}
-
-function createHistoryCategoryFromPanel() {
-  const input = element("history-category-name")
-  try {
-    const category = addHistoryCategory(input && input.value)
-    if (input) input.value = ""
-    historyPanelPage = 0
-    paintHistoryPanel()
-    showStatus(`已创建分类「${category.name}」，后续生成将自动归入该分类`)
-  } catch (error) {
-    showStatus(error.message || "创建分类失败", true)
-  }
 }
 
 function moveSelectedRenderHistory() {
@@ -4774,10 +4761,88 @@ function fillHistoryCategoryMenu(menu) {
     })
     menu.appendChild(item)
   })
-  const hint = document.createElement("span")
-  hint.className = "composer-option history-category-hint"
-  hint.textContent = "可在历史记录窗口新建分类"
-  menu.appendChild(hint)
+  const create = document.createElement("span")
+  create.className = "composer-option history-category-create-option"
+  create.setAttribute("role", "button")
+  create.tabIndex = 0
+  create.textContent = "新建分类"
+  const openCreate = (event) => {
+    event.stopPropagation()
+    openHistoryCategoryCreate(menu)
+  }
+  create.addEventListener("click", openCreate)
+  create.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return
+    event.preventDefault()
+    openCreate(event)
+  })
+  menu.appendChild(create)
+}
+
+function openHistoryCategoryCreate(menu) {
+  menu.textContent = ""
+  const dialog = document.createElement("div")
+  dialog.className = "history-category-create-dialog"
+
+  const title = document.createElement("strong")
+  title.textContent = "新建分类"
+  dialog.appendChild(title)
+
+  const input = document.createElement("input")
+  input.type = "text"
+  input.maxLength = 20
+  input.placeholder = "输入分类名称"
+  input.setAttribute("aria-label", "分类名称")
+  dialog.appendChild(input)
+
+  const message = document.createElement("span")
+  message.className = "history-category-create-error"
+  dialog.appendChild(message)
+
+  const actions = document.createElement("div")
+  actions.className = "history-category-create-actions"
+  const cancel = document.createElement("button")
+  cancel.type = "button"
+  cancel.textContent = "取消"
+  cancel.addEventListener("click", (event) => {
+    event.stopPropagation()
+    fillHistoryCategoryMenu(menu)
+  })
+  const submit = document.createElement("button")
+  submit.type = "button"
+  submit.className = "is-primary"
+  submit.textContent = "新建"
+  const createCategory = (event) => {
+    event.stopPropagation()
+    try {
+      const category = addHistoryCategory(input.value)
+      historyPanelPage = 0
+      paintHistoryPanel()
+      closeComposerMenus(true)
+      showStatus(`已创建分类「${category.name}」，后续生成将自动归入该分类`)
+    } catch (error) {
+      message.textContent = error.message || "创建分类失败"
+      input.focus()
+    }
+  }
+  submit.addEventListener("click", createCategory)
+  input.addEventListener("input", () => { message.textContent = "" })
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault()
+      event.stopPropagation()
+      fillHistoryCategoryMenu(menu)
+      return
+    }
+    if (event.key !== "Enter") return
+    event.preventDefault()
+    createCategory(event)
+  })
+  actions.appendChild(cancel)
+  actions.appendChild(submit)
+  dialog.appendChild(actions)
+  menu.appendChild(dialog)
+  setTimeout(() => input.focus(), 0)
 }
 
 function toggleComposerMenu(id) {
@@ -7590,12 +7655,6 @@ async function initialize() {
     historyPanelPage = 0
     saveHistoryCategories()
     paintHistoryPanel()
-  })
-  element("history-category-add").addEventListener("click", createHistoryCategoryFromPanel)
-  element("history-category-name").addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return
-    event.preventDefault()
-    createHistoryCategoryFromPanel()
   })
   element("history-panel-move-selected").addEventListener("click", moveSelectedRenderHistory)
   element("history-panel-delete-selected").addEventListener("click", () => {

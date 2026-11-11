@@ -42,6 +42,22 @@ test('settings opens on pointerdown instead of waiting for a delayed click', () 
   assert.match(mainSource, /element\("settings-toggle"\)\.addEventListener\("pointerdown"/)
 })
 
+test('history categories are created from the composer menu instead of the history panel', () => {
+  assert.doesNotMatch(htmlSource, /id="history-category-name"/)
+  assert.doesNotMatch(htmlSource, /id="history-category-add"/)
+  assert.doesNotMatch(mainSource, /createHistoryCategoryFromPanel/)
+  const menuStart = mainSource.indexOf('function fillHistoryCategoryMenu(')
+  const menuEnd = mainSource.indexOf('function toggleComposerMenu(', menuStart)
+  assert.ok(menuStart >= 0 && menuEnd > menuStart)
+  const menuSource = mainSource.slice(menuStart, menuEnd)
+  assert.match(menuSource, /history-category-create-option/)
+  assert.match(menuSource, /openHistoryCategoryCreate\(menu\)/)
+  assert.match(menuSource, /addHistoryCategory\(input\.value\)/)
+  assert.match(menuSource, /submit\.textContent = "新建"/)
+  const styleSource = readFileSync(new URL('../photoshop-uxp-plugin/styles.css', import.meta.url), 'utf8')
+  assert.match(styleSource, /\.history-category-create-dialog/)
+})
+
 test('preset editor defaults to suffix content and preserves advanced prefix presets', () => {
   const helperStart = mainSource.indexOf('function createHostPresetEditor(')
   const helperEnd = mainSource.indexOf('function presetCategory(', helperStart)
