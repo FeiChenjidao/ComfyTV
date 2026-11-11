@@ -15,7 +15,7 @@ const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const HISTORY_PANEL_ID = "com.comfytv.photoshop.history"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.3.10"
+const PLUGIN_VERSION = "0.3.11"
 const COMPOSER_PROTOCOL_VERSION = 3
 const WORKFLOW_PROTOCOL_VERSION = 3
 const RUNTIME_DIRECT = "direct"
@@ -6232,8 +6232,8 @@ async function downloadAndInstallPluginUpdate() {
     if (uxp.shell && typeof uxp.shell.openPath === "function" && file.nativePath) {
       const result = await uxp.shell.openPath(file.nativePath, "安装 ComfyTV Photoshop 更新")
       if (result) throw new Error(String(result))
-      pluginUpdateStatus(`已打开 ${pluginUpdateInfo.version} 安装器；安装完成后重启 Photoshop`, "available")
-      showStatus("更新包校验完成，请在 Adobe 安装器中确认安装")
+      pluginUpdateStatus(`已打开 ${pluginUpdateInfo.version} 安装确认页，请点击 Install；完成后重启 Photoshop`, "available")
+      showStatus("CCX 已打开，请在安装器中点击 Install")
       return
     }
     openPluginReleasePage(pluginUpdateInfo.packageUrl || pluginUpdateInfo.releaseUrl)

@@ -1,4 +1,4 @@
-ComfyTV Photoshop 插件 0.3.9
+ComfyTV Photoshop 插件 0.3.11
 
 需要 Photoshop 2025（26.0）或更新版本。插件提供两种运行方式：
 
@@ -7,8 +7,8 @@ ComfyTV Photoshop 插件 0.3.9
 
 完整安装包内容：
 
-- ComfyTV-photoshop-0.3.9.ccx：Creative Cloud 安装版 Photoshop 插件。
-- ComfyTV-photoshop-0.3.9-手动安装.zip：无 Creative Cloud 时使用。
+- ComfyTV-photoshop-0.3.11.ccx：Creative Cloud 安装版 Photoshop 插件。
+- ComfyTV-photoshop-0.3.11-手动安装.zip：无 Creative Cloud 时使用。
 - ComfyTV-custom-node-1.10.0.zip：ComfyUI 模式需要的完整 ComfyTV 自定义节点。
 - PS_NanoBanana_GPTImage.json：ComfyUI 模式配套工作流。
 - SHA256 文件：用于确认安装包没有损坏或漏文件。
@@ -19,7 +19,7 @@ ComfyTV Photoshop 插件 0.3.9
 
 1. 登录 Adobe Creative Cloud 桌面版。
 2. 完全退出 Photoshop。升级旧版时先卸载旧 ComfyTV，不要同时保留两份同 ID 插件。
-3. 双击 ComfyTV-photoshop-0.3.9.ccx。
+3. 双击 ComfyTV-photoshop-0.3.11.ccx。
 4. 出现“不是来自 Creative Cloud 市场”的提示时选择安装，并允许所需权限。
 5. 安装完成后重新打开 Photoshop。
 6. 在“增效工具 > ComfyTV”中打开 Ai Panel。
@@ -32,10 +32,10 @@ C:\Program Files\Common Files\Adobe\Adobe Desktop Common\RemoteComponents\UPI\Un
 
 1. Photoshop：编辑 > 首选项 > 增效工具，启用开发人员模式，然后完全退出 Photoshop。
 2. 确认系统级和用户级目录中没有另一份 ComfyTV。同一台电脑只能保留一份。
-3. 解压 ComfyTV-photoshop-0.3.9-手动安装.zip。
+3. 解压 ComfyTV-photoshop-0.3.11-手动安装.zip。
 4. 将全部插件文件放到：
 
-%AppData%\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.3.9
+%AppData%\Adobe\UXP\Plugins\External\com.comfytv.photoshop.uxp_0.3.11
 
 manifest.json 必须直接位于该目录下，不能多套一层文件夹。
 
@@ -96,6 +96,6 @@ ComfyUI 模式可选安装 rgthree-comfy，但直接模式完全不依赖 rgthre
 
 可使用 PowerShell 检查文件：
 
-Get-FileHash .\ComfyTV-photoshop-0.3.9.ccx -Algorithm SHA256
+Get-FileHash .\ComfyTV-photoshop-0.3.11.ccx -Algorithm SHA256
 
-结果应与 ComfyTV-photoshop-0.3.9.ccx.sha256.txt 一致。完整同事安装包外部的 SHA256 文件用于校验最终 ZIP；完整包内部的“完整包文件校验.sha256.txt”用于核对其中每个文件。
+结果应与 ComfyTV-photoshop-0.3.11.ccx.sha256.txt 一致。完整同事安装包外部的 SHA256 文件用于校验最终 ZIP；完整包内部的“完整包文件校验.sha256.txt”用于核对其中每个文件。
