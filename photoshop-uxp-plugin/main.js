@@ -15,7 +15,7 @@ const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const HISTORY_PANEL_ID = "com.comfytv.photoshop.history"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.3.9"
+const PLUGIN_VERSION = "0.3.10"
 const COMPOSER_PROTOCOL_VERSION = 3
 const WORKFLOW_PROTOCOL_VERSION = 3
 const RUNTIME_DIRECT = "direct"
@@ -3966,24 +3966,13 @@ async function placeLayerFile(document, file, name, bounds) {
   await selectLayer(placed)
   placed.name = name
   await fitPlacedLayer(bounds, file)
-  return placed.id
+  return placed
 }
 
-async function groupPlacedLayers(layerIds, name) {
-  if (!layerIds.length) return false
+async function groupPlacedLayers(document, layers, name) {
+  if (!layers.length) return false
   try {
-    const commands = layerIds.map((id, index) => ({
-      _obj: "select",
-      _target: [{ _ref: "layer", _id: id }],
-      ...(index ? { selectionModifier: { _enum: "selectionModifierType", _value: "addToSelection" } } : {}),
-      makeVisible: false,
-      _options: { dialogOptions: "dontDisplay" },
-    }))
-    commands.push({ _obj: "groupLayersEvent", _options: { dialogOptions: "dontDisplay" } })
-    await action.batchPlay(commands, { modalBehavior: "execute" })
-    const group = app.activeDocument.activeLayers[0]
-    if (group) group.name = name
-    return true
+    return Boolean(await document.createLayerGroup({ name, fromLayers: layers }))
   } catch (_) {
     return false
   }
@@ -3992,17 +3981,17 @@ async function groupPlacedLayers(layerIds, name) {
 async function addLayeredResult(document, layered, placement) {
   const root = await storage.localFileSystem.getDataFolder()
   const layers = layered.layers.slice().sort((left, right) => left.zIndex - right.zIndex)
-  const placedIds = []
+  const placedLayers = []
   for (let index = 0; index < layers.length; index += 1) {
     const item = layers[index]
     const file = await root.getEntry(item.fileName)
     const label = String(item.name || (index === 0 ? "background" : `layer ${index}`))
-    placedIds.push(await placeLayerFile(document, file, label, layeredBounds(item, layered, placement, document)))
+    placedLayers.push(await placeLayerFile(document, file, label, layeredBounds(item, layered, placement, document)))
   }
-  const grouped = await groupPlacedLayers(placedIds, `Seedream 图层分离 ${renderCount}`)
+  const grouped = await groupPlacedLayers(document, placedLayers, `Seedream 图层分离 ${renderCount}`)
   return grouped
-    ? `已添加 ${placedIds.length} 个可编辑图层并建立图层组`
-    : `已添加 ${placedIds.length} 个可编辑透明图层`
+    ? `已添加 ${placedLayers.length} 个可编辑图层并建立图层组`
+    : `已添加 ${placedLayers.length} 个可编辑透明图层`
 }
 
 function closePrompt() {

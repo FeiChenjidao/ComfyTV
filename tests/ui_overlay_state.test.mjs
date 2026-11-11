@@ -31,3 +31,12 @@ test('drawers and composer popovers are mutually exclusive', () => {
 test('settings opens on pointerdown instead of waiting for a delayed click', () => {
   assert.match(mainSource, /element\("settings-toggle"\)\.addEventListener\("pointerdown"/)
 })
+
+test('Seedream layers use the Photoshop DOM grouping API without native group dialogs', () => {
+  const groupStart = mainSource.indexOf('async function groupPlacedLayers(')
+  const groupEnd = mainSource.indexOf('async function addLayeredResult(', groupStart)
+  const groupSource = mainSource.slice(groupStart, groupEnd)
+  assert.match(groupSource, /document\.createLayerGroup\(\{ name, fromLayers: layers \}\)/)
+  assert.doesNotMatch(groupSource, /groupLayersEvent/)
+  assert.match(mainSource, /return placed\s*\n}\s*\n\s*async function groupPlacedLayers/)
+})
