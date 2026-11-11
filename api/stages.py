@@ -41,8 +41,12 @@ _UPSTREAM_PAT = re.compile(
 )
 _KINDS = ("image", "video", "audio", "text", "model")
 
+# Generator kinds that must also run from text alone. Reference media stays
+# optional there: requiring it made text-to-image impossible.
+_MEDIA_OPTIONAL_KINDS = frozenset({"image"})
 
-def _compute_input_usage(bindings: list[dict]) -> dict:
+
+def _compute_input_usage(bindings: list[dict], *, media_optional: bool = False) -> dict:
     uses     = {k: False for k in _KINDS}
     requires = {k: False for k in _KINDS}
     required_slots: dict[str, set[int]] = {k: set() for k in _KINDS}
@@ -77,7 +81,7 @@ def _compute_input_usage(bindings: list[dict]) -> dict:
             uses_mask = True
         idx = int(m.group(3)) if m.group(3) else 0
         uses[kind] = True
-        if cell.get("required") is True:
+        if cell.get("required") is True and not (media_optional and kind in ("image", "video", "audio")):
             requires[kind] = True
             required_slots[kind].add(idx)
         cur = max_inputs[kind] or 0
@@ -107,7 +111,10 @@ def workflow_info_payload() -> dict:
         kind = entry["kind"]
         if kind not in out:
             out[kind] = {}
-        usage = _compute_input_usage(entry["bindings"])
+        usage = _compute_input_usage(
+            entry["bindings"],
+            media_optional=kind in _MEDIA_OPTIONAL_KINDS,
+        )
         meta = entry.get("meta") or {}
         usage["prompt_required"] = meta.get("prompt_required", True) is not False
         out[kind][entry["label"]] = usage

@@ -11,8 +11,7 @@
   "inputs": {
     "277": {
       "image": {
-        "from": "upstream_image:annotated[0]",
-        "required": true
+        "from": "upstream_image:annotated[0]"
       }
     },
     "278": {

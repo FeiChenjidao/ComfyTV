@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from typing import Any, Optional
 
 from sqlalchemy import select
@@ -11,6 +12,28 @@ from .bindings import drop_stale_api
 
 
 _log = logging.getLogger(__name__)
+
+_UPSTREAM_SRC = re.compile(r"^upstream_(image|video|audio):")
+_MEDIA_OPTIONAL_KINDS = frozenset({"image"})
+
+
+def _relax_media_required(kind: str, inputs: dict) -> dict:
+    """Drop `required` on reference-media bindings of text-to-image workflows.
+
+    A required media binding makes `_Resolver.resolve` raise when nothing is
+    wired, which locked the image generation stage into image-to-image. Leaving
+    the binding optional lets `_auto_prune_unbound` drop the unused image branch
+    so the same workflow also runs from the prompt alone.
+    """
+    if kind not in _MEDIA_OPTIONAL_KINDS:
+        return inputs
+    for fields in inputs.values():
+        for spec in (fields or {}).values():
+            if not isinstance(spec, dict):
+                continue
+            if _UPSTREAM_SRC.match(str(spec.get("from") or "")):
+                spec.pop("required", None)
+    return inputs
 
 
 def _bindings_to_inputs_dict(rows: list[db.WorkflowInputBinding]) -> dict:
@@ -78,7 +101,7 @@ def build_preset(kind: str, label: str) -> Optional[dict]:
             except json.JSONDecodeError:
                 pass
         if bindings:
-            out["inputs"] = _bindings_to_inputs_dict(list(bindings))
+            out["inputs"] = _relax_media_required(kind, _bindings_to_inputs_dict(list(bindings)))
         return out
 
 
@@ -115,7 +138,7 @@ def get_workflow_for_invoke(kind: str, label: str) -> Optional[dict]:
             "api_json": api_obj,
             "result": {"type": row.result_type, "node": row.result_node}
                       if row.result_node else {},
-            "inputs": _bindings_to_inputs_dict(bindings),
+            "inputs": _relax_media_required(kind, _bindings_to_inputs_dict(bindings)),
             "sizing": json.loads(row.sizing_json) if row.sizing_json else {},
             "prune_when_missing":
                 json.loads(row.prune_when_missing_json)
