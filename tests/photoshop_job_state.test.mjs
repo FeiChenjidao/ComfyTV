@@ -1,7 +1,7 @@
+import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import test from 'node:test'
 import vm from 'node:vm'
-
-import { describe, expect, it } from 'vitest'
 
 const source = readFileSync(new URL('../photoshop-uxp-plugin/main.js', import.meta.url), 'utf8')
 const start = source.indexOf('const jobPhaseRanks = new Map()')
@@ -16,22 +16,20 @@ function stateMachine() {
   return context
 }
 
-describe('Photoshop job state machine', () => {
-  it('does not move backwards after the result is received', () => {
-    const state = stateMachine()
-    expect(state.acceptJobPhase('job', 'queued')).toBe(true)
-    expect(state.acceptJobPhase('job', 'running')).toBe(true)
-    expect(state.acceptJobPhase('job', 'result_received')).toBe(true)
-    expect(state.acceptJobPhase('job', 'running')).toBe(false)
-    expect(state.acceptJobPhase('job', 'completed')).toBe(true)
-    expect(state.acceptJobPhase('job', 'interrupted')).toBe(false)
-  })
+test('Photoshop job state does not move backwards after receiving a result', () => {
+  const state = stateMachine()
+  assert.equal(state.acceptJobPhase('job', 'queued'), true)
+  assert.equal(state.acceptJobPhase('job', 'running'), true)
+  assert.equal(state.acceptJobPhase('job', 'result_received'), true)
+  assert.equal(state.acceptJobPhase('job', 'running'), false)
+  assert.equal(state.acceptJobPhase('job', 'completed'), true)
+  assert.equal(state.acceptJobPhase('job', 'interrupted'), false)
+})
 
-  it('rejects a result after the task was stopped', () => {
-    const state = stateMachine()
-    expect(state.acceptJobPhase('job', 'queued')).toBe(true)
-    expect(state.acceptJobPhase('job', 'interrupted')).toBe(true)
-    expect(state.acceptJobPhase('job', 'result_received')).toBe(false)
-    expect(state.acceptJobPhase('job', 'completed')).toBe(false)
-  })
+test('Photoshop job state rejects results after interruption', () => {
+  const state = stateMachine()
+  assert.equal(state.acceptJobPhase('job', 'queued'), true)
+  assert.equal(state.acceptJobPhase('job', 'interrupted'), true)
+  assert.equal(state.acceptJobPhase('job', 'result_received'), false)
+  assert.equal(state.acceptJobPhase('job', 'completed'), false)
 })

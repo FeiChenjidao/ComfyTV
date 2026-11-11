@@ -60,6 +60,14 @@ describe('Photoshop preset data', () => {
     assert.equal(otherCategory.ok, true)
   })
 
+  it('reports an empty preset using the basic editor wording', () => {
+    const result = presets.savePreset(emptyLibrary(), {
+      category: '功能', name: '空预设', prefix: '', suffix: '',
+    }, options)
+    assert.equal(result.ok, false)
+    assert.equal(result.message, '预设内容不能为空')
+  })
+
   it('parses import data and applies skip or overwrite atomically', () => {
     const existing = presets.savePreset(emptyLibrary(), {
       category: '风格', name: '电影感', prefix: 'old', suffix: '',

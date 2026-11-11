@@ -9,7 +9,10 @@ let socket = null
 let reconnectTimer = 0
 let lastModels = ''
 let listenersReady = false
-let activeJob = null
+const jobs = new Map()
+const promptJobs = new Map()
+let currentPromptId = ''
+let queueChain = Promise.resolve()
 let workflowAutoloadAttempts = 0
 let workflowAutoloadComplete = false
 
@@ -104,7 +107,7 @@ function rows(kind) {
 }
 
 function setNodeWidget(node, name, value) {
-  if (!node || value === undefined || value === null || value === '') return
+  if (!node || value === undefined || value === null) return
   const widget = (node.widgets || []).find((item) => String(item?.name || item?.label || '') === name)
   if (!widget) return
   widget.value = value
@@ -112,6 +115,10 @@ function setNodeWidget(node, name, value) {
     node.widgets_values_named[name] = value
   }
   try { widget.callback?.(value, app()?.canvas, node) } catch (_) {}
+}
+
+function photoshopInputNode() {
+  return nodes().find((node) => nodeType(node) === PS_NODE)
 }
 
 function profileNode(profile) {
@@ -166,8 +173,14 @@ function applyProfile(profile) {
   app()?.graph?.setDirtyCanvas?.(true, true)
 }
 
-function jobStatus(phase, extra = {}) {
-  const job = activeJob
+function finishJob(job) {
+  if (!job) return
+  jobs.delete(job.jobId)
+  if (job.promptId) promptJobs.delete(job.promptId)
+  if (currentPromptId === job.promptId) currentPromptId = ''
+}
+
+function jobStatus(job, phase, extra = {}) {
   if (!job || job.terminal) return
   if (['completed', 'error', 'interrupted'].includes(phase)) job.terminal = true
   send({
@@ -179,17 +192,27 @@ function jobStatus(phase, extra = {}) {
     batchIndex: job.batchIndex,
     jobStatus: { phase, ...extra },
   })
-  if (job.terminal) activeJob = null
+  if (job.terminal) finishJob(job)
 }
 
 function eventPromptId(event) {
   return String(event?.detail?.prompt_id || '')
 }
 
-function matchesJob(event) {
-  if (!activeJob || activeJob.terminal) return false
+function jobForEvent(event) {
   const promptId = eventPromptId(event)
-  return !activeJob.promptId || !promptId || promptId === activeJob.promptId
+  if (promptId && promptJobs.has(promptId)) return promptJobs.get(promptId)
+  if (promptId) {
+    const waiting = Array.from(jobs.values()).find((job) => !job.terminal && !job.promptId)
+    if (waiting) {
+      waiting.promptId = promptId
+      promptJobs.set(promptId, waiting)
+      return waiting
+    }
+  }
+  if (currentPromptId && promptJobs.has(currentPromptId)) return promptJobs.get(currentPromptId)
+  const active = Array.from(jobs.values()).filter((job) => !job.terminal)
+  return active.length === 1 ? active[0] : null
 }
 
 function aggregateProgress(detail) {
@@ -205,44 +228,52 @@ function attachProgressListeners() {
   if (!api?.addEventListener) return false
   listenersReady = true
   api.addEventListener('execution_start', (event) => {
-    if (!activeJob || activeJob.terminal) return
-    activeJob.promptId = eventPromptId(event) || activeJob.promptId
-    jobStatus('running', { progress: 0 })
+    const job = jobForEvent(event)
+    if (!job) return
+    const promptId = eventPromptId(event) || job.promptId
+    if (promptId) {
+      job.promptId = promptId
+      promptJobs.set(promptId, job)
+      currentPromptId = promptId
+    }
+    jobStatus(job, 'running', { progress: 0 })
   })
   api.addEventListener('progress', (event) => {
-    if (!matchesJob(event)) return
+    const job = jobForEvent(event)
+    if (!job) return
     const value = Number(event?.detail?.value)
     const max = Number(event?.detail?.max)
     if (Number.isFinite(value) && Number.isFinite(max) && max > 0) {
-      jobStatus('running', { progress: Math.max(0, Math.min(99, Math.round(value / max * 100))) })
+      jobStatus(job, 'running', { progress: Math.max(0, Math.min(99, Math.round(value / max * 100))) })
     }
   })
   api.addEventListener('progress_state', (event) => {
-    if (!matchesJob(event)) return
+    const job = jobForEvent(event)
+    if (!job) return
     const progress = aggregateProgress(event?.detail)
-    if (progress > 0) jobStatus('running', { progress })
+    if (progress > 0) jobStatus(job, 'running', { progress })
   })
   api.addEventListener('execution_success', (event) => {
-    if (matchesJob(event)) jobStatus('running', { progress: 99, message: '执行完成，等待 Photoshop 接收结果' })
+    const job = jobForEvent(event)
+    if (job) jobStatus(job, 'running', { progress: 99, message: '执行完成，等待 Photoshop 接收结果' })
   })
   api.addEventListener('execution_error', (event) => {
-    if (!matchesJob(event)) return
+    const job = jobForEvent(event)
+    if (!job) return
     const detail = event?.detail || {}
-    jobStatus('error', { message: detail.exception_message || detail.exception_type || 'ComfyUI 执行失败' })
+    jobStatus(job, 'error', { message: detail.exception_message || detail.exception_type || 'ComfyUI 执行失败' })
   })
   api.addEventListener('execution_interrupted', (event) => {
-    if (matchesJob(event)) jobStatus('interrupted', { message: '生成已停止' })
+    const job = jobForEvent(event)
+    if (job) jobStatus(job, 'interrupted', { message: '生成已停止' })
   })
   return true
 }
 
 async function queueJob(message) {
-  if (activeJob && !activeJob.terminal) {
-    send({ jobId: message.jobId, alert: '已有 Photoshop 任务正在运行' })
-    return
-  }
   if (typeof message.workflow === 'number') rows('model')[message.workflow]?.doModeChange?.(true)
   applyProfile(message.renderProfile)
+  const inputNode = photoshopInputNode()
   if (!workflowState().ready || typeof app()?.queuePrompt !== 'function') {
     send({
       protocolVersion: PS_PROTOCOL,
@@ -253,34 +284,46 @@ async function queueJob(message) {
     })
     return
   }
-  activeJob = {
+  setNodeWidget(inputNode, 'job_id', String(message.inputKey || ''))
+  const job = {
     jobId: String(message.jobId || ''),
     psClientId: String(message.psClientId || ''),
     batchIndex: Number(message.batchIndex) || 0,
     promptId: '',
     terminal: false,
   }
+  jobs.set(job.jobId, job)
   attachProgressListeners()
-  jobStatus('queued', { progress: 0 })
+  jobStatus(job, 'queued', { progress: 0 })
   try {
     const result = await app().queuePrompt(0, 1)
-    if (!activeJob) return
-    activeJob.promptId = String(result?.prompt_id || result?.promptId || '')
-    jobStatus('queued', { progress: 0 })
+    if (job.terminal || !jobs.has(job.jobId)) return
+    job.promptId = String(result?.prompt_id || result?.promptId || '')
+    if (job.promptId) promptJobs.set(job.promptId, job)
+    jobStatus(job, 'queued', { progress: 0 })
   } catch (error) {
     console.error('photoshop bridge queue', error)
-    jobStatus('error', { message: error?.message || '排队失败' })
+    jobStatus(job, 'error', { message: error?.message || '排队失败' })
+  } finally {
+    setNodeWidget(inputNode, 'job_id', '')
   }
 }
 
 async function interruptJob(message) {
-  if (!activeJob || (message.jobId && message.jobId !== activeJob.jobId)) return
+  const job = jobs.get(String(message.jobId || ''))
+  if (!job) return
   try {
-    if (app()?.api?.interrupt) await app().api.interrupt()
+    if (job.promptId && currentPromptId && job.promptId !== currentPromptId) {
+      await fetch('/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delete: [job.promptId] }),
+      })
+    } else if (app()?.api?.interrupt) await app().api.interrupt()
     else await fetch('/interrupt', { method: 'POST' })
-    jobStatus('interrupted', { message: '生成已停止' })
+    jobStatus(job, 'interrupted', { message: '生成已停止' })
   } catch (error) {
-    send({ jobId: activeJob?.jobId || '', alert: error?.message || '无法停止生成' })
+    send({ jobId: job.jobId, alert: error?.message || '无法停止生成' })
   }
 }
 
@@ -311,9 +354,13 @@ function connectBridge() {
       if (message.photoshopConnected || message.pullModels) publishModels(true)
       if (message.photoshopConnected) send({ pullProfile: true })
       if (message.interrupt) return void interruptJob(message)
-      if (message.queue) return void queueJob(message)
-      if (message.jobAck?.phase === 'completed' && activeJob?.jobId === message.jobId) {
-        jobStatus('completed', { progress: 100 })
+      if (message.queue) {
+        queueChain = queueChain.catch(() => {}).then(() => queueJob(message))
+        return
+      }
+      if (message.jobAck?.phase === 'completed') {
+        const job = jobs.get(String(message.jobId || ''))
+        if (job) jobStatus(job, 'completed', { progress: 100 })
         return
       }
       if (typeof message.workflow === 'number') rows('model')[message.workflow]?.doModeChange?.(true)
@@ -328,7 +375,9 @@ function connectBridge() {
     publishModels(true)
   }
   socket.onclose = () => {
-    activeJob = null
+    jobs.clear()
+    promptJobs.clear()
+    currentPromptId = ''
     reconnectTimer = window.setTimeout(connectBridge, 4000)
   }
 }

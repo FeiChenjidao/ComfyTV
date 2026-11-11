@@ -15,7 +15,7 @@ const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const HISTORY_PANEL_ID = "com.comfytv.photoshop.history"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.3.11"
+const PLUGIN_VERSION = "0.3.16"
 const COMPOSER_PROTOCOL_VERSION = 3
 const WORKFLOW_PROTOCOL_VERSION = 3
 const RUNTIME_DIRECT = "direct"
@@ -30,13 +30,19 @@ const REFERENCE_MAX_EDGE = 2048
 const REFERENCE_MAX_BYTES = 25 * 1024 * 1024
 const THUMB_DECODE_TIMEOUT_MS = 1500
 const DEFAULT_MAX_RES = 3840
+const STATE_BACKUP_FILE = "comfytv-state-backup-v1.json"
+const DOCUMENT_WORKSPACE_ROOT = "document-workspaces-v1"
+const DOCUMENT_WORKSPACE_MANIFEST = "workspace.json"
+const PERSISTENT_STATE = globalThis.ComfyTvPersistentState
+const LOCAL_STATE_KEYS_AT_LOAD = new Set(Object.keys(PERSISTENT_STATE?.prefixedValues(localStorage, STORE_PREFIX) || {}))
 const clientId = `comfytv-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
 let socket = null
 let runtimeMode = ""
 let directApiKey = ""
-let directAbortController = null
-let directElapsedTimer = 0
+const directAbortControllers = new Map()
+const renderJobs = new Map()
+let pendingHistoryClock = 0
 let pluginUpdateInfo = null
 let pluginUpdateBusy = false
 let reconnectTimer = null
@@ -46,7 +52,6 @@ let toastTimer = null
 let latestRenderFile = null
 let latestRenderPlacement = null
 let latestRenderLayered = null
-let activeRenderPlacement = null
 let capturePreviewFile = null
 let capturePreviewThumbSrc = ""
 let lastCaptureBounds = null
@@ -58,7 +63,6 @@ let selectedHistoryIndex = 0
 let historyPage = 0
 let historyCategories = []
 let selectedHistoryCategoryId = ""
-let activeRenderHistoryCategoryId = null
 let historyPanelFilter = "__all__"
 const HISTORY_PAGE_SIZE = 8
 const HISTORY_PANEL_PAGE_SIZE = 36
@@ -70,6 +74,19 @@ let launchTimer = null
 let composerWebReady = false
 let hostPopoverMenu = ""
 let composerStateSignatures = Object.create(null)
+let stateBackupTimer = 0
+let stateBackupWrite = Promise.resolve()
+let stateBackupReady = false
+let documentWorkspaceRootTask = null
+let documentWorkspaceCurrent = null
+let documentWorkspaceDefaults = null
+let documentWorkspacePendingModel = null
+let documentWorkspaceObserved = ""
+let documentWorkspaceTimer = 0
+let documentWorkspaceSaveTimer = 0
+let documentWorkspaceWrite = Promise.resolve()
+let documentWorkspaceReady = false
+let documentWorkspaceApplying = false
 
 function element(id) {
   return document.getElementById(id)
@@ -252,15 +269,11 @@ function setBusy(busy) {
 }
 
 function renderInFlight() {
-  return Boolean(activeJobId || renderDone || directAbortController)
+  return renderJobs.size > 0
 }
 
 const BATCH_MAX = 8
 let batchRunning = false
-let batchStop = false
-let renderDone = null
-let activeJobId = ""
-let activeBatchIndex = 0
 const jobPhaseRanks = new Map()
 const jobPhases = new Map()
 const JOB_PHASE_RANK = {
@@ -304,41 +317,9 @@ function batchCount() {
 
 function setRenderLabel(text) {
   const button = element("render")
-  const stopping = text === "停止"
-  button.title = stopping ? "停止后面的生成" : "开始生成。右键会先换一个随机种子。生成过程中再点一次，停掉后面的。"
-  button.classList.toggle("is-stop", stopping)
+  button.title = "开始生成。批量任务会立即加入历史记录并在后台运行。右键会先换一个随机种子。"
+  button.classList.remove("is-stop")
   syncComposerProgress()
-}
-
-function settleRender(error, jobId = "") {
-  const pending = renderDone
-  if (!pending) return
-  if (jobId && pending.jobId && jobId !== pending.jobId) return
-  renderDone = null
-  if (error) pending.reject(error)
-  else pending.resolve()
-}
-
-function armRenderWait(jobId) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      if (renderDone && renderDone.reject === reject) {
-        renderDone = null
-        reject(new Error("这一张等待超时"))
-      }
-    }, 8 * 60 * 1000)
-    renderDone = {
-      jobId,
-      resolve: () => {
-        clearTimeout(timer)
-        resolve()
-      },
-      reject: (error) => {
-        clearTimeout(timer)
-        reject(error)
-      },
-    }
-  })
 }
 
 function nextJobId() {
@@ -377,6 +358,12 @@ function padPercent() {
   const number = Number.parseFloat(element("crop-pad").value)
   if (!Number.isFinite(number)) return 32
   return Math.max(0, Math.min(200, number))
+}
+
+function maskFeatherPixels() {
+  const number = Number.parseFloat(element("mask-feather").value)
+  if (!Number.isFinite(number)) return 0
+  return Math.max(0, Math.min(1000, number))
 }
 
 function expandSelectionBounds(bounds, limit, percent) {
@@ -436,7 +423,7 @@ function clampBounds(bounds, limit) {
 
 const GPT_MIN_PIXELS = 655360
 const GPT_MAX_PIXELS = 8294400
-const GPT_INPUT_MAX_PIXELS = 2048 * 2048
+const GPT_INPUT_MAX_PIXELS = GPT_MAX_PIXELS
 const GPT_MAX_EDGE = 3840
 const GPT_MIN_EDGE = 480
 const GPT_MAX_RATIO = 3
@@ -889,7 +876,7 @@ function fillCommand(color) {
   }
 }
 
-async function encodeSelectionMask(document, sourceBounds, frame, selection, onStage = null) {
+async function encodeSelectionMask(document, sourceBounds, frame, selection, featherPixels = 0, onStage = null) {
   const size = { width: frame.width, height: frame.height }
   if (!selection) return solidWhitePng(size.width, size.height)
 
@@ -912,8 +899,21 @@ async function encodeSelectionMask(document, sourceBounds, frame, selection, onS
       },
       fillCommand("black"),
       selectionCommand({ _ref: "channel", _name: "ComfyTVSel" }),
-      fillCommand("white"),
     ], { modalBehavior: "execute" })
+    const selectionWidth = Math.max(1, selection.right - selection.left)
+    const selectionHeight = Math.max(1, selection.bottom - selection.top)
+    const feather = Math.min(Math.max(0, Number(featherPixels) || 0), selectionWidth / 2, selectionHeight / 2)
+    if (feather > 0) {
+      try {
+        await action.batchPlay([{
+          _obj: "feather",
+          radius: { _unit: "pixelsUnit", _value: feather },
+          selectionModifyEffectAtCanvasBounds: false,
+          _options: { dialogOptions: "dontDisplay" },
+        }], { modalBehavior: "execute" })
+      } catch (_) {}
+    }
+    await action.batchPlay([fillCommand("white")], { modalBehavior: "execute" })
     const layer = document.activeLayers[0]
     if (!layer) return solidWhitePng(size.width, size.height)
     const pixelOptions = {
@@ -1103,7 +1103,8 @@ async function captureWorkflowInput(jobId = "", batchIndex = 0, onStage = null) 
     const canvas = await encodePixels(pixelOptions, frame, onStage, "\u753b\u5e03")
     const hasMask = Boolean(selection)
     const maskFrame = frame || { width: nativeWidth, height: nativeHeight, padLeft: 0, padTop: 0, resample: false }
-    const maskBase64 = hasMask ? await encodeSelectionMask(document, sourceBounds, maskFrame, selection, onStage) : ""
+    const maskFeather = maskFeatherPixels()
+    const maskBase64 = hasMask ? await encodeSelectionMask(document, sourceBounds, maskFrame, selection, maskFeather, onStage) : ""
     if (onStage) onStage("\u51c6\u5907\u751f\u6210\u8bf7\u6c42")
     const compiledPrompt = compileWorkflowPrompt(hasMask)
   lastCaptureBounds = sourceBounds
@@ -1131,6 +1132,7 @@ async function captureWorkflowInput(jobId = "", batchIndex = 0, onStage = null) 
       positive: compiledPrompt.positive,
       promptStructure: promptStructurePayload(compiledPrompt),
       negative: element("negative").value,
+      maskFeather,
       seed: String(validSeed()),
       pluginVer: PLUGIN_VERSION,
       family: profile.family,
@@ -1222,7 +1224,9 @@ function sendSocket(payload) {
 
 function sendWorkflowPayload(payload) {
   // 画布、遮罩、参考图、排队分成多条消息。旧服务端单条上限 4MB，合在一起会把连接掐掉。
-  const workflow = Number(element("workflow").value)
+  const workflow = Number(payload.workflow)
+  const references = payloadReferenceInputs(payload)
+  const jobId = String(payload.configdata?.jobId || "")
   const profile = payload.configdata
     ? {
       family: payload.configdata.family,
@@ -1236,19 +1240,18 @@ function sendWorkflowPayload(payload) {
       group: payload.configdata.group,
     }
     : profilePayload(renderProfile)
-  sendSocket({ referenceClear: true })
-  allReferenceFiles().forEach((file, index) => {
+  sendSocket({ jobId, referenceClear: true })
+  references.forEach((file, index) => {
     sendSocket({
+      jobId,
       referenceBase64: file.base64,
       referenceIndex: index + 1,
       referenceName: file.name || "",
     })
   })
-  sendSocket({ canvasBase64: payload.canvasBase64 })
-  if (payload.maskBase64) sendSocket({ maskBase64: payload.maskBase64 })
-  else sendSocket({ maskClear: true })
-  if (Number.isFinite(workflow)) sendSocket({ workflow })
-  sendSocket({ renderProfile: profile })
+  sendSocket({ jobId, canvasBase64: payload.canvasBase64 })
+  if (payload.maskBase64) sendSocket({ jobId, maskBase64: payload.maskBase64 })
+  else sendSocket({ jobId, maskClear: true })
   sendSocket({
     protocolVersion: WORKFLOW_PROTOCOL_VERSION,
     queue: payload.queue,
@@ -1256,7 +1259,7 @@ function sendWorkflowPayload(payload) {
     batchIndex: payload.configdata.batchIndex,
     workflow: Number.isFinite(workflow) ? workflow : 0,
     renderProfile: profile,
-    referenceCount: allReferenceFiles().length,
+    referenceCount: references.length,
     configdata: payload.configdata,
   })
 }
@@ -1272,7 +1275,8 @@ function updateOptions(selectId, value) {
     option.selected = Boolean(item?.selected)
     select.appendChild(option)
   })
-  const followed = selectId === "workflow" && syncProfileToModel()
+  const restoredSelection = selectId === "workflow" && applyDocumentWorkspaceModelSelection()
+  const followed = selectId === "workflow" && !restoredSelection && syncProfileToModel()
   if (typeof syncComposer === "function") syncComposer()
   if (followed) pushRenderProfile()
 }
@@ -1290,6 +1294,47 @@ async function writeDataFile(name, base64) {
   const file = await folder.createFile(name, { overwrite: true })
   await file.write(base64ToBuffer(base64), { format: storage.formats.binary })
   return file
+}
+
+async function writeDurableStateBackup() {
+  if (!PERSISTENT_STATE) return
+  const payload = PERSISTENT_STATE.snapshot(localStorage, STORE_PREFIX, PLUGIN_VERSION)
+  const folder = await storage.localFileSystem.getDataFolder()
+  const file = await folder.createFile(STATE_BACKUP_FILE, { overwrite: true })
+  await file.write(JSON.stringify(payload))
+}
+
+function scheduleDurableStateBackup(delay = 250) {
+  if (!stateBackupReady) return
+  clearTimeout(stateBackupTimer)
+  stateBackupTimer = setTimeout(() => {
+    stateBackupTimer = 0
+    stateBackupWrite = stateBackupWrite
+      .catch(() => {})
+      .then(() => writeDurableStateBackup())
+      .catch((error) => console.warn("ComfyTV state backup failed", error))
+  }, delay)
+}
+
+async function flushDurableStateBackup() {
+  clearTimeout(stateBackupTimer)
+  stateBackupTimer = 0
+  stateBackupWrite = stateBackupWrite.catch(() => {}).then(() => writeDurableStateBackup())
+  await stateBackupWrite
+}
+
+async function restoreDurableStateBackup() {
+  if (!PERSISTENT_STATE) return 0
+  try {
+    const folder = await storage.localFileSystem.getDataFolder()
+    const file = await folder.getEntry(STATE_BACKUP_FILE)
+    const payload = JSON.parse(await file.read())
+    return PERSISTENT_STATE.restore(localStorage, payload, STORE_PREFIX, {
+      overwriteKeys: Object.keys(payload.values || {}).filter((key) => !LOCAL_STATE_KEYS_AT_LOAD.has(key)),
+    })
+  } catch (_) {
+    return 0
+  }
 }
 
 function stampPngResolution(bytes, ppi) {
@@ -1404,6 +1449,7 @@ function saveHistoryCategories() {
   localStorage.setItem(historyCategoriesKey(), JSON.stringify(historyCategories))
   localStorage.setItem(historySelectedCategoryKey(), selectedHistoryCategoryId)
   localStorage.setItem(historyPanelFilterKey(), historyPanelFilter)
+  scheduleDurableStateBackup()
 }
 
 function restoreHistoryCategories() {
@@ -1466,7 +1512,7 @@ function nextRenderNumber() {
 }
 
 function saveRenderHistory() {
-  const stored = renderHistory.map((item) => ({
+  const stored = renderHistory.filter((item) => !item.pending && !item.failed && /^render-\d+\.png$/i.test(String(item.name || ""))).map((item) => ({
     name: item.name,
     number: item.number,
     categoryId: validHistoryCategoryId(item.categoryId),
@@ -1474,6 +1520,41 @@ function saveRenderHistory() {
     layered: item.layered || null,
   }))
   localStorage.setItem(historyKey(), JSON.stringify(stored))
+  scheduleDurableStateBackup()
+}
+
+function historyJobStatus(item) {
+  if (!item) return ""
+  if (item.failed) return String(item.statusMessage || "生成失败")
+  const elapsed = Math.max(0, Math.floor((Date.now() - Number(item.startedAt || Date.now())) / 1000))
+  const phase = String(item.phase || "queued")
+  const progress = Number(item.progress)
+  let prefix = String(item.statusMessage || "").trim() || (phase === "running"
+    ? (Number.isFinite(progress) && progress > 0 ? `生成中 ${Math.min(99, Math.round(progress))}%` : "生成中")
+    : phase === "uploading" ? "提交中" : phase === "result_received" ? "接收结果" : "排队中")
+  if (phase === "running" && Number.isFinite(progress) && progress > 0 && !/%/.test(prefix)) {
+    prefix += ` ${Math.min(99, Math.round(progress))}%`
+  }
+  return `${prefix} · ${elapsed}秒`
+}
+
+function refreshPendingHistoryLabels() {
+  const labels = document.querySelectorAll(".history-job-status")
+  for (let index = 0; index < labels.length; index += 1) {
+    const label = labels[index]
+    const job = renderJobs.get(String(label.dataset.jobId || ""))
+    if (job?.item) label.textContent = historyJobStatus(job.item)
+  }
+}
+
+function syncPendingHistoryClock() {
+  if (renderJobs.size && !pendingHistoryClock) {
+    pendingHistoryClock = setInterval(refreshPendingHistoryLabels, 1000)
+  } else if (!renderJobs.size && pendingHistoryClock) {
+    clearInterval(pendingHistoryClock)
+    pendingHistoryClock = 0
+  }
+  refreshPendingHistoryLabels()
 }
 
 function readRenderHistory() {
@@ -1567,6 +1648,9 @@ async function writeLayeredResult(renderName, value) {
 }
 
 async function historyFile(item) {
+  if (!item || item.pending || item.failed || !/^render-\d+\.png$/i.test(String(item.name || ""))) {
+    throw new Error("这张图片还没有生成完成")
+  }
   const folder = await storage.localFileSystem.getDataFolder()
   return folder.getEntry(item.name)
 }
@@ -1896,7 +1980,7 @@ async function storeThumbBytes(name, buffer) {
 async function writePreparedThumb(name, base64) {
   const clean = String(base64 || "").replace(/^data:image\/[^;]+;base64,/, "")
   const entry = await storeThumbBytes(name, base64ToBuffer(clean))
-  return { entry, src: `data:image/png;base64,${clean}` }
+  return { entry, src: String(entry?.url || "") }
 }
 
 async function referenceThumbSrc(bytes) {
@@ -1929,17 +2013,12 @@ async function writeThumbFile(file, name) {
 
 async function rememberThumb(item, entry) {
   item.thumb = entry || item.thumb || null
-  if (!item.thumbSrc && entry && typeof entry.read === "function") {
-    try {
-      const raw = await entry.read({ format: storage.formats.binary })
-      const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
-      if (bytes.length > 32) item.thumbSrc = `data:image/png;base64,${bytesToBase64(bytes)}`
-    } catch (_) {}
-  }
+  if (!item.thumbSrc && entry) item.thumbSrc = String(entry.url || "")
   return item.thumbSrc || String(entry && entry.url || "")
 }
 
 function ensureThumb(item) {
+  if (!item || item.pending || item.failed) return Promise.resolve(null)
   if (item.thumbSrc) return Promise.resolve(item.thumb || null)
   if (item.thumbTask) return item.thumbTask
   item.thumbTask = enqueueThumb(async () => {
@@ -2129,6 +2208,7 @@ function historyPanelPageCount() {
 }
 
 function historyPanelTime(item) {
+  if (item?.pending || item?.failed) return historyJobStatus(item)
   const stamp = renderStamp(item && item.name)
   if (!stamp) return ""
   const value = new Date(stamp)
@@ -2217,6 +2297,8 @@ function paintHistoryPanel() {
     const selected = historyPanelSelection.has(item.name)
     const card = document.createElement("span")
     card.className = index === selectedHistoryIndex ? "history-panel-card active" : "history-panel-card"
+    if (item?.pending) card.classList.add("pending")
+    if (item?.failed) card.classList.add("failed")
     if (selected) card.classList.add("batch-selected")
     card.setAttribute("role", "button")
     card.setAttribute("aria-pressed", selected ? "true" : "false")
@@ -2229,10 +2311,21 @@ function paintHistoryPanel() {
     check.textContent = "✓"
     card.appendChild(check)
 
-    const image = document.createElement("img")
-    image.alt = ""
-    if (item && item.thumbSrc) image.src = item.thumbSrc
-    card.appendChild(image)
+    if (item?.pending || item?.failed) {
+      const placeholder = document.createElement("span")
+      placeholder.className = "history-panel-placeholder"
+      const status = document.createElement("span")
+      status.className = "history-job-status"
+      status.dataset.jobId = String(item.jobId || "")
+      status.textContent = historyJobStatus(item)
+      placeholder.appendChild(status)
+      card.appendChild(placeholder)
+    } else {
+      const image = document.createElement("img")
+      image.alt = ""
+      if (item && item.thumbSrc) image.src = item.thumbSrc
+      card.appendChild(image)
+    }
 
     const label = document.createElement("span")
     label.className = "history-panel-card-label"
@@ -2370,28 +2463,31 @@ function paintHistoryStrip() {
   const start = historyPage * HISTORY_PAGE_SIZE
   const end = Math.min(renderHistory.length, start + HISTORY_PAGE_SIZE)
   for (let index = start; index < end; index += 1) {
+    const item = renderHistory[index]
     const card = document.createElement("span")
     card.className = index === selectedHistoryIndex ? "history-card active" : "history-card"
+    if (item?.pending) card.classList.add("pending")
+    if (item?.failed) card.classList.add("failed")
     card.setAttribute("role", "button")
     card.tabIndex = 0
     card.dataset.index = String(index)
-    const image = document.createElement("img")
-    image.className = "history-thumb"
-    image.alt = ""
-    image.decoding = "async"
-    const ready = renderHistory[index]
-    if (ready && ready.thumbSrc) image.src = ready.thumbSrc
-    card.appendChild(image)
+    if (item?.pending || item?.failed) {
+      const status = document.createElement("span")
+      status.className = "history-job-status"
+      status.dataset.jobId = String(item.jobId || "")
+      status.textContent = historyJobStatus(item)
+      card.appendChild(status)
+    } else {
+      const image = document.createElement("img")
+      image.className = "history-thumb"
+      image.alt = ""
+      image.decoding = "async"
+      if (item && item.thumbSrc) image.src = item.thumbSrc
+      card.appendChild(image)
+    }
     track.appendChild(card)
   }
   if (historyOpen) mountVisibleThumbs()
-  warmVisibleThumbs()
-}
-
-function warmVisibleThumbs() {
-  const start = historyPage * HISTORY_PAGE_SIZE
-  const end = Math.min(renderHistory.length, start + HISTORY_PAGE_SIZE)
-  for (let index = start; index < end; index += 1) ensureThumb(renderHistory[index]).catch(() => {})
 }
 
 let historyWheelAt = 0
@@ -2436,6 +2532,14 @@ async function selectHistory(index) {
   historyPage = page
   if (pageChanged) paintHistoryStrip()
   markActiveHistoryCard()
+  if (item.pending || item.failed) {
+    latestRenderFile = null
+    latestRenderPlacement = null
+    latestRenderLayered = null
+    element("add-layer").disabled = true
+    showStatus(item.failed ? String(item.statusMessage || "生成失败") : historyJobStatus(item), Boolean(item.failed))
+    return
+  }
   const file = await historyFile(item)
   if (selectedHistoryIndex !== index) return
   latestRenderFile = file
@@ -2447,9 +2551,20 @@ async function selectHistory(index) {
 }
 
 async function restoreRenderHistory() {
-  const stored = readRenderHistory()
+  let stored = readRenderHistory()
   const kept = []
   const root = await storage.localFileSystem.getDataFolder()
+  const known = new Set(stored.map((item) => item.name))
+  const entries = await root.getEntries()
+  const recovered = entries
+    .filter((entry) => entry.isFile && /^render-(\d+)\.png$/i.test(entry.name) && !known.has(entry.name))
+    .sort((left, right) => Number(left.name.match(/\d+/)?.[0] || 0) - Number(right.name.match(/\d+/)?.[0] || 0))
+  let recoveredNumber = stored.reduce((max, item) => Math.max(max, Number(item.number) || 0), 0)
+  recovered.forEach((entry) => {
+    recoveredNumber += 1
+    stored.push({ name: entry.name, number: recoveredNumber, categoryId: "", placement: null, layered: null })
+  })
+  stored.sort((left, right) => Number(right.name.match(/\d+/)?.[0] || 0) - Number(left.name.match(/\d+/)?.[0] || 0))
   for (const item of stored) {
     try {
       const file = await root.getEntry(item.name)
@@ -2477,29 +2592,128 @@ async function restoreRenderHistory() {
   selectedHistoryIndex = 0
   paintHistoryStrip()
   refreshHistoryPanelIfOpen()
-  if (kept.length) await selectHistory(0)
+  latestRenderFile = null
+  latestRenderPlacement = null
+  latestRenderLayered = null
+  renderCount = 0
+  element("add-layer").disabled = true
   refreshHistoryLimit()
 }
 
-async function receiveRender(value, thumbBase64, layeredValue) {
+let lastRenderFileStamp = 0
+
+function nextRenderFileName() {
+  lastRenderFileStamp = Math.max(Date.now(), lastRenderFileStamp + 1)
+  return `render-${lastRenderFileStamp}.png`
+}
+
+function updateRenderJob(job, phase, message = "", progress = null) {
+  if (!job || !renderJobs.has(job.jobId)) return
+  job.phase = phase
+  job.item.phase = phase
+  job.item.statusMessage = String(message || "")
+  if (Number.isFinite(Number(progress))) job.item.progress = Number(progress)
+  refreshPendingHistoryLabels()
+}
+
+function releaseRenderJob(job) {
+  if (!job) return
+  if (job.timeout) clearTimeout(job.timeout)
+  renderJobs.delete(job.jobId)
+  directAbortControllers.delete(job.jobId)
+  syncPendingHistoryClock()
+  paintHistoryStrip()
+  refreshHistoryPanelIfOpen()
+}
+
+function failRenderJob(jobId, error, phase = "error") {
+  const job = renderJobs.get(String(jobId || ""))
+  if (!job) return
+  const message = String(error?.message || error || (phase === "interrupted" ? "生成已停止" : "生成失败"))
+  job.item.pending = false
+  job.item.failed = true
+  job.item.phase = phase
+  job.item.statusMessage = message
+  releaseRenderJob(job)
+  showStatus(message, true)
+}
+
+function armRenderJobTimeout(job) {
+  job.timeout = setTimeout(() => failRenderJob(job.jobId, new Error("任务等待超过 8 分钟")), 8 * 60 * 1000)
+}
+
+function createPendingRenderJobs(snapshot, total, categoryId) {
+  const jobs = []
+  const items = []
+  const firstNumber = nextRenderNumber()
+  for (let index = 0; index < total; index += 1) {
+    const jobId = nextJobId()
+    const payload = payloadFromBatchSnapshot(snapshot, jobId, index)
+    const item = {
+      name: `pending-${jobId}`,
+      number: firstNumber + index,
+      categoryId: validHistoryCategoryId(categoryId),
+      placement: normalizeRenderPlacement(payload.placement),
+      layered: null,
+      jobId,
+      pending: true,
+      failed: false,
+      phase: "uploading",
+      progress: 0,
+      statusMessage: "",
+      startedAt: Date.now(),
+    }
+    const job = { jobId, batchIndex: index, payload, item, mode: snapshot.runtimeMode, timeout: 0 }
+    renderJobs.set(jobId, job)
+    jobPhaseRanks.set(jobId, 0)
+    jobPhases.set(jobId, "")
+    armRenderJobTimeout(job)
+    jobs.push(job)
+    items.push(item)
+  }
+  renderHistory.unshift(...items.slice().reverse())
+  selectedHistoryIndex = 0
+  historyPage = 0
+  latestRenderFile = null
+  latestRenderPlacement = null
+  latestRenderLayered = null
+  element("add-layer").disabled = true
+  paintHistoryStrip()
+  refreshHistoryPanelIfOpen()
+  setHistoryOpen(true)
+  syncPendingHistoryClock()
+  refreshHistoryLimit()
+  return jobs
+}
+
+async function receiveRender(value, thumbBase64, layeredValue, job = null) {
   const base64 = String(value || "").replace(/^data:image\/[^;]+;base64,/, "")
   if (!base64) return
-  const number = nextRenderNumber()
-  const name = `render-${Date.now()}.png`
+  const number = Number(job?.item?.number) || nextRenderNumber()
+  const name = nextRenderFileName()
   const file = await writeDataFile(name, base64)
   const layered = await writeLayeredResult(name, layeredValue)
-  const categoryId = activeRenderHistoryCategoryId === null
-    ? selectedHistoryCategoryId
-    : activeRenderHistoryCategoryId
-  const item = {
+  const item = job?.item || {
     name,
     number,
-    categoryId: validHistoryCategoryId(categoryId),
-    placement: activeRenderPlacement || null,
-    layered,
-    file,
+    categoryId: validHistoryCategoryId(selectedHistoryCategoryId),
+    placement: null,
+    layered: null,
   }
-  renderHistory.unshift(item)
+  item.name = name
+  item.number = number
+  item.categoryId = validHistoryCategoryId(job?.item?.categoryId || item.categoryId)
+  item.placement = job?.item?.placement || item.placement || null
+  item.layered = layered
+  item.file = file
+  item.pending = false
+  item.failed = false
+  item.phase = "completed"
+  item.progress = 100
+  item.statusMessage = ""
+  delete item.jobId
+  delete item.startedAt
+  if (!job) renderHistory.unshift(item)
   saveRenderHistory()
   if (thumbBase64) {
     try {
@@ -2509,20 +2723,17 @@ async function receiveRender(value, thumbBase64, layeredValue) {
     } catch (_) {}
   }
   if (!item.thumbSrc) ensureThumb(item).catch(() => {})
-  selectedHistoryIndex = 0
-  historyPage = 0
+  selectedHistoryIndex = Math.max(0, renderHistory.indexOf(item))
+  historyPage = Math.floor(selectedHistoryIndex / HISTORY_PAGE_SIZE)
   latestRenderFile = file
   latestRenderPlacement = item.placement
   latestRenderLayered = item.layered
-  activeRenderPlacement = null
   renderCount = number
   showPreview("", file.url)
   element("add-layer").disabled = false
   paintHistoryStrip()
   refreshHistoryPanelIfOpen()
-  setProgress("完成")
-  finishMarquee()
-  showStatus("生成结果已收到")
+  showStatus(`第 ${number} 张生成结果已收到`)
   refreshHistoryLimit()
 }
 
@@ -2789,15 +3000,15 @@ function handleSocketMessage(event) {
     const jobId = String(message.jobId || "")
     const manualRender = message.manualRender === true
     if (message.render) {
+      const job = jobId ? renderJobs.get(jobId) : null
       if (!jobId) {
-        if (!manualRender || activeJobId || renderDone) return
+        if (!manualRender || renderInFlight()) return
       } else {
-        if (!activeJobId || jobId !== activeJobId) return
+        if (!job) return
         if (!acceptJobPhase(jobId, "result_received")) return
       }
-      setProgress("正在接收结果")
-      setMarquee(100, true)
-      receiveRender(message.render, message.thumb, message.layered).then(() => {
+      if (job) updateRenderJob(job, "result_received", "正在接收结果", 100)
+      receiveRender(message.render, message.thumb, message.layered, job).then(() => {
         if (!jobId) return
         if (!acceptJobPhase(jobId, "completed")) return
         try {
@@ -2807,39 +3018,30 @@ function handleSocketMessage(event) {
             jobAck: { phase: "completed" },
           })
         } catch (_) {}
-        settleRender(null, jobId)
+        releaseRenderJob(job)
       }).catch((error) => {
         if (jobId) acceptJobPhase(jobId, "error")
-        showStatus(error.message, true)
-        setProgress("失败")
-        setMarquee(0, false)
-        settleRender(error, jobId)
+        failRenderJob(jobId, error)
       })
     }
     if (message.jobStatus) {
-      if (!jobId || !activeJobId || jobId !== activeJobId) return
+      const job = renderJobs.get(jobId)
+      if (!job) return
       const status = message.jobStatus || {}
       const phase = String(status.phase || "")
       const percent = Number(status.progress)
       if (!acceptJobPhase(jobId, phase)) return
       if (phase === "queued") {
-        setProgress("已排队")
-        setMarquee(0, true)
+        updateRenderJob(job, "queued", "已排队", 0)
       } else if (phase === "running") {
-        setProgress(status.message || (Number.isFinite(percent) ? `${percent}%` : "生成中"))
-        setMarquee(Number.isFinite(percent) ? percent : marqueePercent, true)
+        updateRenderJob(job, "running", status.message || "生成中", percent)
       } else if (phase === "result_received") {
-        setProgress("正在接收结果")
-        setMarquee(100, true)
+        updateRenderJob(job, "result_received", "正在接收结果", 100)
       } else if (phase === "completed") {
-        setProgress("完成")
-        finishMarquee()
-        settleRender(null, jobId)
+        if (job.item.pending) updateRenderJob(job, "result_received", "等待结果写入", 100)
       } else if (phase === "error" || phase === "interrupted") {
         const text = String(status.message || (phase === "interrupted" ? "生成已停止" : "生成失败"))
-        setProgress(phase === "interrupted" ? "已停止" : "失败")
-        setMarquee(0, false)
-        settleRender(new Error(text), jobId)
+        failRenderJob(jobId, new Error(text), phase)
       }
     }
     if (message.Send_workflow) {
@@ -2853,8 +3055,8 @@ function handleSocketMessage(event) {
     if (message.pullProfile) pushRenderProfile()
     if (message.alert) {
       const alertText = String(message.alert)
-      showStatus(alertText, true)
-      if (renderDone) settleRender(new Error(alertText))
+      if (jobId && renderJobs.has(jobId)) failRenderJob(jobId, new Error(alertText))
+      else showStatus(alertText, true)
     }
   } catch (error) {
     showStatus(`无法解析 ComfyUI 消息：${error.message}`, true)
@@ -2897,8 +3099,9 @@ function connectSocket() {
     socket.onclose = () => {
       if (runtimeMode !== RUNTIME_COMFYUI) return
       setConnection("已断开", "error")
-      setMarquee(0, false)
-      if (renderDone) settleRender(new Error("Photoshop 与 ComfyUI 的任务连接已断开"), activeJobId)
+      for (const job of Array.from(renderJobs.values())) {
+        if (job.mode === RUNTIME_COMFYUI) failRenderJob(job.jobId, new Error("Photoshop 与 ComfyUI 的任务连接已断开"))
+      }
       reconnectTimer = setTimeout(connectSocket, 4000)
     }
   } catch (error) {
@@ -3114,15 +3317,29 @@ function showPreview(source, fileUrl) {
   paint()
 }
 
+function freezeReferenceInputs() {
+  return allReferenceFiles().map((file, index) => ({
+    role: styleReference && index === 0 ? "style" : "reference",
+    label: styleReference && index === 0 ? "风格" : `参考图${styleReference ? index : index + 1}`,
+    base64: String(file.base64 || ""),
+    mimeType: "image/png",
+    name: String(file.name || ""),
+  }))
+}
+
+function payloadReferenceInputs(payload) {
+  return Array.isArray(payload?.referenceInputs) ? payload.referenceInputs : freezeReferenceInputs()
+}
+
 function directInputImages(payload) {
   const images = [{ role: "canvas", label: "画布", base64: payload.canvasBase64, mimeType: "image/png" }]
   if (payload.maskBase64) images.push({ role: "mask", label: "Mask", base64: payload.maskBase64, mimeType: "image/png" })
-  allReferenceFiles().forEach((file, index) => {
+  payloadReferenceInputs(payload).forEach((file) => {
     images.push({
-      role: styleReference && index === 0 ? "style" : "reference",
-      label: styleReference && index === 0 ? "风格" : `参考图${styleReference ? index : index + 1}`,
+      role: file.role,
+      label: file.label,
       base64: file.base64,
-      mimeType: "image/png",
+      mimeType: file.mimeType || "image/png",
     })
   })
   return images
@@ -3135,39 +3352,16 @@ function directPrompt(configdata) {
   return `${positive}\n\nNegative prompt: ${negative}`
 }
 
-function stopDirectElapsed() {
-  if (directElapsedTimer) clearInterval(directElapsedTimer)
-  directElapsedTimer = 0
-}
-
-function startDirectElapsed(startedAt) {
-  stopDirectElapsed()
-  const paint = () => {
-    const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
-    setProgress(`等待生成 · ${seconds}秒`)
-  }
-  paint()
-  directElapsedTimer = setInterval(paint, 1000)
-}
-
-async function renderDirect(payload, jobId, batchIndex) {
+async function renderDirect(job) {
+  const { payload, jobId, batchIndex } = job
   if (!globalThis.ComfyDirectApi) throw new Error("直接 API 客户端没有加载")
-  if (!directApiKey) directApiKey = await readDirectApiKey()
-  if (!directApiKey) {
-    if (element("settings-drawer")?.classList.contains("hidden")) toggleDrawer("settings-drawer")
-    throw new Error("请先在设置中验证并保存 Comfy API Key")
-  }
   const controller = new AbortController()
-  directAbortController = controller
+  directAbortControllers.set(jobId, controller)
   acceptJobPhase(jobId, "queued")
-  setProgress("上传请求")
-  // Direct API does not expose a real progress percentage. Keep the UI indeterminate
-  // until the response arrives instead of showing a misleading completed bar.
-  setMarquee(0, true)
-  const startedAt = Date.now()
+  updateRenderJob(job, "uploading", "上传请求", 0)
   try {
     acceptJobPhase(jobId, "running")
-    startDirectElapsed(startedAt)
+    updateRenderJob(job, "running", "生成中", 0)
     const result = await globalThis.ComfyDirectApi.generate({
       apiKey: directApiKey,
       jobId,
@@ -3181,110 +3375,96 @@ async function renderDirect(payload, jobId, batchIndex) {
       signal: controller.signal,
     }, {
       onRetry: ({ attempt, status }) => {
-        setProgress(status ? `服务繁忙，正在第 ${attempt} 次重试` : `网络重试 ${attempt}`)
+        updateRenderJob(job, "running", status ? `服务繁忙，第 ${attempt} 次重试` : `网络重试 ${attempt}`, 0)
       },
     })
     if (!result.images?.length) throw new Error("Comfy API 没有返回图像")
-    if (batchStop || controller.signal.aborted) throw new Error("已停止")
+    if (controller.signal.aborted) throw new Error("已停止")
     acceptJobPhase(jobId, "result_received")
-    stopDirectElapsed()
-    setProgress("接收结果")
-    await receiveRender(result.images[0].base64, "", result.layered)
+    updateRenderJob(job, "result_received", "接收结果", 100)
+    await receiveRender(result.images[0].base64, "", result.layered, job)
     acceptJobPhase(jobId, "completed")
-    settleRender(null, jobId)
+    releaseRenderJob(job)
     if (result.credits) showStatus(`生成结果已收到，消耗 ${result.credits} credits`)
   } catch (error) {
-    stopDirectElapsed()
     const stopped = controller.signal.aborted || error?.code === "aborted" || error?.message === "已停止"
     acceptJobPhase(jobId, stopped ? "interrupted" : "error")
-    setProgress(stopped ? "已停止" : "失败")
-    setMarquee(0, false)
-    const next = stopped ? new Error("已停止") : error
-    settleRender(next, jobId)
-    throw next
+    failRenderJob(jobId, stopped ? new Error("已停止") : error, stopped ? "interrupted" : "error")
   } finally {
-    if (directAbortController === controller) directAbortController = null
+    directAbortControllers.delete(jobId)
   }
 }
 
-async function render(jobId = activeJobId, batchIndex = activeBatchIndex) {
-  if (!runtimeMode) throw new Error("请先选择运行模式")
-  if (historyMutationBusy) throw new Error("历史记录正在修改，请稍后再生成")
-  latestRenderFile = null
-  latestRenderPlacement = null
-  latestRenderLayered = null
-  activeRenderPlacement = null
-  element("add-layer").disabled = true
+async function captureBatchRenderSnapshot(autoSeed) {
+  const capturedMode = runtimeMode
+  const capturedWorkflow = Number(element("workflow").value)
+  const capturedReferences = freezeReferenceInputs()
+  if (autoSeed) randomSeed()
   setBusy(true)
-  const currentProgress = element("progress-label").textContent
-  setProgress(/^第 \d+ \/ \d+ 张$/.test(currentProgress) ? currentProgress : "读取 Photoshop")
+  setProgress("读取 Photoshop")
   setMarquee(5, true)
-  let captureBusy = true
+  const updateCaptureStage = (stage) => {
+    setProgress(stage)
+    setMarquee(Math.min(35, marqueePercent + 5), true)
+  }
   try {
-    if (element("auto-seed").checked) randomSeed()
-    const updateCaptureStage = (stage) => {
-      setProgress(stage)
-      setMarquee(Math.min(35, marqueePercent + 5), true)
-    }
     const payload = await core.executeAsModal(
-      () => captureWorkflowInput(jobId, batchIndex, updateCaptureStage),
-      { commandName: "Send canvas to ComfyTV", timeOut: 10000 },
+      () => captureWorkflowInput("", 0, updateCaptureStage),
+      { commandName: "Capture canvas for ComfyTV batch", timeOut: 10000 },
     )
-    const note = payload.captureNote
-    delete payload.captureNote
-    activeRenderPlacement = normalizeRenderPlacement(payload.placement)
-    delete payload.placement
-    setProgress("准备预览")
-    await showCapturedPreview(payload.canvasBase64)
-    if (runtimeMode === RUNTIME_DIRECT) {
-      setBusy(false)
-      captureBusy = false
-      await renderDirect(payload, jobId, batchIndex)
+    return {
+      ...payload,
+      runtimeMode: capturedMode,
+      workflow: capturedWorkflow,
+      referenceInputs: capturedReferences,
+      autoSeed: Boolean(autoSeed),
+    }
+  } finally {
+    setBusy(false)
+  }
+}
+
+function payloadFromBatchSnapshot(snapshot, jobId, batchIndex) {
+  const seed = snapshot.autoSeed && batchIndex > 0
+    ? String(randomSeed())
+    : String(snapshot.configdata.seed)
+  return {
+    canvasBase64: snapshot.canvasBase64,
+    maskBase64: snapshot.maskBase64,
+    captureNote: snapshot.captureNote,
+    placement: snapshot.placement,
+    workflow: snapshot.workflow,
+    runtimeMode: snapshot.runtimeMode,
+    referenceInputs: snapshot.referenceInputs,
+    configdata: {
+      ...snapshot.configdata,
+      seed,
+      jobId,
+      batchIndex,
+    },
+    queue: true,
+  }
+}
+
+function submitRenderJob(job) {
+  try {
+    if (job.mode === RUNTIME_DIRECT) {
+      renderDirect(job).catch((error) => failRenderJob(job.jobId, error))
       return
     }
-    setProgress("等待 ComfyUI")
-    sendWorkflowPayload(payload)
-    showStatus(note || "已提交到 ComfyUI")
+    acceptJobPhase(job.jobId, "queued")
+    updateRenderJob(job, "uploading", "提交到 ComfyUI", 0)
+    sendWorkflowPayload(job.payload)
+    updateRenderJob(job, "queued", "已加入 ComfyUI 队列", 0)
   } catch (error) {
-    setProgress("失败")
-    setMarquee(0, false)
-    showStatus(error.message || String(error), true)
-    throw error
-  } finally {
-    if (captureBusy) setBusy(false)
+    acceptJobPhase(job.jobId, "error")
+    failRenderJob(job.jobId, error)
   }
-}
-
-function requestInterrupt() {
-  if (!activeJobId) return
-  const phase = String(jobPhases.get(activeJobId) || "")
-  if (phase === "result_received" || phase === "completed") {
-    showStatus("结果已经返回，正在写入 Photoshop")
-    return
-  }
-  if (!acceptJobPhase(activeJobId, "interrupted")) return
-  if (runtimeMode === RUNTIME_DIRECT) {
-    batchStop = true
-    if (directAbortController) directAbortController.abort()
-    stopDirectElapsed()
-    setProgress("已停止")
-    setMarquee(0, false)
-    settleRender(new Error("已停止"), activeJobId)
-    return
-  }
-  try {
-    sendSocket({ protocolVersion: WORKFLOW_PROTOCOL_VERSION, interrupt: true, jobId: activeJobId })
-  } catch (_) {}
-  setProgress("已停止")
-  setMarquee(0, false)
-  settleRender(new Error("已停止"), activeJobId)
 }
 
 async function renderBatch(totalOverride) {
   if (batchRunning) {
-    batchStop = true
-    requestInterrupt()
-    showStatus("正在停止")
+    showStatus("正在读取 Photoshop，请稍候")
     return
   }
   if (!runtimeMode) {
@@ -3299,45 +3479,27 @@ async function renderBatch(totalOverride) {
   const total = Number.isFinite(totalOverride) ? totalOverride : batchCount()
   if (!Number.isFinite(totalOverride)) element("batch-count").value = String(total)
   batchRunning = true
-  batchStop = false
-  activeRenderHistoryCategoryId = validHistoryCategoryId(selectedHistoryCategoryId)
-  setRenderLabel("停止")
-  let finished = 0
   try {
-    for (let index = 0; index < total; index += 1) {
-      if (batchStop) break
-      if (total > 1) setProgress(`第 ${index + 1} / ${total} 张`)
-      activeJobId = nextJobId()
-      jobPhaseRanks.set(activeJobId, 0)
-      jobPhases.set(activeJobId, "")
-      activeBatchIndex = index
-      const pending = armRenderWait(activeJobId)
-      pending.catch(() => {})
-      try {
-        await render(activeJobId, activeBatchIndex)
-        await pending
-      } catch (error) {
-        settleRender(error, activeJobId)
-        throw error
+    const snapshot = await captureBatchRenderSnapshot(element("auto-seed").checked)
+    if (snapshot.runtimeMode === RUNTIME_DIRECT) {
+      if (!directApiKey) directApiKey = await readDirectApiKey()
+      if (!directApiKey) {
+        if (element("settings-drawer")?.classList.contains("hidden")) toggleDrawer("settings-drawer")
+        throw new Error("请先在设置中验证并保存 Comfy API Key")
       }
-      activeJobId = ""
-      finished += 1
-      if (total > 1) showStatus(`第 ${finished} / ${total} 张已完成`)
     }
-    if (batchStop) showStatus(finished ? `已停止，完成 ${finished} 张` : "已停止")
-    else if (total > 1) showStatus(`${total} 张已生成`)
+    await showCapturedPreview(snapshot.canvasBase64)
+    const jobs = createPendingRenderJobs(snapshot, total, selectedHistoryCategoryId)
+    jobs.forEach(submitRenderJob)
+    setProgress(`已提交 ${total} 张`)
+    setMarquee(0, false)
+    showStatus(`${total} 个任务已加入历史记录`)
   } catch (error) {
-    if (batchStop || (error && error.message === "已停止")) {
-      showStatus(finished ? `已停止，完成 ${finished} 张` : "已停止")
-    } else {
-      showStatus(error.message || String(error), true)
-    }
+    setProgress("失败")
+    setMarquee(0, false)
+    showStatus(error.message || String(error), true)
   } finally {
-    activeJobId = ""
-    activeBatchIndex = 0
-    activeRenderHistoryCategoryId = null
     batchRunning = false
-    batchStop = false
     setRenderLabel("渲染")
   }
 }
@@ -3865,10 +4027,6 @@ async function maskPlacedLayer() {
 }
 
 async function addResultLayer() {
-  if (renderInFlight()) {
-    showStatus("生成完成前不能添加结果", true)
-    return
-  }
   if (!latestRenderFile) {
     showStatus("还没有可添加的生成结果", true)
     return
@@ -4050,6 +4208,7 @@ function setDirectModelOptions() {
     option.selected = model.family === family
     select.appendChild(option)
   })
+  applyDocumentWorkspaceModelSelection()
   modelListSynced = true
   syncComposer()
 }
@@ -4292,13 +4451,15 @@ function profileGroupName(profile) {
 
 function profilePayload(profile, imageSize = null) {
   const normalized = normalizeProfile(profile)
-  if (normalized.family === "gpt" && normalized.resolution === "Custom" && imageSize) {
+  if (normalized.family === "gpt" && imageSize && (normalized.resolution === "Custom" || normalized.resolution === "auto")) {
     const width = Number.parseInt(imageSize.width, 10)
     const height = Number.parseInt(imageSize.height, 10)
     if (Number.isFinite(width) && width > 0) normalized.customWidth = width
     if (Number.isFinite(height) && height > 0) normalized.customHeight = height
   }
-  const size = normalized.family === "gpt" || normalized.family === "seedream" ? normalized.resolution : ""
+  const size = normalized.family === "gpt" && normalized.resolution === "auto" && imageSize
+    ? "Custom"
+    : (normalized.family === "gpt" || normalized.family === "seedream" ? normalized.resolution : "")
   return { ...normalized, group: profileGroupName(normalized), size }
 }
 
@@ -4341,6 +4502,8 @@ function loadRenderProfile() {
 
 function saveRenderProfile() {
   localStorage.setItem(`${STORE_PREFIX}renderProfile`, JSON.stringify(renderProfile))
+  scheduleDurableStateBackup()
+  scheduleDocumentWorkspaceSave()
 }
 
 function pushRenderProfile() {
@@ -4844,6 +5007,7 @@ function paintReferenceRow() {
     row.insertBefore(card, add)
   })
   syncComposerWorkbench()
+  scheduleDocumentWorkspaceSave()
 }
 
 async function referenceFromFile(file) {
@@ -5134,6 +5298,7 @@ function normalizePresetLibrary(value) {
 function writePresetLibrary(value) {
   presetLibrary = normalizePresetLibrary(value)
   localStorage.setItem(PRESET_LIBRARY_KEY, JSON.stringify(presetLibrary))
+  scheduleDurableStateBackup()
 }
 
 function readPresetLibrary() {
@@ -5164,6 +5329,8 @@ function writePresetSelection() {
     if (!presetIds.has(selectedPresetIds[categoryId])) delete selectedPresetIds[categoryId]
   })
   localStorage.setItem(PRESET_SELECTION_KEY, JSON.stringify(selectedPresetIds))
+  scheduleDurableStateBackup()
+  scheduleDocumentWorkspaceSave()
 }
 
 let presetLibrary = readPresetLibrary()
@@ -5176,6 +5343,428 @@ let hostPresetEditor = null
 let hostPresetToolsOpen = false
 let hostPresetNotice = ""
 writePresetSelection()
+
+function documentPathValue(value) {
+  if (!value) return ""
+  if (typeof value === "string") return value
+  if (typeof value.nativePath === "string") return value.nativePath
+  if (typeof value.fsName === "string") return value.fsName
+  if (typeof value._path === "string") return value._path
+  return ""
+}
+
+function activeDocumentWorkspaceDescriptor() {
+  try {
+    if (!app.documents.length) return null
+    const active = app.activeDocument
+    if (!active) return null
+    const id = Number(active.id)
+    const name = String(active.name || "未命名文档")
+    let path = ""
+    try { path = documentPathValue(active.path) } catch (_) {}
+    if (!path) {
+      try { path = documentPathValue(active.fullName) } catch (_) {}
+    }
+    const normalizedPath = String(path || "").replace(/[\\/]+$/, "").toLocaleLowerCase()
+    const identity = normalizedPath
+      ? `file:${normalizedPath}|${name.toLocaleLowerCase()}`
+      : `session:${Number.isFinite(id) ? id : name}`
+    return { id, name, path: String(path || ""), identity }
+  } catch (_) {
+    return null
+  }
+}
+
+async function resolveDocumentWorkspaceDescriptor(descriptor) {
+  if (!descriptor || descriptor.path || !Number.isFinite(descriptor.id)) return descriptor
+  try {
+    const [result] = await action.batchPlay([{
+      _obj: "get",
+      _target: [
+        { _property: "fileReference" },
+        { _ref: "document", _id: descriptor.id },
+      ],
+      _options: { dialogOptions: "dontDisplay" },
+    }], {})
+    const path = documentPathValue(result?.fileReference || result?.filePath)
+    if (!path) return descriptor
+    const normalizedPath = path.replace(/[\\/]+$/, "").toLocaleLowerCase()
+    return {
+      ...descriptor,
+      path,
+      identity: `file:${normalizedPath}|${descriptor.name.toLocaleLowerCase()}`,
+    }
+  } catch (_) {
+    return descriptor
+  }
+}
+
+function documentWorkspaceFolderToken(identity) {
+  const text = String(identity || "")
+  let first = 2166136261
+  let second = 3335557771
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index)
+    first = Math.imul(first ^ code, 16777619)
+    second = Math.imul(second ^ (code + index), 2246822519)
+  }
+  return `document-${(first >>> 0).toString(16).padStart(8, "0")}${(second >>> 0).toString(16).padStart(8, "0")}`
+}
+
+function documentWorkspaceRoot() {
+  if (documentWorkspaceRootTask) return documentWorkspaceRootTask
+  documentWorkspaceRootTask = (async () => {
+    const root = await storage.localFileSystem.getDataFolder()
+    try {
+      return await root.getEntry(DOCUMENT_WORKSPACE_ROOT)
+    } catch (_) {
+      return root.createFolder(DOCUMENT_WORKSPACE_ROOT)
+    }
+  })()
+  return documentWorkspaceRootTask
+}
+
+async function documentWorkspaceFolder(descriptor, create = false) {
+  if (!descriptor || !descriptor.identity) return null
+  const root = await documentWorkspaceRoot()
+  const name = documentWorkspaceFolderToken(descriptor.identity)
+  try {
+    return await root.getEntry(name)
+  } catch (_) {
+    return create ? root.createFolder(name) : null
+  }
+}
+
+function currentWorkflowSelection() {
+  const select = element("workflow")
+  const option = select && select.options[select.selectedIndex]
+  return {
+    value: select ? String(select.value || "") : "",
+    label: option ? String(option.textContent || "").trim() : "",
+  }
+}
+
+function captureDocumentWorkspace(descriptor = documentWorkspaceCurrent) {
+  return {
+    descriptor: descriptor ? { ...descriptor } : null,
+    ui: {
+      positive: String(element("positive")?.value || ""),
+      negative: String(element("negative")?.value || ""),
+      seed: String(element("seed")?.value || ""),
+      autoSeed: Boolean(element("auto-seed")?.checked),
+      batchCount: batchCount(),
+      workflow: currentWorkflowSelection(),
+      renderProfile: { ...normalizeProfile(renderProfile) },
+      selectedPresetIds: { ...selectedPresetIds },
+    },
+    styleReference,
+    references: referenceFiles.slice(),
+  }
+}
+
+function defaultDocumentWorkspace() {
+  const source = documentWorkspaceDefaults || captureDocumentWorkspace(null)
+  return {
+    descriptor: null,
+    ui: {
+      ...source.ui,
+      positive: "",
+      negative: "",
+      selectedPresetIds: {},
+      renderProfile: { ...source.ui.renderProfile },
+      workflow: { ...source.ui.workflow },
+    },
+    styleReference: null,
+    references: [],
+  }
+}
+
+function documentWorkspaceReferenceName(file, role, index, identity) {
+  if (file && file._workspaceIdentity === identity && file._workspaceFileName) return file._workspaceFileName
+  const random = Math.random().toString(36).slice(2, 9)
+  const name = `${role}-${Date.now().toString(36)}-${index}-${random}.png`
+  if (file) {
+    file._workspaceIdentity = identity
+    file._workspaceFileName = name
+  }
+  return name
+}
+
+async function writeDocumentWorkspaceReference(folder, file, role, index, identity) {
+  if (!file || !file.base64) return null
+  const fileName = documentWorkspaceReferenceName(file, role, index, identity)
+  let entry = null
+  try { entry = await folder.getEntry(fileName) } catch (_) {}
+  if (!entry) {
+    entry = await folder.createFile(fileName, { overwrite: true })
+    await entry.write(base64ToBuffer(file.base64), { format: storage.formats.binary })
+  }
+  file._workspaceStoredIdentity = identity
+  return {
+    fileName,
+    name: String(file.name || "reference.png"),
+    sourceWidth: Number(file.sourceWidth) || 0,
+    sourceHeight: Number(file.sourceHeight) || 0,
+    width: Number(file.width) || 0,
+    height: Number(file.height) || 0,
+    optimized: Boolean(file.optimized),
+    documentId: Number(file.documentId) || 0,
+    layerId: Number(file.layerId) || 0,
+    layerName: String(file.layerName || ""),
+  }
+}
+
+async function readDocumentWorkspaceReference(folder, record, identity) {
+  if (!record || !record.fileName) return null
+  try {
+    const entry = await folder.getEntry(String(record.fileName))
+    const raw = await entry.read({ format: storage.formats.binary })
+    const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
+    if (!bytes.length) return null
+    return {
+      name: String(record.name || "reference.png"),
+      base64: bytesToBase64(bytes),
+      thumbSrc: await referenceThumbSrc(bytes),
+      sourceWidth: Number(record.sourceWidth) || 0,
+      sourceHeight: Number(record.sourceHeight) || 0,
+      width: Number(record.width) || 0,
+      height: Number(record.height) || 0,
+      optimized: Boolean(record.optimized),
+      documentId: Number(record.documentId) || 0,
+      layerId: Number(record.layerId) || 0,
+      layerName: String(record.layerName || ""),
+      _workspaceIdentity: identity,
+      _workspaceStoredIdentity: identity,
+      _workspaceFileName: String(record.fileName),
+    }
+  } catch (_) {
+    return null
+  }
+}
+
+async function writeDocumentWorkspace(snapshot) {
+  const descriptor = snapshot && snapshot.descriptor
+  if (!descriptor || !descriptor.identity) return
+  const folder = await documentWorkspaceFolder(descriptor, true)
+  const styleRecord = await writeDocumentWorkspaceReference(folder, snapshot.styleReference, "style", 0, descriptor.identity)
+  const referenceRecords = []
+  for (let index = 0; index < snapshot.references.length; index += 1) {
+    const record = await writeDocumentWorkspaceReference(folder, snapshot.references[index], "reference", index, descriptor.identity)
+    if (record) referenceRecords.push(record)
+  }
+  const manifest = {
+    schema: 1,
+    identity: descriptor.identity,
+    documentName: descriptor.name,
+    documentPath: descriptor.path,
+    savedAt: new Date().toISOString(),
+    ui: snapshot.ui,
+    styleReference: styleRecord,
+    references: referenceRecords,
+  }
+  const file = await folder.createFile(DOCUMENT_WORKSPACE_MANIFEST, { overwrite: true })
+  await file.write(JSON.stringify(manifest))
+  const keep = new Set(referenceRecords.map((item) => item.fileName))
+  if (styleRecord) keep.add(styleRecord.fileName)
+  const entries = await folder.getEntries()
+  for (const entry of entries) {
+    if (!entry.isFile || !/^(style|reference)-.*\.png$/i.test(entry.name) || keep.has(entry.name)) continue
+    try { await entry.delete() } catch (_) {}
+  }
+}
+
+async function readDocumentWorkspace(descriptor) {
+  const folder = await documentWorkspaceFolder(descriptor, false)
+  if (!folder) return null
+  try {
+    const file = await folder.getEntry(DOCUMENT_WORKSPACE_MANIFEST)
+    const manifest = JSON.parse(await file.read())
+    if (Number(manifest.schema) !== 1 || manifest.identity !== descriptor.identity || !manifest.ui) return null
+    const restoredReferences = []
+    for (const record of (Array.isArray(manifest.references) ? manifest.references : []).slice(0, 6)) {
+      const restored = await readDocumentWorkspaceReference(folder, record, descriptor.identity)
+      if (restored) restoredReferences.push(restored)
+    }
+    const restoredStyle = await readDocumentWorkspaceReference(folder, manifest.styleReference, descriptor.identity)
+    return {
+      descriptor: { ...descriptor },
+      ui: manifest.ui,
+      styleReference: restoredStyle,
+      references: restoredReferences,
+    }
+  } catch (_) {
+    return null
+  }
+}
+
+function applyDocumentWorkspaceModelSelection() {
+  const desired = documentWorkspacePendingModel
+  const select = element("workflow")
+  if (!desired || !select || !select.options.length) return false
+  const options = Array.from(select.options)
+  const option = options.find((item) => desired.label && String(item.textContent || "").trim() === desired.label)
+    || options.find((item) => String(item.value || "") === String(desired.value || ""))
+  if (!option) return false
+  select.value = option.value
+  documentWorkspacePendingModel = null
+  return true
+}
+
+function validDocumentPresetSelection(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {}
+  const valid = {}
+  Object.entries(source).forEach(([categoryId, presetId]) => {
+    const preset = presetItem(presetId)
+    if (preset && preset.categoryId === categoryId) valid[categoryId] = preset.id
+  })
+  return valid
+}
+
+function applyDocumentWorkspace(snapshot) {
+  const source = snapshot && snapshot.ui ? snapshot : defaultDocumentWorkspace()
+  const ui = source.ui || {}
+  documentWorkspaceApplying = true
+  try {
+    element("positive").value = String(ui.positive || "")
+    element("negative").value = String(ui.negative || "")
+    element("seed").value = String(ui.seed || "0")
+    element("auto-seed").checked = ui.autoSeed !== false
+    element("batch-count").value = String(Math.max(1, Math.min(BATCH_MAX, Number(ui.batchCount) || 1)))
+    renderProfile = normalizeProfile(ui.renderProfile || renderProfile)
+    selectedPresetIds = validDocumentPresetSelection(ui.selectedPresetIds)
+    documentWorkspacePendingModel = ui.workflow && typeof ui.workflow === "object" ? { ...ui.workflow } : null
+    styleReference = source.styleReference || null
+    referenceFiles.splice(0, referenceFiles.length, ...(Array.isArray(source.references) ? source.references : []))
+    applyDocumentWorkspaceModelSelection()
+    localStorage.setItem(`${STORE_PREFIX}renderProfile`, JSON.stringify(renderProfile))
+    saveSettings()
+    writePresetSelection()
+    syncPromptMirror()
+    paintReferenceRow()
+    syncPresetButton()
+    syncComposer()
+    syncComposerWorkbench(true)
+  } finally {
+    documentWorkspaceApplying = false
+  }
+}
+
+function queueDocumentWorkspaceWrite(task) {
+  documentWorkspaceWrite = documentWorkspaceWrite.catch(() => {}).then(task).catch((error) => {
+    console.warn("ComfyTV document workspace failed", error)
+  })
+  return documentWorkspaceWrite
+}
+
+function scheduleDocumentWorkspaceSave(delay = 650) {
+  if (!documentWorkspaceReady || documentWorkspaceApplying || !documentWorkspaceCurrent) return
+  clearTimeout(documentWorkspaceSaveTimer)
+  documentWorkspaceSaveTimer = setTimeout(() => {
+    documentWorkspaceSaveTimer = 0
+    const snapshot = captureDocumentWorkspace(documentWorkspaceCurrent)
+    queueDocumentWorkspaceWrite(() => writeDocumentWorkspace(snapshot))
+  }, delay)
+}
+
+async function flushDocumentWorkspaceSave() {
+  clearTimeout(documentWorkspaceSaveTimer)
+  documentWorkspaceSaveTimer = 0
+  if (!documentWorkspaceReady || documentWorkspaceApplying || !documentWorkspaceCurrent) return documentWorkspaceWrite
+  const snapshot = captureDocumentWorkspace(documentWorkspaceCurrent)
+  return queueDocumentWorkspaceWrite(() => writeDocumentWorkspace(snapshot))
+}
+
+async function activateDocumentWorkspace(descriptor, quiet = false) {
+  const previous = documentWorkspaceCurrent
+  const previousMarker = previous ? `${previous.id}|${previous.identity}` : ""
+  const nextMarker = descriptor ? `${descriptor.id}|${descriptor.identity}` : ""
+  if (previousMarker === nextMarker) return
+  clearTimeout(documentWorkspaceSaveTimer)
+  documentWorkspaceSaveTimer = 0
+  const previousSnapshot = previous ? captureDocumentWorkspace(previous) : null
+  if (previousSnapshot) await writeDocumentWorkspace(previousSnapshot)
+  if (previous && descriptor && previous.id === descriptor.id && previous.identity !== descriptor.identity) {
+    documentWorkspaceCurrent = descriptor
+    const migrated = { ...previousSnapshot, descriptor: { ...descriptor } }
+    await writeDocumentWorkspace(migrated)
+    if (!quiet) showStatus(`已将面板设置绑定到「${descriptor.name}」`)
+    return
+  }
+  documentWorkspaceCurrent = descriptor || null
+  if (!descriptor) {
+    applyDocumentWorkspace(defaultDocumentWorkspace())
+    return
+  }
+  const restored = await readDocumentWorkspace(descriptor)
+  if (restored) {
+    applyDocumentWorkspace(restored)
+    if (!quiet) showStatus(`已恢复「${descriptor.name}」的提示词、模型和参考图`)
+    return
+  }
+  const fresh = defaultDocumentWorkspace()
+  fresh.descriptor = { ...descriptor }
+  applyDocumentWorkspace(fresh)
+  await writeDocumentWorkspace(captureDocumentWorkspace(descriptor))
+  if (!quiet) showStatus(`已为「${descriptor.name}」建立独立面板设置`)
+}
+
+function checkActiveDocumentWorkspace() {
+  const candidate = activeDocumentWorkspaceDescriptor()
+  const marker = candidate ? `${candidate.id}|${candidate.name}` : ""
+  if (marker === documentWorkspaceObserved) return
+  documentWorkspaceObserved = marker
+  queueDocumentWorkspaceWrite(async () => {
+    const descriptor = await resolveDocumentWorkspaceDescriptor(candidate)
+    await activateDocumentWorkspace(descriptor)
+  })
+}
+
+async function initializeDocumentWorkspaces() {
+  documentWorkspaceDefaults = defaultDocumentWorkspace()
+  const descriptor = await resolveDocumentWorkspaceDescriptor(activeDocumentWorkspaceDescriptor())
+  documentWorkspaceCurrent = descriptor
+  documentWorkspaceObserved = descriptor ? `${descriptor.id}|${descriptor.name}` : ""
+  if (descriptor) {
+    const restored = await readDocumentWorkspace(descriptor)
+    if (restored) applyDocumentWorkspace(restored)
+    else await writeDocumentWorkspace(captureDocumentWorkspace(descriptor))
+  }
+  documentWorkspaceReady = true
+  if (documentWorkspaceTimer) clearInterval(documentWorkspaceTimer)
+  documentWorkspaceTimer = setInterval(checkActiveDocumentWorkspace, 400)
+}
+
+function createHostPresetEditor(item = {}, categoryName = "") {
+  const prefix = String(item.prefix || "")
+  const suffix = String(item.suffix || "")
+  return {
+    ...item,
+    id: String(item.id || ""),
+    category: String(categoryName || item.category || ""),
+    name: String(item.name || ""),
+    prefix,
+    suffix,
+    content: suffix,
+    advanced: Boolean(prefix),
+  }
+}
+
+function setHostPresetEditorAdvanced(enabled) {
+  if (!hostPresetEditor) return
+  if (enabled) {
+    hostPresetEditor = {
+      ...hostPresetEditor,
+      advanced: true,
+      suffix: String(hostPresetEditor.content || hostPresetEditor.suffix || ""),
+    }
+    return
+  }
+  const content = [hostPresetEditor.prefix, hostPresetEditor.suffix || hostPresetEditor.content]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join("\n")
+  hostPresetEditor = { ...hostPresetEditor, advanced: false, prefix: "", suffix: content, content }
+}
 
 function presetCategory(categoryId) {
   return presetLibrary.categories.find((item) => item.id === categoryId) || null
@@ -5476,7 +6065,7 @@ function paintHostPresetMenu() {
   add.addEventListener("click", (event) => {
     event.stopPropagation()
     const category = categories.find((item) => item.id === hostPresetTab)
-    hostPresetEditor = { id: "", category: category ? category.name : "", name: "", prefix: "", suffix: "" }
+    hostPresetEditor = createHostPresetEditor({}, category ? category.name : "")
     hostPresetView = "edit"
     hostPresetToolsOpen = false
     hostPresetNotice = ""
@@ -5623,15 +6212,9 @@ function paintHostPresetMenu() {
     categoryField.appendChild(categoryControl)
     fields.appendChild(categoryField)
 
-    const promptFields = document.createElement("div")
-    promptFields.className = "preset-prompt-fields"
-    ;[
-      { key: "name", label: "名称", multiline: false, placeholder: "预设名称" },
-      { key: "prefix", label: "前缀", multiline: true, placeholder: "加在用户提示词前面" },
-      { key: "suffix", label: "后缀", multiline: true, placeholder: "加在用户提示词后面" },
-    ].forEach((field) => {
+    const appendField = (field, container = fields) => {
       const fieldGroup = document.createElement("div")
-      fieldGroup.className = "preset-form-field"
+      fieldGroup.className = field.className ? `preset-form-field ${field.className}` : "preset-form-field"
       const caption = document.createElement("div")
       caption.className = "preset-field-label"
       caption.textContent = field.label
@@ -5645,10 +6228,65 @@ function paintHostPresetMenu() {
       values[field.key] = input
       fieldGroup.appendChild(caption)
       fieldGroup.appendChild(input)
-      if (field.key === "prefix" || field.key === "suffix") promptFields.appendChild(fieldGroup)
-      else fields.appendChild(fieldGroup)
+      container.appendChild(fieldGroup)
+      return input
+    }
+
+    appendField({ key: "name", label: "名称", multiline: false, placeholder: "预设名称" })
+
+    const advancedRow = document.createElement("div")
+    advancedRow.className = "preset-advanced-row"
+    const structureLabel = document.createElement("span")
+    structureLabel.textContent = "提示词结构"
+    const advancedToggle = document.createElement("button")
+    advancedToggle.type = "button"
+    advancedToggle.className = hostPresetEditor.advanced
+      ? "preset-advanced-toggle is-active"
+      : "preset-advanced-toggle"
+    advancedToggle.textContent = hostPresetEditor.advanced ? "关闭高级" : "高级"
+    advancedToggle.setAttribute("aria-pressed", hostPresetEditor.advanced ? "true" : "false")
+    advancedToggle.title = hostPresetEditor.advanced
+      ? "关闭后会将前缀和后缀合并为内容，并统一放在用户提示词后面"
+      : "分别设置用户提示词前后的内容"
+    advancedToggle.addEventListener("click", (event) => {
+      event.stopPropagation()
+      setHostPresetEditorAdvanced(!hostPresetEditor.advanced)
+      paintHostPresetMenu()
     })
-    fields.appendChild(promptFields)
+    advancedRow.appendChild(structureLabel)
+    advancedRow.appendChild(advancedToggle)
+    fields.appendChild(advancedRow)
+
+    const promptHint = document.createElement("div")
+    promptHint.className = "preset-advanced-hint"
+    if (hostPresetEditor.advanced) {
+      promptHint.textContent = "前缀权重更高：核心要求、主体和风格放前面；画幅、补充说明和限制放后面。"
+      const promptFields = document.createElement("div")
+      promptFields.className = "preset-prompt-fields"
+      appendField({
+        key: "prefix",
+        label: "前缀",
+        multiline: true,
+        placeholder: "核心要求、主体、风格（权重更高）",
+      }, promptFields)
+      appendField({
+        key: "suffix",
+        label: "后缀",
+        multiline: true,
+        placeholder: "画幅、补充说明、限制",
+      }, promptFields)
+      fields.appendChild(promptFields)
+    } else {
+      promptHint.textContent = "内容会作为预设功能，添加在用户提示词后面。"
+      appendField({
+        key: "content",
+        label: "内容",
+        multiline: true,
+        placeholder: "输入这个预设要补充的功能、画幅或限制",
+        className: "preset-content-field",
+      })
+    }
+    fields.appendChild(promptHint)
     const error = document.createElement("div")
     error.className = "preset-form-error"
     fields.appendChild(error)
@@ -5690,8 +6328,10 @@ function paintHostPresetMenu() {
           id: hostPresetEditor.id,
           category: String(values.category.value || "").trim(),
           name: String(values.name.value || "").trim(),
-          prefix: String(values.prefix.value || "").trim(),
-          suffix: String(values.suffix.value || "").trim(),
+          prefix: hostPresetEditor.advanced ? String(values.prefix.value || "").trim() : "",
+          suffix: hostPresetEditor.advanced
+            ? String(values.suffix.value || "").trim()
+            : String(values.content.value || "").trim(),
         })
         if (!result || !result.ok) {
           error.textContent = result && result.message ? result.message : "保存预设失败"
@@ -5880,7 +6520,7 @@ function paintHostPresetMenu() {
       const editPreset = (event) => {
         event.stopPropagation()
         const category = categories.find((entry) => entry.id === item.categoryId)
-        hostPresetEditor = { ...item, category: category ? category.name : "" }
+        hostPresetEditor = createHostPresetEditor(item, category ? category.name : "")
         hostPresetView = "edit"
         hostPresetNotice = ""
         paintHostPresetMenu()
@@ -6223,6 +6863,10 @@ async function downloadAndInstallPluginUpdate() {
   if (installButton) installButton.disabled = true
   pluginUpdateStatus(`正在下载 ${pluginUpdateInfo.packageName}…`, "available")
   try {
+    pluginUpdateStatus("正在备份历史记录、预设和工程面板设置…", "available")
+    await flushDurableStateBackup()
+    await flushDocumentWorkspaceSave()
+    pluginUpdateStatus(`正在下载 ${pluginUpdateInfo.packageName}…`, "available")
     const downloaded = await updater.downloadAndVerify(pluginUpdateInfo)
     pluginUpdateStatus("SHA256 校验通过，正在打开 Adobe 安装器…", "available")
     const folder = await updateDownloadFolder()
@@ -6249,8 +6893,8 @@ async function downloadAndInstallPluginUpdate() {
 
 async function switchRuntimeMode(mode, options = {}) {
   if (mode !== RUNTIME_DIRECT && mode !== RUNTIME_COMFYUI) return
-  if (batchRunning && runtimeMode && runtimeMode !== mode) {
-    showStatus("请先停止当前生成，再切换运行模式", true)
+  if ((batchRunning || renderInFlight()) && runtimeMode && runtimeMode !== mode) {
+    showStatus("当前还有生成任务，完成后再切换运行模式", true)
     return
   }
   const changed = runtimeMode !== mode
@@ -6632,6 +7276,8 @@ function onComposerMessage(event) {
     element("positive").value = value
     composerStateSignatures.prompt = value
     localStorage.setItem(`${STORE_PREFIX}positive`, value)
+    scheduleDurableStateBackup()
+    scheduleDocumentWorkspaceSave()
     syncPromptMirror()
     return
   }
@@ -6842,11 +7488,14 @@ function saveSettings() {
     minRes: element("min-res").value,
     cropSelection: element("crop-selection").checked,
     cropPad: element("crop-pad").value,
+    maskFeather: element("mask-feather").value,
     autoSeed: element("auto-seed").checked,
     batchCount: batchCount(),
     comfyLaunch: element("comfy-launch").value,
   }
   Object.entries(values).forEach(([key, value]) => localStorage.setItem(`${STORE_PREFIX}${key}`, String(value)))
+  scheduleDurableStateBackup()
+  scheduleDocumentWorkspaceSave()
 }
 
 function restoreSettings() {
@@ -6856,7 +7505,7 @@ function restoreSettings() {
   const textIds = ["positive", "negative", "seed"]
   textIds.forEach((id) => {
     const saved = localStorage.getItem(`${STORE_PREFIX}${id}`)
-    if (saved !== null) element(id).value = saved
+    if (saved !== null) element(id).value = id === "negative" && /^(null|undefined)$/i.test(saved.trim()) ? "" : saved
   })
   const savedMax = localStorage.getItem(`${STORE_PREFIX}maxRes`) || localStorage.getItem(`${STORE_PREFIX}maxEdge`)
   const savedMin = localStorage.getItem(`${STORE_PREFIX}minRes`)
@@ -6864,6 +7513,8 @@ function restoreSettings() {
   if (savedMin !== null) element("min-res").value = savedMin
   const savedPad = localStorage.getItem(`${STORE_PREFIX}cropPad`)
   if (savedPad !== null) element("crop-pad").value = savedPad
+  const savedMaskFeather = localStorage.getItem(`${STORE_PREFIX}maskFeather`)
+  if (savedMaskFeather !== null) element("mask-feather").value = savedMaskFeather
   const checks = [
     ["crop-selection", "cropSelection", true],
     ["auto-seed", "autoSeed", true],
@@ -6881,13 +7532,19 @@ function restoreSettings() {
   syncComposer()
 }
 
-function initialize() {
+async function initialize() {
+  const restoredKeys = await restoreDurableStateBackup()
+  presetLibrary = readPresetLibrary()
+  selectedPresetIds = readPresetSelection()
+  stateBackupReady = true
+  writePresetSelection()
   paintIcons()
   if (typeof mountGlass === "function") mountGlass()
   window.addEventListener("resize", () => {
     if (element("progress-frame").classList.contains("active")) paintMarquee()
   })
   restoreSettings()
+  if (restoredKeys) showStatus("已恢复更新前的历史与预设数据")
   window.addEventListener("message", onComposerMessage)
   mountComposerWorkbench()
   element("runtime-mode-picker").classList.remove("hidden")
@@ -7093,10 +7750,14 @@ function initialize() {
   element("add-layer").addEventListener("click", addResultLayer)
   element("preview-hit").addEventListener("click", addResultLayer)
   element("empty-preview").addEventListener("click", addResultLayer)
-  element("positive").addEventListener("input", syncComposerWorkbench)
+  element("positive").addEventListener("input", () => {
+    syncComposerWorkbench()
+    scheduleDocumentWorkspaceSave()
+  })
   element("workflow").addEventListener("change", (event) => {
     if (event.target.value === "") return
     syncProfileToModel()
+    scheduleDocumentWorkspaceSave()
     if (runtimeMode === RUNTIME_DIRECT) {
       showStatus("已切换模型")
       return
@@ -7132,8 +7793,11 @@ function initialize() {
   })
   window.addEventListener("beforeunload", () => {
     clearTimeout(reconnectTimer)
-    stopDirectElapsed()
-    if (directAbortController) directAbortController.abort()
+    clearInterval(documentWorkspaceTimer)
+    flushDocumentWorkspaceSave().catch(() => {})
+    if (pendingHistoryClock) clearInterval(pendingHistoryClock)
+    for (const controller of directAbortControllers.values()) controller.abort()
+    directAbortControllers.clear()
     if (socket) socket.close()
   })
   const historyHover = element("history-hover")
@@ -7160,7 +7824,9 @@ function initialize() {
   element("history-open-folder").addEventListener("click", () => {
     openRenderFolder().catch((error) => showStatus(error.message, true))
   })
-  restoreRenderHistory().catch((error) => showStatus(error.message, true))
+  await initializeDocumentWorkspaces()
+  await restoreRenderHistory()
+  scheduleDurableStateBackup(0)
 }
 
 let panelBooted = false
@@ -7171,7 +7837,7 @@ function bootMain() {
   const web = document.querySelector('uxp-panel[panelid="' + WEB_PANEL_ID + '"]')
   if (main && web && window.getComputedStyle(main).display === "none" && window.getComputedStyle(web).display !== "none") return
   panelBooted = true
-  initialize()
+  initialize().catch((error) => showStatus(error.message || String(error), true))
 }
 
 function boot() {

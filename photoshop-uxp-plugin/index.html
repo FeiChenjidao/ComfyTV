@@ -41,7 +41,7 @@
           <span id="settings-toggle" class="rail-btn" role="button" tabindex="0" title="设置" aria-label="设置">
             <span class="icon-slot" data-icon="settings-toggle"></span>
           </span>
-          <span id="web-toggle" class="rail-btn" role="button" tabindex="0" title="在 Photoshop 中打开 ComfyUI" aria-label="在 Photoshop 中打开 ComfyUI">
+          <span id="web-toggle" class="rail-btn hidden" role="button" tabindex="0" title="在 Photoshop 中打开 ComfyUI" aria-label="在 Photoshop 中打开 ComfyUI">
             <span class="icon-slot" data-icon="web-toggle"></span>
           </span>
           <span id="fit-toggle" class="rail-btn" role="button" tabindex="0" title="切换预览适配" aria-label="切换预览适配">
@@ -144,6 +144,10 @@
             <div class="field-row">
               <label for="crop-pad">选区外扩 (%)</label>
               <input id="crop-pad" type="number" min="0" max="200" step="1" value="32" title="裁切时每边按选区尺寸的这个百分比向外扩，把周围一起传进去">
+            </div>
+            <div class="field-row">
+              <label for="mask-feather">蒙版羽化 (px)</label>
+              <input id="mask-feather" type="number" min="0" max="1000" step="1" value="0" title="羽化发送给模型的选区蒙版边缘，0 表示硬边">
             </div>
           </div>
           <div class="settings-section general-settings">
@@ -311,6 +315,7 @@
     <script src="icons.js"></script>
     <script src="glass.js"></script>
     <script src="preset-data.js"></script>
+    <script src="state-backup.js"></script>
     <script src="direct-api.js"></script>
     <script src="updater.js"></script>
     <script src="main.js"></script>

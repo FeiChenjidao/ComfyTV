@@ -79,7 +79,7 @@
     const suffix = clean(data && data.suffix)
     const editId = clean(data && data.id)
     if (!categoryName || !name) return { ok: false, message: "分类和名称都必须填写" }
-    if (!prefix && !suffix) return { ok: false, message: "前缀和后缀至少填写一项" }
+    if (!prefix && !suffix) return { ok: false, message: "预设内容不能为空" }
     const next = normalizeLibrary(library, config)
     let category = next.categories.find((item) => key(item.name) === key(categoryName))
     if (!category) {

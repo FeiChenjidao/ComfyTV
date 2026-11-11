@@ -53,6 +53,74 @@ def test_queue_binds_to_latest_ready_comfy_client():
     asyncio.run(run())
 
 
+def test_concurrent_jobs_keep_separate_input_files(tmp_path, monkeypatch):
+    async def run():
+        reset_state()
+        monkeypatch.setattr(backend, "PS_INPUTS", str(tmp_path))
+        add_client("ps", "ps")
+        comfy = add_client("cm", "cm", ready=True)
+        for job_id, canvas, prompt in (
+            ("job-a", "Y2FudmFzLWE=", "prompt-a"),
+            ("job-b", "Y2FudmFzLWI=", "prompt-b"),
+        ):
+            await backend.handle_message("ps", "ps", json.dumps({
+                "jobId": job_id,
+                "canvasBase64": canvas,
+            }))
+            await backend.handle_message("ps", "ps", json.dumps({
+                "jobId": job_id,
+                "configdata": {"jobId": job_id, "positive": prompt},
+            }))
+            await backend.handle_message("ps", "ps", json.dumps({
+                "queue": True,
+                "jobId": job_id,
+            }))
+
+        first = tmp_path / "jobs" / "job-a"
+        second = tmp_path / "jobs" / "job-b"
+        assert (first / "PS_canvas.png").read_bytes() == b"canvas-a"
+        assert (second / "PS_canvas.png").read_bytes() == b"canvas-b"
+        assert json.loads((first / "config.json").read_text(encoding="utf-8"))["positive"] == "prompt-a"
+        assert json.loads((second / "config.json").read_text(encoding="utf-8"))["positive"] == "prompt-b"
+        queued = [message for message in comfy.messages if message.get("queue")]
+        assert [message["inputKey"] for message in queued] == ["job-a", "job-b"]
+        assert set(backend.active_jobs) == {"job-a", "job-b"}
+
+    asyncio.run(run())
+
+
+def test_completed_job_only_cleans_its_own_inputs(tmp_path, monkeypatch):
+    async def run():
+        reset_state()
+        monkeypatch.setattr(backend, "PS_INPUTS", str(tmp_path))
+        owner = add_client("ps", "ps")
+        comfy = add_client("cm", "cm", ready=True)
+        for job_id in ("job-a", "job-b"):
+            root = tmp_path / "jobs" / job_id
+            root.mkdir(parents=True)
+            (root / "config.json").write_text("{}", encoding="utf-8")
+            (root / "PS_canvas.png").write_bytes(job_id.encode("utf-8"))
+            backend.active_jobs[job_id] = {
+                "ps_client_id": "ps",
+                "cm_client_id": "cm",
+                "input_key": job_id,
+            }
+
+        await backend.handle_message("ps", "ps", json.dumps({
+            "jobId": "job-a",
+            "jobAck": {"phase": "completed"},
+        }))
+
+        assert not (tmp_path / "jobs" / "job-a").exists()
+        assert (tmp_path / "jobs" / "job-b").exists()
+        assert "job-a" not in backend.active_jobs
+        assert "job-b" in backend.active_jobs
+        assert comfy.messages[-1]["jobId"] == "job-a"
+        assert owner.messages[-1]["jobStatus"]["phase"] == "completed"
+
+    asyncio.run(run())
+
+
 def test_embedded_comfy_client_is_preferred_for_its_photoshop_panel():
     async def run():
         reset_state()

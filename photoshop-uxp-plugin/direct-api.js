@@ -9,7 +9,7 @@
   const GPT_SIZE_LIMITS = Object.freeze({
     minPixels: 655360,
     maxPixels: 8294400,
-    inputMaxPixels: 2048 * 2048,
+    inputMaxPixels: 8294400,
     minEdge: 480,
     maxEdge: 3840,
     maxRatio: 3,

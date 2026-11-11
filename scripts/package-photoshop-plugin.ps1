@@ -80,6 +80,7 @@ function Assert-RequiredFiles([string] $Root) {
         'icons.js',
         'glass.js',
         'preset-data.js',
+        'state-backup.js',
         'preview-default.jpg',
         'composer-web\index.html',
         'composer-web\composer.css',
@@ -228,6 +229,7 @@ Invoke-NodeCheck (Join-Path $stageRoot 'main.js')
 Invoke-NodeCheck (Join-Path $stageRoot 'direct-api.js')
 Invoke-NodeCheck (Join-Path $stageRoot 'updater.js')
 Invoke-NodeCheck (Join-Path $stageRoot 'preset-data.js')
+Invoke-NodeCheck (Join-Path $stageRoot 'state-backup.js')
 Invoke-NodeCheck (Join-Path $stageRoot 'composer-web\composer.js')
 Invoke-NodeCheck (Join-Path $nodeStageRoot 'runtime\photoshop-runtime-bridge.js')
 Invoke-NodeCheck (Join-Path $nodeStageRoot 'js\photoshop-runtime-bridge.js')

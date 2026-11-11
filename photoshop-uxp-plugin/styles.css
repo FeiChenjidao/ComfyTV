@@ -1288,6 +1288,14 @@ footer.composer.menu-open .composer-prompt-mirror {
   top: 54px;
 }
 
+.tool-rail #web-toggle.hidden {
+  display: none;
+}
+
+.tool-rail #web-toggle.hidden + #fit-toggle {
+  top: 54px;
+}
+
 #fit-toggle {
   top: 108px;
 }
@@ -1452,6 +1460,7 @@ footer.composer.menu-open .composer-prompt-mirror {
 }
 
 .history-card {
+  position: relative;
   flex: 0 0 calc((100% - 42px) / 8);
   width: calc((100% - 42px) / 8);
   height: 54px;
@@ -1461,6 +1470,30 @@ footer.composer.menu-open .composer-prompt-mirror {
   overflow: hidden;
   background: #3a3a3c;
   cursor: pointer;
+}
+
+.history-card.pending,
+.history-card.failed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #303033;
+  cursor: default;
+}
+
+.history-card.failed {
+  background: #3b2528;
+}
+
+.history-card .history-job-status {
+  max-width: calc(100% - 8px);
+  color: #d6d6d6;
+  -webkit-text-fill-color: #d6d6d6;
+  font-size: 8px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  pointer-events: none;
 }
 
 .history-card:last-child {
@@ -2329,6 +2362,26 @@ footer.composer.menu-open .composer-prompt-mirror {
   object-fit: contain;
   background: #080808;
   pointer-events: none;
+}
+
+.history-panel-placeholder {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 10px;
+  background: #303033;
+  color: #d6d6d6;
+  -webkit-text-fill-color: #d6d6d6;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+}
+
+.history-panel-card.failed .history-panel-placeholder {
+  background: #3b2528;
 }
 
 .history-panel-card-label {
@@ -3470,6 +3523,45 @@ footer.composer.menu-open .composer-prompt-mirror {
 .host-preset-menu .preset-textarea {
   height: 42px;
   resize: none;
+}
+
+.host-preset-menu .preset-content-field .preset-textarea {
+  height: 58px;
+}
+
+.host-preset-menu .preset-advanced-row {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  color: #999999;
+  font-size: 11px;
+}
+
+.host-preset-menu .preset-advanced-toggle {
+  height: 26px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  background: #242424;
+  color: #c5c5c5;
+  font: 11px/24px Arial, "Microsoft YaHei", sans-serif;
+  cursor: pointer;
+}
+
+.host-preset-menu .preset-advanced-toggle.is-active {
+  border-color: #72872d;
+  background: #30391d;
+  color: #dcff65;
+}
+
+.host-preset-menu .preset-advanced-hint {
+  flex: 0 0 auto;
+  color: #828282;
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .host-preset-menu .preset-prompt-fields {

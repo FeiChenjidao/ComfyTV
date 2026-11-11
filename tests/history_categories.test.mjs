@@ -32,6 +32,7 @@ function createState() {
     historyPanelSelectionAnchor: '',
     historyPanelPage: 0,
     renderInFlight() { return false },
+    scheduleDurableStateBackup() {},
     plainBounds(value) { return value || null },
     localStorage: {
       getItem(key) { return values.has(key) ? values.get(key) : null },

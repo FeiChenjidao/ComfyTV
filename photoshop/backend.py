@@ -62,32 +62,66 @@ REFERENCE_MAX_EDGE = 2048
 REFERENCE_MAX_FILE_BYTES = 1024 * 1024 * 1024
 REFERENCE_MAX_PIXELS = 400_000_000
 REFERENCE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+JOB_INPUT_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,160}$")
 
 
-async def save_file(data, filename):
+def job_input_directory(job_id="", create=False):
+    value = str(job_id or "")
+    if not value or not JOB_INPUT_ID_PATTERN.fullmatch(value):
+        return PS_INPUTS
+    path = os.path.join(PS_INPUTS, "jobs", value)
+    if create:
+        os.makedirs(path, exist_ok=True)
+    return path
+
+
+def job_inputs_ready(job_id):
+    path = job_input_directory(job_id)
+    return path != PS_INPUTS and all(
+        os.path.isfile(os.path.join(path, name))
+        for name in ("config.json", "PS_canvas.png")
+    )
+
+
+def cleanup_job_inputs(job_id):
+    path = job_input_directory(job_id)
+    if path == PS_INPUTS:
+        return
+    try:
+        shutil.rmtree(path)
+    except FileNotFoundError:
+        pass
+    except OSError as error:
+        print(f"# PS: failed to clean job inputs {job_id}: {error}")
+
+
+async def save_file(data, filename, job_id=""):
     raw = base64.b64decode(data)
-    with open(os.path.join(PS_INPUTS, filename), "wb") as file:
+    root = job_input_directory(job_id, create=True)
+    with open(os.path.join(root, filename), "wb") as file:
         file.write(raw)
 
 
-async def save_config(data):
-    with open(os.path.join(PS_INPUTS, "config.json"), "w", encoding="utf-8") as file:
+async def save_config(data, job_id=""):
+    root = job_input_directory(job_id, create=True)
+    with open(os.path.join(root, "config.json"), "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False)
 
 
-def clear_reference_files():
-    if not os.path.isdir(PS_INPUTS):
+def clear_reference_files(job_id=""):
+    root = job_input_directory(job_id, create=True)
+    if not os.path.isdir(root):
         return
-    for name in os.listdir(PS_INPUTS):
+    for name in os.listdir(root):
         if name.startswith("PS_ref_") and name.endswith(".png"):
             try:
-                os.remove(os.path.join(PS_INPUTS, name))
+                os.remove(os.path.join(root, name))
             except OSError:
                 pass
 
 
-def clear_mask_file():
-    path = os.path.join(PS_INPUTS, "PS_mask.png")
+def clear_mask_file(job_id=""):
+    path = os.path.join(job_input_directory(job_id, create=True), "PS_mask.png")
     try:
         os.remove(path)
     except FileNotFoundError:
@@ -175,6 +209,7 @@ async def fail_jobs_for_client(client_id, message):
                 "jobStatus": {"phase": "error", "message": message},
             })
         active_jobs.pop(job_id, None)
+        cleanup_job_inputs(job.get("input_key") or job_id)
 
 
 async def websocket_handler(request):
@@ -255,6 +290,7 @@ async def handle_message(client_id, platform, data):
                 phase = str((msg.get("jobStatus") or {}).get("phase") or "")
                 if phase in ("completed", "error", "interrupted"):
                     active_jobs.pop(job_id, None)
+                    cleanup_job_inputs(job.get("input_key") or job_id)
                 return
             if job_id:
                 return
@@ -266,24 +302,26 @@ async def handle_message(client_id, platform, data):
     if platform != "ps":
         return
     try:
+        message_job_id = str(msg.get("jobId") or "")
         if msg.get("referenceClear"):
-            clear_reference_files()
+            clear_reference_files(message_job_id)
         if msg.get("maskClear"):
-            clear_mask_file()
+            clear_mask_file(message_job_id)
         if "referenceBase64" in msg:
-            await save_file(msg["referenceBase64"], reference_filename(msg.get("referenceIndex")))
+            await save_file(msg["referenceBase64"], reference_filename(msg.get("referenceIndex")), message_job_id)
         if "canvasBase64" in msg:
-            await save_file(msg["canvasBase64"], "PS_canvas.png")
+            await save_file(msg["canvasBase64"], "PS_canvas.png", message_job_id)
         if "maskBase64" in msg:
-            await save_file(msg["maskBase64"], "PS_mask.png")
+            await save_file(msg["maskBase64"], "PS_mask.png", message_job_id)
         if "configdata" in msg:
-            await save_config(msg["configdata"])
+            await save_config(msg["configdata"], message_job_id)
         if "workspace" in msg:
             cm_client_id = bound_comfy_client(client_id)
             if cm_client_id:
                 await send_to_client(cm_client_id, {"workspace": msg["workspace"]})
         if msg.get("queue"):
             job_id = str(msg.get("jobId") or uuid.uuid4())
+            input_key = job_id if job_inputs_ready(job_id) else ""
             cm_client_id = bound_comfy_client(client_id)
             if not cm_client_id:
                 await send_to_client(client_id, {
@@ -294,11 +332,13 @@ async def handle_message(client_id, platform, data):
                         "message": "没有打开包含 Photoshop 输入与送回节点的 ComfyUI 工作流",
                     },
                 })
+                cleanup_job_inputs(input_key)
                 return
             active_jobs[job_id] = {
                 "ps_client_id": client_id,
                 "cm_client_id": cm_client_id,
                 "created_at": time.monotonic(),
+                "input_key": input_key,
             }
             forward = {
                 "protocolVersion": PROTOCOL_VERSION,
@@ -308,6 +348,7 @@ async def handle_message(client_id, platform, data):
                 "batchIndex": int(msg.get("batchIndex") or 0),
                 "renderProfile": msg.get("renderProfile") or {},
                 "referenceCount": int(msg.get("referenceCount") or 0),
+                "inputKey": input_key,
             }
             if "workflow" in msg:
                 forward["workflow"] = msg["workflow"]
@@ -333,6 +374,7 @@ async def handle_message(client_id, platform, data):
                         "jobStatus": {"phase": "completed", "progress": 100},
                     })
                     active_jobs.pop(job_id, None)
+                    cleanup_job_inputs(job.get("input_key") or job_id)
         handled = (
             "configdata", "maskBase64", "maskClear", "canvasBase64", "workspace", "queue",
             "referenceClear", "referenceBase64", "interrupt", "jobAck",

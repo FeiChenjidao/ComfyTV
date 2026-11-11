@@ -11,11 +11,11 @@ from comfy_api.latest import io
 from nodes import SaveImage
 from PIL import Image, ImageOps
 
-from .backend import PS_INPUTS, send_render_file, send_render_payload, thumb_png_bytes
+from .backend import job_input_directory, send_render_file, send_render_payload, thumb_png_bytes
 
 
-def _file_hash(name):
-    path = os.path.join(PS_INPUTS, name)
+def _file_hash(name, job_id=""):
+    path = os.path.join(job_input_directory(job_id), name)
     try:
         with open(path, "rb") as file:
             return hashlib.md5(file.read()).hexdigest()
@@ -23,8 +23,8 @@ def _file_hash(name):
         return "missing"
 
 
-def _open_image(name):
-    path = os.path.join(PS_INPUTS, name)
+def _open_image(name, job_id=""):
+    path = os.path.join(job_input_directory(job_id), name)
     try:
         with open(path, "rb") as file:
             data = file.read()
@@ -44,11 +44,30 @@ def _to_tensor(image):
     return torch.from_numpy(pixels.astype(np.float32) / 255.0)[None,]
 
 
-def _optional_image_tensor(name):
-    path = os.path.join(PS_INPUTS, name)
+def _optional_image_tensor(name, job_id=""):
+    path = os.path.join(job_input_directory(job_id), name)
     if not os.path.isfile(path) or os.path.getsize(path) == 0:
         return None
-    return _to_tensor(_open_image(name).convert("RGB"))
+    return _to_tensor(_open_image(name, job_id).convert("RGB"))
+
+
+def _job_id_from_prompt(prompt):
+    if not isinstance(prompt, dict):
+        return ""
+    for node in prompt.values():
+        inputs = node.get("inputs") if isinstance(node, dict) else None
+        value = inputs.get("job_id") if isinstance(inputs, dict) else ""
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
+def _job_id_from_config(job_id=""):
+    try:
+        with open(os.path.join(job_input_directory(job_id), "config.json"), "r", encoding="utf-8") as file:
+            return str(json.load(file).get("jobId") or "")
+    except (OSError, ValueError):
+        return ""
 
 
 def _fit_media_tensor(image, height, width):
@@ -81,7 +100,9 @@ class PhotoshopFromPanel(io.ComfyNode):
             display_name="Photoshop",
             category="Photoshop",
             description="Read the canvas, mask, and prompt sent by the ComfyTV Photoshop panel.",
-            inputs=[],
+            inputs=[
+                io.String.Input("job_id", default="", socketless=True, extra_dict={"hidden": True}),
+            ],
             outputs=[
                 io.Image.Output(display_name="Canvas"),
                 io.Image.Output(display_name="Mask"),
@@ -107,30 +128,31 @@ class PhotoshopFromPanel(io.ComfyNode):
         )
 
     @classmethod
-    def fingerprint_inputs(cls):
+    def fingerprint_inputs(cls, job_id=""):
         names = ["config.json", "PS_canvas.png", "PS_mask.png"]
         names.extend(f"PS_ref_{index}.png" for index in range(1, 7))
-        return "|".join(_file_hash(name) for name in names)
+        return "|".join(_file_hash(name, job_id) for name in names)
 
     @classmethod
-    def execute(cls):
-        config_path = os.path.join(PS_INPUTS, "config.json")
+    def execute(cls, job_id=""):
+        root = job_input_directory(job_id)
+        config_path = os.path.join(root, "config.json")
         with open(config_path, "r", encoding="utf-8") as file:
             config = json.load(file)
 
-        image = _open_image("PS_canvas.png")
+        image = _open_image("PS_canvas.png", job_id)
         canvas = _to_tensor(image)
         width, height = image.size
 
-        has_mask = bool(config.get("hasMask")) and os.path.isfile(os.path.join(PS_INPUTS, "PS_mask.png"))
-        mask_image = ImageOps.exif_transpose(_open_image("PS_mask.png")) if has_mask else Image.new("L", (width, height), 255)
+        has_mask = bool(config.get("hasMask")) and os.path.isfile(os.path.join(root, "PS_mask.png"))
+        mask_image = ImageOps.exif_transpose(_open_image("PS_mask.png", job_id)) if has_mask else Image.new("L", (width, height), 255)
         if mask_image.size != (width, height):
             mask_image = mask_image.resize((width, height), Image.Resampling.BILINEAR)
         canvas = _to_tensor(image.convert("RGB"))
         optional_mask = _to_tensor(mask_image.convert("RGB")) if has_mask else None
         reference_count = max(0, min(6, int(config.get("referenceCount") or 0)))
         references = [
-            _optional_image_tensor(f"PS_ref_{index}.png") if index <= reference_count else None
+            _optional_image_tensor(f"PS_ref_{index}.png", job_id) if index <= reference_count else None
             for index in range(1, 7)
         ]
         media = [canvas]
@@ -187,12 +209,7 @@ class SendToPhotoshop(io.ComfyNode):
         saved = saver.save_images(output, "PS_OUTPUTS", prompt, extra_pnginfo)
         filename = saved["ui"]["images"][0]["filename"]
         try:
-            job_id = ""
-            try:
-                with open(os.path.join(PS_INPUTS, "config.json"), "r", encoding="utf-8") as file:
-                    job_id = str(json.load(file).get("jobId") or "")
-            except (OSError, ValueError):
-                pass
+            job_id = _job_id_from_prompt(prompt) or _job_id_from_config()
             await send_render_file(filename, job_id)
         except Exception as error:
             print(f"# PS: error on send2Ps: {error}")
@@ -274,12 +291,7 @@ class SendLayersToPhotoshop(io.ComfyNode):
     @classmethod
     async def execute(cls, layers, preview, prompt=None, extra_pnginfo=None):
         preview_base64, preview_bytes, _ = _png_base64(preview)
-        job_id = ""
-        try:
-            with open(os.path.join(PS_INPUTS, "config.json"), "r", encoding="utf-8") as file:
-                job_id = str(json.load(file).get("jobId") or "")
-        except (OSError, ValueError):
-            pass
+        job_id = _job_id_from_prompt(prompt) or _job_id_from_config()
         thumb = ""
         try:
             thumb = base64.b64encode(thumb_png_bytes(preview_bytes)).decode("ascii")

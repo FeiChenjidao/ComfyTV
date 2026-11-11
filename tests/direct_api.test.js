@@ -265,4 +265,8 @@ test("fits captured GPT images to the shared custom-size limits", () => {
       customHeight: fitted.height,
     }))
   }
+  assert.deepEqual(
+    api.fitGptSize(3840, 2160, { maxPixels: api.GPT_SIZE_LIMITS.inputMaxPixels }),
+    { width: 3840, height: 2160 },
+  )
 })
