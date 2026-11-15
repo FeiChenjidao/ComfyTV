@@ -205,7 +205,7 @@ class Model3DStage(io.ComfyNode):
                                tooltip="Tripo geometry quality (standard / detailed)."),
                 io.Combo.Input("model_version", options=MODEL3D_MODEL_VERSIONS,
                                default=MODEL3D_MODEL_VERSIONS[0],
-                               tooltip="Tripo model version."),
+                               tooltip="Provider model version (Tripo / Meshy)."),
                 io.Int.Input("face_limit", default=-1, min=-1, max=2000000, step=1,
                              tooltip="Tripo face limit (-1 = provider default)."),
                 io.Boolean.Input("quad", default=False,

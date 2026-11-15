@@ -559,6 +559,21 @@
         "ver": "0.36.0",
         "Node name for S&R": "MeshyImageToModelNode"
       },
+      "widgets_values": [
+        "meshy-7.1",
+        "true",
+        "triangle",
+        300000,
+        "auto",
+        "true",
+        false,
+        "",
+        "2k",
+        "",
+        0,
+        "randomize",
+        false
+      ],
       "widgets_values_named": {
         "model": "meshy-7.1",
         "should_remesh": "true",

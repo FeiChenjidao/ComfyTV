@@ -30,6 +30,7 @@ export default defineConfig({
         score: fileURLToPath(new URL('./e2e/harness/score.html', import.meta.url)),
         scene3d: fileURLToPath(new URL('./e2e/harness/scene3d.html', import.meta.url)),
         material: fileURLToPath(new URL('./e2e/harness/material.html', import.meta.url)),
+        modelviewer: fileURLToPath(new URL('./e2e/harness/modelviewer.html', import.meta.url)),
       },
     },
   },

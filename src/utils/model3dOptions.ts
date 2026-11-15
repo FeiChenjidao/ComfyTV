@@ -1,11 +1,17 @@
-/** Stage defaults / unions for Tripo + Rodin Gen-2.5 COMBO sync. */
+/** Stage defaults / unions for Tripo + Meshy + Rodin Gen-2.5 COMBO sync. */
 
 export const MODEL3D_TEXTURE_QUALITIES = ['standard', 'detailed', 'extreme'] as const
 export const MODEL3D_GEOMETRY_QUALITIES = ['standard', 'detailed'] as const
 export const MODEL3D_MODEL_VERSIONS = [
+  // Tripo
   'v3.1-20260211',
   'v3.0-20250812',
   'v2.5-20250123',
+  // Meshy
+  'meshy-7.1',
+  'meshy-7',
+  'meshy-6',
+  'latest',
 ] as const
 export const MODEL3D_MATERIALS = ['PBR', 'Shaded', 'All', 'None'] as const
 export const MODEL3D_MODES = ['Regular', 'Fast', 'Extreme-High'] as const

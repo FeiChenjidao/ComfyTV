@@ -196,6 +196,102 @@ class TestConvertCore:
         assert result["2"]["class_type"] == "PreviewImage"
         assert result["2"]["inputs"] == {"images": ["1", 0]}
 
+    def test_named_widget_values_fallback_for_meshy_dynamic_inputs(self):
+        object_info = {
+            "MeshyImageToModelNode": {
+                "input": {
+                    "required": {
+                        "model": ["COMBO", {"options": ["meshy-7.1", "latest"]}],
+                        "image": ["IMAGE", {}],
+                        "should_remesh": [
+                            "COMFY_DYNAMICCOMBO_V3",
+                            {
+                                "options": [
+                                    {
+                                        "key": "true",
+                                        "inputs": {
+                                            "required": {
+                                                "topology": ["COMBO", {"options": ["triangle", "quad"]}],
+                                                "target_polycount": ["INT", {"default": 300000}],
+                                            }
+                                        },
+                                    },
+                                    {"key": "false", "inputs": {"required": {}}},
+                                ]
+                            },
+                        ],
+                        "seed": ["INT", {"default": 0, "control_after_generate": True}],
+                    }
+                },
+                "input_order": {
+                    "required": ["model", "image", "should_remesh", "seed"]
+                },
+                "output_node": True,
+                "display_name": "Meshy: Image to Model",
+            },
+            "LoadImage": {
+                "input": {"required": {"image": ["STRING", {"default": ""}]}},
+                "input_order": {"required": ["image"]},
+                "output_node": False,
+                "display_name": "Load Image",
+            },
+        }
+        workflow = {
+            "nodes": [
+                _node(10, "LoadImage", outputs=[{"links": [50]}], widgets=["front.png"]),
+                _node(
+                    2,
+                    "MeshyImageToModelNode",
+                    inputs=[{"name": "image", "link": 50}],
+                    widgets_values_named={
+                        "model": "meshy-7.1",
+                        "should_remesh": "true",
+                        "should_remesh.topology": "triangle",
+                        "should_remesh.target_polycount": 125000,
+                        "seed": 42,
+                        "control_after_generate": "randomize",
+                    },
+                ),
+            ],
+            "links": [[50, 10, 0, 2, 0, "IMAGE"]],
+        }
+
+        result = convert_ui_to_api(workflow, object_info)
+
+        assert result["2"]["inputs"] == {
+            "model": "meshy-7.1",
+            "image": ["10", 0],
+            "should_remesh": "true",
+            "seed": 42,
+            "should_remesh.topology": "triangle",
+            "should_remesh.target_polycount": 125000,
+        }
+
+    def test_positional_widget_values_take_precedence_over_named_map(self):
+        object_info = {
+            "ChoiceNode": {
+                "input": {"required": {"model": [["saved", "named"], {}]}},
+                "input_order": {"required": ["model"]},
+                "output_node": True,
+                "display_name": "Choice",
+            }
+        }
+        workflow = {
+            "nodes": [
+                _node(
+                    1,
+                    "ChoiceNode",
+                    widgets=["saved"],
+                    widgets_values_named={"model": "named"},
+                )
+            ],
+            "links": [],
+        }
+
+        result = convert_ui_to_api(workflow, object_info)
+
+        assert result["1"]["inputs"] == {"model": "saved"}
+
     def test_input_order_follows_schema(self, object_info):
         # KSampler should emit widget values first in schema order, then link inputs.
         # Producer nodes use EmptyLatentImage stand-ins for all three connection

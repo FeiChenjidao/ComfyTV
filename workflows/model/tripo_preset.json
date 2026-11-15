@@ -67,7 +67,13 @@
     }
   ],
   "meta": {
-    "prompt_required": false
+    "prompt_required": false,
+    "model_image_slots": [
+      "front",
+      "left",
+      "back",
+      "right"
+    ]
   },
   "inputs": {
     "47": {

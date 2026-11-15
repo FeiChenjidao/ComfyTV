@@ -21,15 +21,18 @@
       v-if="controls && !loading && !loadError && modelReady"
       :channel="activeChannel"
       :lighting="lightingMode"
-      :metalness="metalness"
-      :roughness="roughness"
-      :has-texture="!!overrideTexture"
+      :pbr="pbr"
+      :map-slots="mapSlots"
+      :stats="viewerStats"
+      :fullscreen="isFullscreen"
       @update:channel="onChannelChange"
       @update:lighting="onLightingChange"
-      @update:metalness="onMetalnessChange"
-      @update:roughness="onRoughnessChange"
-      @texture-file="onTextureFile"
-      @clear-texture="onClearTexture"
+      @update:pbr="onPbrChange"
+      @reset-pbr="resetPbr"
+      @map-file="onMapFile"
+      @clear-map="onClearMap"
+      @reset-view="resetView"
+      @toggle-fullscreen="toggleFullscreen"
     />
   </div>
 </template>
@@ -41,6 +44,12 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import ModelPreviewControls from './ModelPreviewControls.vue'
+import {
+  DEFAULT_PREVIEW_PBR,
+  type ModelViewerStats,
+  type PreviewMapSlot,
+  type PreviewPbrKey,
+} from './modelPreviewTypes'
 import {
   fetchModelBytes,
   urlFilename,
@@ -55,11 +64,17 @@ import { loadCustomModelAssets } from '@/widgets/three/scene3d/scene3dAssets'
 import { applyViewChannel, type ViewChannel } from '@/widgets/three/channelShading'
 import {
   applyPreviewMaterialOverrides,
+  clearPreviewMaterialClones,
   loadTextureFromFile,
   replaceSceneLights,
   type PreviewLighting,
 } from '@/widgets/three/previewShading'
-import type { MaterialParams } from '@/widgets/material/types'
+import {
+  MATERIAL_COLOR_MAP_KEYS,
+  MATERIAL_MAP_KEYS,
+  type MaterialMapKey,
+  type MaterialParams,
+} from '@/widgets/material/types'
 
 const props = withDefaults(defineProps<{
   src: string
@@ -86,10 +101,20 @@ const modelReady = ref(false)
 
 const internalChannel = ref<ViewChannel>('material')
 const lightingMode = ref<PreviewLighting>('default')
-/** Multiplicative factors over the active material (1 = leave unchanged). */
-const metalness = ref(1)
-const roughness = ref(1)
-const overrideTexture = ref<THREE.Texture | null>(null)
+const pbr = reactive({ ...DEFAULT_PREVIEW_PBR })
+const mapSlots = ref<PreviewMapSlot[]>(emptyMapSlots())
+const viewerStats = ref<ModelViewerStats>({
+  vertices: 0,
+  triangles: 0,
+  meshes: 0,
+  materials: 0,
+  size: [0, 0, 0],
+})
+const isFullscreen = ref(false)
+
+const overrideTextures = new Map<MaterialMapKey, THREE.Texture>()
+const overrideMapMeta = new Map<MaterialMapKey, { fileName: string; previewUrl: string }>()
+let embeddedMapSlots: PreviewMapSlot[] = emptyMapSlots()
 
 const activeChannel = computed<ViewChannel>(() =>
   props.controls ? internalChannel.value : (props.channel ?? 'material'))
@@ -124,11 +149,16 @@ let animationId: number | null = null
 
 const previewEmit: typeof emit = ((event: any, ...args: any[]) => {
   if (event === 'part-materials-ready') {
-    // Maps finished loading after applyShading cloned the pre-map material —
-    // re-apply × metalness/roughness onto the freshly rebound meshes.
-    if (modelRoot && activeChannel.value === 'material') applyPbrFactors()
+    if (modelRoot && activeChannel.value === 'material') {
+      refreshEmbeddedMaps()
+      applyMaterialAdjustments()
+    }
     emit('view-changed')
     return
+  }
+  if (event === 'model-stats') {
+    const stats = args[0] as ModelStats
+    viewerStats.value = { ...viewerStats.value, ...stats }
   }
   return (emit as any)(event, ...args)
 }) as typeof emit
@@ -148,21 +178,111 @@ const mp = useModelPreview(previewProps, previewEmit, {
 
 const { loading, loadError } = mp
 
+function emptyMapSlots(): PreviewMapSlot[] {
+  return MATERIAL_MAP_KEYS.map((key) => ({ key, previewUrl: null, source: 'empty', count: 0 }))
+}
+
+function texturePreviewUrl(texture: THREE.Texture): string | null {
+  const image = texture.image as {
+    currentSrc?: string
+    src?: string
+    width?: number
+    height?: number
+  } | null
+  const direct = image?.currentSrc || image?.src
+  if (direct) return direct
+  if (!image?.width || !image?.height) return null
+  try {
+    const canvas = document.createElement('canvas')
+    const maxSize = 256
+    const scale = Math.min(1, maxSize / Math.max(image.width, image.height))
+    canvas.width = Math.max(1, Math.round(image.width * scale))
+    canvas.height = Math.max(1, Math.round(image.height * scale))
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(image as CanvasImageSource, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  }
+}
+
+function refreshEmbeddedMaps(): void {
+  if (!modelRoot) {
+    embeddedMapSlots = emptyMapSlots()
+    syncMapSlots()
+    return
+  }
+  const counts = new Map<MaterialMapKey, number>()
+  const previews = new Map<MaterialMapKey, string>()
+  modelRoot.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    const materials = Array.isArray(child.material) ? child.material : [child.material]
+    for (const material of materials) {
+      if (!(material instanceof THREE.MeshStandardMaterial)) continue
+      for (const key of MATERIAL_MAP_KEYS) {
+        const texture = (material as unknown as Record<MaterialMapKey, THREE.Texture | null>)[key]
+        if (!texture) continue
+        counts.set(key, (counts.get(key) ?? 0) + 1)
+        if (!previews.has(key)) {
+          const preview = texturePreviewUrl(texture)
+          if (preview) previews.set(key, preview)
+        }
+      }
+    }
+  })
+  embeddedMapSlots = MATERIAL_MAP_KEYS.map((key) => ({
+    key,
+    previewUrl: previews.get(key) ?? null,
+    source: counts.has(key) ? 'embedded' : 'empty',
+    count: counts.get(key) ?? 0,
+  }))
+  syncMapSlots()
+}
+
+function syncMapSlots(): void {
+  mapSlots.value = embeddedMapSlots.map((slot) => {
+    const custom = overrideMapMeta.get(slot.key)
+    return custom
+      ? { ...slot, source: 'custom', previewUrl: custom.previewUrl, fileName: custom.fileName }
+      : slot
+  })
+}
+
+function refreshViewerMetadata(root: THREE.Object3D): void {
+  const bounds = new THREE.Box3().setFromObject(root)
+  const size = new THREE.Vector3()
+  bounds.getSize(size)
+  let meshes = 0
+  const materials = new Set<string>()
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    meshes += 1
+    const childMaterials = Array.isArray(child.material) ? child.material : [child.material]
+    for (const material of childMaterials) materials.add(material.uuid)
+  })
+  viewerStats.value = {
+    ...viewerStats.value,
+    meshes,
+    materials: materials.size,
+    size: [size.x, size.y, size.z],
+  }
+}
+
 function syncLighting(): void {
   if (!scene) return
   replaceSceneLights(scene, lightingMode.value)
 }
 
-function applyPbrFactors(map?: THREE.Texture | null): void {
+function applyMaterialAdjustments(): void {
   if (!modelRoot) return
-  const overrides: Parameters<typeof applyPreviewMaterialOverrides>[1] = {
-    metalness: metalness.value,
-    roughness: roughness.value,
+  const maps = {} as Record<MaterialMapKey, THREE.Texture | null>
+  for (const key of MATERIAL_MAP_KEYS) maps[key] = overrideTextures.get(key) ?? null
+  applyPreviewMaterialOverrides(modelRoot, {
+    maps,
+    scalars: { ...pbr },
     multiply: true,
-  }
-  if (map !== undefined) overrides.map = map
-  else if (overrideTexture.value) overrides.map = overrideTexture.value
-  applyPreviewMaterialOverrides(modelRoot, overrides)
+  })
 }
 
 function applyShading(): void {
@@ -172,7 +292,8 @@ function applyShading(): void {
   applyViewChannel(modelRoot, ch)
   if (ch === 'material') {
     mp.applyPartMaterials(true)
-    applyPbrFactors()
+    refreshEmbeddedMaps()
+    applyMaterialAdjustments()
     if (props.selectedPart) mp.setHighlight(props.selectedPart)
   }
   emit('view-changed')
@@ -189,38 +310,82 @@ function onLightingChange(mode: PreviewLighting): void {
   emit('view-changed')
 }
 
-function onMetalnessChange(v: number): void {
-  metalness.value = v
+function onPbrChange(key: PreviewPbrKey, value: number): void {
+  pbr[key] = value
   if (modelRoot && activeChannel.value === 'material') {
-    applyPbrFactors()
+    applyMaterialAdjustments()
     emit('view-changed')
   }
 }
 
-function onRoughnessChange(v: number): void {
-  roughness.value = v
+function resetPbr(): void {
+  Object.assign(pbr, DEFAULT_PREVIEW_PBR)
   if (modelRoot && activeChannel.value === 'material') {
-    applyPbrFactors()
+    applyMaterialAdjustments()
     emit('view-changed')
   }
 }
 
-async function onTextureFile(file: File): Promise<void> {
+async function onMapFile(key: MaterialMapKey, file: File): Promise<void> {
   try {
-    const tex = await loadTextureFromFile(file)
-    overrideTexture.value?.dispose()
-    overrideTexture.value = tex
+    const colorSpace = MATERIAL_COLOR_MAP_KEYS.has(key)
+      ? THREE.SRGBColorSpace
+      : THREE.NoColorSpace
+    const texture = await loadTextureFromFile(file, colorSpace)
+    overrideTextures.get(key)?.dispose()
+    overrideTextures.set(key, texture)
+    const previous = overrideMapMeta.get(key)
+    if (previous) URL.revokeObjectURL(previous.previewUrl)
+    overrideMapMeta.set(key, {
+      fileName: file.name,
+      previewUrl: URL.createObjectURL(file),
+    })
+    syncMapSlots()
     if (internalChannel.value !== 'material') internalChannel.value = 'material'
     applyShading()
   } catch (e) {
-    console.error('[ComfyTV/ModelPreview] texture load failed', e)
+    console.error('[ComfyTV/ModelPreview] material map load failed', key, e)
   }
 }
 
-function onClearTexture(): void {
-  overrideTexture.value?.dispose()
-  overrideTexture.value = null
+function onClearMap(key: MaterialMapKey): void {
+  overrideTextures.get(key)?.dispose()
+  overrideTextures.delete(key)
+  const meta = overrideMapMeta.get(key)
+  if (meta) URL.revokeObjectURL(meta.previewUrl)
+  overrideMapMeta.delete(key)
+  syncMapSlots()
   applyShading()
+}
+
+function resetView(): void {
+  if (!modelRoot) return
+  frameModel(modelRoot)
+  emit('view-changed')
+}
+
+async function toggleFullscreen(): Promise<void> {
+  if (!hostEl.value) return
+  try {
+    if (document.fullscreenElement === hostEl.value) await document.exitFullscreen()
+    else await hostEl.value.requestFullscreen()
+  } catch (e) {
+    console.warn('[ComfyTV/ModelPreview] fullscreen request failed', e)
+  }
+}
+
+function onFullscreenChange(): void {
+  isFullscreen.value = document.fullscreenElement === hostEl.value
+  syncSize()
+}
+
+function clearMapOverrides(): void {
+  for (const texture of overrideTextures.values()) texture.dispose()
+  overrideTextures.clear()
+  for (const meta of overrideMapMeta.values()) URL.revokeObjectURL(meta.previewUrl)
+  overrideMapMeta.clear()
+  embeddedMapSlots = emptyMapSlots()
+  syncMapSlots()
 }
 
 async function ensureSparkRenderer(): Promise<void> {
@@ -232,7 +397,11 @@ async function ensureSparkRenderer(): Promise<void> {
 }
 
 function disposeModelRoot(): void {
-  if (modelRoot && scene) scene.remove(modelRoot)
+  if (modelRoot) {
+    applyViewChannel(modelRoot, 'material')
+    clearPreviewMaterialClones(modelRoot)
+    if (scene) scene.remove(modelRoot)
+  }
   modelRoot = null
   modelDispose?.()
   modelDispose = null
@@ -346,8 +515,7 @@ async function loadModel(url: string): Promise<void> {
     modelDispose = loaded.dispose
     scene.add(loaded.root)
     mp.registerParts(loaded.root)
-    metalness.value = 1
-    roughness.value = 1
+    refreshViewerMetadata(loaded.root)
     applyShading()
     frameModel(loaded.root)
     loading.value = false
@@ -389,6 +557,7 @@ onMounted(() => {
 
   view.canvas.addEventListener('pointerdown', mp.onPickDown)
   view.canvas.addEventListener('pointerup', mp.onPickUp)
+  document.addEventListener('fullscreenchange', onFullscreenChange)
 
   syncSize()
   view.observeResize(hostEl.value, syncSize)
@@ -398,11 +567,16 @@ onMounted(() => {
 })
 
 watch(() => props.src, (url) => {
-  overrideTexture.value?.dispose()
-  overrideTexture.value = null
+  clearMapOverrides()
   internalChannel.value = 'material'
-  metalness.value = 1
-  roughness.value = 1
+  Object.assign(pbr, DEFAULT_PREVIEW_PBR)
+  viewerStats.value = {
+    vertices: 0,
+    triangles: 0,
+    meshes: 0,
+    materials: 0,
+    size: [0, 0, 0],
+  }
   void loadModel(url || '')
 })
 
@@ -424,13 +598,13 @@ onBeforeUnmount(() => {
   animationId = null
   view?.canvas.removeEventListener('pointerdown', mp.onPickDown)
   view?.canvas.removeEventListener('pointerup', mp.onPickUp)
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
   disposeDragGuard?.()
   disposeDragGuard = null
   controlsOrbit?.dispose()
   controlsOrbit = null
-  overrideTexture.value?.dispose()
-  overrideTexture.value = null
   disposeModelRoot()
+  clearMapOverrides()
   if (sparkRenderer) {
     scene?.remove(sparkRenderer)
     ;(sparkRenderer as unknown as { dispose?: () => void }).dispose?.()

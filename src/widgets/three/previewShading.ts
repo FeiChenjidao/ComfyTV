@@ -1,5 +1,11 @@
 import * as THREE from 'three'
 
+import {
+  MATERIAL_MAP_KEYS,
+  type MaterialMapKey,
+  type MaterialScalarKey,
+} from '@/widgets/material/types'
+
 import { OVERLAY_FLAG, type ViewChannel } from './channelShading'
 
 export type PreviewLighting = 'default' | 'studio' | 'dramatic' | 'flat'
@@ -8,19 +14,35 @@ export const PREVIEW_CHANNELS: ViewChannel[] = ['material', 'clay', 'wire', 'nor
 export const PREVIEW_LIGHTINGS: PreviewLighting[] = ['default', 'studio', 'dramatic', 'flat']
 
 const CLONE_KEY = '__ctvPreviewClone'
-const ORIG_MAP_KEY = '__ctvPreviewOrigMap'
-const ORIG_METAL_KEY = '__ctvPreviewOrigMetal'
-const ORIG_ROUGH_KEY = '__ctvPreviewOrigRough'
+const ORIG_MAPS_KEY = '__ctvPreviewOrigMaps'
+const ORIG_SCALARS_KEY = '__ctvPreviewOrigScalars'
+const ORIG_TRANSPARENT_KEY = '__ctvPreviewOrigTransparent'
+
+const SCALAR_KEYS: MaterialScalarKey[] = [
+  'metalness',
+  'roughness',
+  'transmission',
+  'opacity',
+  'clearcoat',
+  'clearcoatRoughness',
+  'ior',
+  'emissiveIntensity',
+  'normalScale',
+  'aoMapIntensity',
+]
 
 export interface PreviewMaterialOverrides {
-  map?: THREE.Texture | null
-  metalness?: number | null
-  roughness?: number | null
-  /** When true, metalness/roughness are multiplied onto the cloned base values. */
+  maps?: Partial<Record<MaterialMapKey, THREE.Texture | null>>
+  scalars?: Partial<Record<MaterialScalarKey, number | null>>
+  /** When true, scalar values are multiplied onto each material's base value. */
   multiply?: boolean
 }
 
 export function invalidatePreviewMaterialClone(mesh: THREE.Mesh): void {
+  if (mesh.userData[CLONE_KEY]) {
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const mat of mats) mat.dispose()
+  }
   delete mesh.userData[CLONE_KEY]
 }
 
@@ -52,15 +74,46 @@ export function ensurePreviewMaterialClones(root: THREE.Object3D): void {
     const mats = Array.isArray(child.material) ? child.material : [child.material]
     for (const mat of mats) {
       if (!(mat instanceof THREE.MeshStandardMaterial)) continue
-      mat.userData[ORIG_MAP_KEY] = mat.map ?? null
-      mat.userData[ORIG_METAL_KEY] = mat.metalness
-      mat.userData[ORIG_ROUGH_KEY] = mat.roughness
+      const maps = {} as Record<MaterialMapKey, THREE.Texture | null>
+      for (const key of MATERIAL_MAP_KEYS) {
+        maps[key] = (mat as unknown as Record<MaterialMapKey, THREE.Texture | null>)[key] ?? null
+      }
+      const scalars: Partial<Record<MaterialScalarKey, number>> = {}
+      for (const key of SCALAR_KEYS) {
+        const value = readScalar(mat, key)
+        if (value !== undefined) scalars[key] = value
+      }
+      mat.userData[ORIG_MAPS_KEY] = maps
+      mat.userData[ORIG_SCALARS_KEY] = scalars
+      mat.userData[ORIG_TRANSPARENT_KEY] = mat.transparent
     }
   })
 }
 
-function clamp01(v: number): number {
-  return Math.min(1, Math.max(0, v))
+function readScalar(mat: THREE.MeshStandardMaterial, key: MaterialScalarKey): number | undefined {
+  if (key === 'normalScale') return mat.normalScale.x
+  const value = (mat as unknown as Record<MaterialScalarKey, unknown>)[key]
+  return typeof value === 'number' ? value : undefined
+}
+
+function scalarLimit(key: MaterialScalarKey, value: number): number {
+  if (key === 'ior') return Math.min(2.333, Math.max(1, value))
+  if (key === 'normalScale' || key === 'aoMapIntensity') return Math.min(2, Math.max(0, value))
+  if (key === 'emissiveIntensity') return Math.min(10, Math.max(0, value))
+  return Math.min(1, Math.max(0, value))
+}
+
+function writeScalar(
+  mat: THREE.MeshStandardMaterial,
+  key: MaterialScalarKey,
+  value: number,
+): void {
+  if (key === 'normalScale') {
+    mat.normalScale.set(value, value)
+    return
+  }
+  const record = mat as unknown as Record<MaterialScalarKey, unknown>
+  if (typeof record[key] === 'number') record[key] = value
 }
 
 export function applyPreviewMaterialOverrides(
@@ -70,22 +123,28 @@ export function applyPreviewMaterialOverrides(
   ensurePreviewMaterialClones(root)
   const multiply = !!overrides.multiply
   eachStandardMat(root, (_mesh, mat) => {
-    if (overrides.map !== undefined) {
-      mat.map = overrides.map ?? (mat.userData[ORIG_MAP_KEY] as THREE.Texture | null) ?? null
-      mat.needsUpdate = true
+    const originalMaps = mat.userData[ORIG_MAPS_KEY] as Record<MaterialMapKey, THREE.Texture | null>
+    let mapsChanged = false
+    for (const key of MATERIAL_MAP_KEYS) {
+      if (!overrides.maps || overrides.maps[key] === undefined) continue
+      const texture = overrides.maps[key] ?? originalMaps?.[key] ?? null
+      ;(mat as unknown as Record<MaterialMapKey, THREE.Texture | null>)[key] = texture
+      mapsChanged = true
     }
-    if (overrides.metalness != null) {
-      const base = (mat.userData[ORIG_METAL_KEY] as number | undefined) ?? mat.metalness
-      mat.metalness = multiply ? clamp01(base * overrides.metalness) : overrides.metalness
-    } else if (ORIG_METAL_KEY in mat.userData) {
-      mat.metalness = mat.userData[ORIG_METAL_KEY] as number
+
+    const originalScalars = mat.userData[ORIG_SCALARS_KEY] as Partial<Record<MaterialScalarKey, number>>
+    for (const key of SCALAR_KEYS) {
+      const requested = overrides.scalars?.[key]
+      if (requested === undefined) continue
+      const base = originalScalars?.[key]
+      if (base === undefined) continue
+      const value = requested == null ? base : (multiply ? base * requested : requested)
+      writeScalar(mat, key, scalarLimit(key, value))
     }
-    if (overrides.roughness != null) {
-      const base = (mat.userData[ORIG_ROUGH_KEY] as number | undefined) ?? mat.roughness
-      mat.roughness = multiply ? clamp01(base * overrides.roughness) : overrides.roughness
-    } else if (ORIG_ROUGH_KEY in mat.userData) {
-      mat.roughness = mat.userData[ORIG_ROUGH_KEY] as number
-    }
+
+    const originalTransparent = !!mat.userData[ORIG_TRANSPARENT_KEY]
+    mat.transparent = originalTransparent || mat.opacity < 1 || !!mat.alphaMap
+    if (mapsChanged) mat.needsUpdate = true
   })
 }
 
@@ -93,18 +152,15 @@ export function clearPreviewMaterialClones(root: THREE.Object3D): void {
   root.traverse((child) => {
     if (!(child instanceof THREE.Mesh) || !child.userData[CLONE_KEY]) return
     const mats = Array.isArray(child.material) ? child.material : [child.material]
-    for (const mat of mats) {
-      // Only dispose clones we created — original maps stay owned by the loader.
-      if (mat.userData[ORIG_MAP_KEY] !== undefined && mat.map && mat.map !== mat.userData[ORIG_MAP_KEY]) {
-        // Custom override textures are disposed by the caller.
-      }
-      mat.dispose()
-    }
+    for (const mat of mats) mat.dispose()
     delete child.userData[CLONE_KEY]
   })
 }
 
-export function loadTextureFromFile(file: File): Promise<THREE.Texture> {
+export function loadTextureFromFile(
+  file: File,
+  colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace,
+): Promise<THREE.Texture> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const loader = new THREE.TextureLoader()
@@ -112,7 +168,7 @@ export function loadTextureFromFile(file: File): Promise<THREE.Texture> {
       url,
       (tex) => {
         URL.revokeObjectURL(url)
-        tex.colorSpace = THREE.SRGBColorSpace
+        tex.colorSpace = colorSpace
         tex.flipY = false
         tex.needsUpdate = true
         resolve(tex)

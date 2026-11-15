@@ -538,6 +538,22 @@
         "ver": "0.36.0",
         "Node name for S&R": "TripoPSeriesImageToModelNode"
       },
+      "widgets_values": [
+        "P2",
+        false,
+        -1,
+        "standard",
+        true,
+        42,
+        "randomize",
+        "original_image",
+        "default",
+        false,
+        42,
+        false,
+        true,
+        false
+      ],
       "widgets_values_named": {
         "model": "P2",
         "model.quad": false,

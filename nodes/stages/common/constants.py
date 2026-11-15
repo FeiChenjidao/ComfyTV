@@ -34,15 +34,21 @@ ACE_KEYSCALES = [
                  "G", "G#", "Ab", "A", "A#", "Bb", "B"]
 ]
 
-# --- 3D Model Stage (Tripo + Rodin Gen-2.5 union; Stage INPUT_TYPES must allow
+# --- 3D Model Stage (Tripo + Meshy + Rodin Gen-2.5 union; Stage INPUT_TYPES must allow
 # every value a bound partner COMBO may hold after syncBoundOptionEnums) ---
 
 MODEL3D_TEXTURE_QUALITIES = ["standard", "detailed", "extreme"]
 MODEL3D_GEOMETRY_QUALITIES = ["standard", "detailed"]
 MODEL3D_MODEL_VERSIONS = [
+    # Tripo
     "v3.1-20260211",
     "v3.0-20250812",
     "v2.5-20250123",
+    # Meshy
+    "meshy-7.1",
+    "meshy-7",
+    "meshy-6",
+    "latest",
 ]
 MODEL3D_MATERIALS = ["PBR", "Shaded", "All", "None"]
 MODEL3D_MODES = ["Regular", "Fast", "Extreme-High"]

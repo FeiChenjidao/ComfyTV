@@ -1589,6 +1589,17 @@ def _collect_widget_inputs(
     node: dict, node_type: str, object_info: dict, link_inputs: dict[str, list]
 ) -> dict[str, Any]:
     widget_values = node.get("widgets_values")
+    named_widget_values = node.get("widgets_values_named")
+    if (
+        (widget_values is None or widget_values == [])
+        and isinstance(named_widget_values, dict)
+        and named_widget_values
+    ):
+        # Newer frontend saves can contain only the self-describing named map.
+        # This is common on V3 dynamic-combo API nodes (Meshy / Tripo P2).
+        # Without this fallback every widget input is silently replaced by a
+        # schema default or omitted, producing an invalid partner-node prompt.
+        widget_values = named_widget_values
     if widget_values is None:
         return {}
     dynamic_prompt_names = _dynamic_prompt_input_names(node_type, node, object_info)
@@ -1602,7 +1613,7 @@ def _collect_widget_inputs(
     if isinstance(widget_values, dict):
         # Already self-describing; drop UI-only keys and respect link overrides.
         for key, value in widget_values.items():
-            if key in ("videopreview", "preview"):
+            if key in ("videopreview", "preview", "control_after_generate"):
                 continue
             if key in link_inputs:
                 continue

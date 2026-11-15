@@ -1,4 +1,5 @@
 import json
+import runpy
 from pathlib import Path
 
 
@@ -31,6 +32,17 @@ def _node_ids(workflow: dict) -> set[str]:
 
 def _top_node_id(node_id) -> str:
     return str(node_id).split(":", 1)[0]
+
+
+def _bound_defaults(value, binding: str):
+    if isinstance(value, dict):
+        if value.get("from") == binding and "default" in value:
+            yield value["default"]
+        for child in value.values():
+            yield from _bound_defaults(child, binding)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _bound_defaults(child, binding)
 
 
 def test_shipped_workflows_and_presets_are_paired_and_valid():
@@ -82,4 +94,45 @@ def test_shipped_preset_node_references_exist():
         for source, node_id in referenced:
             assert _top_node_id(node_id) in node_ids, (
                 f"{preset_path}: {source} references missing node {node_id}"
+            )
+
+
+def test_shipped_model_image_slot_roles_match_bindings():
+    expected = {
+        "meshy-multi_preset.json": ["front", "left", "back", "right"],
+        "tripo_preset.json": ["front", "left", "back", "right"],
+        "tripo-p2_preset.json": ["front", "left", "back", "right"],
+        "rodin-gen25_preset.json": ["reference"] * 5,
+    }
+    for name, roles in expected.items():
+        preset_path = WORKFLOWS_DIR / "model" / name
+        preset = json.loads(preset_path.read_text(encoding="utf-8"))
+        assert preset.get("meta", {}).get("model_image_slots") == roles
+
+        bound_slots = set()
+        for fields in (preset.get("inputs") or {}).values():
+            for spec in fields.values():
+                source = spec.get("from", "") if isinstance(spec, dict) else ""
+                if source.startswith("upstream_image:annotated["):
+                    bound_slots.add(int(source.rsplit("[", 1)[1].rstrip("]")))
+        assert bound_slots == set(range(len(roles))), (
+            f"{preset_path}: model_image_slots must match upstream image bindings"
+        )
+
+
+def test_shipped_model_versions_are_valid_stage_values():
+    constants_path = (
+        Path(__file__).resolve().parent.parent
+        / "nodes" / "stages" / "common" / "constants.py"
+    )
+    allowed = set(runpy.run_path(str(constants_path))["MODEL3D_MODEL_VERSIONS"])
+    current_meshy_versions = {"meshy-7.1", "meshy-7", "meshy-6", "latest"}
+
+    assert current_meshy_versions <= allowed
+    for preset_path in (WORKFLOWS_DIR / "model").glob("*_preset.json"):
+        preset = json.loads(preset_path.read_text(encoding="utf-8"))
+        for default in _bound_defaults(preset, "option:model_version"):
+            assert default in allowed, (
+                f"{preset_path}: model_version default {default!r} is rejected "
+                "by ComfyTV.Model3DStage"
             )

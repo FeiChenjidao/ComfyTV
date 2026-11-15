@@ -458,6 +458,15 @@
       "pending": "… 等待中"
     },
     "disconnect": "断开此连接",
+    "modelInput": {
+      "front": "正",
+      "left": "左",
+      "back": "背",
+      "right": "右",
+      "extra": "辅",
+      "reference": "参考图 {n}",
+      "image": "图片 {n}"
+    },
     "starting": "启动中…",
     "runByKind": {
       "text": "生成文本",
@@ -2479,6 +2488,36 @@
     "clearTexture": "清除纹理",
     "metalnessMul": "×金属度",
     "roughnessMul": "×粗糙度",
+    "materialEditor": "材质检查器",
+    "modelInfo": "模型信息",
+    "closePanel": "关闭面板",
+    "resetView": "重置视角",
+    "fullscreen": "全屏查看",
+    "exitFullscreen": "退出全屏",
+    "replaceMap": "替换",
+    "restoreMap": "恢复",
+    "lightingTitle": "预览光照",
+    "pbrStrength": "PBR 属性强度",
+    "reset": "重置",
+    "navigationHint": "拖动旋转，滚轮缩放，右键拖动平移。",
+    "tab": {
+      "maps": "贴图",
+      "pbr": "PBR",
+      "info": "信息"
+    },
+    "mapSource": {
+      "custom": "自定义贴图",
+      "embedded": "模型内嵌 · {count}",
+      "empty": "未使用"
+    },
+    "stats": {
+      "triangles": "三角面",
+      "vertices": "顶点",
+      "meshes": "网格",
+      "materials": "材质",
+      "dimensions": "尺寸",
+      "textureSlots": "贴图槽"
+    },
     "lighting": {
       "default": "光照",
       "studio": "棚拍",
@@ -2690,6 +2729,7 @@
       "clearcoat": "清漆",
       "clearcoatRoughness": "清漆粗糙度",
       "ior": "折射率",
+      "emissiveIntensity": "自发光强度",
       "normalScale": "法线强度",
       "aoMapIntensity": "AO 强度"
     }

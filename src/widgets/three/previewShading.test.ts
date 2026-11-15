@@ -44,7 +44,7 @@ describe('previewShading', () => {
     expect(mesh.userData.__ctvPreviewClone).toBe(true)
     expect(mesh.material).not.toBeUndefined()
 
-    applyPreviewMaterialOverrides(root, { metalness: 0.9, roughness: 0.2 })
+    applyPreviewMaterialOverrides(root, { scalars: { metalness: 0.9, roughness: 0.2 } })
     const mat = mesh.material as THREE.MeshStandardMaterial
     expect(mat.metalness).toBe(0.9)
     expect(mat.roughness).toBe(0.2)
@@ -58,13 +58,19 @@ describe('previewShading', () => {
     const root = new THREE.Group()
     root.add(mesh)
 
-    applyPreviewMaterialOverrides(root, { metalness: 0.5, roughness: 0.5, multiply: true })
+    applyPreviewMaterialOverrides(root, {
+      scalars: { metalness: 0.5, roughness: 0.5 },
+      multiply: true,
+    })
     const mat = mesh.material as THREE.MeshStandardMaterial
     expect(mat.metalness).toBeCloseTo(0.25)
     expect(mat.roughness).toBeCloseTo(0.4)
 
     // Re-applying uses the stored base, so it does not compound.
-    applyPreviewMaterialOverrides(root, { metalness: 1, roughness: 1, multiply: true })
+    applyPreviewMaterialOverrides(root, {
+      scalars: { metalness: 1, roughness: 1 },
+      multiply: true,
+    })
     expect(mat.metalness).toBeCloseTo(0.5)
     expect(mat.roughness).toBeCloseTo(0.8)
   })
@@ -77,7 +83,54 @@ describe('previewShading', () => {
     const root = new THREE.Group()
     root.add(mesh)
     const tex = new THREE.Texture()
-    applyPreviewMaterialOverrides(root, { map: tex })
+    applyPreviewMaterialOverrides(root, { maps: { map: tex } })
     expect((mesh.material as THREE.MeshStandardMaterial).map).toBe(tex)
+  })
+
+  it('supports independent PBR maps and restores the embedded texture', () => {
+    const embedded = new THREE.Texture()
+    const custom = new THREE.Texture()
+    const material = new THREE.MeshPhysicalMaterial({ map: embedded })
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), material)
+    const root = new THREE.Group()
+    root.add(mesh)
+
+    applyPreviewMaterialOverrides(root, { maps: { normalMap: custom, map: custom } })
+    const preview = mesh.material as THREE.MeshPhysicalMaterial
+    expect(preview.map).toBe(custom)
+    expect(preview.normalMap).toBe(custom)
+
+    applyPreviewMaterialOverrides(root, { maps: { map: null, normalMap: null } })
+    expect(preview.map).toBe(embedded)
+    expect(preview.normalMap).toBeNull()
+  })
+
+  it('multiplies normal, AO and physical-material strengths', () => {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(),
+      new THREE.MeshPhysicalMaterial({
+        normalScale: new THREE.Vector2(0.5, 0.5),
+        aoMapIntensity: 0.8,
+        clearcoat: 0.5,
+        transmission: 0.4,
+      }),
+    )
+    const root = new THREE.Group()
+    root.add(mesh)
+
+    applyPreviewMaterialOverrides(root, {
+      scalars: {
+        normalScale: 2,
+        aoMapIntensity: 0.5,
+        clearcoat: 0.5,
+        transmission: 0.5,
+      },
+      multiply: true,
+    })
+    const material = mesh.material as THREE.MeshPhysicalMaterial
+    expect(material.normalScale.x).toBeCloseTo(1)
+    expect(material.aoMapIntensity).toBeCloseTo(0.4)
+    expect(material.clearcoat).toBeCloseTo(0.25)
+    expect(material.transmission).toBeCloseTo(0.2)
   })
 })

@@ -46,7 +46,14 @@
     }
   ],
   "meta": {
-    "prompt_required": false
+    "prompt_required": false,
+    "model_image_slots": [
+      "reference",
+      "reference",
+      "reference",
+      "reference",
+      "reference"
+    ]
   },
   "inputs": {
     "1": {

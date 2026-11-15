@@ -457,6 +457,15 @@
       "pending": "… waiting"
     },
     "disconnect": "Disconnect",
+    "modelInput": {
+      "front": "Front",
+      "left": "Left",
+      "back": "Back",
+      "right": "Right",
+      "extra": "Extra",
+      "reference": "Reference {n}",
+      "image": "Image {n}"
+    },
     "starting": "starting…",
     "runByKind": {
       "text": "Generate Text",
@@ -2410,6 +2419,36 @@
     "clearTexture": "Clear texture",
     "metalnessMul": "× Metalness",
     "roughnessMul": "× Roughness",
+    "materialEditor": "Material inspector",
+    "modelInfo": "Model information",
+    "closePanel": "Close panel",
+    "resetView": "Reset view",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "replaceMap": "Replace",
+    "restoreMap": "Restore",
+    "lightingTitle": "Lighting",
+    "pbrStrength": "PBR strength multipliers",
+    "reset": "Reset",
+    "navigationHint": "Drag to orbit, scroll to zoom, and right-drag to pan.",
+    "tab": {
+      "maps": "Textures",
+      "pbr": "PBR",
+      "info": "Info"
+    },
+    "mapSource": {
+      "custom": "Custom texture",
+      "embedded": "Embedded · {count}",
+      "empty": "Not assigned"
+    },
+    "stats": {
+      "triangles": "Triangles",
+      "vertices": "Vertices",
+      "meshes": "Meshes",
+      "materials": "Materials",
+      "dimensions": "Dimensions",
+      "textureSlots": "Texture slots"
+    },
     "lighting": {
       "default": "Lit",
       "studio": "Studio",
@@ -2621,6 +2660,7 @@
       "clearcoat": "Clearcoat",
       "clearcoatRoughness": "Coat roughness",
       "ior": "IOR",
+      "emissiveIntensity": "Emissive intensity",
       "normalScale": "Normal scale",
       "aoMapIntensity": "AO intensity"
     }

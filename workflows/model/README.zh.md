@@ -26,7 +26,7 @@
 - **Tripo P2**（`tripo-p2.json` + `_preset.json`）— 同样自动切换（`TripoPSeriesImageToModelNode` / `TripoPSeriesMultiviewToModelNode` / P2）。参数在 `model` DynamicCombo 下；`File3DFirst` 配合 Stage `quad` 取 GLB/FBX。
 - **Rodin Gen25**（`rodin-gen25.json` + `_preset.json`）— 1–5 张图 → **网格**（`Rodin3D_Gen25_Image` / Rodin Gen-2.5 图生 3D）。Stage 槽位 `images.image0`…`image4` 与 Rodin 节点入口同名一一对应；缺的参考图会 prune。绑定 `material` / `mode` / `polygon_count` / `geometry_file_format` / `texture_mode` / `seed` / `tapose` / `hd_texture` / `texture_delight` / `addon_highpack`。
 - **Meshy**（`meshy-multi.json` + `_preset.json`）— 1 张图 → `MeshyImageToModelNode`；2–4 张 → `MeshyMultiImageToModelNode`（同样按数量自动切换）。`File3DFirst` 取 GLB/FBX。绑定 `seed` / `pbr` 等 Meshy 旋钮。
-- **Stage 图像槽位**统一为 `images.image0`…`image4`。Rodin 用 0–4；Tripo / Meshy 用 0–3（按下标：0 正 / 1 左 / 2 背 / 3 右）。
+- **Stage 图像槽位**内部名称保持为 `images.image0`…`image4`，界面标签按所选工作流的 `meta.model_image_slots` 动态显示。Rodin 显示 5 个编号参考图；Tripo / Meshy 的 0–3 显示正 / 左 / 背 / 右。
 
 ## 引用的模型
 

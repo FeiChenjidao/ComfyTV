@@ -2,6 +2,10 @@ import { watch } from 'vue'
 
 
 import { useChainCallback } from '@/composables/functional/useChainCallback'
+import {
+  applyModelImageInputProfile,
+  fetchModelImageInputProfileCached,
+} from '@/composables/stages/modelImageInputs'
 import { setWidget } from '@/composables/stages/spawnFollowUp'
 import {
   useStageStore,
@@ -45,6 +49,7 @@ import {
   syncBoundOptionEnums,
   type ApplyDefaultsMode,
 } from '@/composables/stages/boundOptionEnums'
+import { t } from '@/i18n'
 import { useSelectionStore } from '@/stores/selectionStore'
 import { app } from '@/lib/comfyApp'
 import { onNodeConfigure } from '@/utils/widget'
@@ -139,6 +144,21 @@ export function useStageNode(
     })
   }
 
+  function syncModelImageInputs(): void {
+    if (workflowKind !== 'model') return
+    const wfWidget = node.widgets?.find((w: any) => w.name === 'workflow')
+    const label = wfWidget ? String(wfWidget.value ?? '') : ''
+    applyModelImageInputProfile(node, null, t)
+    if (!label) return
+    void fetchModelImageInputProfileCached(workflowKind, label)
+      .then((profile) => {
+        const current = node.widgets?.find((w: any) => w.name === 'workflow')
+        if (String(current?.value ?? '') !== label) return
+        applyModelImageInputProfile(node, profile, t)
+      })
+      .catch(() => { /* keep generic labels when workflow config is unavailable */ })
+  }
+
   let _applyDefaults: ApplyDefaultsMode = 'all'
 
   function syncOptionEnums(): void {
@@ -176,6 +196,7 @@ export function useStageNode(
       }
       if (variant === 'generator') {
         queueMicrotask(syncMaskInput)
+        queueMicrotask(syncModelImageInputs)
         queueMicrotask(reValidate)
         queueMicrotask(syncOptionEnums)
       }
@@ -189,6 +210,7 @@ export function useStageNode(
       wfWidget.callback = useChainCallback(wfWidget.callback, () => {
         _applyDefaults = 'all'
         queueMicrotask(syncMaskInput)
+        queueMicrotask(syncModelImageInputs)
         queueMicrotask(reValidate)
         queueMicrotask(triggerPrepForCurrentWorkflow)
         queueMicrotask(() => selectionStore.refreshFromCanvas())
@@ -204,24 +226,36 @@ export function useStageNode(
   onNodeConfigure(node, () => {
     _applyDefaults = false
     queueMicrotask(syncMedia)
-    if (variant === 'generator') queueMicrotask(syncMaskInput)
+    if (variant === 'generator') {
+      queueMicrotask(syncMaskInput)
+      queueMicrotask(syncModelImageInputs)
+    }
   })
   node.onConnectionsChange = useChainCallback(node.onConnectionsChange, () => {
     queueMicrotask(syncMedia)
     queueMicrotask(refresh)
-    if (variant === 'generator') queueMicrotask(syncMaskInput)
+    if (variant === 'generator') {
+      queueMicrotask(syncMaskInput)
+      queueMicrotask(syncModelImageInputs)
+    }
     queueMicrotask(() => store.notifyConsumers(state))
     if (variant === 'generator') queueMicrotask(reValidate)
   })
   node.onConnectInput = useChainCallback(node.onConnectInput, () => {
     queueMicrotask(syncMedia)
     queueMicrotask(refresh)
-    if (variant === 'generator') queueMicrotask(syncMaskInput)
+    if (variant === 'generator') {
+      queueMicrotask(syncMaskInput)
+      queueMicrotask(syncModelImageInputs)
+    }
   })
 
   queueMicrotask(syncMedia)
   queueMicrotask(refresh)
-  if (variant === 'generator') queueMicrotask(syncMaskInput)
+  if (variant === 'generator') {
+    queueMicrotask(syncMaskInput)
+    queueMicrotask(syncModelImageInputs)
+  }
   if (variant === 'generator') queueMicrotask(reValidate)
 
   const stopTickWatch = watch(
