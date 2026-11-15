@@ -2500,6 +2500,11 @@
     "pbrStrength": "PBR 属性强度",
     "reset": "重置",
     "navigationHint": "拖动旋转，滚轮缩放，右键拖动平移。",
+    "normalMode": {
+      "geometry": "几何法线",
+      "texture": "贴图法线",
+      "unavailable": "当前模型没有法线贴图"
+    },
     "tab": {
       "maps": "贴图",
       "pbr": "PBR",

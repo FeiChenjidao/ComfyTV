@@ -1,8 +1,14 @@
 import * as THREE from 'three'
 
 export type ViewChannel = 'material' | 'clay' | 'normal' | 'wire' | 'uv'
+export type NormalPreviewMode = 'geometry' | 'texture'
+
+export interface ViewChannelOptions {
+  normalMode?: NormalPreviewMode
+}
 
 const ORIG_KEY = '__ctvChannelOriginalMaterial'
+const TEMP_KEY = '__ctvChannelTemporaryMaterials'
 export const OVERLAY_FLAG = '__ctvChannelOverlay'
 
 let normalMat: THREE.MeshNormalMaterial | null = null
@@ -70,7 +76,50 @@ function getUvMat(): THREE.MeshBasicMaterial {
   return (uvMat ??= new THREE.MeshBasicMaterial({ map: makeUvCheckerTexture() }))
 }
 
-export function applyViewChannel(root: THREE.Object3D, channel: ViewChannel): void {
+function clearTemporaryMaterials(mesh: THREE.Mesh): void {
+  const materials = mesh.userData[TEMP_KEY] as THREE.Material[] | undefined
+  if (!materials) return
+  for (const material of materials) material.dispose()
+  delete mesh.userData[TEMP_KEY]
+}
+
+function makeNormalMapPreviewMaterial(source: THREE.Material): THREE.MeshStandardMaterial {
+  const standard = source instanceof THREE.MeshStandardMaterial ? source : null
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xb5b5b5,
+    metalness: 0,
+    roughness: 0.72,
+    normalMap: standard?.normalMap ?? null,
+    alphaMap: standard?.alphaMap ?? null,
+    alphaTest: source.alphaTest,
+    opacity: source.opacity,
+    transparent: source.transparent,
+    side: source.side,
+    flatShading: standard?.flatShading ?? false,
+    depthTest: source.depthTest,
+    depthWrite: source.depthWrite,
+  })
+  if (standard) {
+    material.normalMapType = standard.normalMapType
+    material.normalScale.copy(standard.normalScale)
+  }
+  material.name = `${source.name || 'material'} (normal map preview)`
+  return material
+}
+
+function makeNormalMapPreview(
+  source: THREE.Material | THREE.Material[],
+): THREE.Material | THREE.Material[] {
+  return Array.isArray(source)
+    ? source.map(makeNormalMapPreviewMaterial)
+    : makeNormalMapPreviewMaterial(source)
+}
+
+export function applyViewChannel(
+  root: THREE.Object3D,
+  channel: ViewChannel,
+  options: ViewChannelOptions = {},
+): void {
   const overlays: THREE.Object3D[] = []
   root.traverse((child) => {
     if (child.userData?.[OVERLAY_FLAG]) overlays.push(child)
@@ -79,6 +128,7 @@ export function applyViewChannel(root: THREE.Object3D, channel: ViewChannel): vo
 
   root.traverse((child) => {
     if (!(child instanceof THREE.Mesh) || child.userData[OVERLAY_FLAG]) return
+    clearTemporaryMaterials(child)
     if (channel === 'material') {
       if (ORIG_KEY in child.userData) {
         child.material = child.userData[ORIG_KEY]
@@ -88,7 +138,13 @@ export function applyViewChannel(root: THREE.Object3D, channel: ViewChannel): vo
     }
     if (!(ORIG_KEY in child.userData)) child.userData[ORIG_KEY] = child.material
     if (channel === 'normal') {
-      child.material = getNormalMat()
+      if (options.normalMode === 'texture') {
+        const preview = makeNormalMapPreview(child.userData[ORIG_KEY])
+        child.material = preview
+        child.userData[TEMP_KEY] = Array.isArray(preview) ? preview : [preview]
+      } else {
+        child.material = getNormalMat()
+      }
     } else if (channel === 'clay') {
       child.material = getClayMat()
     } else if (channel === 'uv') {

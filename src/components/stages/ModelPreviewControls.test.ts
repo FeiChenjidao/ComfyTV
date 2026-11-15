@@ -6,10 +6,12 @@ import { MATERIAL_MAP_KEYS } from '@/widgets/material/types'
 import ModelPreviewControls from './ModelPreviewControls.vue'
 import { DEFAULT_PREVIEW_PBR } from './modelPreviewTypes'
 
-function renderControls() {
+function renderControls(overrides: Record<string, unknown> = {}) {
   return renderWithPlugins(ModelPreviewControls, {
     props: {
       channel: 'material',
+      normalMode: 'geometry',
+      hasNormalMap: false,
       lighting: 'default',
       pbr: { ...DEFAULT_PREVIEW_PBR },
       mapSlots: MATERIAL_MAP_KEYS.map((key) => ({
@@ -26,6 +28,7 @@ function renderControls() {
         size: [1, 1, 1] as [number, number, number],
       },
       fullscreen: false,
+      ...overrides,
     },
   })
 }
@@ -54,5 +57,19 @@ describe('ModelPreviewControls', () => {
 
     expect(emitted()['update:pbr']).toEqual([['normalScale', 1.5]])
     expect(emitted()['reset-pbr']).toHaveLength(1)
+  })
+
+  it('switches between geometry and normal-map previews', async () => {
+    const { emitted } = renderControls({ channel: 'normal', hasNormalMap: true })
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Normal map' }))
+
+    expect(emitted()['update:normal-mode']).toEqual([['texture']])
+  })
+
+  it('disables normal-map preview when the model has no normal map', () => {
+    renderControls({ channel: 'normal' })
+
+    expect(screen.getByRole('button', { name: 'Normal map' })).toBeDisabled()
   })
 })

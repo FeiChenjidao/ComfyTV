@@ -21,6 +21,27 @@
         <span class="ctv:hidden ctv:min-[430px]:inline">{{ $t(`meshOps.channel.${item.key}`) }}</span>
       </button>
 
+      <div
+        v-if="channel === 'normal'"
+        class="ctv:flex ctv:items-center ctv:gap-0.5 ctv:rounded ctv:bg-white/[0.05] ctv:p-0.5"
+      >
+        <button
+          v-for="item in normalModeItems"
+          :key="item.key"
+          type="button"
+          :disabled="item.key === 'texture' && !hasNormalMap"
+          :class="normalModeClass(normalMode === item.key, item.key === 'texture' && !hasNormalMap)"
+          :title="$t(item.key === 'texture' && !hasNormalMap
+            ? 'modelPreview.normalMode.unavailable'
+            : `modelPreview.normalMode.${item.key}`)"
+          :aria-label="$t(`modelPreview.normalMode.${item.key}`)"
+          @click.stop="emit('update:normal-mode', item.key)"
+        >
+          <component :is="item.icon" class="ctv:size-3.5" />
+          <span class="ctv:hidden ctv:min-[520px]:inline">{{ $t(`modelPreview.normalMode.${item.key}`) }}</span>
+        </button>
+      </div>
+
       <span class="ctv:mx-0.5 ctv:h-5 ctv:w-px ctv:bg-white/15" />
 
       <button
@@ -244,10 +265,12 @@ import {
 } from './modelPreviewTypes'
 import { PREVIEW_LIGHTINGS, type PreviewLighting } from '@/widgets/three/previewShading'
 import type { MaterialMapKey } from '@/widgets/material/types'
-import type { ViewChannel } from '@/widgets/three/channelShading'
+import type { NormalPreviewMode, ViewChannel } from '@/widgets/three/channelShading'
 
 const props = defineProps<{
   channel: ViewChannel
+  normalMode: NormalPreviewMode
+  hasNormalMap: boolean
   lighting: PreviewLighting
   pbr: PreviewPbrState
   mapSlots: PreviewMapSlot[]
@@ -257,6 +280,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:channel', value: ViewChannel): void
+  (e: 'update:normal-mode', value: NormalPreviewMode): void
   (e: 'update:lighting', value: PreviewLighting): void
   (e: 'update:pbr', key: PreviewPbrKey, value: number): void
   (e: 'reset-pbr'): void
@@ -275,6 +299,10 @@ const channelItems: { key: ViewChannel; icon: Component }[] = [
   { key: 'clay', icon: IconBox },
   { key: 'wire', icon: IconGrid3X3 },
   { key: 'normal', icon: IconCompass },
+]
+const normalModeItems: { key: NormalPreviewMode; icon: Component }[] = [
+  { key: 'geometry', icon: IconBox },
+  { key: 'texture', icon: IconImage },
 ]
 const panelTabs = [
   { key: 'maps' as const, icon: IconImages },
@@ -344,11 +372,21 @@ function formatDimension(value: number): string {
 }
 
 function toolClass(active: boolean): string {
-  return 'ctv:inline-flex ctv:h-7 ctv:min-w-7 ctv:items-center ctv:justify-center ctv:gap-1 ctv:rounded ctv:border-none'
-    + ' ctv:px-1.5 ctv:text-[10px] ctv:cursor-pointer ctv:transition-colors'
+  return 'ctv:inline-flex ctv:h-7 ctv:min-w-7 ctv:flex-none ctv:items-center ctv:justify-center ctv:gap-1 ctv:rounded ctv:border-none'
+    + ' ctv:whitespace-nowrap ctv:px-1.5 ctv:text-[10px] ctv:cursor-pointer ctv:transition-colors'
     + (active
       ? ' ctv:bg-[#b8ef45] ctv:text-black'
       : ' ctv:bg-transparent ctv:text-white/70 ctv:hover:bg-white/10 ctv:hover:text-white')
+}
+
+function normalModeClass(active: boolean, disabled: boolean): string {
+  return 'ctv:inline-flex ctv:h-6 ctv:min-w-6 ctv:flex-none ctv:items-center ctv:justify-center ctv:gap-1 ctv:rounded ctv:border-none'
+    + ' ctv:whitespace-nowrap ctv:px-1 ctv:text-[9px] ctv:transition-colors'
+    + (disabled
+      ? ' ctv:cursor-not-allowed ctv:text-white/20'
+      : active
+        ? ' ctv:cursor-pointer ctv:bg-white/18 ctv:text-white'
+        : ' ctv:cursor-pointer ctv:text-white/50 ctv:hover:bg-white/10 ctv:hover:text-white')
 }
 
 function tabClass(active: boolean): string {

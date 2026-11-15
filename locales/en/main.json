@@ -2431,6 +2431,11 @@
     "pbrStrength": "PBR strength multipliers",
     "reset": "Reset",
     "navigationHint": "Drag to orbit, scroll to zoom, and right-drag to pan.",
+    "normalMode": {
+      "geometry": "Geometry normals",
+      "texture": "Normal map",
+      "unavailable": "No normal map is assigned"
+    },
     "tab": {
       "maps": "Textures",
       "pbr": "PBR",

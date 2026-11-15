@@ -20,12 +20,15 @@
     <ModelPreviewControls
       v-if="controls && !loading && !loadError && modelReady"
       :channel="activeChannel"
+      :normal-mode="normalPreviewMode"
+      :has-normal-map="hasNormalMap"
       :lighting="lightingMode"
       :pbr="pbr"
       :map-slots="mapSlots"
       :stats="viewerStats"
       :fullscreen="isFullscreen"
       @update:channel="onChannelChange"
+      @update:normal-mode="onNormalModeChange"
       @update:lighting="onLightingChange"
       @update:pbr="onPbrChange"
       @reset-pbr="resetPbr"
@@ -61,7 +64,11 @@ import { guardOrbitControlsDragEnd } from '@/widgets/three/orbitControlsGuard'
 import { RendererView } from '@/widgets/three/RendererView'
 import { buildPrimitiveMesh, parsePrimitiveRecipe } from '@/widgets/three/primitiveGeometry'
 import { loadCustomModelAssets } from '@/widgets/three/scene3d/scene3dAssets'
-import { applyViewChannel, type ViewChannel } from '@/widgets/three/channelShading'
+import {
+  applyViewChannel,
+  type NormalPreviewMode,
+  type ViewChannel,
+} from '@/widgets/three/channelShading'
 import {
   applyPreviewMaterialOverrides,
   clearPreviewMaterialClones,
@@ -100,6 +107,7 @@ const hostEl = ref<HTMLDivElement | null>(null)
 const modelReady = ref(false)
 
 const internalChannel = ref<ViewChannel>('material')
+const normalPreviewMode = ref<NormalPreviewMode>('geometry')
 const lightingMode = ref<PreviewLighting>('default')
 const pbr = reactive({ ...DEFAULT_PREVIEW_PBR })
 const mapSlots = ref<PreviewMapSlot[]>(emptyMapSlots())
@@ -118,6 +126,8 @@ let embeddedMapSlots: PreviewMapSlot[] = emptyMapSlots()
 
 const activeChannel = computed<ViewChannel>(() =>
   props.controls ? internalChannel.value : (props.channel ?? 'material'))
+const hasNormalMap = computed(() =>
+  mapSlots.value.some((slot) => slot.key === 'normalMap' && slot.source !== 'empty'))
 
 const previewProps = reactive({
   pickable: props.pickable,
@@ -289,7 +299,7 @@ function applyShading(): void {
   if (!modelRoot) return
   const ch = activeChannel.value
   mp.clearHighlight()
-  applyViewChannel(modelRoot, ch)
+  applyViewChannel(modelRoot, ch, { normalMode: normalPreviewMode.value })
   if (ch === 'material') {
     mp.applyPartMaterials(true)
     refreshEmbeddedMaps()
@@ -302,6 +312,12 @@ function applyShading(): void {
 function onChannelChange(ch: ViewChannel): void {
   internalChannel.value = ch
   applyShading()
+}
+
+function onNormalModeChange(mode: NormalPreviewMode): void {
+  if (mode === 'texture' && !hasNormalMap.value) return
+  normalPreviewMode.value = mode
+  if (activeChannel.value === 'normal') applyShading()
 }
 
 function onLightingChange(mode: PreviewLighting): void {
@@ -355,6 +371,7 @@ function onClearMap(key: MaterialMapKey): void {
   if (meta) URL.revokeObjectURL(meta.previewUrl)
   overrideMapMeta.delete(key)
   syncMapSlots()
+  if (key === 'normalMap' && !hasNormalMap.value) normalPreviewMode.value = 'geometry'
   applyShading()
 }
 
@@ -569,6 +586,7 @@ onMounted(() => {
 watch(() => props.src, (url) => {
   clearMapOverrides()
   internalChannel.value = 'material'
+  normalPreviewMode.value = 'geometry'
   Object.assign(pbr, DEFAULT_PREVIEW_PBR)
   viewerStats.value = {
     vertices: 0,
