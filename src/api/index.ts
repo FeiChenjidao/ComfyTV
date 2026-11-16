@@ -469,9 +469,18 @@ export function fetchWorkflowConfig(kind: string, label: string): Promise<Workfl
   )
 }
 
-export function fetchWorkflowApiCost(kind: string, label: string): Promise<WorkflowApiCost> {
+export function fetchWorkflowApiCost(
+  kind: string,
+  label: string,
+  upstreamSlots: Partial<Record<'image' | 'video' | 'audio' | 'text' | 'model', number[]>> = {},
+): Promise<WorkflowApiCost> {
+  const params = new URLSearchParams({ kind, label })
+  for (const mediaKind of ['image', 'video', 'audio', 'text', 'model'] as const) {
+    const indexes = upstreamSlots[mediaKind]
+    if (indexes?.length) params.set(`${mediaKind}_slots`, indexes.join(','))
+  }
   return apiFetch(
-    `/comfytv/workflows/api_cost?kind=${encodeURIComponent(kind)}&label=${encodeURIComponent(label)}`,
+    `/comfytv/workflows/api_cost?${params.toString()}`,
     WorkflowApiCostSchema,
   )
 }

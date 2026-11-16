@@ -58,6 +58,59 @@ export type WorkflowCostSummary = {
   nodeCount: number
 }
 
+export type WorkflowUpstreamKind = 'image' | 'video' | 'audio' | 'text' | 'model'
+export type WorkflowUpstreamSlots = Partial<Record<WorkflowUpstreamKind, number[]>>
+
+type ConnectedStageInput = {
+  slot?: string
+  type?: string
+  source?: string
+  link?: unknown
+}
+
+const GROUP_KIND: Record<string, WorkflowUpstreamKind> = {
+  images: 'image',
+  videos: 'video',
+  audio: 'audio',
+  texts: 'text',
+  models: 'model',
+}
+
+function upstreamSlotOf(input: ConnectedStageInput): [WorkflowUpstreamKind, number] | null {
+  const slot = String(input.slot ?? '')
+  const grouped = slot.match(/^(images|videos|audio|texts|models)\.(?:image|video|audio|text|model)(\d+)$/)
+  if (grouped) return [GROUP_KIND[grouped[1]!]!, Number(grouped[2])]
+  const direct = slot.match(/^(image|video|audio|text|model)(\d+)$/)
+  if (direct) return [direct[1] as WorkflowUpstreamKind, Number(direct[2])]
+  if (['image', 'video', 'audio', 'text', 'model'].includes(slot)) {
+    return [slot as WorkflowUpstreamKind, 0]
+  }
+  return null
+}
+
+export function collectConnectedUpstreamSlots(inputs: ConnectedStageInput[]): WorkflowUpstreamSlots {
+  const found = new Map<WorkflowUpstreamKind, Set<number>>()
+  for (const input of inputs) {
+    const connected = input.source != null ? input.source !== 'empty' : input.link != null
+    if (!connected) continue
+    const parsed = upstreamSlotOf(input)
+    if (!parsed) continue
+    const [kind, index] = parsed
+    const indexes = found.get(kind) ?? new Set<number>()
+    indexes.add(index)
+    found.set(kind, indexes)
+  }
+  return Object.fromEntries(
+    [...found.entries()].map(([kind, indexes]) => [kind, [...indexes].sort((a, b) => a - b)]),
+  ) as WorkflowUpstreamSlots
+}
+
+export function upstreamSlotsSignature(slots: WorkflowUpstreamSlots): string {
+  return (['image', 'video', 'audio', 'text', 'model'] as WorkflowUpstreamKind[])
+    .map(kind => `${kind}:${(slots[kind] ?? []).join(',')}`)
+    .join('|')
+}
+
 const compiledCache = new Map<string, ReturnType<typeof jsonata> | null>()
 
 function asFiniteNumber(v: unknown): number | null {

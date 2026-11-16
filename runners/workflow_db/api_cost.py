@@ -7,6 +7,7 @@ as ComfyUI's node pricing badges).
 """
 from __future__ import annotations
 
+import copy
 import logging
 from typing import Any, Optional
 
@@ -142,7 +143,69 @@ def _node_io(node: dict) -> tuple[dict[str, Any], dict[str, bool], dict[str, int
     return widgets, connected, group_hits
 
 
-def collect_api_cost_nodes(api_json: Optional[dict]) -> list[dict]:
+def _upstream_node_ids(api_json: dict, roots: list[str]) -> set[str]:
+    """Return result roots and every node feeding them."""
+    keep: set[str] = set()
+    stack = [str(node_id) for node_id in roots if str(node_id) in api_json]
+    while stack:
+        node_id = stack.pop()
+        if node_id in keep:
+            continue
+        keep.add(node_id)
+        node = api_json.get(node_id)
+        if not isinstance(node, dict):
+            continue
+        for value in (node.get("inputs") or {}).values():
+            if _is_link(value):
+                source_id = str(value[0])
+                if source_id in api_json and source_id not in keep:
+                    stack.append(source_id)
+    return keep
+
+
+def _upstream_payload(slots: Optional[dict[str, list[int]]]) -> dict[str, list]:
+    buckets = {
+        "image": "images",
+        "video": "videos",
+        "audio": "audio",
+        "text": "texts",
+        "model": "models",
+    }
+    upstream: dict[str, list] = {bucket: [] for bucket in buckets.values()}
+    for kind, indexes in (slots or {}).items():
+        bucket = buckets.get(kind)
+        valid = sorted({int(i) for i in indexes if int(i) >= 0}) if bucket else []
+        if not bucket or not valid:
+            continue
+        values = [None] * (valid[-1] + 1)
+        for index in valid:
+            values[index] = True
+        upstream[bucket] = values
+    return upstream
+
+
+def _execution_roots(workflow: dict, config: dict, kind: str) -> list[str]:
+    from .._workflow_mutate import _auto_detect_result, _output_node_ids
+    from ..custom_io import normalize_custom_io, result_meta_for
+
+    custom_io = (config.get("meta") or {}).get("custom_io")
+    result_meta = result_meta_for(normalize_custom_io(custom_io)) if custom_io else {}
+    result_meta = result_meta or config.get("result") or {}
+    if not result_meta.get("node"):
+        result_meta = _auto_detect_result(workflow, kind)
+    if result_meta.get("type") == "multi":
+        return [
+            str(output.get("node") or "")
+            for output in result_meta.get("outputs") or []
+            if str(output.get("node") or "") in workflow
+        ]
+    return _output_node_ids(workflow, str(result_meta.get("node") or ""))
+
+
+def collect_api_cost_nodes(
+    api_json: Optional[dict],
+    node_ids: Optional[set[str]] = None,
+) -> list[dict]:
     """List paid API nodes present in an API-format prompt."""
     if not isinstance(api_json, dict) or not api_json:
         return []
@@ -153,6 +216,8 @@ def collect_api_cost_nodes(api_json: Optional[dict]) -> list[dict]:
 
     out: list[dict] = []
     for node_id, node in api_json.items():
+        if node_ids is not None and str(node_id) not in node_ids:
+            continue
         if not isinstance(node, dict):
             continue
         class_type = node.get("class_type")
@@ -176,17 +241,42 @@ def collect_api_cost_nodes(api_json: Optional[dict]) -> list[dict]:
     return out
 
 
-def get_workflow_api_cost(kind: str, label: str) -> Optional[dict]:
-    from .config import get_workflow_config
+def get_workflow_api_cost(
+    kind: str,
+    label: str,
+    upstream_slots: Optional[dict[str, list[int]]] = None,
+) -> Optional[dict]:
+    from .._workflow_mutate import _apply_prunes, _auto_prune_unbound
+    from ..base import RunnerContext
+    from .config import get_workflow_for_invoke
 
-    cfg = get_workflow_config(kind, label)
+    cfg = get_workflow_for_invoke(kind, label)
     if cfg is None:
         return None
-    nodes = collect_api_cost_nodes(cfg.get("api_json"))
+    workflow = copy.deepcopy(cfg.get("api_json") or {})
+    ctx = RunnerContext(kind=kind, upstream=_upstream_payload(upstream_slots))
+    _apply_prunes(workflow, cfg, ctx)
+    _auto_prune_unbound(workflow, cfg, ctx)
+    try:
+        reachable = _upstream_node_ids(workflow, _execution_roots(workflow, cfg, kind))
+    except RuntimeError as exc:
+        _log.warning("[ComfyTV/api_cost] result scope unavailable for %s/%s: %s", kind, label, exc)
+        reachable = set(workflow)
+    nodes = collect_api_cost_nodes(workflow, reachable)
+    bindings = [
+        {
+            "node_id": str(node_id),
+            "input_name": str(input_name),
+            "from": spec.get("from", ""),
+            "default": spec.get("default"),
+        }
+        for node_id, fields in (cfg.get("inputs") or {}).items()
+        for input_name, spec in (fields or {}).items()
+    ]
     return {
         "kind": kind,
         "label": label,
-        "has_api": bool(cfg.get("has_api")),
+        "has_api": bool(cfg.get("api_json")),
         "nodes": nodes,
-        "bindings": cfg.get("bindings") or [],
+        "bindings": bindings,
     }

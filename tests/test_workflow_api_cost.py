@@ -69,6 +69,32 @@ def test_collect_paid_nodes(monkeypatch):
     assert nodes[0]["price_badge"]["expr"]
 
 
+def test_collect_paid_nodes_can_be_scoped_to_result_branch(monkeypatch):
+    monkeypatch.setattr(api_cost, "get_api_node_defs", lambda: {
+        "Paid": {
+            "class_type": "Paid",
+            "display_name": "Paid",
+            "price_badge": None,
+        },
+    })
+    workflow = {
+        "single": {"class_type": "Paid", "inputs": {}},
+        "multi": {"class_type": "Paid", "inputs": {}},
+        "result": {"class_type": "SaveGLB", "inputs": {"mesh": ["single", 0]}},
+    }
+    reachable = api_cost._upstream_node_ids(workflow, ["result"])
+    nodes = api_cost.collect_api_cost_nodes(workflow, reachable)
+    assert reachable == {"single", "result"}
+    assert [node["id"] for node in nodes] == ["single"]
+
+
+def test_upstream_payload_preserves_sparse_model_image_slots():
+    upstream = api_cost._upstream_payload({"image": [0, 2], "model": [1]})
+    assert upstream["images"] == [True, None, True]
+    assert upstream["models"] == [None, True]
+    assert upstream["videos"] == []
+
+
 def test_schema_to_api_def_requires_api_node_flag():
     assert api_cost._schema_to_api_def("X", {"display_name": "X"}) is None
     entry = api_cost._schema_to_api_def("X", {

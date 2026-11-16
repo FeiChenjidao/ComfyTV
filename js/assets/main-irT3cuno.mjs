@@ -17865,9 +17865,14 @@ function fetchWorkflowConfig(kind, label) {
     WorkflowConfigSchema
   );
 }
-function fetchWorkflowApiCost(kind, label) {
+function fetchWorkflowApiCost(kind, label, upstreamSlots = {}) {
+  const params2 = new URLSearchParams({ kind, label });
+  for (const mediaKind of ["image", "video", "audio", "text", "model"]) {
+    const indexes = upstreamSlots[mediaKind];
+    if (indexes == null ? void 0 : indexes.length) params2.set(`${mediaKind}_slots`, indexes.join(","));
+  }
   return apiFetch(
-    `/comfytv/workflows/api_cost?kind=${encodeURIComponent(kind)}&label=${encodeURIComponent(label)}`,
+    `/comfytv/workflows/api_cost?${params2.toString()}`,
     WorkflowApiCostSchema
   );
 }
@@ -59968,7 +59973,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-CZ295WRz.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-BIjW0yh6.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -90401,7 +90406,7 @@ const _sfc_main$4D = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-BNoBiU5_.mjs"),
+      loader: () => import("./AgentPanelRoot-DPuAXUeI.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -155937,7 +155942,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-CAMenHUB.mjs");
+    const { STLLoader } = await import("./STLLoader-BmxNWEht.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -155945,7 +155950,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-DxN7BOhJ.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-Bavdpzpk.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -251965,6 +251970,43 @@ function requireJsonata() {
 var jsonataExports = requireJsonata();
 const jsonata = /* @__PURE__ */ getDefaultExportFromCjs(jsonataExports);
 const CREDITS_PER_USD = 211;
+const GROUP_KIND = {
+  images: "image",
+  videos: "video",
+  audio: "audio",
+  texts: "text",
+  models: "model"
+};
+function upstreamSlotOf(input) {
+  const slot = String(input.slot ?? "");
+  const grouped = slot.match(/^(images|videos|audio|texts|models)\.(?:image|video|audio|text|model)(\d+)$/);
+  if (grouped) return [GROUP_KIND[grouped[1]], Number(grouped[2])];
+  const direct = slot.match(/^(image|video|audio|text|model)(\d+)$/);
+  if (direct) return [direct[1], Number(direct[2])];
+  if (["image", "video", "audio", "text", "model"].includes(slot)) {
+    return [slot, 0];
+  }
+  return null;
+}
+function collectConnectedUpstreamSlots(inputs) {
+  const found2 = /* @__PURE__ */ new Map();
+  for (const input of inputs) {
+    const connected = input.source != null ? input.source !== "empty" : input.link != null;
+    if (!connected) continue;
+    const parsed = upstreamSlotOf(input);
+    if (!parsed) continue;
+    const [kind, index2] = parsed;
+    const indexes = found2.get(kind) ?? /* @__PURE__ */ new Set();
+    indexes.add(index2);
+    found2.set(kind, indexes);
+  }
+  return Object.fromEntries(
+    [...found2.entries()].map(([kind, indexes]) => [kind, [...indexes].sort((a2, b) => a2 - b)])
+  );
+}
+function upstreamSlotsSignature(slots) {
+  return ["image", "video", "audio", "text", "model"].map((kind) => `${kind}:${(slots[kind] ?? []).join(",")}`).join("|");
+}
 const compiledCache = /* @__PURE__ */ new Map();
 function asFiniteNumber(v) {
   if (v === null || v === void 0) return null;
@@ -252231,6 +252273,22 @@ function readWidgetMap(node) {
 function useWorkflowApiCostBadge(getNode2, workflowLabel, widgetTick) {
   const summary = /* @__PURE__ */ ref(null);
   const loading2 = /* @__PURE__ */ ref(false);
+  const stageStore = useStageStore();
+  const upstreamSlots = computed(() => {
+    var _a2;
+    const node = getNode2();
+    if (!node) return {};
+    const stageInputs2 = (_a2 = stageStore.getStage(node)) == null ? void 0 : _a2.inputs;
+    if (stageInputs2) return collectConnectedUpstreamSlots(stageInputs2);
+    return collectConnectedUpstreamSlots(
+      (node.inputs ?? []).map((input) => ({
+        slot: input.name,
+        type: String(input.type ?? ""),
+        link: input.link
+      }))
+    );
+  });
+  const upstreamTick = computed(() => upstreamSlotsSignature(upstreamSlots.value));
   let seq2 = 0;
   async function reload() {
     var _a2, _b2;
@@ -252246,7 +252304,7 @@ function useWorkflowApiCostBadge(getNode2, workflowLabel, widgetTick) {
     }
     loading2.value = true;
     try {
-      const payload = await fetchWorkflowApiCost(kind, label2);
+      const payload = await fetchWorkflowApiCost(kind, label2, upstreamSlots.value);
       if (my !== seq2) return;
       if (!((_b2 = payload.nodes) == null ? void 0 : _b2.length)) {
         summary.value = null;
@@ -252283,7 +252341,7 @@ function useWorkflowApiCostBadge(getNode2, workflowLabel, widgetTick) {
     }
   }
   watch(
-    () => [toValue$2(workflowLabel), toValue$2(widgetTick)],
+    () => [toValue$2(workflowLabel), toValue$2(widgetTick), upstreamTick.value],
     () => {
       void reload();
     },
@@ -263878,4 +263936,4 @@ export {
   DropdownMenuRoot_default as y,
   DropdownMenuTrigger_default as z
 };
-//# sourceMappingURL=main-DjaJaJm4.mjs.map
+//# sourceMappingURL=main-irT3cuno.mjs.map

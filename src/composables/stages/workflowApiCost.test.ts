@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import {
   applyBindingOverrides,
+  collectConnectedUpstreamSlots,
   evaluateNodeCost,
   formatCreditsValue,
   formatPricingResult,
   summarizeWorkflowCosts,
+  upstreamSlotsSignature,
 } from './workflowApiCost'
 
 describe('workflowApiCost formatting', () => {
@@ -124,5 +126,27 @@ describe('applyBindingOverrides', () => {
       { resolution: '' },
     )
     expect(nodes[0]!.widgets!.size).toBe('fallback')
+  })
+})
+
+describe('workflow API cost upstream slots', () => {
+  it('preserves sparse front/left/back/right positions', () => {
+    const slots = collectConnectedUpstreamSlots([
+      { slot: 'images.image0', type: 'COMFYTV_IMAGE', source: 'upstream' },
+      { slot: 'images.image1', type: 'COMFYTV_IMAGE', source: 'empty' },
+      { slot: 'images.image2', type: 'COMFYTV_IMAGE', source: 'upstream-pending' },
+      { slot: 'images.image3', type: 'COMFYTV_IMAGE', source: 'empty' },
+    ])
+    expect(slots).toEqual({ image: [0, 2] })
+    expect(upstreamSlotsSignature(slots)).toContain('image:0,2')
+  })
+
+  it('supports legacy singular inputs and raw LiteGraph links', () => {
+    expect(collectConnectedUpstreamSlots([
+      { slot: 'image', type: 'COMFYTV_IMAGE', link: 12 },
+      { slot: 'audio.audio1', type: 'COMFYTV_AUDIO', link: 13 },
+      { slot: 'mask', type: 'COMFYTV_IMAGE', link: 14 },
+      { slot: 'model', type: 'COMFYTV_MODEL', link: null },
+    ])).toEqual({ image: [0], audio: [1] })
   })
 })

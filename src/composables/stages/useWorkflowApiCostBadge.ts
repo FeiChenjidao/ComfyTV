@@ -4,11 +4,14 @@ import { fetchWorkflowApiCost } from '@/api'
 import { loadStageMeta, getStageMeta } from '@/composables/stages/stageMeta'
 import {
   applyBindingOverrides,
+  collectConnectedUpstreamSlots,
   summarizeWorkflowCosts,
+  upstreamSlotsSignature,
   type WorkflowCostSummary,
 } from '@/composables/stages/workflowApiCost'
 import type { LGraphNode } from '@/lib/comfyApp'
 import { parseParamItems } from '@/composables/stages/useCustomParams'
+import { useStageStore } from '@/stores/stageStore'
 
 function readWidgetMap(node: LGraphNode | undefined): Record<string, unknown> {
   const out: Record<string, unknown> = {}
@@ -32,6 +35,21 @@ export function useWorkflowApiCostBadge(
 ) {
   const summary = ref<WorkflowCostSummary | null>(null)
   const loading = ref(false)
+  const stageStore = useStageStore()
+  const upstreamSlots = computed(() => {
+    const node = getNode()
+    if (!node) return {}
+    const stageInputs = stageStore.getStage(node)?.inputs
+    if (stageInputs) return collectConnectedUpstreamSlots(stageInputs)
+    return collectConnectedUpstreamSlots(
+      (node.inputs ?? []).map(input => ({
+        slot: input.name,
+        type: String(input.type ?? ''),
+        link: input.link,
+      })),
+    )
+  })
+  const upstreamTick = computed(() => upstreamSlotsSignature(upstreamSlots.value))
   let seq = 0
 
   async function reload() {
@@ -47,7 +65,7 @@ export function useWorkflowApiCostBadge(
     }
     loading.value = true
     try {
-      const payload = await fetchWorkflowApiCost(kind, label)
+      const payload = await fetchWorkflowApiCost(kind, label, upstreamSlots.value)
       if (my !== seq) return
       if (!payload.nodes?.length) {
         summary.value = null
@@ -85,7 +103,7 @@ export function useWorkflowApiCostBadge(
   }
 
   watch(
-    () => [toValue(workflowLabel), toValue(widgetTick)] as const,
+    () => [toValue(workflowLabel), toValue(widgetTick), upstreamTick.value] as const,
     () => { void reload() },
     { immediate: true },
   )

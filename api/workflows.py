@@ -82,7 +82,23 @@ async def workflow_api_cost(request: web.Request) -> web.Response:
     label = request.query.get("label") or ""
     if not kind or not label:
         return web.json_response({"error": "kind and label required"}, status=400)
-    payload = workflow_db.get_workflow_api_cost(kind, label)
+    upstream_slots: dict[str, list[int]] = {}
+    for media_kind in ("image", "video", "audio", "text", "model"):
+        raw = request.query.get(f"{media_kind}_slots") or ""
+        indexes: list[int] = []
+        for value in raw.split(","):
+            value = value.strip()
+            if not value:
+                continue
+            try:
+                index = int(value)
+            except ValueError:
+                continue
+            if index >= 0:
+                indexes.append(index)
+        if indexes:
+            upstream_slots[media_kind] = indexes
+    payload = workflow_db.get_workflow_api_cost(kind, label, upstream_slots)
     if payload is None:
         return web.json_response({"error": "workflow not found"}, status=404)
     return web.json_response(payload)
