@@ -1,3 +1,4 @@
+import asyncio
 import base64
 from io import BytesIO
 
@@ -6,7 +7,8 @@ from PIL import Image
 
 torch = pytest.importorskip("torch")
 
-from ComfyTV.photoshop.nodes import _layered_payload
+from ComfyTV.photoshop import nodes as photoshop_nodes
+from ComfyTV.photoshop.nodes import SendPromptToPhotoshop, _layered_payload
 
 
 def test_layered_payload_preserves_geometry_order_and_alpha():
@@ -28,3 +30,17 @@ def test_layered_payload_preserves_geometry_order_and_alpha():
     with Image.open(BytesIO(base64.b64decode(subject["base64"]))) as image:
         assert image.mode == "RGBA"
         assert list(image.getchannel("A").getdata()) == [255, 0, 127, 255]
+
+
+def test_prompt_output_node_routes_text_with_job_id(monkeypatch):
+    sent = []
+
+    async def fake_send(text, job_id):
+        sent.append((text, job_id))
+
+    monkeypatch.setattr(photoshop_nodes, "send_prompt_result", fake_send)
+    asyncio.run(SendPromptToPhotoshop.execute(
+        "enhanced prompt",
+        prompt={"1": {"inputs": {"job_id": "prompt-job"}}},
+    ))
+    assert sent == [("enhanced prompt", "prompt-job")]

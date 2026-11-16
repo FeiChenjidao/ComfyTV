@@ -543,4 +543,8 @@ export function applyPluginUpdate(): Promise<PluginUpdateStatus> {
   return apiSend('/comfytv/plugin/update', 'POST', PluginUpdateStatusSchema, {})
 }
 
+export function rollbackPluginUpdate(): Promise<PluginUpdateStatus> {
+  return apiSend('/comfytv/plugin/rollback', 'POST', PluginUpdateStatusSchema, {})
+}
+
 export * from './schemas'

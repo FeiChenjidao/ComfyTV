@@ -38,6 +38,17 @@
 
       <template v-else>
         <SettingsSection
+          v-if="pluginUpdateVisible"
+          :section="pluginUpdateSection"
+          :title="$t('settings.pluginUpdate.section')"
+          :collapsed="isCollapsed('pluginUpdate')"
+          :master-on="false"
+          @toggle="toggleCollapsed('pluginUpdate')"
+        >
+          <PluginUpdateSettings :active="props.active !== false" />
+        </SettingsSection>
+
+        <SettingsSection
           v-for="s in sections"
           :key="s.id"
           :section="s"
@@ -126,7 +137,7 @@
         </SettingsSection>
 
         <div
-          v-if="!sections.length && !teamGitVisible"
+          v-if="!sections.length && !teamGitVisible && !pluginUpdateVisible"
           class="ctv:py-5 ctv:px-1.5 ctv:text-center ctv:italic ctv:text-muted-foreground/60"
         >
           {{ $t('settings.noMatch') }}
@@ -148,10 +159,12 @@ import { useI18n } from 'vue-i18n'
 
 import { fetchNativeWorkflowGitToken, saveNativeWorkflowGitToken } from '@/api'
 import SettingItem from '@/components/sidebar/SettingItem.vue'
+import PluginUpdateSettings from '@/components/sidebar/PluginUpdateSettings.vue'
 import SettingsSection from '@/components/sidebar/SettingsSection.vue'
 import SkillsSection from '@/components/sidebar/SkillsSection.vue'
 import ComfyTVText from '@/components/widgets/ComfyTVText.vue'
 import { depthOf, useSettingsPanel } from '@/composables/sidebar/useSettingsPanel'
+import type { SettingSection } from '@/composables/sidebar/useSettingsPanel'
 
 import IconSearch from '~icons/lucide/search'
 
@@ -202,6 +215,28 @@ const teamGitVisible = computed(() => {
     'pat',
   ].join(' ').toLowerCase()
   return blob.includes(q)
+})
+
+const pluginUpdateSection: SettingSection = {
+  id: 'pluginUpdate',
+  master: null,
+  rows: [],
+  experimental: false,
+  dirty: false,
+  probe: null,
+}
+
+const pluginUpdateVisible = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return true
+  return [
+    t('settings.pluginUpdate.section'),
+    t('settings.pluginUpdate.desc'),
+    t('settings.pluginUpdate.check'),
+    'comfytv',
+    'github',
+    'git',
+  ].join(' ').toLowerCase().includes(q)
 })
 
 async function refreshTeamGitToken() {

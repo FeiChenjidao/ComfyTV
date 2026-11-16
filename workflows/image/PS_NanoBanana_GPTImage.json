@@ -1,8 +1,8 @@
 {
   "id": "c94f279c-fb3c-42d5-be0b-54a56ac25f84",
   "revision": 0,
-  "last_node_id": 34,
-  "last_link_id": 139,
+  "last_node_id": 38,
+  "last_link_id": 151,
   "nodes": [
     {
       "id": 1,
@@ -27,7 +27,9 @@
             111,
             122,
             134,
-            139
+            139,
+            141,
+            150
           ],
           "slot_index": 0
         },
@@ -45,7 +47,8 @@
           "type": "IMAGE",
           "links": [
             113,
-            124
+            124,
+            142
           ],
           "slot_index": 2
         },
@@ -54,7 +57,8 @@
           "type": "IMAGE",
           "links": [
             114,
-            125
+            125,
+            143
           ],
           "slot_index": 3
         },
@@ -63,7 +67,8 @@
           "type": "IMAGE",
           "links": [
             115,
-            126
+            126,
+            144
           ],
           "slot_index": 4
         },
@@ -72,7 +77,8 @@
           "type": "IMAGE",
           "links": [
             116,
-            127
+            127,
+            145
           ],
           "slot_index": 5
         },
@@ -81,7 +87,8 @@
           "type": "IMAGE",
           "links": [
             117,
-            128
+            128,
+            146
           ],
           "slot_index": 6
         },
@@ -90,7 +97,8 @@
           "type": "IMAGE",
           "links": [
             118,
-            129
+            129,
+            147
           ],
           "slot_index": 7
         },
@@ -115,7 +123,8 @@
             45,
             132,
             133,
-            137
+            137,
+            148
           ],
           "slot_index": 10
         },
@@ -126,7 +135,8 @@
             110,
             119,
             121,
-            135
+            135,
+            140
           ],
           "slot_index": 11
         },
@@ -228,7 +238,7 @@
       "title": "📁工作流",
       "properties": {
         "matchColors": "",
-        "matchTitle": "^(NanoBanana Pro|NanoBanana|GPT|Seedream 图层分离)$",
+        "matchTitle": "^(NanoBanana Pro|NanoBanana|GPT|Seedream 生图|Seedream 图层分离|提示词美化)$",
         "showNav": true,
         "showAllGraphs": true,
         "sort": "position",
@@ -701,7 +711,7 @@
         {
           "localized_name": "模型",
           "name": "model",
-          "type": "COMFY_DYNAMICCOMBO_V3",
+          "type": "COMBO",
           "widget": {
             "name": "model"
           },
@@ -916,7 +926,7 @@
       "type": "ByteDanceSeedreamLayerSeparationNode",
       "pos": [
         1555,
-        1160
+        1810
       ],
       "size": [
         420,
@@ -1049,7 +1059,7 @@
       "type": "🔹SendLayersTo Photoshop Plugin",
       "pos": [
         2035,
-        1260
+        1910
       ],
       "size": [
         300,
@@ -1076,6 +1086,338 @@
       "title": "Seedream 图层分离",
       "properties": {
         "Node name for S&R": "🔹SendLayersTo Photoshop Plugin"
+      }
+    },
+    {
+      "id": 35,
+      "type": "ByteDanceSeedreamNodeV3",
+      "pos": [
+        1555,
+        1160
+      ],
+      "size": [
+        420,
+        520
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 2,
+      "inputs": [
+        {
+          "localized_name": "提示词",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 140
+        },
+        {
+          "localized_name": "模型",
+          "name": "model",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "model"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "尺寸预设",
+          "name": "model.size_preset",
+          "type": "COMBO",
+          "widget": {
+            "name": "model.size_preset"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "宽度",
+          "name": "model.width",
+          "type": "INT",
+          "widget": {
+            "name": "model.width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "高度",
+          "name": "model.height",
+          "type": "INT",
+          "widget": {
+            "name": "model.height"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "background",
+          "name": "model.background",
+          "type": "COMBO",
+          "widget": {
+            "name": "model.background"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "image_1",
+          "name": "model.images.image_1",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 141
+        },
+        {
+          "localized_name": "image_2",
+          "name": "model.images.image_2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 142
+        },
+        {
+          "localized_name": "image_3",
+          "name": "model.images.image_3",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 143
+        },
+        {
+          "localized_name": "image_4",
+          "name": "model.images.image_4",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 144
+        },
+        {
+          "localized_name": "image_5",
+          "name": "model.images.image_5",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 145
+        },
+        {
+          "localized_name": "image_6",
+          "name": "model.images.image_6",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 146
+        },
+        {
+          "localized_name": "image_7",
+          "name": "model.images.image_7",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 147
+        },
+        {
+          "localized_name": "种子",
+          "name": "model.seed",
+          "type": "INT",
+          "widget": {
+            "name": "model.seed"
+          },
+          "link": 148
+        },
+        {
+          "localized_name": "水印",
+          "name": "model.watermark",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "model.watermark"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            149
+          ]
+        }
+      ],
+      "title": "Seedream 生图",
+      "properties": {
+        "Node name for S&R": "ByteDanceSeedreamNodeV3",
+        "cnr_id": "comfy-core"
+      },
+      "widgets_values": [
+        "",
+        "seedream 5.5",
+        "(2K) 2048x2048 (1:1)",
+        2048,
+        2048,
+        "auto",
+        42,
+        "fixed",
+        false
+      ],
+      "widgets_values_named": {
+        "prompt": "",
+        "model": "seedream 5.5",
+        "model.size_preset": "(2K) 2048x2048 (1:1)",
+        "model.width": 2048,
+        "model.height": 2048,
+        "model.background": "auto",
+        "model.seed": 42,
+        "control_after_generate": "fixed",
+        "model.watermark": false
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 36,
+      "type": "🔹SendTo Photoshop Plugin",
+      "pos": [
+        2035,
+        1260
+      ],
+      "size": [
+        280,
+        80
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 2,
+      "inputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "IMAGE",
+          "link": 149
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Seedream 生图",
+      "properties": {
+        "Node name for S&R": "🔹SendTo Photoshop Plugin"
+      }
+    },
+    {
+      "id": 37,
+      "type": "OpenAIChatNode",
+      "pos": [
+        1555,
+        2410
+      ],
+      "size": [
+        420,
+        520
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 2,
+      "inputs": [
+        {
+          "localized_name": "提示词",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "保持上下文",
+          "name": "persist_context",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "persist_context"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "模型",
+          "name": "model",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "model"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "图像",
+          "name": "images",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 150
+        },
+        {
+          "localized_name": "文件",
+          "name": "files",
+          "shape": 7,
+          "type": "OPENAI_INPUT_FILES",
+          "link": null
+        },
+        {
+          "localized_name": "高级设置",
+          "name": "advanced_options",
+          "shape": 7,
+          "type": "OPENAI_CHAT_CONFIG",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "字符串",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            151
+          ]
+        }
+      ],
+      "title": "提示词美化",
+      "properties": {
+        "Node name for S&R": "OpenAIChatNode",
+        "cnr_id": "comfy-core"
+      },
+      "widgets_values": [
+        "",
+        false,
+        "gpt-5.6-sol"
+      ],
+      "widgets_values_named": {
+        "prompt": "",
+        "persist_context": false,
+        "model": "gpt-5.6-sol"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 38,
+      "type": "🔹SendPromptTo Photoshop Plugin",
+      "pos": [
+        2035,
+        2550
+      ],
+      "size": [
+        280,
+        80
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 2,
+      "inputs": [
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 151
+        }
+      ],
+      "outputs": [],
+      "title": "提示词美化",
+      "properties": {
+        "Node name for S&R": "🔹SendPromptTo Photoshop Plugin"
       }
     }
   ],
@@ -1415,6 +1757,102 @@
       34,
       1,
       "IMAGE"
+    ],
+    [
+      140,
+      1,
+      11,
+      35,
+      0,
+      "STRING"
+    ],
+    [
+      141,
+      1,
+      0,
+      35,
+      6,
+      "IMAGE"
+    ],
+    [
+      142,
+      1,
+      2,
+      35,
+      7,
+      "IMAGE"
+    ],
+    [
+      143,
+      1,
+      3,
+      35,
+      8,
+      "IMAGE"
+    ],
+    [
+      144,
+      1,
+      4,
+      35,
+      9,
+      "IMAGE"
+    ],
+    [
+      145,
+      1,
+      5,
+      35,
+      10,
+      "IMAGE"
+    ],
+    [
+      146,
+      1,
+      6,
+      35,
+      11,
+      "IMAGE"
+    ],
+    [
+      147,
+      1,
+      7,
+      35,
+      12,
+      "IMAGE"
+    ],
+    [
+      148,
+      1,
+      10,
+      35,
+      13,
+      "INT"
+    ],
+    [
+      149,
+      35,
+      0,
+      36,
+      0,
+      "IMAGE"
+    ],
+    [
+      150,
+      1,
+      0,
+      37,
+      3,
+      "IMAGE"
+    ],
+    [
+      151,
+      37,
+      0,
+      38,
+      0,
+      "STRING"
     ]
   ],
   "groups": [
@@ -1452,6 +1890,42 @@
         480
       ],
       "color": "#6b3fa0",
+      "flags": {}
+    },
+    {
+      "id": 9,
+      "title": "Seedream 生图",
+      "bounding": [
+        1545,
+        1090,
+        790,
+        590
+      ],
+      "color": "#6b572c",
+      "flags": {}
+    },
+    {
+      "id": 10,
+      "title": "Seedream 图层分离",
+      "bounding": [
+        1545,
+        1740,
+        800,
+        540
+      ],
+      "color": "#6b572c",
+      "flags": {}
+    },
+    {
+      "id": 11,
+      "title": "提示词美化",
+      "bounding": [
+        1545,
+        2340,
+        800,
+        620
+      ],
+      "color": "#4c4c4c",
       "flags": {}
     }
   ],

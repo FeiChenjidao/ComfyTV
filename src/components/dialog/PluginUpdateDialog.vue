@@ -9,7 +9,7 @@
     >{{ status.remote_url }}</div>
     <div v-if="error" class="ctv:text-xs ctv:text-red-400 ctv:whitespace-pre-wrap">{{ error }}</div>
     <div class="ctv:flex ctv:flex-wrap ctv:justify-end ctv:gap-2">
-      <button type="button" :class="btnGhost" :disabled="busy" @click="resolve('dismiss')">
+      <button v-if="status.update_available" type="button" :class="btnGhost" :disabled="busy" @click="resolve('dismiss')">
         {{ $t('pluginUpdate.dismiss') }}
       </button>
       <button type="button" :class="btnGhost" :disabled="busy" @click="resolve('later')">
@@ -21,7 +21,9 @@
         :disabled="busy"
         @click="onUpdate"
       >
-        {{ busy ? $t('pluginUpdate.updating') : $t('pluginUpdate.updateNow') }}
+        {{ busy
+          ? $t('pluginUpdate.updating')
+          : $t(status.update_available ? 'pluginUpdate.updateNow' : 'settings.pluginUpdate.repair') }}
       </button>
     </div>
   </div>
@@ -47,6 +49,9 @@ const message = computed(() => {
   const local = props.status.local_version || '?'
   const remote = props.status.remote_version || props.status.remote_sha || '?'
   const behind = props.status.behind || 0
+  if (!props.status.update_available && props.status.repair_available) {
+    return t('pluginUpdate.messageRepair', { local })
+  }
   if (props.status.dirty) {
     return t('pluginUpdate.messageDirty', { local, remote, n: behind })
   }

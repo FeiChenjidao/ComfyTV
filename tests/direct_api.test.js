@@ -41,6 +41,38 @@ test("validates a Comfy API key without persisting it", async () => {
   assert.equal(request.options.headers["Idempotency-Key"], undefined)
 })
 
+test("enhances prompts with the OpenAI Responses API and current canvas", async () => {
+  const calls = []
+  const result = await api.enhancePrompt({
+    apiKey: "secret",
+    jobId: "prompt-job",
+    prompt: "analyze this canvas",
+    imageBase64: "YQ==",
+    model: "gpt-5.6-sol",
+  }, {
+    attempts: 1,
+    pollIntervalMs: 0,
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options })
+      if (calls.length === 1) return response(200, { id: "response-1", status: "queued", output: [] })
+      return response(200, {
+        id: "response-1",
+        status: "completed",
+        output: [{ type: "message", content: [{ type: "output_text", text: "优化后的提示词" }] }],
+      }, { "x-comfy-credits-used": "1.25" })
+    },
+  })
+  assert.equal(calls[0].url, "https://api.comfy.org/proxy/openai/v1/responses")
+  const body = JSON.parse(calls[0].options.body)
+  assert.equal(body.model, "gpt-5.6-sol")
+  assert.equal(body.input[0].content[0].text, "analyze this canvas")
+  assert.equal(body.input[0].content[1].image_url, "data:image/png;base64,YQ==")
+  assert.equal(calls[1].url, "https://api.comfy.org/proxy/openai/v1/responses/response-1")
+  assert.equal(calls[1].options.headers["Idempotency-Key"], undefined)
+  assert.equal(result.text, "优化后的提示词")
+  assert.equal(result.credits, "1.25")
+})
+
 test("builds Gemini image parts in compact media order", async () => {
   let body
   const result = await api.generate({
@@ -111,7 +143,7 @@ test("uses GPT multipart image array and custom dimensions", async () => {
 })
 
 test("sends the selected GPT model", async () => {
-  let model
+  let body
   await api.generate({
     apiKey: "secret",
     jobId: "job-gpt-model",
@@ -121,11 +153,31 @@ test("sends the selected GPT model", async () => {
   }, {
     attempts: 1,
     fetchImpl: async (_url, options) => {
-      model = options.body.get("model")
+      body = options.body
       return response(200, { data: [{ b64_json: "Yw==" }] })
     },
   })
-  assert.equal(model, "gpt-image-2")
+  assert.equal(body.get("model"), "gpt-image-2")
+  assert.equal(body.get("complexity"), null)
+})
+
+test("sends complexity for GPT Image 2.6", async () => {
+  let body
+  await api.generate({
+    apiKey: "secret",
+    jobId: "job-gpt-26",
+    prompt: "edit",
+    profile: { family: "gpt", model: "gpt-image-2.6-flare", resolution: "auto", quality: "max", complexity: "medium", background: "transparent" },
+    images: [{ base64: "YQ==" }],
+  }, {
+    attempts: 1,
+    fetchImpl: async (_url, options) => {
+      body = options.body
+      return response(200, { data: [{ b64_json: "Yw==" }] })
+    },
+  })
+  assert.equal(body.get("model"), "gpt-image-2.6-flare")
+  assert.equal(body.get("complexity"), "medium")
 })
 
 test("routes each Nano Banana model to its matching endpoint", async () => {
@@ -226,6 +278,121 @@ test("uploads and returns Seedream layer separation results", async () => {
     height: 600,
     zIndex: 2,
   })
+})
+
+test("generates Seedream images with custom size and ignores the Photoshop mask", async () => {
+  const source = pngHeader(2048, 2048)
+  const calls = []
+  let storageIndex = 0
+  const result = await api.generate({
+    apiKey: "secret",
+    jobId: "job-seedream-image",
+    prompt: "paint a cinematic scene",
+    profile: { family: "seedreamImage", model: "seedream 5.5", customWidth: 2048, customHeight: 2048, background: "transparent" },
+    images: [
+      { role: "canvas", base64: Buffer.from(source).toString("base64") },
+      { role: "mask", base64: Buffer.from(source).toString("base64") },
+      { role: "reference", base64: Buffer.from(source).toString("base64") },
+    ],
+    seed: 99,
+  }, {
+    attempts: 1,
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url, options })
+      if (url === "https://api.comfy.org/customers/storage") {
+        storageIndex += 1
+        return response(200, { upload_url: `https://upload.test/image-${storageIndex}`, download_url: `https://download.test/input-${storageIndex}` })
+      }
+      if (url.startsWith("https://upload.test/image-")) return response(200, null)
+      if (url === "https://api.comfy.org/proxy/byteplus/api/v3/images/generations") {
+        return response(200, { data: [{ url: "https://download.test/result" }] })
+      }
+      if (url === "https://download.test/result") return response(200, source)
+      throw new Error(`unexpected request ${url}`)
+    },
+  })
+
+  const generation = calls.find((item) => item.url.includes("/proxy/byteplus/"))
+  const body = JSON.parse(generation.options.body)
+  assert.equal(storageIndex, 2)
+  assert.equal(body.model, "seedream-5-5-261028")
+  assert.equal(body.size, "2048x2048")
+  assert.equal(body.background, "transparent")
+  assert.equal(body.image.length, 2)
+  assert.equal(body.layer_decomposition, undefined)
+  assert.equal(body.sequential_image_generation, undefined)
+  assert.equal(result.images[0].base64, Buffer.from(source).toString("base64"))
+})
+
+test("reuses Seedream uploads across concurrent batch jobs", async () => {
+  const source = pngHeader(2048, 2048)
+  const uploadCache = new Map()
+  let storageCount = 0
+  let uploadCount = 0
+  let generationCount = 0
+  const fetchImpl = async (url) => {
+    if (url === "https://api.comfy.org/customers/storage") {
+      storageCount += 1
+      return response(200, { upload_url: "https://upload.test/shared", download_url: "https://download.test/shared" })
+    }
+    if (url === "https://upload.test/shared") {
+      uploadCount += 1
+      return response(200, null)
+    }
+    if (url === "https://api.comfy.org/proxy/byteplus/api/v3/images/generations") {
+      generationCount += 1
+      return response(200, { data: [{ url: "https://download.test/result" }] })
+    }
+    if (url === "https://download.test/result") return response(200, source)
+    throw new Error(`unexpected request ${url}`)
+  }
+  const baseJob = {
+    apiKey: "secret",
+    prompt: "paint a cinematic scene",
+    profile: { family: "seedreamImage", model: "seedream 5.5", customWidth: 2048, customHeight: 2048 },
+    images: [{ role: "canvas", base64: Buffer.from(source).toString("base64") }],
+    uploadCache,
+  }
+  const [first, second] = await Promise.all([
+    api.generate({ ...baseJob, jobId: "batch-1", batchIndex: 0, seed: 1 }, { attempts: 1, fetchImpl }),
+    api.generate({ ...baseJob, jobId: "batch-2", batchIndex: 1, seed: 2 }, { attempts: 1, fetchImpl }),
+  ])
+  assert.equal(storageCount, 1)
+  assert.equal(uploadCount, 1)
+  assert.equal(generationCount, 2)
+  assert.equal(first.images[0].base64, second.images[0].base64)
+})
+
+test("accepts a valid JPEG Seedream result and reports its real mime type", async () => {
+  const jpeg = new Uint8Array([255, 216, 255, 224, 0, 16, 74, 70, 73, 70, 0, 1, 255, 217])
+  const result = await api.generate({
+    apiKey: "secret",
+    jobId: "job-seedream-jpeg",
+    prompt: "paint a cinematic scene",
+    profile: { family: "seedreamImage", model: "seedream-4-5-251128", customWidth: 2048, customHeight: 2048 },
+    images: [],
+    seed: 99,
+  }, {
+    attempts: 1,
+    fetchImpl: async (url) => {
+      if (url === "https://api.comfy.org/proxy/byteplus/api/v3/images/generations") {
+        return response(200, { data: [{ url: "https://download.test/result.jpg" }] })
+      }
+      if (url === "https://download.test/result.jpg") return response(200, jpeg, { "content-type": "image/jpeg" })
+      throw new Error(`unexpected request ${url}`)
+    },
+  })
+
+  assert.equal(result.images[0].mimeType, "image/jpeg")
+  assert.equal(result.images[0].base64, Buffer.from(jpeg).toString("base64"))
+})
+
+test("validates Seedream custom dimensions per model", () => {
+  assert.equal(api.validateSeedreamImageSize({ model: "seedream 5.5", customWidth: 960, customHeight: 960 }), "960x960")
+  assert.equal(api.validateSeedreamImageSize({ model: "seedream 5.0 lite", customWidth: 2048, customHeight: 2048 }), "2048x2048")
+  assert.equal(api.validateSeedreamImageSize({ model: "seedream 5.0 flash", resolution: "1K", customWidth: 800, customHeight: 1424 }), "800x1424")
+  assert.throws(() => api.validateSeedreamImageSize({ model: "seedream 5.0 pro", resolution: "Custom", customWidth: 960, customHeight: 960 }), /1024/)
+  assert.throws(() => api.validateSeedreamImageSize({ model: "seedream 5.5", customWidth: 3840, customHeight: 2160 }), /像素总量/)
 })
 
 test("maps authentication errors without exposing the key", async () => {

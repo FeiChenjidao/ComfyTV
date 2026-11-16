@@ -152,7 +152,7 @@ async def photoshop_status(request: web.Request) -> web.Response:
     denied = _require_loopback(request)
     if denied is not None:
         return denied
-    return _response({"ok": True})
+    return _response({"ok": True, "workflowProtocol": 4, "batchInputs": True})
 
 
 @routes.post("/comfytv/photoshop/layer")

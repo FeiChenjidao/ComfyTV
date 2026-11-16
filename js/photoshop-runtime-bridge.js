@@ -1,6 +1,8 @@
-const PS_PROTOCOL = 3
+const PS_PROTOCOL = 4
 const PS_NODE = '🔹Photoshop ComfyUI Plugin'
 const SEND_NODE = '🔹SendTo Photoshop Plugin'
+const PROMPT_SEND_NODE = '🔹SendPromptTo Photoshop Plugin'
+const PROMPT_ENHANCE_GROUP = '提示词美化'
 const clientId = globalThis.crypto?.randomUUID?.() || String(Date.now())
 const searchParams = new URLSearchParams(location.search)
 const preferredPsClientId = searchParams.get('comfytv_ps_client') || ''
@@ -11,6 +13,8 @@ let lastModels = ''
 let listenersReady = false
 const jobs = new Map()
 const promptJobs = new Map()
+const cancelledJobIds = new Set()
+const cancelledPromptIds = new Set()
 let currentPromptId = ''
 let queueChain = Promise.resolve()
 let workflowAutoloadAttempts = 0
@@ -47,19 +51,25 @@ function photoshopWorkflowReady() {
   const modelMuter = nodes().find((node) => nodeType(node) === 'Fast Groups Muter (rgthree)' && String(node?.title || '').includes('工作流'))
   return types.includes(PS_NODE)
     && types.includes(SEND_NODE)
+    && types.includes('OpenAIChatNode')
+    && types.includes(PROMPT_SEND_NODE)
+    && types.includes('ByteDanceSeedreamNodeV3')
     && types.includes('ByteDanceSeedreamLayerSeparationNode')
     && types.includes('🔹SendLayersTo Photoshop Plugin')
+    && String(modelMuter?.properties?.matchTitle || '').includes('Seedream 生图')
     && String(modelMuter?.properties?.matchTitle || '').includes('Seedream 图层分离')
+    && String(modelMuter?.properties?.matchTitle || '').includes(PROMPT_ENHANCE_GROUP)
 }
 
 async function autoloadPhotoshopWorkflow() {
-  if (!shouldAutoloadWorkflow || workflowAutoloadComplete || workflowAutoloadAttempts >= 20 || !app()) return
+  const comfyApp = app()
+  if (!shouldAutoloadWorkflow || workflowAutoloadComplete || workflowAutoloadAttempts >= 20 || !comfyApp?.graph || !comfyApp?.canvas) return
   workflowAutoloadAttempts += 1
   try {
     const response = await fetch('/comfytv/photoshop/workflow', { cache: 'no-store' })
     if (!response.ok) throw new Error(`workflow ${response.status}`)
     const workflow = await response.json()
-    await app().loadGraphData(workflow)
+    await comfyApp.loadGraphData(workflow)
     workflowAutoloadComplete = photoshopWorkflowReady()
     if (!workflowAutoloadComplete) throw new Error('workflow nodes are not ready')
     publishHello()
@@ -106,6 +116,10 @@ function rows(kind) {
   return (muter(kind)?.widgets || []).filter((widget) => typeof widget.doModeChange === 'function' && rowName(widget))
 }
 
+function modelRows() {
+  return rows('model').filter((widget) => rowName(widget) !== PROMPT_ENHANCE_GROUP)
+}
+
 function setNodeWidget(node, name, value) {
   if (!node || value === undefined || value === null) return
   const widget = (node.widgets || []).find((item) => String(item?.name || item?.label || '') === name)
@@ -121,6 +135,28 @@ function photoshopInputNode() {
   return nodes().find((node) => nodeType(node) === PS_NODE)
 }
 
+function promptEnhanceNode() {
+  return nodes().find((node) => nodeType(node) === 'OpenAIChatNode' && String(node?.title || '') === PROMPT_ENHANCE_GROUP)
+    || nodes().find((node) => nodeType(node) === 'OpenAIChatNode')
+}
+
+function promptEnhancementReady() {
+  return Boolean(
+    promptEnhanceNode()
+    && nodes().some((node) => nodeType(node) === PROMPT_SEND_NODE)
+    && rows('model').some((widget) => rowName(widget) === PROMPT_ENHANCE_GROUP),
+  )
+}
+
+function applyPromptEnhancement(request) {
+  rows('model').find((widget) => rowName(widget) === PROMPT_ENHANCE_GROUP)?.doModeChange?.(true)
+  const node = promptEnhanceNode()
+  setNodeWidget(node, 'prompt', String(request?.prompt || ''))
+  setNodeWidget(node, 'persist_context', false)
+  setNodeWidget(node, 'model', String(request?.model || 'gpt-5.6-sol'))
+  app()?.graph?.setDirtyCanvas?.(true, true)
+}
+
 function profileNode(profile) {
   if (profile?.family === 'nanobanana') {
     return nodes().find((item) => nodeType(item) === 'GeminiNanoBanana2V2' || String(item?.title || '') === 'NanoBanana')
@@ -129,7 +165,13 @@ function profileNode(profile) {
     return nodes().find((item) => nodeType(item) === 'GeminiImage2Node' || String(item?.title || '') === 'NanoBanana Pro')
   }
   if (profile?.family === 'gpt') {
-    return nodes().find((item) => nodeType(item) === 'OpenAIGPTImageNodeV2' || String(item?.title || '') === 'GPT')
+    return nodes().find((item) => String(item?.title || '') === 'GPT')
+      || nodes().find((item) => nodeType(item) === 'OpenAIGPTImageNodeV2')
+      || nodes().find((item) => nodeType(item) === 'OpenAIGPTImageNodeV3')
+  }
+  if (profile?.family === 'seedreamImage') {
+    return nodes().find((item) => String(item?.title || '') === 'Seedream 生图')
+      || nodes().find((item) => nodeType(item) === 'ByteDanceSeedreamNodeV3')
   }
   if (profile?.family === 'seedream') {
     return nodes().find((item) => nodeType(item) === 'ByteDanceSeedreamLayerSeparationNode' || String(item?.title || '') === 'Seedream 图层分离')
@@ -157,6 +199,14 @@ function applyNodeProfile(profile) {
     setNodeWidget(node, 'prompt_optimization', profile.quality || 'standard')
     return
   }
+  if (profile.family === 'seedreamImage') {
+    setNodeWidget(node, 'model.size_preset', profile.sizePreset || 'Custom')
+    setNodeWidget(node, 'model.width', Math.max(2, Number.parseInt(profile.customWidth, 10) || 2048))
+    setNodeWidget(node, 'model.height', Math.max(2, Number.parseInt(profile.customHeight, 10) || 2048))
+    setNodeWidget(node, 'model.background', profile.background || 'auto')
+    if (profile.quality) setNodeWidget(node, 'model.prompt_optimization', profile.quality)
+    return
+  }
   setNodeWidget(node, 'model.size', profile.size || profile.resolution || 'auto')
   if ((profile.size || profile.resolution) === 'Custom') {
     setNodeWidget(node, 'model.custom_width', Math.max(1, Number.parseInt(profile.customWidth, 10) || 1))
@@ -164,6 +214,7 @@ function applyNodeProfile(profile) {
   }
   setNodeWidget(node, 'model.background', profile.background || 'auto')
   setNodeWidget(node, 'model.quality', profile.quality || 'high')
+  if (profile.complexity) setNodeWidget(node, 'model.complexity', profile.complexity)
 }
 
 function applyProfile(profile) {
@@ -199,8 +250,15 @@ function eventPromptId(event) {
   return String(event?.detail?.prompt_id || '')
 }
 
+function rememberCancelledPrompt(promptId) {
+  if (!promptId) return
+  cancelledPromptIds.add(promptId)
+  while (cancelledPromptIds.size > 32) cancelledPromptIds.delete(cancelledPromptIds.values().next().value)
+}
+
 function jobForEvent(event) {
   const promptId = eventPromptId(event)
+  if (promptId && cancelledPromptIds.has(promptId)) return null
   if (promptId && promptJobs.has(promptId)) return promptJobs.get(promptId)
   if (promptId) {
     const waiting = Array.from(jobs.values()).find((job) => !job.terminal && !job.promptId)
@@ -228,6 +286,12 @@ function attachProgressListeners() {
   if (!api?.addEventListener) return false
   listenersReady = true
   api.addEventListener('execution_start', (event) => {
+    const cancelledPromptId = eventPromptId(event)
+    if (cancelledPromptId && cancelledPromptIds.has(cancelledPromptId)) {
+      currentPromptId = cancelledPromptId
+      Promise.resolve(app()?.api?.interrupt?.() || fetch('/interrupt', { method: 'POST' })).catch(() => {})
+      return
+    }
     const job = jobForEvent(event)
     if (!job) return
     const promptId = eventPromptId(event) || job.promptId
@@ -264,6 +328,11 @@ function attachProgressListeners() {
     jobStatus(job, 'error', { message: detail.exception_message || detail.exception_type || 'ComfyUI 执行失败' })
   })
   api.addEventListener('execution_interrupted', (event) => {
+    const promptId = eventPromptId(event)
+    if (promptId && cancelledPromptIds.has(promptId)) {
+      if (currentPromptId === promptId) currentPromptId = ''
+      return
+    }
     const job = jobForEvent(event)
     if (job) jobStatus(job, 'interrupted', { message: '生成已停止' })
   })
@@ -271,8 +340,24 @@ function attachProgressListeners() {
 }
 
 async function queueJob(message) {
-  if (typeof message.workflow === 'number') rows('model')[message.workflow]?.doModeChange?.(true)
-  applyProfile(message.renderProfile)
+  const jobId = String(message.jobId || '')
+  if (cancelledJobIds.delete(jobId)) return
+  const promptEnhance = message.promptEnhance && typeof message.promptEnhance === 'object'
+  if (promptEnhance && !promptEnhancementReady()) {
+    send({
+      protocolVersion: PS_PROTOCOL,
+      clientId,
+      psClientId: message.psClientId,
+      jobId: message.jobId,
+      jobStatus: { phase: 'error', message: '当前 ComfyUI 工作流没有提示词美化节点，请重新打开默认 Photoshop 工作流' },
+    })
+    return
+  }
+  if (promptEnhance) applyPromptEnhancement(message.promptEnhance)
+  else {
+    if (typeof message.workflow === 'number') modelRows()[message.workflow]?.doModeChange?.(true)
+    applyProfile(message.renderProfile)
+  }
   const inputNode = photoshopInputNode()
   if (!workflowState().ready || typeof app()?.queuePrompt !== 'function') {
     send({
@@ -286,19 +371,25 @@ async function queueJob(message) {
   }
   setNodeWidget(inputNode, 'job_id', String(message.inputKey || ''))
   const job = {
-    jobId: String(message.jobId || ''),
+    jobId,
     psClientId: String(message.psClientId || ''),
     batchIndex: Number(message.batchIndex) || 0,
+    kind: promptEnhance ? 'promptEnhance' : 'render',
     promptId: '',
     terminal: false,
+    cancelRequested: false,
   }
   jobs.set(job.jobId, job)
   attachProgressListeners()
   jobStatus(job, 'queued', { progress: 0 })
   try {
     const result = await app().queuePrompt(0, 1)
-    if (job.terminal || !jobs.has(job.jobId)) return
-    job.promptId = String(result?.prompt_id || result?.promptId || '')
+    const promptId = String(result?.prompt_id || result?.promptId || '')
+    if (job.cancelRequested || job.terminal || !jobs.has(job.jobId)) {
+      await cancelPrompt(promptId)
+      return
+    }
+    job.promptId = promptId
     if (job.promptId) promptJobs.set(job.promptId, job)
     jobStatus(job, 'queued', { progress: 0 })
   } catch (error) {
@@ -309,34 +400,58 @@ async function queueJob(message) {
   }
 }
 
-async function interruptJob(message) {
-  const job = jobs.get(String(message.jobId || ''))
-  if (!job) return
-  try {
-    if (job.promptId && currentPromptId && job.promptId !== currentPromptId) {
-      await fetch('/queue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ delete: [job.promptId] }),
-      })
-    } else if (app()?.api?.interrupt) await app().api.interrupt()
+async function cancelPrompt(promptId) {
+  if (!promptId) return
+  rememberCancelledPrompt(promptId)
+  if (currentPromptId === promptId) {
+    if (app()?.api?.interrupt) await app().api.interrupt()
     else await fetch('/interrupt', { method: 'POST' })
-    jobStatus(job, 'interrupted', { message: '生成已停止' })
+    return
+  }
+  await fetch('/queue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ delete: [promptId] }),
+  })
+  if (currentPromptId === promptId) {
+    if (app()?.api?.interrupt) await app().api.interrupt()
+    else await fetch('/interrupt', { method: 'POST' })
+  }
+}
+
+async function interruptJob(message) {
+  const jobId = String(message.jobId || '')
+  const job = jobs.get(jobId)
+  if (!job) {
+    cancelledJobIds.add(jobId)
+    while (cancelledJobIds.size > 32) cancelledJobIds.delete(cancelledJobIds.values().next().value)
+    send({
+      protocolVersion: PS_PROTOCOL,
+      clientId,
+      jobId,
+      jobStatus: { phase: 'interrupted', message: '已取消' },
+    })
+    return
+  }
+  try {
+    job.cancelRequested = true
+    await cancelPrompt(job.promptId)
+    jobStatus(job, 'interrupted', { message: '已取消' })
   } catch (error) {
     send({ jobId: job.jobId, alert: error?.message || '无法停止生成' })
   }
 }
 
 function publishModels(force = false) {
-  const modelRows = rows('model')
-  if (!modelRows.length || !socket || socket.readyState !== WebSocket.OPEN) return false
+  const availableRows = modelRows()
+  if (!availableRows.length || !socket || socket.readyState !== WebSocket.OPEN) return false
   const state = workflowState()
   const payload = JSON.stringify({
     protocolVersion: PS_PROTOCOL,
     clientId,
     bridgeReady: state.ready,
     workflowFingerprint: state.workflowFingerprint,
-    Send_workflow: modelRows.map((widget) => ({ name: rowName(widget), selected: Boolean(widget.toggled) })),
+    Send_workflow: availableRows.map((widget) => ({ name: rowName(widget), selected: Boolean(widget.toggled) })),
   })
   if (!force && payload === lastModels) return true
   lastModels = payload
@@ -363,7 +478,7 @@ function connectBridge() {
         if (job) jobStatus(job, 'completed', { progress: 100 })
         return
       }
-      if (typeof message.workflow === 'number') rows('model')[message.workflow]?.doModeChange?.(true)
+      if (typeof message.workflow === 'number') modelRows()[message.workflow]?.doModeChange?.(true)
       applyProfile(message.renderProfile)
     } catch (error) {
       console.error('photoshop bridge', error)

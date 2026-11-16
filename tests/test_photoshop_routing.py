@@ -18,6 +18,7 @@ def reset_state():
     backend.comfyui_users.clear()
     backend.photoshop_bindings.clear()
     backend.active_jobs.clear()
+    backend.batch_inputs.clear()
 
 
 def add_client(client_id, platform, ready=False):
@@ -49,6 +50,22 @@ def test_queue_binds_to_latest_ready_comfy_client():
         assert second.messages[-1]["jobId"] == "job-1"
         assert second.messages[-1]["psClientId"] == "ps"
         assert backend.active_jobs["job-1"]["cm_client_id"] == "cm-second"
+
+    asyncio.run(run())
+
+
+def test_prompt_enhancement_queue_metadata_is_forwarded():
+    async def run():
+        reset_state()
+        add_client("ps", "ps")
+        comfy = add_client("cm", "cm", ready=True)
+        request = {"prompt": "analyze the canvas", "model": "gpt-5.6-sol"}
+        await backend.handle_message("ps", "ps", json.dumps({
+            "queue": True,
+            "jobId": "prompt-job",
+            "promptEnhance": request,
+        }))
+        assert comfy.messages[-1]["promptEnhance"] == request
 
     asyncio.run(run())
 
@@ -85,6 +102,65 @@ def test_concurrent_jobs_keep_separate_input_files(tmp_path, monkeypatch):
         queued = [message for message in comfy.messages if message.get("queue")]
         assert [message["inputKey"] for message in queued] == ["job-a", "job-b"]
         assert set(backend.active_jobs) == {"job-a", "job-b"}
+
+    asyncio.run(run())
+
+
+def test_batch_inputs_upload_once_and_materialize_independent_jobs(tmp_path, monkeypatch):
+    async def run():
+        reset_state()
+        monkeypatch.setattr(backend, "PS_INPUTS", str(tmp_path))
+        add_client("ps", "ps")
+        comfy = add_client("cm", "cm", ready=True)
+        batch_key = "batch-shared"
+        await backend.handle_message("ps", "ps", json.dumps({
+            "inputKey": batch_key,
+            "canvasBase64": "c2hhcmVkLWNhbnZhcw==",
+        }))
+        await backend.handle_message("ps", "ps", json.dumps({
+            "inputKey": batch_key,
+            "referenceBase64": "c2hhcmVkLXJlZg==",
+            "referenceIndex": 1,
+        }))
+        for index, job_id in enumerate(("job-a", "job-b")):
+            await backend.handle_message("ps", "ps", json.dumps({
+                "queue": True,
+                "jobId": job_id,
+                "batchInputKey": batch_key,
+                "batchFinal": index == 1,
+                "configdata": {"jobId": job_id, "positive": f"prompt-{index}"},
+            }))
+
+        assert not (tmp_path / "jobs" / batch_key).exists()
+        for index, job_id in enumerate(("job-a", "job-b")):
+            root = tmp_path / "jobs" / job_id
+            assert (root / "PS_canvas.png").read_bytes() == b"shared-canvas"
+            assert (root / "PS_ref_1.png").read_bytes() == b"shared-ref"
+            config = json.loads((root / "config.json").read_text(encoding="utf-8"))
+            assert config["positive"] == f"prompt-{index}"
+        queued = [message for message in comfy.messages if message.get("queue")]
+        assert [message["inputKey"] for message in queued] == ["job-a", "job-b"]
+        assert batch_key not in backend.batch_inputs
+
+    asyncio.run(run())
+
+
+def test_missing_batch_input_fails_without_falling_back_to_global_canvas(tmp_path, monkeypatch):
+    async def run():
+        reset_state()
+        monkeypatch.setattr(backend, "PS_INPUTS", str(tmp_path))
+        owner = add_client("ps", "ps")
+        add_client("cm", "cm", ready=True)
+        await backend.handle_message("ps", "ps", json.dumps({
+            "queue": True,
+            "jobId": "job-missing",
+            "batchInputKey": "batch-missing",
+            "batchFinal": True,
+            "configdata": {"jobId": "job-missing"},
+        }))
+        assert owner.messages[-1]["jobStatus"]["phase"] == "error"
+        assert "批次输入不存在" in owner.messages[-1]["jobStatus"]["message"]
+        assert "job-missing" not in backend.active_jobs
 
     asyncio.run(run())
 
@@ -251,6 +327,24 @@ def test_layered_render_is_sent_only_to_the_owning_photoshop_client():
         payload = await backend.send_render_payload("preview", "job-layered", "thumb", layered)
         assert payload["layered"] == layered
         assert owner.messages[-1]["layered"] == layered
+        assert other.messages == []
+
+    asyncio.run(run())
+
+
+def test_prompt_result_is_sent_only_to_the_owning_photoshop_client():
+    async def run():
+        reset_state()
+        owner = add_client("ps-owner", "ps")
+        other = add_client("ps-other", "ps")
+        add_client("cm", "cm", ready=True)
+        backend.active_jobs["prompt-job"] = {
+            "ps_client_id": "ps-owner",
+            "cm_client_id": "cm",
+        }
+        payload = await backend.send_prompt_result("enhanced prompt", "prompt-job")
+        assert payload["promptEnhancement"] == "enhanced prompt"
+        assert owner.messages[-1]["promptEnhancement"] == "enhanced prompt"
         assert other.messages == []
 
     asyncio.run(run())

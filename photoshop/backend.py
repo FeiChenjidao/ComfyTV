@@ -51,9 +51,10 @@ photoshop_users = []
 comfyui_users = []
 photoshop_bindings = {}
 active_jobs = {}
+batch_inputs = {}
 auth_transfers = {}
 
-PROTOCOL_VERSION = 3
+PROTOCOL_VERSION = 4
 AUTH_TRANSFER_TTL_SECONDS = 5 * 60
 AUTH_TRANSFER_MAX_BYTES = 1024 * 1024
 AUTH_TRANSFER_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
@@ -93,6 +94,27 @@ def cleanup_job_inputs(job_id):
         pass
     except OSError as error:
         print(f"# PS: failed to clean job inputs {job_id}: {error}")
+
+
+def materialize_batch_inputs(batch_input_key, job_id):
+    source = job_input_directory(batch_input_key)
+    target = job_input_directory(job_id, create=True)
+    if source == PS_INPUTS or target == PS_INPUTS or not os.path.isfile(os.path.join(source, "PS_canvas.png")):
+        return False
+    for name in os.listdir(source):
+        if name != "PS_canvas.png" and name != "PS_mask.png" and not re.fullmatch(r"PS_ref_[1-6]\.png", name):
+            continue
+        source_file = os.path.join(source, name)
+        target_file = os.path.join(target, name)
+        try:
+            os.remove(target_file)
+        except FileNotFoundError:
+            pass
+        try:
+            os.link(source_file, target_file)
+        except OSError:
+            shutil.copy2(source_file, target_file)
+    return True
 
 
 async def save_file(data, filename, job_id=""):
@@ -210,6 +232,11 @@ async def fail_jobs_for_client(client_id, message):
             })
         active_jobs.pop(job_id, None)
         cleanup_job_inputs(job.get("input_key") or job_id)
+    for input_key, owner_id in list(batch_inputs.items()):
+        if owner_id != client_id:
+            continue
+        cleanup_job_inputs(input_key)
+        batch_inputs.pop(input_key, None)
 
 
 async def websocket_handler(request):
@@ -303,16 +330,19 @@ async def handle_message(client_id, platform, data):
         return
     try:
         message_job_id = str(msg.get("jobId") or "")
+        message_input_key = str(msg.get("inputKey") or message_job_id)
+        if msg.get("inputKey") and job_input_directory(message_input_key) != PS_INPUTS:
+            batch_inputs[message_input_key] = client_id
         if msg.get("referenceClear"):
-            clear_reference_files(message_job_id)
+            clear_reference_files(message_input_key)
         if msg.get("maskClear"):
-            clear_mask_file(message_job_id)
+            clear_mask_file(message_input_key)
         if "referenceBase64" in msg:
-            await save_file(msg["referenceBase64"], reference_filename(msg.get("referenceIndex")), message_job_id)
+            await save_file(msg["referenceBase64"], reference_filename(msg.get("referenceIndex")), message_input_key)
         if "canvasBase64" in msg:
-            await save_file(msg["canvasBase64"], "PS_canvas.png", message_job_id)
+            await save_file(msg["canvasBase64"], "PS_canvas.png", message_input_key)
         if "maskBase64" in msg:
-            await save_file(msg["maskBase64"], "PS_mask.png", message_job_id)
+            await save_file(msg["maskBase64"], "PS_mask.png", message_input_key)
         if "configdata" in msg:
             await save_config(msg["configdata"], message_job_id)
         if "workspace" in msg:
@@ -321,6 +351,18 @@ async def handle_message(client_id, platform, data):
                 await send_to_client(cm_client_id, {"workspace": msg["workspace"]})
         if msg.get("queue"):
             job_id = str(msg.get("jobId") or uuid.uuid4())
+            batch_input_key = str(msg.get("batchInputKey") or "")
+            if batch_input_key and not materialize_batch_inputs(batch_input_key, job_id):
+                await send_to_client(client_id, {
+                    "protocolVersion": PROTOCOL_VERSION,
+                    "jobId": job_id,
+                    "jobStatus": {"phase": "error", "message": "批次输入不存在，请重新提交任务"},
+                })
+                cleanup_job_inputs(job_id)
+                if msg.get("batchFinal"):
+                    cleanup_job_inputs(batch_input_key)
+                    batch_inputs.pop(batch_input_key, None)
+                return
             input_key = job_id if job_inputs_ready(job_id) else ""
             cm_client_id = bound_comfy_client(client_id)
             if not cm_client_id:
@@ -333,6 +375,9 @@ async def handle_message(client_id, platform, data):
                     },
                 })
                 cleanup_job_inputs(input_key)
+                if msg.get("batchFinal"):
+                    cleanup_job_inputs(batch_input_key)
+                    batch_inputs.pop(batch_input_key, None)
                 return
             active_jobs[job_id] = {
                 "ps_client_id": client_id,
@@ -352,7 +397,12 @@ async def handle_message(client_id, platform, data):
             }
             if "workflow" in msg:
                 forward["workflow"] = msg["workflow"]
+            if isinstance(msg.get("promptEnhance"), dict):
+                forward["promptEnhance"] = msg["promptEnhance"]
             await send_to_client(cm_client_id, forward)
+            if msg.get("batchFinal"):
+                cleanup_job_inputs(batch_input_key)
+                batch_inputs.pop(batch_input_key, None)
         if msg.get("interrupt"):
             job_id = str(msg.get("jobId") or "")
             job = active_jobs.get(job_id)
@@ -377,7 +427,7 @@ async def handle_message(client_id, platform, data):
                     cleanup_job_inputs(job.get("input_key") or job_id)
         handled = (
             "configdata", "maskBase64", "maskClear", "canvasBase64", "workspace", "queue",
-            "referenceClear", "referenceBase64", "interrupt", "jobAck",
+            "referenceClear", "referenceBase64", "interrupt", "jobAck", "inputKey", "batchInputKey",
         )
         if not any(key in msg for key in handled):
             cm_client_id = bound_comfy_client(client_id)
@@ -420,6 +470,26 @@ async def send_render_payload(encoded, job_id="", thumb="", layered=None):
         payload["jobId"] = ""
         payload["manualRender"] = True
         await send_message(photoshop_users, "", json.dumps(payload))
+    return payload
+
+
+async def send_prompt_result(text, job_id=""):
+    job_id = str(job_id or "")
+    result = str(text or "").strip()
+    if not result:
+        raise ValueError("Missing prompt enhancement result")
+    payload = {
+        "protocolVersion": PROTOCOL_VERSION,
+        "jobId": job_id,
+        "promptEnhancement": result,
+    }
+    job = active_jobs.get(job_id)
+    if job:
+        await send_to_client(job["ps_client_id"], payload)
+    elif active_jobs:
+        print(f"# PS: dropped prompt result for inactive job {job_id or '<missing>'}")
+    else:
+        print(f"# PS: dropped prompt result without an active job {job_id or '<missing>'}")
     return payload
 
 

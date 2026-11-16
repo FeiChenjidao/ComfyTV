@@ -118,6 +118,16 @@ class TestPluginUpdateCheck:
         assert status["update_available"] is False
         assert status["behind"] == 0
 
+    def test_untracked_files_do_not_offer_repair(self, twin_repos):
+        mod = _load_mod()
+        local, _other, _remote = twin_repos
+        (local / "local-only.txt").write_text("keep", encoding="utf-8")
+
+        status = mod.check_plugin_update(fetch=True, root=local)
+
+        assert status["dirty"] is False
+        assert status["repair_available"] is False
+
     def test_apply_ff_only(self, twin_repos):
         mod = _load_mod()
         local, other, _remote = twin_repos
@@ -162,3 +172,177 @@ class TestPluginUpdateCheck:
         assert "1.2.0" in (local / "pyproject.toml").read_text(encoding="utf-8")
         # Untracked files are not deleted by the force reset.
         assert (local / "dirty.txt").read_text(encoding="utf-8") == "keep-untracked"
+
+    def test_force_overwrites_builtin_workflow_and_keeps_user_workflow(self, twin_repos):
+        mod = _load_mod()
+        local, other, _remote = twin_repos
+        workflow_dir = local / "workflows" / "image"
+        workflow_dir.mkdir(parents=True)
+        (local / "workflows" / ".gitignore").write_text(
+            "*.json\n!image/\n!image/builtin.json\n",
+            encoding="utf-8",
+        )
+        builtin = workflow_dir / "builtin.json"
+        builtin.write_text('{"version": "shipped-v1"}\n', encoding="utf-8")
+        _git(local, "add", "workflows/.gitignore", "workflows/image/builtin.json")
+        _git(local, "commit", "-m", "add built-in workflow")
+        _git(local, "push", "origin", "main")
+
+        _git(other, "pull", "--ff-only", "origin", "main")
+        remote_builtin = other / "workflows" / "image" / "builtin.json"
+        remote_builtin.write_text('{"version": "shipped-v2"}\n', encoding="utf-8")
+        _git(other, "add", "workflows/image/builtin.json")
+        _git(other, "commit", "-m", "update built-in workflow")
+        _git(other, "push", "origin", "main")
+
+        builtin.write_text('{"version": "local-edit"}\n', encoding="utf-8")
+        user_workflow = local / "workflows" / "user-custom.json"
+        user_workflow.write_text('{"version": "user"}\n', encoding="utf-8")
+
+        status = mod.apply_plugin_update(root=local)
+
+        assert status["ok"] is True
+        assert status["forced"] is True
+        assert builtin.read_text(encoding="utf-8") == '{"version": "shipped-v2"}\n'
+        assert user_workflow.read_text(encoding="utf-8") == '{"version": "user"}\n'
+
+    def test_fetch_failure_never_uses_a_stale_remote_tip(self, twin_repos):
+        mod = _load_mod()
+        local, other, _remote = twin_repos
+        (other / "pyproject.toml").write_text(
+            '[project]\nname = "ComfyTV"\nversion = "1.3.0"\n',
+            encoding="utf-8",
+        )
+        _git(other, "add", "pyproject.toml")
+        _git(other, "commit", "-m", "bump")
+        _git(other, "push", "origin", "main")
+        assert mod.check_plugin_update(fetch=True, root=local)["update_available"] is True
+
+        _git(local, "remote", "set-url", "origin", str(local / "missing-remote.git"))
+        status = mod.check_plugin_update(fetch=True, root=local)
+
+        assert status["ok"] is False
+        assert status["update_available"] is False
+        assert status["error_code"] == "fetch_failed"
+
+    def test_quarantines_user_file_when_remote_adds_same_path(self, twin_repos):
+        mod = _load_mod()
+        local, other, _remote = twin_repos
+        workflows = local / "workflows"
+        workflows.mkdir()
+        (workflows / ".gitignore").write_text("*.json\n", encoding="utf-8")
+        _git(local, "add", "workflows/.gitignore")
+        _git(local, "commit", "-m", "ignore user workflows")
+        _git(local, "push", "origin", "main")
+        _git(other, "pull", "--ff-only", "origin", "main")
+
+        user_workflow = workflows / "model" / "new-builtin.json"
+        user_workflow.parent.mkdir()
+        user_workflow.write_text('{"source": "user"}\n', encoding="utf-8")
+        remote_workflow = other / "workflows" / "model" / "new-builtin.json"
+        remote_workflow.parent.mkdir(parents=True)
+        remote_workflow.write_text('{"source": "remote"}\n', encoding="utf-8")
+        _git(other, "add", "-f", "workflows/model/new-builtin.json")
+        _git(other, "commit", "-m", "ship workflow")
+        _git(other, "push", "origin", "main")
+
+        status = mod.apply_plugin_update(root=local)
+
+        backup = Path(str(user_workflow) + ".local-backup")
+        assert status["ok"] is True
+        assert user_workflow.read_text(encoding="utf-8") == '{"source": "remote"}\n'
+        assert backup.read_text(encoding="utf-8") == '{"source": "user"}\n'
+        assert "workflows/model/new-builtin.json.local-backup" in status["local_backups"]
+
+    def test_quarantines_independently_tracked_workflow_collision(self, twin_repos):
+        mod = _load_mod()
+        local, other, _remote = twin_repos
+        local_workflow = local / "workflows" / "model" / "shared.json"
+        local_workflow.parent.mkdir(parents=True)
+        local_workflow.write_text('{"source": "local-commit"}\n', encoding="utf-8")
+        _git(local, "add", "workflows/model/shared.json")
+        _git(local, "commit", "-m", "local workflow")
+
+        remote_workflow = other / "workflows" / "model" / "shared.json"
+        remote_workflow.parent.mkdir(parents=True)
+        remote_workflow.write_text('{"source": "remote-built-in"}\n', encoding="utf-8")
+        _git(other, "add", "workflows/model/shared.json")
+        _git(other, "commit", "-m", "remote workflow")
+        _git(other, "push", "origin", "main")
+
+        status = mod.apply_plugin_update(root=local)
+
+        backup = Path(str(local_workflow) + ".local-backup")
+        assert status["ok"] is True
+        assert local_workflow.read_text(encoding="utf-8") == '{"source": "remote-built-in"}\n'
+        assert backup.read_text(encoding="utf-8") == '{"source": "local-commit"}\n'
+
+    def test_restores_tracked_local_only_workflow_after_force_update(self, twin_repos):
+        mod = _load_mod()
+        local, other, _remote = twin_repos
+        local_workflow = local / "workflows" / "mine.json"
+        local_workflow.parent.mkdir()
+        local_workflow.write_text('{"source": "local"}\n', encoding="utf-8")
+        _git(local, "add", "workflows/mine.json")
+        _git(local, "commit", "-m", "local workflow")
+
+        (other / "pyproject.toml").write_text(
+            '[project]\nname = "ComfyTV"\nversion = "1.4.0"\n',
+            encoding="utf-8",
+        )
+        _git(other, "add", "pyproject.toml")
+        _git(other, "commit", "-m", "remote update")
+        _git(other, "push", "origin", "main")
+
+        status = mod.apply_plugin_update(root=local)
+
+        assert status["ok"] is True
+        assert status["forced"] is True
+        assert local_workflow.read_text(encoding="utf-8") == '{"source": "local"}\n'
+        assert _git(local, "ls-files", "workflows/mine.json").stdout.strip() == ""
+
+    def test_update_creates_patch_and_can_rollback(self, twin_repos):
+        mod = _load_mod()
+        local, other, _remote = twin_repos
+        (other / "pyproject.toml").write_text(
+            '[project]\nname = "ComfyTV"\nversion = "2.0.0"\n',
+            encoding="utf-8",
+        )
+        _git(other, "add", "pyproject.toml")
+        _git(other, "commit", "-m", "major update")
+        _git(other, "push", "origin", "main")
+        (local / "pyproject.toml").write_text(
+            '[project]\nname = "ComfyTV"\nversion = "9.9.9-local"\n',
+            encoding="utf-8",
+        )
+
+        updated = mod.apply_plugin_update(root=local)
+
+        patch = Path(updated["backup_path"]) / "tracked-changes.patch"
+        assert updated["ok"] is True
+        assert updated["rollback_available"] is True
+        assert updated["rollback_version"] == "1.0.0"
+        assert updated["dependency_files_changed"] == []
+        assert "9.9.9-local" in patch.read_text(encoding="utf-8")
+        assert "2.0.0" in (local / "pyproject.toml").read_text(encoding="utf-8")
+
+        rolled_back = mod.rollback_plugin_update(root=local)
+
+        assert rolled_back["ok"] is True
+        assert rolled_back["rolled_back"] is True
+        assert rolled_back["rollback_available"] is False
+        assert rolled_back["restart_required"] is True
+        assert "1.0.0" in (local / "pyproject.toml").read_text(encoding="utf-8")
+
+    def test_rejects_concurrent_update(self, twin_repos):
+        mod = _load_mod()
+        local, _other, _remote = twin_repos
+        assert mod._UPDATE_LOCK.acquire(blocking=False)
+        try:
+            status = mod.apply_plugin_update(root=local)
+        finally:
+            mod._UPDATE_LOCK.release()
+
+        assert status["ok"] is False
+        assert status["update_in_progress"] is True
+        assert status["error_code"] == "update_in_progress"

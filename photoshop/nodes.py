@@ -11,7 +11,7 @@ from comfy_api.latest import io
 from nodes import SaveImage
 from PIL import Image, ImageOps
 
-from .backend import job_input_directory, send_render_file, send_render_payload, thumb_png_bytes
+from .backend import job_input_directory, send_prompt_result, send_render_file, send_render_payload, thumb_png_bytes
 
 
 def _file_hash(name, job_id=""):
@@ -216,6 +216,25 @@ class SendToPhotoshop(io.ComfyNode):
         return io.NodeOutput()
 
 
+class SendPromptToPhotoshop(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="🔹SendPromptTo Photoshop Plugin",
+            display_name="提示词送回 Photoshop",
+            category="Photoshop",
+            description="Send an enhanced prompt back to the ComfyTV Photoshop panel.",
+            inputs=[io.String.Input("text", multiline=True, force_input=True)],
+            is_output_node=True,
+        )
+
+    @classmethod
+    async def execute(cls, text, prompt=None, extra_pnginfo=None):
+        job_id = _job_id_from_prompt(prompt) or _job_id_from_config()
+        await send_prompt_result(text, job_id)
+        return io.NodeOutput()
+
+
 def _tensor_image(value):
     tensor = value.detach().cpu()
     if tensor.ndim == 4:
@@ -301,4 +320,4 @@ class SendLayersToPhotoshop(io.ComfyNode):
         return io.NodeOutput()
 
 
-PHOTOSHOP_NODES = [PhotoshopFromPanel, SendToPhotoshop, SendLayersToPhotoshop]
+PHOTOSHOP_NODES = [PhotoshopFromPanel, SendToPhotoshop, SendPromptToPhotoshop, SendLayersToPhotoshop]

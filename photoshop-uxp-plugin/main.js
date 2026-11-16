@@ -15,9 +15,10 @@ const WEB_PANEL_ID = "com.comfytv.photoshop.web"
 const HISTORY_PANEL_ID = "com.comfytv.photoshop.history"
 const EMBEDDED_COMFY = "http://localhost:8188"
 const STORE_PREFIX = "comfytv.uxp."
-const PLUGIN_VERSION = "0.3.19"
+const PLUGIN_VERSION = "0.3.33"
 const COMPOSER_PROTOCOL_VERSION = 3
-const WORKFLOW_PROTOCOL_VERSION = 3
+const WORKFLOW_PROTOCOL_VERSION = 4
+const PROMPT_ENHANCE_MODEL = "gpt-5.6-sol"
 const RUNTIME_DIRECT = "direct"
 const RUNTIME_COMFYUI = "comfyui"
 const UPDATE_RELEASE_PAGE = "https://github.com/FeiChenjidao/ComfyTV-Photoshop/releases"
@@ -33,6 +34,9 @@ const DEFAULT_MAX_RES = 3840
 const STATE_BACKUP_FILE = "comfytv-state-backup-v1.json"
 const DOCUMENT_WORKSPACE_ROOT = "document-workspaces-v1"
 const DOCUMENT_WORKSPACE_MANIFEST = "workspace.json"
+const HISTORY_INPUT_ROOT = "history-inputs"
+const HISTORY_MANIFEST_FILE = "comfytv-history-v1.json"
+const HISTORY_STORAGE_TOKEN_KEY = `${STORE_PREFIX}historyStorageToken.v1`
 const PERSISTENT_STATE = globalThis.ComfyTvPersistentState
 const LOCAL_STATE_KEYS_AT_LOAD = new Set(Object.keys(PERSISTENT_STATE?.prefixedValues(localStorage, STORE_PREFIX) || {}))
 const clientId = `comfytv-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -42,12 +46,14 @@ let runtimeMode = ""
 let directApiKey = ""
 const directAbortControllers = new Map()
 const renderJobs = new Map()
+let promptEnhanceJob = null
 let pendingHistoryClock = 0
 let pluginUpdateInfo = null
 let pluginUpdateBusy = false
 let reconnectTimer = null
 let modelPullTimer = null
 let modelListSynced = false
+let comfyCapabilities = { batchInputs: false }
 let toastTimer = null
 let latestRenderFile = null
 let latestRenderPlacement = null
@@ -87,6 +93,10 @@ let documentWorkspaceSaveTimer = 0
 let documentWorkspaceWrite = Promise.resolve()
 let documentWorkspaceReady = false
 let documentWorkspaceApplying = false
+let historyStorageRootTask = null
+let historyStorageUsingCustom = false
+let historyStorageTokenInvalid = false
+let historyManifestWrite = Promise.resolve()
 
 function element(id) {
   return document.getElementById(id)
@@ -360,10 +370,18 @@ function padPercent() {
   return Math.max(0, Math.min(200, number))
 }
 
-function maskFeatherPixels() {
+function maskFeatherPercent() {
   const number = Number.parseFloat(element("mask-feather").value)
-  if (!Number.isFinite(number)) return 0
-  return Math.max(0, Math.min(1000, number))
+  if (!Number.isFinite(number)) return 5
+  return Math.max(0, Math.min(50, number))
+}
+
+function maskFeatherRadius(bounds, percent = maskFeatherPercent()) {
+  const width = Math.max(0, Number(bounds?.right) - Number(bounds?.left))
+  const height = Math.max(0, Number(bounds?.bottom) - Number(bounds?.top))
+  const shortest = Math.min(width, height)
+  if (!Number.isFinite(shortest) || shortest <= 0) return 0
+  return Math.min(shortest / 2, shortest * Math.max(0, Math.min(50, Number(percent) || 0)) / 100)
 }
 
 function expandSelectionBounds(bounds, limit, percent) {
@@ -492,6 +510,24 @@ function overMaxFrame(width, height) {
   if (userOk && hardOk) return null
   const fitted = captureSize({ left: 0, top: 0, right: width, bottom: height })
   if (!fitted || (fitted.width === width && fitted.height === height)) return null
+  return {
+    width: fitted.width,
+    height: fitted.height,
+    padLeft: 0,
+    padTop: 0,
+    contentWidth: width,
+    contentHeight: height,
+    resample: true,
+  }
+}
+
+function fitCaptureFrameForProfile(width, height, frame, profile = renderProfile) {
+  const normalized = normalizeProfile(profile)
+  if (normalized.family !== "seedreamImage" || normalized.resolution !== "Custom") return frame
+  const currentWidth = Number(frame?.width) || width
+  const currentHeight = Number(frame?.height) || height
+  const fitted = fitSeedreamImageSize(normalized.model, currentWidth, currentHeight)
+  if (fitted.width === currentWidth && fitted.height === currentHeight) return frame
   return {
     width: fitted.width,
     height: fitted.height,
@@ -771,7 +807,7 @@ function bytesToBase64(bytes) {
   return btoa(binary)
 }
 
-function buildRgbRaw(data, width, height, step, frame, fill, channels) {
+function buildRgbRaw(data, width, height, step, frame, fill, channels, binaryMask = false) {
   const count = channels === 4 ? 4 : 3
   const dstW = frame?.width || width
   const dstH = frame?.height || height
@@ -795,7 +831,12 @@ function buildRgbRaw(data, width, height, step, frame, fill, channels) {
         sy = Math.max(0, Math.min(height - 1, sy))
       }
       const from = (sy * width + sx) * step
-      if (step === 1) {
+      if (binaryMask) {
+        const value = data[from] >= 128 ? 255 : 0
+        raw[to] = value
+        raw[to + 1] = value
+        raw[to + 2] = value
+      } else if (step === 1) {
         raw[to] = data[from]
         raw[to + 1] = data[from]
         raw[to + 2] = data[from]
@@ -822,7 +863,7 @@ async function rgbPngFromImageData(imageData, frame, fill, opaque) {
   }
   const channels = !opaque && step === 4 ? 4 : 3
   const padded = frame && (frame.width !== width || frame.height !== height)
-  const raw = buildRgbRaw(data, width, height, step, padded ? frame : null, fill || "edge", channels)
+  const raw = buildRgbRaw(data, width, height, step, padded ? frame : null, fill || "edge", channels, frame?.binaryMask === true)
   return rgbPngBase64(padded ? frame.width : width, padded ? frame.height : height, raw, channels)
 }
 
@@ -845,6 +886,100 @@ function rgbPngBase64(width, height, raw, channels) {
     pngChunk("IEND", new Uint8Array(0)),
   ])
   return bytesToBase64(png)
+}
+
+async function pngFromBrowserImage(bytes, mimeType) {
+  if (typeof createImageBitmap !== "function" || typeof Blob !== "function") return ""
+  let bitmap = null
+  let canvas = null
+  try {
+    const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    bitmap = await createImageBitmap(new Blob([copy], { type: mimeType }))
+    if (!bitmap || !bitmap.width || !bitmap.height) return ""
+    canvas = document.createElement("canvas")
+    canvas.width = bitmap.width
+    canvas.height = bitmap.height
+    const context = canvas.getContext("2d")
+    if (!context || typeof context.getImageData !== "function") return ""
+    context.drawImage(bitmap, 0, 0)
+    if (typeof canvas.toDataURL === "function") {
+      try {
+        const dataUrl = canvas.toDataURL("image/png")
+        const encoded = String(dataUrl || "").replace(/^data:image\/png;base64,/, "")
+        if (encoded && pngHeader(new Uint8Array(base64ToBuffer(encoded)))) return encoded
+      } catch (_) {}
+    }
+    const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height).data
+    const stride = 1 + bitmap.width * 4
+    const raw = new Uint8Array(stride * bitmap.height)
+    for (let y = 0; y < bitmap.height; y += 1) {
+      raw.set(pixels.subarray(y * bitmap.width * 4, (y + 1) * bitmap.width * 4), y * stride + 1)
+    }
+    return rgbPngBase64(bitmap.width, bitmap.height, raw, 4)
+  } catch (_) {
+    return ""
+  } finally {
+    if (canvas) {
+      canvas.width = 0
+      canvas.height = 0
+    }
+    if (bitmap && typeof bitmap.close === "function") bitmap.close()
+  }
+}
+
+async function pngFromPhotoshopImage(bytes, mimeType) {
+  const extension = mimeType === "image/webp" ? "webp" : "jpg"
+  const folder = await storage.localFileSystem.getTemporaryFolder()
+  const temporary = await folder.createFile(`comfytv-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`, { overwrite: true })
+  const binary = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+  await temporary.write(binary, { format: storage.formats.binary })
+  let opened = null
+  try {
+    return await core.executeAsModal(async () => {
+      try {
+        opened = await app.open(temporary)
+        if (!opened) throw new Error("Photoshop 无法打开生成结果")
+        const bounds = fullDocumentBounds(opened)
+        const image = await encodePixels({
+          documentID: opened.id,
+          sourceBounds: bounds,
+          componentSize: 8,
+          colorSpace: "RGB",
+        })
+        return image.encoded
+      } finally {
+        if (opened) {
+          if (typeof opened.closeWithoutSaving === "function") await opened.closeWithoutSaving()
+          else await action.batchPlay([{ _obj: "close", saving: { _enum: "yesNo", _value: "no" }, _options: { dialogOptions: "dontDisplay" } }], {})
+        }
+      }
+    }, { commandName: "Convert generated image", timeOut: 15000 })
+  } finally {
+    if (temporary && typeof temporary.delete === "function") {
+      try { await temporary.delete() } catch (_) {}
+    }
+  }
+}
+
+async function normalizeDirectResultImage(image) {
+  const base64 = String(image?.base64 || "").replace(/^data:image\/[^;]+;base64,/, "")
+  const bytes = new Uint8Array(base64ToBuffer(base64))
+  if (pngHeader(bytes)) return base64
+  const mimeType = String(image?.mimeType || "").toLowerCase()
+  if (!["image/jpeg", "image/webp"].includes(mimeType)) throw new Error("生成结果不是支持的图片格式")
+  const browserPng = await pngFromBrowserImage(bytes, mimeType)
+  if (browserPng) return browserPng
+  return pngFromPhotoshopImage(bytes, mimeType)
+}
+
+let directResultConversionQueue = Promise.resolve()
+
+function enqueueDirectResultConversion(image) {
+  const task = directResultConversionQueue
+    .catch(() => {})
+    .then(() => normalizeDirectResultImage(image))
+  directResultConversionQueue = task.then(() => {}, () => {})
+  return task
 }
 
 function solidWhitePng(width, height) {
@@ -876,7 +1011,7 @@ function fillCommand(color) {
   }
 }
 
-async function encodeSelectionMask(document, sourceBounds, frame, selection, featherPixels = 0, onStage = null) {
+async function encodeSelectionMask(document, sourceBounds, frame, selection, featherPercent = 5, onStage = null) {
   const size = { width: frame.width, height: frame.height }
   if (!selection) return solidWhitePng(size.width, size.height)
 
@@ -900,9 +1035,7 @@ async function encodeSelectionMask(document, sourceBounds, frame, selection, fea
       fillCommand("black"),
       selectionCommand({ _ref: "channel", _name: "ComfyTVSel" }),
     ], { modalBehavior: "execute" })
-    const selectionWidth = Math.max(1, selection.right - selection.left)
-    const selectionHeight = Math.max(1, selection.bottom - selection.top)
-    const feather = Math.min(Math.max(0, Number(featherPixels) || 0), selectionWidth / 2, selectionHeight / 2)
+    const feather = maskFeatherRadius(selection, featherPercent)
     if (feather > 0) {
       try {
         await action.batchPlay([{
@@ -924,7 +1057,12 @@ async function encodeSelectionMask(document, sourceBounds, frame, selection, fea
       colorSpace: "RGB",
     }
     if (frame.resample) pixelOptions.targetSize = size
-    const image = await encodePixels(pixelOptions, { ...frame, fill: "black", opaque: true }, onStage, "\u9009\u533a\u906e\u7f69")
+    const image = await encodePixels(pixelOptions, {
+      ...frame,
+      fill: "black",
+      opaque: true,
+      binaryMask: feather <= 0,
+    }, onStage, "\u9009\u533a\u906e\u7f69")
     if (image.encoded) return image.encoded
   } catch (_) {
   } finally {
@@ -1090,7 +1228,7 @@ async function captureWorkflowInput(jobId = "", batchIndex = 0, onStage = null) 
     const sourceBounds = alignBoundsToStep(rawBounds, limit, expand, expand ? tight : rawBounds) || rawBounds
     const nativeWidth = Math.max(1, Math.round(sourceBounds.right - sourceBounds.left))
     const nativeHeight = Math.max(1, Math.round(sourceBounds.bottom - sourceBounds.top))
-    const frame = overMaxFrame(nativeWidth, nativeHeight)
+    const frame = fitCaptureFrameForProfile(nativeWidth, nativeHeight, overMaxFrame(nativeWidth, nativeHeight))
     const pixelOptions = {
     documentID: document.id,
     sourceBounds,
@@ -1103,7 +1241,7 @@ async function captureWorkflowInput(jobId = "", batchIndex = 0, onStage = null) 
     const canvas = await encodePixels(pixelOptions, frame, onStage, "\u753b\u5e03")
     const hasMask = Boolean(selection)
     const maskFrame = frame || { width: nativeWidth, height: nativeHeight, padLeft: 0, padTop: 0, resample: false }
-    const maskFeather = maskFeatherPixels()
+    const maskFeather = maskFeatherPercent()
     const maskBase64 = hasMask ? await encodeSelectionMask(document, sourceBounds, maskFrame, selection, maskFeather, onStage) : ""
     if (onStage) onStage("\u51c6\u5907\u751f\u6210\u8bf7\u6c42")
     const compiledPrompt = compileWorkflowPrompt(hasMask)
@@ -1136,11 +1274,14 @@ async function captureWorkflowInput(jobId = "", batchIndex = 0, onStage = null) 
       seed: String(validSeed()),
       pluginVer: PLUGIN_VERSION,
       family: profile.family,
+      model: profile.model,
       aspect: profile.aspect,
       resolution: profile.resolution,
       quality: profile.quality,
+      complexity: profile.complexity,
       background: profile.background,
       size: profile.size,
+      sizePreset: profile.sizePreset,
       customWidth: profile.customWidth,
       customHeight: profile.customHeight,
       group: profile.group,
@@ -1222,36 +1363,47 @@ function sendSocket(payload) {
   socket.send(JSON.stringify(payload))
 }
 
-function sendWorkflowPayload(payload) {
-  // 画布、遮罩、参考图、排队分成多条消息。旧服务端单条上限 4MB，合在一起会把连接掐掉。
-  const workflow = Number(payload.workflow)
+function sendWorkflowInputs(payload, inputKey) {
+  // 画布、遮罩、参考图分成多条消息。旧服务端单条上限 4MB，合在一起会把连接掐掉。
   const references = payloadReferenceInputs(payload)
-  const jobId = String(payload.configdata?.jobId || "")
-  const profile = payload.configdata
-    ? {
-      family: payload.configdata.family,
-      aspect: payload.configdata.aspect,
-      resolution: payload.configdata.resolution,
-      quality: payload.configdata.quality,
-      background: payload.configdata.background,
-      size: payload.configdata.size,
-      customWidth: payload.configdata.customWidth,
-      customHeight: payload.configdata.customHeight,
-      group: payload.configdata.group,
-    }
-    : profilePayload(renderProfile)
-  sendSocket({ jobId, referenceClear: true })
+  sendSocket({ inputKey, referenceClear: true })
   references.forEach((file, index) => {
     sendSocket({
-      jobId,
+      inputKey,
       referenceBase64: file.base64,
       referenceIndex: index + 1,
       referenceName: file.name || "",
     })
   })
-  sendSocket({ jobId, canvasBase64: payload.canvasBase64 })
-  if (payload.maskBase64) sendSocket({ jobId, maskBase64: payload.maskBase64 })
-  else sendSocket({ jobId, maskClear: true })
+  sendSocket({ inputKey, canvasBase64: payload.canvasBase64 })
+  if (payload.maskBase64) sendSocket({ inputKey, maskBase64: payload.maskBase64 })
+  else sendSocket({ inputKey, maskClear: true })
+  return references.length
+}
+
+function sendWorkflowPayload(payload, options = {}) {
+  const workflow = Number(payload.workflow)
+  const jobId = String(payload.configdata?.jobId || "")
+  const inputKey = String(options.inputKey || jobId)
+  const referenceCount = options.uploadInputs === false
+    ? Number(options.referenceCount) || 0
+    : sendWorkflowInputs(payload, inputKey)
+  const profile = payload.configdata
+    ? {
+      family: payload.configdata.family,
+      model: payload.configdata.model,
+      aspect: payload.configdata.aspect,
+      resolution: payload.configdata.resolution,
+      quality: payload.configdata.quality,
+      complexity: payload.configdata.complexity,
+      background: payload.configdata.background,
+      size: payload.configdata.size,
+      sizePreset: payload.configdata.sizePreset,
+      customWidth: payload.configdata.customWidth,
+      customHeight: payload.configdata.customHeight,
+      group: payload.configdata.group,
+    }
+    : profilePayload(renderProfile)
   sendSocket({
     protocolVersion: WORKFLOW_PROTOCOL_VERSION,
     queue: payload.queue,
@@ -1259,9 +1411,140 @@ function sendWorkflowPayload(payload) {
     batchIndex: payload.configdata.batchIndex,
     workflow: Number.isFinite(workflow) ? workflow : 0,
     renderProfile: profile,
-    referenceCount: references.length,
+    referenceCount,
+    batchInputKey: String(options.batchInputKey || ""),
+    batchFinal: options.batchFinal === true,
     configdata: payload.configdata,
   })
+}
+
+function promptEnhancementInstruction(userPrompt) {
+  const prompt = String(userPrompt || "").trim()
+  const profile = normalizeProfile(renderProfile)
+  const preserveReferences = "如果原提示词包含 @参考图、@参考图1 等引用标记，必须原样保留，不得删除、改名或新增。"
+  const request = prompt || "用户没有输入文本，请根据画布内容生成一条具体、可执行的中文提示词。"
+  if (profile.family === "seedream") {
+    return [
+      "你是 Photoshop 图层拆分提示词专家。请分析输入画布，并把用户要求改写成一条可直接交给 Seedream 图层分离模型的中文提示词。",
+      "明确画面中实际存在且适合独立编辑的背景、主体、前景、文字或 UI、光影特效、阴影等层级；要求边缘完整、透明蒙版干净、层间不重复，并保持原构图、比例和视觉关系。",
+      preserveReferences,
+      "不要解释，不要列分析过程，不要使用 Markdown，只输出最终提示词。",
+      `用户要求：${request}`,
+    ].join("\n")
+  }
+  return [
+    "你是专业的图像生成与图像编辑提示词编辑器。请分析输入画布，识别主体、构图、风格、材质、光照、色彩、镜头和空间关系，并结合用户原意改写成更准确、可执行的中文提示词。",
+    "保留用户明确要求，不擅自改变主体身份和核心目标；补充需要保持的结构以及需要修改的内容，避免空泛形容和互相冲突的要求。",
+    preserveReferences,
+    "不要解释，不要列分析过程，不要使用 Markdown，只输出最终提示词。",
+    `用户要求：${request}`,
+  ].join("\n")
+}
+
+function cleanPromptEnhancement(value) {
+  let text = String(value || "").trim()
+  text = text.replace(/^```(?:text|markdown|md)?\s*/i, "").replace(/\s*```$/, "").trim()
+  text = text.replace(/^(?:优化后的提示词|美化后的提示词|最终提示词)\s*[：:]\s*/i, "").trim()
+  if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("“") && text.endsWith("”"))) {
+    text = text.slice(1, -1).trim()
+  }
+  return text
+}
+
+function setPromptEnhanceBusy(busy) {
+  const button = element("prompt-enhance")
+  if (!button) return
+  button.classList.toggle("busy", busy)
+  button.setAttribute("aria-disabled", busy ? "true" : "false")
+  button.title = busy ? "GPT 正在分析当前画布" : "根据当前画布美化提示词"
+}
+
+function finishPromptEnhancement(message = "", isError = false) {
+  const job = promptEnhanceJob
+  if (job?.timeout) clearTimeout(job.timeout)
+  promptEnhanceJob = null
+  setPromptEnhanceBusy(false)
+  setBusy(false)
+  setMarquee(0, false)
+  if (message) {
+    setProgress(isError ? "美化失败" : message)
+    showStatus(message, isError)
+  }
+}
+
+async function enhancePrompt() {
+  if (runtimeMode !== RUNTIME_COMFYUI && runtimeMode !== RUNTIME_DIRECT) return
+  if (promptEnhanceJob) return
+  if (batchRunning || renderInFlight()) {
+    showStatus("当前还有生成任务，完成后再美化提示词", true)
+    return
+  }
+  if (runtimeMode === RUNTIME_COMFYUI && (!socket || socket.readyState !== WebSocket.OPEN)) {
+    showStatus("工作流通道未连接，请确认 ComfyUI 页面已打开", true)
+    return
+  }
+  const jobId = nextJobId()
+  const currentPrompt = element("positive").value
+  const controller = new AbortController()
+  promptEnhanceJob = { jobId, timeout: null, controller }
+  setPromptEnhanceBusy(true)
+  setBusy(true)
+  setProgress("读取 Photoshop 画布")
+  setMarquee(8, true)
+  try {
+    const payload = await core.executeAsModal(
+      () => captureWorkflowInput(jobId, 0, (stage) => {
+        setProgress(stage)
+        setMarquee(Math.min(35, marqueePercent + 5), true)
+      }),
+      { commandName: "Analyze canvas for prompt", timeOut: 10000 },
+    )
+    if (runtimeMode === RUNTIME_DIRECT) {
+      if (!globalThis.ComfyDirectApi?.enhancePrompt) throw new Error("直接 API 客户端不支持提示词优化")
+      if (!directApiKey) directApiKey = await readDirectApiKey()
+      if (!directApiKey) throw new Error("请先在设置中验证并保存 Comfy API Key")
+      setProgress("GPT 正在分析画布")
+      setMarquee(45, true)
+      const result = await globalThis.ComfyDirectApi.enhancePrompt({
+        apiKey: directApiKey,
+        jobId,
+        prompt: promptEnhancementInstruction(currentPrompt),
+        imageBase64: payload.canvasBase64,
+        model: PROMPT_ENHANCE_MODEL,
+        signal: controller.signal,
+      })
+      const enhanced = cleanPromptEnhancement(result.text)
+      if (!enhanced) throw new Error("GPT 没有返回可用提示词")
+      element("positive").value = enhanced
+      syncPromptMirror()
+      syncComposerWorkbench(true)
+      saveSettings()
+      finishPromptEnhancement(result.credits ? `提示词已优化，消耗 ${result.credits} credits` : "提示词已优化")
+      return
+    }
+    sendSocket({ jobId, referenceClear: true })
+    sendSocket({ jobId, canvasBase64: payload.canvasBase64 })
+    sendSocket({ jobId, maskClear: true })
+    sendSocket({
+      protocolVersion: WORKFLOW_PROTOCOL_VERSION,
+      queue: true,
+      jobId,
+      batchIndex: 0,
+      referenceCount: 0,
+      configdata: { ...payload.configdata, positive: currentPrompt, jobId, batchIndex: 0 },
+      promptEnhance: {
+        prompt: promptEnhancementInstruction(currentPrompt),
+        model: PROMPT_ENHANCE_MODEL,
+      },
+    })
+    setProgress("GPT 正在分析画布")
+    setMarquee(45, true)
+    promptEnhanceJob.timeout = setTimeout(() => {
+      if (promptEnhanceJob?.jobId === jobId) finishPromptEnhancement("提示词美化等待超过 3 分钟", true)
+    }, 3 * 60 * 1000)
+  } catch (error) {
+    finishPromptEnhancement(error.message || "提示词美化失败", true)
+  }
 }
 
 function updateOptions(selectId, value) {
@@ -1294,6 +1577,92 @@ async function writeDataFile(name, base64) {
   const file = await folder.createFile(name, { overwrite: true })
   await file.write(base64ToBuffer(base64), { format: storage.formats.binary })
   return file
+}
+
+function resetHistoryStorageRoot() {
+  historyStorageRootTask = null
+  thumbFolderTask = null
+}
+
+function historyStorageToken() {
+  return String(localStorage.getItem(HISTORY_STORAGE_TOKEN_KEY) || "")
+}
+
+function historyStorageRoot() {
+  if (historyStorageRootTask) return historyStorageRootTask
+  historyStorageRootTask = (async () => {
+    const token = historyStorageToken()
+    if (token && typeof storage.localFileSystem.getEntryForPersistentToken === "function") {
+      try {
+        const entry = await storage.localFileSystem.getEntryForPersistentToken(token)
+        if (entry?.isFolder) {
+          historyStorageUsingCustom = true
+          historyStorageTokenInvalid = false
+          return entry
+        }
+      } catch (_) {
+        historyStorageTokenInvalid = true
+      }
+    }
+    historyStorageUsingCustom = false
+    return storage.localFileSystem.getDataFolder()
+  })()
+  return historyStorageRootTask
+}
+
+async function writeHistoryDataFile(name, base64) {
+  const folder = await historyStorageRoot()
+  const file = await folder.createFile(name, { overwrite: true })
+  await file.write(base64ToBuffer(base64), { format: storage.formats.binary })
+  return file
+}
+
+async function childFolder(parent, name, create = true) {
+  try {
+    const entry = await parent.getEntry(name)
+    return entry?.isFolder ? entry : null
+  } catch (_) {
+    return create ? parent.createFolder(name) : null
+  }
+}
+
+async function syncEntryTree(source, targetFolder) {
+  let existing = null
+  try { existing = await targetFolder.getEntry(source.name) } catch (_) {}
+  if (source.isFile) {
+    if (existing?.isFolder) {
+      await deleteEntryTree(existing)
+      existing = null
+    }
+    const target = existing?.isFile ? existing : await targetFolder.createFile(source.name, { overwrite: true })
+    const data = await source.read({ format: storage.formats.binary })
+    await target.write(data, { format: storage.formats.binary })
+    return 1
+  }
+  if (!source.isFolder) return 0
+  if (existing?.isFile) {
+    await deleteEntryTree(existing)
+    existing = null
+  }
+  const target = existing?.isFolder ? existing : await targetFolder.createFolder(source.name)
+  let copied = 0
+  const entries = await source.getEntries()
+  const sourceNames = new Set(entries.map((entry) => entry.name))
+  for (const entry of entries) copied += await syncEntryTree(entry, target)
+  const targetEntries = await target.getEntries()
+  for (const entry of targetEntries) {
+    if (!sourceNames.has(entry.name)) await deleteEntryTree(entry)
+  }
+  return copied
+}
+
+async function deleteEntryTree(entry) {
+  if (!entry) return true
+  if (entry.isFolder) {
+    const children = await entry.getEntries()
+    for (const child of children) await deleteEntryTree(child)
+  }
+  return deleteEntry(entry)
 }
 
 async function writeDurableStateBackup() {
@@ -1391,6 +1760,193 @@ async function stampPngPpi(file, ppi) {
 
 function historyKey() {
   return `${STORE_PREFIX}renderHistory`
+}
+
+function normalizeHistoryRequest(value) {
+  if (!value || typeof value !== "object") return null
+  const id = String(value.id || "").replace(/[^a-z0-9_-]/gi, "")
+  if (!id) return null
+  const prompt = value.prompt && typeof value.prompt === "object" ? value.prompt : {}
+  const workflow = value.workflow && typeof value.workflow === "object" ? value.workflow : {}
+  const references = (Array.isArray(value.references) ? value.references : []).slice(0, 6).map((item, index) => ({
+    fileName: String(item?.fileName || ""),
+    role: item?.role === "style" ? "style" : "reference",
+    label: String(item?.label || (item?.role === "style" ? "风格" : `参考图${index + 1}`)),
+    name: String(item?.name || `reference-${index + 1}.png`),
+    sourceWidth: Number(item?.sourceWidth) || 0,
+    sourceHeight: Number(item?.sourceHeight) || 0,
+    width: Number(item?.width) || 0,
+    height: Number(item?.height) || 0,
+    optimized: Boolean(item?.optimized),
+    documentId: Number(item?.documentId) || 0,
+    layerId: Number(item?.layerId) || 0,
+    layerName: String(item?.layerName || ""),
+  })).filter((item) => item.fileName)
+  return {
+    schema: 1,
+    id,
+    createdAt: Number(value.createdAt) || Date.now(),
+    runtimeMode: value.runtimeMode === RUNTIME_COMFYUI || value.runtimeMode === RUNTIME_DIRECT ? value.runtimeMode : "",
+    workflow: { value: String(workflow.value || ""), label: String(workflow.label || "") },
+    prompt: {
+      user: String(prompt.user || ""),
+      compiled: String(prompt.compiled || ""),
+      negative: String(prompt.negative || ""),
+      structure: prompt.structure && typeof prompt.structure === "object" ? prompt.structure : null,
+    },
+    profile: value.profile && typeof value.profile === "object" ? { ...normalizeProfile(value.profile) } : null,
+    selectedPresetIds: value.selectedPresetIds && typeof value.selectedPresetIds === "object" ? { ...value.selectedPresetIds } : {},
+    seed: String(value.seed || ""),
+    references,
+  }
+}
+
+async function historyInputRoot(create = true) {
+  return childFolder(await historyStorageRoot(), HISTORY_INPUT_ROOT, create)
+}
+
+async function historyRequestFolder(requestId, create = true) {
+  const id = String(requestId || "").replace(/[^a-z0-9_-]/gi, "")
+  if (!id) return null
+  const root = await historyInputRoot(create)
+  return root ? childFolder(root, id, create) : null
+}
+
+async function archiveHistoryRequest(snapshot) {
+  const id = `request-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
+  const folder = await historyRequestFolder(id, true)
+  if (!folder) throw new Error("无法创建历史输入目录")
+  const references = []
+  const inputs = Array.isArray(snapshot.referenceInputs) ? snapshot.referenceInputs.slice(0, 6) : []
+  for (let index = 0; index < inputs.length; index += 1) {
+    const input = inputs[index]
+    const encoded = String(input?.base64 || "").replace(/^data:image\/[^;]+;base64,/, "")
+    if (!encoded) continue
+    const fileName = `${input.role === "style" ? "style" : "reference"}-${index + 1}.png`
+    const entry = await folder.createFile(fileName, { overwrite: true })
+    await entry.write(base64ToBuffer(encoded), { format: storage.formats.binary })
+    references.push({
+      fileName,
+      role: input.role === "style" ? "style" : "reference",
+      label: String(input.label || ""),
+      name: String(input.name || fileName),
+      sourceWidth: Number(input.sourceWidth) || 0,
+      sourceHeight: Number(input.sourceHeight) || 0,
+      width: Number(input.width) || 0,
+      height: Number(input.height) || 0,
+      optimized: Boolean(input.optimized),
+      documentId: Number(input.documentId) || 0,
+      layerId: Number(input.layerId) || 0,
+      layerName: String(input.layerName || ""),
+    })
+  }
+  const inputState = snapshot.historyInputState || {}
+  const request = normalizeHistoryRequest({
+    schema: 1,
+    id,
+    createdAt: Date.now(),
+    runtimeMode: snapshot.runtimeMode,
+    workflow: snapshot.workflowSelection,
+    prompt: {
+      user: inputState.positive,
+      compiled: snapshot.configdata?.positive,
+      negative: snapshot.configdata?.negative,
+      structure: snapshot.configdata?.promptStructure,
+    },
+    profile: snapshot.configdata,
+    selectedPresetIds: inputState.selectedPresetIds,
+    seed: snapshot.configdata?.seed,
+    references,
+  })
+  const manifest = await folder.createFile("request.json", { overwrite: true })
+  await manifest.write(JSON.stringify(request))
+  return request
+}
+
+async function readHistoryRequestReferences(request) {
+  const normalized = normalizeHistoryRequest(request)
+  if (!normalized || !normalized.references.length) return { style: null, references: [] }
+  const folder = await historyRequestFolder(normalized.id, false)
+  if (!folder) throw new Error("这条历史的参考图文件已经不存在")
+  let style = null
+  const references = []
+  for (const record of normalized.references) {
+    const entry = await folder.getEntry(record.fileName)
+    const raw = await entry.read({ format: storage.formats.binary })
+    const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw)
+    const restored = {
+      ...record,
+      base64: bytesToBase64(bytes),
+      thumbSrc: await referenceThumbSrc(bytes),
+      _historyRequestId: normalized.id,
+      _historyFileName: record.fileName,
+    }
+    if (record.role === "style" && !style) style = restored
+    else references.push(restored)
+  }
+  return { style, references }
+}
+
+function stripInternalWorkflowPrompt(value) {
+  return String(value || "")
+    .split(/\n{2,}/)
+    .filter((block) => !/^(?:Mask[：:]|风格[：:]\s*参考图\d+)/.test(block.trim()))
+    .join("\n\n")
+    .trim()
+}
+
+function historyPromptForRestore(request) {
+  const prompt = request?.prompt || {}
+  const userPrompt = String(prompt.user || "")
+  if (userPrompt.trim()) return userPrompt
+  if (prompt.structure && typeof prompt.structure.text === "string") return prompt.structure.text
+  if (Object.keys(request?.selectedPresetIds || {}).length) return ""
+  return stripInternalWorkflowPrompt(prompt.compiled)
+}
+
+async function restoreHistoryRequest(item) {
+  const request = normalizeHistoryRequest(item?.request)
+  if (!request) throw new Error("这条历史来自旧版本，没有保存提示词和参考图")
+  const restored = await readHistoryRequestReferences(request)
+  if (request.runtimeMode && request.runtimeMode !== runtimeMode) {
+    await switchRuntimeMode(request.runtimeMode, { silent: true })
+    if (runtimeMode !== request.runtimeMode) throw new Error("当前还有生成任务，无法切换到这条历史的运行模式")
+  }
+  element("positive").value = historyPromptForRestore(request)
+  element("negative").value = /^(null|undefined)$/i.test(request.prompt.negative.trim()) ? "" : request.prompt.negative
+  if (request.seed) element("seed").value = request.seed
+  if (request.profile) renderProfile = normalizeProfile(request.profile)
+  selectedPresetIds = { ...request.selectedPresetIds }
+  documentWorkspacePendingModel = request.workflow
+  styleReference = restored.style
+  referenceFiles.splice(0, referenceFiles.length, ...restored.references)
+  applyDocumentWorkspaceModelSelection()
+  localStorage.setItem(`${STORE_PREFIX}renderProfile`, JSON.stringify(renderProfile))
+  writePresetSelection()
+  saveSettings()
+  syncPromptMirror()
+  paintReferenceRow()
+  syncPresetButton()
+  syncComposer()
+  syncComposerWorkbench(true)
+  if (runtimeMode === RUNTIME_COMFYUI && socket?.readyState === WebSocket.OPEN) {
+    sendSocket({ workflow: Number(element("workflow").value) })
+    pushRenderProfile()
+  }
+  showStatus(`已恢复第 ${Number(item.number) || ""} 张的提示词、参考图和模型参数`)
+}
+
+async function pruneHistoryInputFolders() {
+  const root = await historyInputRoot(false)
+  if (!root) return 0
+  const keep = new Set(renderHistory.map((item) => normalizeHistoryRequest(item.request)?.id).filter(Boolean))
+  const entries = await root.getEntries()
+  let removed = 0
+  for (const entry of entries) {
+    if (!entry.isFolder || keep.has(entry.name)) continue
+    if (await deleteEntryTree(entry)) removed += 1
+  }
+  return removed
 }
 
 function historyCategoriesKey() {
@@ -1518,9 +2074,30 @@ function saveRenderHistory() {
     categoryId: validHistoryCategoryId(item.categoryId),
     placement: item.placement || null,
     layered: item.layered || null,
+    request: normalizeHistoryRequest(item.request),
   }))
   localStorage.setItem(historyKey(), JSON.stringify(stored))
+  if (typeof historyManifestWrite !== "undefined" && typeof historyStorageRoot === "function") {
+    historyManifestWrite = historyManifestWrite.catch(() => {}).then(async () => {
+      const root = await historyStorageRoot()
+      const file = await root.createFile(HISTORY_MANIFEST_FILE, { overwrite: true })
+      await file.write(JSON.stringify({ schema: 1, savedAt: new Date().toISOString(), items: stored }))
+    }).catch((error) => console.warn("ComfyTV history manifest failed", error))
+  }
   scheduleDurableStateBackup()
+}
+
+async function readHistoryManifest() {
+  try {
+    const root = await historyStorageRoot()
+    const file = await root.getEntry(HISTORY_MANIFEST_FILE)
+    const payload = JSON.parse(await file.read())
+    if (Number(payload?.schema) !== 1 || !Array.isArray(payload.items)) return []
+    localStorage.setItem(historyKey(), JSON.stringify(payload.items))
+    return readRenderHistory()
+  } catch (_) {
+    return []
+  }
 }
 
 function historyJobStatus(item) {
@@ -1536,6 +2113,23 @@ function historyJobStatus(item) {
     prefix += ` ${Math.min(99, Math.round(progress))}%`
   }
   return `${prefix} · ${elapsed}秒`
+}
+
+function historyJobCancellable(item) {
+  return Boolean(item?.pending && item?.jobId && !item.cancelRequested && item.phase !== "result_received")
+}
+
+function appendHistoryJobCancel(card, item) {
+  if (!historyJobCancellable(item)) return
+  const cancel = document.createElement("span")
+  cancel.className = "history-job-cancel"
+  cancel.dataset.jobId = String(item.jobId)
+  cancel.setAttribute("role", "button")
+  cancel.setAttribute("aria-label", "取消此生成任务")
+  cancel.title = "取消此生成任务"
+  cancel.tabIndex = 0
+  cancel.textContent = "×"
+  card.appendChild(cancel)
 }
 
 function refreshPendingHistoryLabels() {
@@ -1569,6 +2163,7 @@ function readRenderHistory() {
         categoryId: validHistoryCategoryId(item.categoryId),
         placement: normalizeRenderPlacement(item.placement),
         layered: normalizeLayeredResult(item.layered),
+        request: normalizeHistoryRequest(item.request),
       }))
   } catch (_) {
     return []
@@ -1633,7 +2228,7 @@ async function writeLayeredResult(renderName, value) {
     const encoded = String(item?.base64 || "").replace(/^data:image\/[^;]+;base64,/, "")
     if (!encoded) continue
     const fileName = `${baseName}-layer-${String(index).padStart(2, "0")}.png`
-    await writeDataFile(fileName, encoded)
+    await writeHistoryDataFile(fileName, encoded)
     layers.push({
       fileName,
       name: String(item.name || (index === 0 ? "background" : `layer ${index}`)).slice(0, 120),
@@ -1651,7 +2246,7 @@ async function historyFile(item) {
   if (!item || item.pending || item.failed || !/^render-\d+\.png$/i.test(String(item.name || ""))) {
     throw new Error("这张图片还没有生成完成")
   }
-  const folder = await storage.localFileSystem.getDataFolder()
+  const folder = await historyStorageRoot()
   return folder.getEntry(item.name)
 }
 
@@ -1785,7 +2380,7 @@ let thumbFolderTask = null
 function thumbFolder() {
   if (thumbFolderTask) return thumbFolderTask
   thumbFolderTask = (async () => {
-    const root = await storage.localFileSystem.getDataFolder()
+    const root = await historyStorageRoot()
     try {
       return await root.getEntry("history-thumbs")
     } catch (_) {
@@ -1820,7 +2415,7 @@ async function trimThumbFolder() {
 }
 
 async function retireLooseThumbs() {
-  const root = await storage.localFileSystem.getDataFolder()
+  const root = await historyStorageRoot()
   const entries = await root.getEntries()
   for (let index = 0; index < entries.length; index += 1) {
     const entry = entries[index]
@@ -2084,6 +2679,15 @@ function historyPanelCardFromEvent(event) {
   return null
 }
 
+function historyJobCancelFromEvent(event, boundary) {
+  let node = event.target
+  while (node && node !== boundary) {
+    if (node.classList && node.classList.contains("history-job-cancel")) return node
+    node = node.parentNode
+  }
+  return null
+}
+
 function clearHistoryThumbs() {
   const strip = element("history-strip")
   if (!strip) return
@@ -2320,6 +2924,7 @@ function paintHistoryPanel() {
       status.textContent = historyJobStatus(item)
       placeholder.appendChild(status)
       card.appendChild(placeholder)
+      appendHistoryJobCancel(card, item)
     } else {
       const image = document.createElement("img")
       image.alt = ""
@@ -2464,6 +3069,7 @@ function paintHistoryStrip() {
       status.dataset.jobId = String(item.jobId || "")
       status.textContent = historyJobStatus(item)
       card.appendChild(status)
+      appendHistoryJobCancel(card, item)
     } else {
       const image = document.createElement("img")
       image.className = "history-thumb"
@@ -2539,8 +3145,16 @@ async function selectHistory(index) {
 
 async function restoreRenderHistory() {
   let stored = readRenderHistory()
+  await historyStorageRoot()
+  if (historyStorageTokenInvalid) {
+    renderHistory = []
+    resetEmptyRenderHistory()
+    showStatus("自定义历史目录需要重新授权，请在设置中重新选择原目录", true)
+    return
+  }
+  if (!stored.length) stored = await readHistoryManifest()
   const kept = []
-  const root = await storage.localFileSystem.getDataFolder()
+  const root = await historyStorageRoot()
   const known = new Set(stored.map((item) => item.name))
   const entries = await root.getEntries()
   const recovered = entries
@@ -2569,6 +3183,7 @@ async function restoreRenderHistory() {
         categoryId: validHistoryCategoryId(item.categoryId),
         placement: item.placement || null,
         layered,
+        request: normalizeHistoryRequest(item.request),
         file,
       })
     } catch (_) {}
@@ -2585,6 +3200,7 @@ async function restoreRenderHistory() {
   renderCount = 0
   element("add-layer").disabled = true
   refreshHistoryLimit()
+  pruneHistoryInputFolders().catch(() => {})
 }
 
 let lastRenderFileStamp = 0
@@ -2622,7 +3238,38 @@ function failRenderJob(jobId, error, phase = "error") {
   job.item.phase = phase
   job.item.statusMessage = message
   releaseRenderJob(job)
-  showStatus(message, true)
+  showStatus(message, phase !== "interrupted")
+}
+
+function cancelRenderJob(jobId) {
+  const id = String(jobId || "")
+  const job = renderJobs.get(id)
+  if (!job || !historyJobCancellable(job.item) || job.cancelRequested) return false
+  job.cancelRequested = true
+  job.item.cancelRequested = true
+  job.item.statusMessage = "正在取消"
+  paintHistoryStrip()
+  refreshHistoryPanelIfOpen()
+  try {
+    if (job.mode === RUNTIME_DIRECT) {
+      const controller = directAbortControllers.get(id)
+      acceptJobPhase(id, "interrupted")
+      if (controller) controller.abort()
+    } else {
+      sendSocket({ protocolVersion: WORKFLOW_PROTOCOL_VERSION, jobId: id, interrupt: true })
+      acceptJobPhase(id, "interrupted")
+    }
+    failRenderJob(id, new Error("已取消"), "interrupted")
+    return true
+  } catch (error) {
+    job.cancelRequested = false
+    job.item.cancelRequested = false
+    job.item.statusMessage = ""
+    paintHistoryStrip()
+    refreshHistoryPanelIfOpen()
+    showStatus(error.message || "无法取消生成", true)
+    return false
+  }
 }
 
 function armRenderJobTimeout(job) {
@@ -2632,6 +3279,10 @@ function armRenderJobTimeout(job) {
 function createPendingRenderJobs(snapshot, total, categoryId) {
   const jobs = []
   const items = []
+  const batchResources = {
+    directUploads: new Map(),
+    uploadController: typeof AbortController === "function" ? new AbortController() : null,
+  }
   const firstNumber = nextRenderNumber()
   for (let index = 0; index < total; index += 1) {
     const jobId = nextJobId()
@@ -2642,6 +3293,7 @@ function createPendingRenderJobs(snapshot, total, categoryId) {
       categoryId: validHistoryCategoryId(categoryId),
       placement: normalizeRenderPlacement(payload.placement),
       layered: null,
+      request: normalizeHistoryRequest(snapshot.historyRequest),
       jobId,
       pending: true,
       failed: false,
@@ -2650,7 +3302,7 @@ function createPendingRenderJobs(snapshot, total, categoryId) {
       statusMessage: "",
       startedAt: Date.now(),
     }
-    const job = { jobId, batchIndex: index, payload, item, mode: snapshot.runtimeMode, timeout: 0 }
+    const job = { jobId, batchIndex: index, payload, item, mode: snapshot.runtimeMode, timeout: 0, batchResources }
     renderJobs.set(jobId, job)
     jobPhaseRanks.set(jobId, 0)
     jobPhases.set(jobId, "")
@@ -2678,7 +3330,7 @@ async function receiveRender(value, thumbBase64, layeredValue, job = null) {
   if (!base64) return
   const number = Number(job?.item?.number) || nextRenderNumber()
   const name = nextRenderFileName()
-  const file = await writeDataFile(name, base64)
+  const file = await writeHistoryDataFile(name, base64)
   const layered = await writeLayeredResult(name, layeredValue)
   const item = job?.item || {
     name,
@@ -2710,14 +3362,17 @@ async function receiveRender(value, thumbBase64, layeredValue, job = null) {
     } catch (_) {}
   }
   if (!item.thumbSrc) ensureThumb(item).catch(() => {})
-  selectedHistoryIndex = Math.max(0, renderHistory.indexOf(item))
-  historyPage = Math.floor(selectedHistoryIndex / HISTORY_PAGE_SIZE)
-  latestRenderFile = file
-  latestRenderPlacement = item.placement
-  latestRenderLayered = item.layered
-  renderCount = number
-  showPreview("", file.url)
-  element("add-layer").disabled = false
+  const activateResult = !job || renderHistory[selectedHistoryIndex] === item
+  if (activateResult) {
+    selectedHistoryIndex = Math.max(0, renderHistory.indexOf(item))
+    historyPage = Math.floor(selectedHistoryIndex / HISTORY_PAGE_SIZE)
+    latestRenderFile = file
+    latestRenderPlacement = item.placement
+    latestRenderLayered = item.layered
+    renderCount = number
+    showPreview("", file.url)
+    element("add-layer").disabled = false
+  }
   paintHistoryStrip()
   refreshHistoryPanelIfOpen()
   showStatus(`第 ${number} 张生成结果已收到`)
@@ -2765,7 +3420,7 @@ async function deleteEntry(entry) {
 }
 
 async function deleteHistoryItemFiles(items) {
-  const root = await storage.localFileSystem.getDataFolder()
+  const root = await historyStorageRoot()
   const thumbs = await thumbFolder()
   let failures = 0
   for (let index = 0; index < items.length; index += 1) {
@@ -2790,7 +3445,7 @@ async function deleteHistoryItemFiles(items) {
 }
 
 async function deleteAllHistoryFiles() {
-  const root = await storage.localFileSystem.getDataFolder()
+  const root = await historyStorageRoot()
   let failures = 0
   const entries = await root.getEntries()
   for (let index = 0; index < entries.length; index += 1) {
@@ -2805,6 +3460,9 @@ async function deleteAllHistoryFiles() {
     if (!entry.isFile) continue
     if (!(await deleteEntry(entry))) failures += 1
   }
+  const inputs = await historyInputRoot(false)
+  if (inputs && !(await deleteEntryTree(inputs))) failures += 1
+  thumbFolderTask = null
   return failures
 }
 
@@ -2873,6 +3531,7 @@ async function deleteSelectedRenderHistory() {
     const failures = await deleteHistoryItemFiles(selectedItems)
     renderHistory = renderHistory.filter((item) => !selectedNames.has(item.name))
     saveRenderHistory()
+    await pruneHistoryInputFolders()
     historyPanelSelection.clear()
     historyPanelSelectionAnchor = ""
     if (!renderHistory.length) {
@@ -2908,7 +3567,7 @@ async function cleanOldRenders() {
   const removed = new Set()
   try {
     const cutoff = Date.now() - HISTORY_KEEP_MS
-    const root = await storage.localFileSystem.getDataFolder()
+    const root = await historyStorageRoot()
     const entries = await root.getEntries()
     for (let index = 0; index < entries.length; index += 1) {
       const entry = entries[index]
@@ -2939,6 +3598,7 @@ async function cleanOldRenders() {
     const currentName = renderHistory[selectedHistoryIndex] && renderHistory[selectedHistoryIndex].name
     renderHistory = renderHistory.filter((item) => !removed.has(item.name))
     saveRenderHistory()
+    await pruneHistoryInputFolders()
     if (!renderHistory.length) {
       selectedHistoryIndex = 0
       historyPage = 0
@@ -2969,7 +3629,7 @@ async function cleanOldRenders() {
 async function openRenderFolder() {
   try {
     const uxp = loadModule("uxp")
-    const folder = await storage.localFileSystem.getDataFolder()
+    const folder = await historyStorageRoot()
     const path = folder.nativePath || ""
     if (uxp.shell && typeof uxp.shell.openPath === "function" && path) {
       await uxp.shell.openPath(path, "打开生成图文件夹")
@@ -2981,11 +3641,211 @@ async function openRenderFolder() {
   }
 }
 
+function historyManagedEntry(entry) {
+  if (!entry) return false
+  if (entry.isFolder) return entry.name === "history-thumbs" || entry.name === HISTORY_INPUT_ROOT
+  return entry.isFile && (entry.name === HISTORY_MANIFEST_FILE || /^render-\d+(?:-layer-\d+)?\.png$/i.test(entry.name))
+}
+
+async function copyManagedHistory(source, target) {
+  const entries = await source.getEntries()
+  const managedEntries = entries.filter(historyManagedEntry)
+  const managedNames = new Set(managedEntries.map((entry) => entry.name))
+  let copied = 0
+  for (const entry of managedEntries) copied += await syncEntryTree(entry, target)
+  const targetEntries = await target.getEntries()
+  for (const entry of targetEntries) {
+    if (historyManagedEntry(entry) && !managedNames.has(entry.name)) await deleteEntryTree(entry)
+  }
+  return copied
+}
+
+async function syncHistoryStorageControls(message = "") {
+  const path = element("history-storage-path")
+  const fallback = element("history-storage-default")
+  const status = element("history-cache-status")
+  if (!path || !fallback || !status) return
+  try {
+    const root = await historyStorageRoot()
+    path.value = root.nativePath || (historyStorageUsingCustom ? "自定义历史目录" : "插件默认目录")
+    path.title = path.value
+    fallback.disabled = !historyStorageUsingCustom && !historyStorageTokenInvalid
+    if (historyStorageTokenInvalid) {
+      path.value = "自定义目录需要重新授权"
+      status.textContent = message || "请重新选择原目录"
+    } else {
+      status.textContent = message || (historyStorageUsingCustom ? "使用自定义目录" : "缩略图按需加载")
+    }
+  } catch (_) {
+    path.value = "历史目录不可用"
+    fallback.disabled = true
+    status.textContent = "目录不可用"
+  }
+}
+
+async function changeHistoryStorage(target, useDefault = false) {
+  if (!target || historyMutationBusy || renderInFlight()) {
+    if (renderInFlight()) showStatus("生成完成前不能切换历史目录", true)
+    return
+  }
+  historyMutationBusy = true
+  const pickButton = element("history-storage-pick")
+  const defaultButton = element("history-storage-default")
+  if (pickButton) pickButton.disabled = true
+  if (defaultButton) defaultButton.disabled = true
+  try {
+    if (historyStorageTokenInvalid && useDefault) {
+      localStorage.removeItem(HISTORY_STORAGE_TOKEN_KEY)
+      historyStorageTokenInvalid = false
+      resetHistoryStorageRoot()
+      scheduleDurableStateBackup(0)
+      await restoreRenderHistory()
+      await syncHistoryStorageControls("已恢复插件默认目录")
+      showStatus("已恢复插件默认历史目录")
+      return
+    }
+    if (historyStorageTokenInvalid && !useDefault) {
+      if (typeof storage.localFileSystem.createPersistentToken !== "function") throw new Error("当前 Photoshop 不支持持久目录授权")
+      const token = await storage.localFileSystem.createPersistentToken(target)
+      if (!token) throw new Error("无法保存历史目录权限")
+      localStorage.setItem(HISTORY_STORAGE_TOKEN_KEY, token)
+      historyStorageTokenInvalid = false
+      resetHistoryStorageRoot()
+      scheduleDurableStateBackup(0)
+      await restoreRenderHistory()
+      await syncHistoryStorageControls("历史目录已重新授权")
+      showStatus("历史目录已重新授权")
+      return
+    }
+    const source = await historyStorageRoot()
+    const samePath = source === target || (source.nativePath && target.nativePath && source.nativePath.toLowerCase() === target.nativePath.toLowerCase())
+    if (samePath) {
+      await syncHistoryStorageControls("历史目录未变化")
+      return
+    }
+    showStatus("正在迁移历史文件")
+    saveRenderHistory()
+    await historyManifestWrite
+    const copied = await copyManagedHistory(source, target)
+    if (useDefault) {
+      localStorage.removeItem(HISTORY_STORAGE_TOKEN_KEY)
+      historyStorageTokenInvalid = false
+    } else {
+      if (typeof storage.localFileSystem.createPersistentToken !== "function") throw new Error("当前 Photoshop 不支持持久目录授权")
+      const token = await storage.localFileSystem.createPersistentToken(target)
+      if (!token) throw new Error("无法保存历史目录权限")
+      localStorage.setItem(HISTORY_STORAGE_TOKEN_KEY, token)
+    }
+    resetHistoryStorageRoot()
+    scheduleDurableStateBackup(0)
+    await restoreRenderHistory()
+    await syncHistoryStorageControls(`已迁移 ${copied} 个文件`)
+    showStatus(`历史目录已切换，迁移 ${copied} 个文件`)
+  } finally {
+    historyMutationBusy = false
+    if (pickButton) pickButton.disabled = false
+    if (defaultButton) defaultButton.disabled = !historyStorageUsingCustom && !historyStorageTokenInvalid
+  }
+}
+
+async function chooseHistoryStorageFolder() {
+  const folder = await storage.localFileSystem.getFolder()
+  if (!folder) return
+  await changeHistoryStorage(folder, false)
+}
+
+async function restoreDefaultHistoryStorage() {
+  if (!historyStorageToken()) return
+  const folder = await storage.localFileSystem.getDataFolder()
+  await changeHistoryStorage(folder, true)
+}
+
+async function clearHistoryCache() {
+  await historyStorageRoot()
+  if (historyStorageTokenInvalid) {
+    showStatus("请先重新授权自定义历史目录", true)
+    return
+  }
+  if (historyMutationBusy || renderInFlight()) {
+    if (renderInFlight()) showStatus("生成完成前不能清理缓存", true)
+    return
+  }
+  historyMutationBusy = true
+  const button = element("history-cache-clear")
+  if (button) button.disabled = true
+  let removed = 0
+  try {
+    clearHistoryThumbs()
+    clearHistoryPanelThumbs()
+    const folder = await thumbFolder()
+    const thumbs = await folder.getEntries()
+    for (const entry of thumbs) {
+      if (entry.isFile && await deleteEntry(entry)) removed += 1
+    }
+    renderHistory.forEach((item) => {
+      item.thumb = null
+      item.thumbSrc = ""
+      item.thumbTask = null
+    })
+    removed += await pruneHistoryInputFolders()
+    const dataRoot = await storage.localFileSystem.getDataFolder()
+    const activeCapture = String(capturePreviewFile?.name || "")
+    const dataEntries = await dataRoot.getEntries()
+    for (const entry of dataEntries) {
+      if (!entry.isFile || !/^capture-\d+\.png$/i.test(entry.name) || entry.name === activeCapture) continue
+      if (await deleteEntry(entry)) removed += 1
+    }
+    paintHistoryStrip()
+    refreshHistoryPanelIfOpen()
+    await syncHistoryStorageControls(`已清理 ${removed} 个缓存文件`)
+    showStatus(removed ? `已清理 ${removed} 个缓存文件，历史原图已保留` : "没有可清理的缓存")
+  } catch (error) {
+    showStatus(error.message || "清理缓存失败", true)
+  } finally {
+    historyMutationBusy = false
+    if (button) button.disabled = false
+  }
+}
+
 function handleSocketMessage(event) {
   try {
     const message = JSON.parse(event.data)
     const jobId = String(message.jobId || "")
     const manualRender = message.manualRender === true
+    if (promptEnhanceJob?.jobId === jobId && message.promptEnhancement !== undefined) {
+      const result = cleanPromptEnhancement(message.promptEnhancement)
+      if (!result) {
+        finishPromptEnhancement("GPT 没有返回可用提示词", true)
+        return
+      }
+      element("positive").value = result
+      syncComposerWorkbench(true)
+      saveSettings()
+      scheduleDocumentWorkspaceSave()
+      try {
+        sendSocket({
+          protocolVersion: WORKFLOW_PROTOCOL_VERSION,
+          jobId,
+          jobAck: { phase: "completed" },
+        })
+      } catch (_) {}
+      finishPromptEnhancement("提示词已根据当前画布美化")
+      return
+    }
+    if (promptEnhanceJob?.jobId === jobId && message.jobStatus) {
+      const status = message.jobStatus || {}
+      const phase = String(status.phase || "")
+      if (phase === "queued") {
+        setProgress("提示词美化已排队")
+        setMarquee(50, true)
+      } else if (phase === "running") {
+        setProgress(status.message || "GPT 正在分析画布")
+        setMarquee(Math.max(55, Math.min(95, Number(status.progress) || 55)), true)
+      } else if (phase === "error" || phase === "interrupted") {
+        finishPromptEnhancement(String(status.message || (phase === "interrupted" ? "提示词美化已停止" : "提示词美化失败")), true)
+      }
+      return
+    }
     if (message.render) {
       const job = jobId ? renderJobs.get(jobId) : null
       if (!jobId) {
@@ -3042,7 +3902,8 @@ function handleSocketMessage(event) {
     if (message.pullProfile) pushRenderProfile()
     if (message.alert) {
       const alertText = String(message.alert)
-      if (jobId && renderJobs.has(jobId)) failRenderJob(jobId, new Error(alertText))
+      if (promptEnhanceJob?.jobId === jobId) finishPromptEnhancement(alertText, true)
+      else if (jobId && renderJobs.has(jobId)) failRenderJob(jobId, new Error(alertText))
       else showStatus(alertText, true)
     }
   } catch (error) {
@@ -3086,6 +3947,7 @@ function connectSocket() {
     socket.onclose = () => {
       if (runtimeMode !== RUNTIME_COMFYUI) return
       setConnection("已断开", "error")
+      if (promptEnhanceJob) finishPromptEnhancement("Photoshop 与 ComfyUI 的任务连接已断开", true)
       for (const job of Array.from(renderJobs.values())) {
         if (job.mode === RUNTIME_COMFYUI) failRenderJob(job.jobId, new Error("Photoshop 与 ComfyUI 的任务连接已断开"))
       }
@@ -3103,7 +3965,8 @@ async function connect() {
   try {
     localStorage.setItem(`${STORE_PREFIX}server`, serverAddress())
     setConnection("检查服务", "busy")
-    await request("/comfytv/photoshop/status")
+    const status = await request("/comfytv/photoshop/status")
+    comfyCapabilities = { batchInputs: status?.batchInputs === true }
     connectSocket()
   } catch (error) {
     setConnection("连接错误", "error")
@@ -3127,6 +3990,7 @@ function disconnectComfy() {
     try { socket.close() } catch (_) {}
     socket = null
   }
+  comfyCapabilities = { batchInputs: false }
 }
 
 async function serverIsUp() {
@@ -3311,6 +4175,14 @@ function freezeReferenceInputs() {
     base64: String(file.base64 || ""),
     mimeType: "image/png",
     name: String(file.name || ""),
+    sourceWidth: Number(file.sourceWidth) || 0,
+    sourceHeight: Number(file.sourceHeight) || 0,
+    width: Number(file.width) || 0,
+    height: Number(file.height) || 0,
+    optimized: Boolean(file.optimized),
+    documentId: Number(file.documentId) || 0,
+    layerId: Number(file.layerId) || 0,
+    layerName: String(file.layerName || ""),
   }))
 }
 
@@ -3360,6 +4232,8 @@ async function renderDirect(job) {
       images: directInputImages(payload),
       seed: payload.configdata.seed,
       signal: controller.signal,
+      uploadSignal: job.batchResources?.uploadController?.signal,
+      uploadCache: job.batchResources?.directUploads,
     }, {
       onRetry: ({ attempt, status }) => {
         updateRenderJob(job, "running", status ? `服务繁忙，第 ${attempt} 次重试` : `网络重试 ${attempt}`, 0)
@@ -3369,14 +4243,15 @@ async function renderDirect(job) {
     if (controller.signal.aborted) throw new Error("已停止")
     acceptJobPhase(jobId, "result_received")
     updateRenderJob(job, "result_received", "接收结果", 100)
-    await receiveRender(result.images[0].base64, "", result.layered, job)
+    const resultBase64 = await enqueueDirectResultConversion(result.images[0])
+    await receiveRender(resultBase64, "", result.layered, job)
     acceptJobPhase(jobId, "completed")
     releaseRenderJob(job)
     if (result.credits) showStatus(`生成结果已收到，消耗 ${result.credits} credits`)
   } catch (error) {
     const stopped = controller.signal.aborted || error?.code === "aborted" || error?.message === "已停止"
     acceptJobPhase(jobId, stopped ? "interrupted" : "error")
-    failRenderJob(jobId, stopped ? new Error("已停止") : error, stopped ? "interrupted" : "error")
+    failRenderJob(jobId, stopped ? new Error(job.cancelRequested ? "已取消" : "已停止") : error, stopped ? "interrupted" : "error")
   } finally {
     directAbortControllers.delete(jobId)
   }
@@ -3385,7 +4260,13 @@ async function renderDirect(job) {
 async function captureBatchRenderSnapshot(autoSeed) {
   const capturedMode = runtimeMode
   const capturedWorkflow = Number(element("workflow").value)
+  const capturedWorkflowSelection = currentWorkflowSelection()
   const capturedReferences = freezeReferenceInputs()
+  const historyInputState = {
+    positive: String(element("positive").value || ""),
+    negative: String(element("negative").value || ""),
+    selectedPresetIds: { ...selectedPresetIds },
+  }
   if (autoSeed) randomSeed()
   setBusy(true)
   setProgress("读取 Photoshop")
@@ -3403,7 +4284,9 @@ async function captureBatchRenderSnapshot(autoSeed) {
       ...payload,
       runtimeMode: capturedMode,
       workflow: capturedWorkflow,
+      workflowSelection: capturedWorkflowSelection,
       referenceInputs: capturedReferences,
+      historyInputState,
       autoSeed: Boolean(autoSeed),
     }
   } finally {
@@ -3433,7 +4316,7 @@ function payloadFromBatchSnapshot(snapshot, jobId, batchIndex) {
   }
 }
 
-function submitRenderJob(job) {
+function submitRenderJob(job, options = {}) {
   try {
     if (job.mode === RUNTIME_DIRECT) {
       renderDirect(job).catch((error) => failRenderJob(job.jobId, error))
@@ -3441,7 +4324,7 @@ function submitRenderJob(job) {
     }
     acceptJobPhase(job.jobId, "queued")
     updateRenderJob(job, "uploading", "提交到 ComfyUI", 0)
-    sendWorkflowPayload(job.payload)
+    sendWorkflowPayload(job.payload, options)
     updateRenderJob(job, "queued", "已加入 ComfyUI 队列", 0)
   } catch (error) {
     acceptJobPhase(job.jobId, "error")
@@ -3449,7 +4332,37 @@ function submitRenderJob(job) {
   }
 }
 
+function batchInputKey() {
+  return `batch-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+function submitRenderBatch(jobs) {
+  if (!jobs.length || jobs[0].mode === RUNTIME_DIRECT || !comfyCapabilities.batchInputs) {
+    jobs.forEach(submitRenderJob)
+    return
+  }
+  const inputKey = batchInputKey()
+  const referenceCount = payloadReferenceInputs(jobs[0].payload).length
+  jobs.forEach((job) => updateRenderJob(job, "uploading", "上传批次输入", 0))
+  try {
+    sendWorkflowInputs(jobs[0].payload, inputKey)
+  } catch (error) {
+    jobs.forEach((job) => failRenderJob(job.jobId, error))
+    return
+  }
+  jobs.forEach((job, index) => submitRenderJob(job, {
+    uploadInputs: false,
+    referenceCount,
+    batchInputKey: inputKey,
+    batchFinal: index === jobs.length - 1,
+  }))
+}
+
 async function renderBatch(totalOverride) {
+  if (promptEnhanceJob) {
+    showStatus("GPT 正在分析画布，请稍候")
+    return
+  }
   if (batchRunning) {
     showStatus("正在读取 Photoshop，请稍候")
     return
@@ -3461,6 +4374,11 @@ async function renderBatch(totalOverride) {
   }
   if (historyMutationBusy) {
     showStatus("历史记录正在修改，请稍后再生成", true)
+    return
+  }
+  await historyStorageRoot()
+  if (historyStorageTokenInvalid) {
+    showStatus("请先在设置中重新授权自定义历史目录", true)
     return
   }
   const total = Number.isFinite(totalOverride) ? totalOverride : batchCount()
@@ -3476,8 +4394,9 @@ async function renderBatch(totalOverride) {
       }
     }
     await showCapturedPreview(snapshot.canvasBase64)
+    snapshot.historyRequest = await archiveHistoryRequest(snapshot)
     const jobs = createPendingRenderJobs(snapshot, total, selectedHistoryCategoryId)
-    jobs.forEach(submitRenderJob)
+    submitRenderBatch(jobs)
     setProgress(`已提交 ${total} 张`)
     setMarquee(0, false)
     showStatus(`${total} 个任务已加入历史记录`)
@@ -3988,19 +4907,24 @@ async function maskPlacedLayer() {
   const bounds = await activeSelection(app.activeDocument)
   if (!bounds) return
   const size = Math.sqrt(Math.max(1, (bounds.right - bounds.left) * (bounds.bottom - bounds.top)))
-  await action.batchPlay([
+  const feather = maskFeatherRadius(bounds)
+  const commands = [
     {
       _obj: "expand",
       by: { _unit: "pixelsUnit", _value: size * 0.02 },
       selectionModifyEffectAtCanvasBounds: false,
       _options: { dialogOptions: "dontDisplay" },
     },
-    {
+  ]
+  if (feather > 0) {
+    commands.push({
       _obj: "feather",
-      radius: { _unit: "pixelsUnit", _value: size * 0.01 },
+      radius: { _unit: "pixelsUnit", _value: feather },
       selectionModifyEffectAtCanvasBounds: false,
       _options: { dialogOptions: "dontDisplay" },
-    },
+    })
+  }
+  commands.push(
     {
       _obj: "make",
       new: { _class: "channel" },
@@ -4009,7 +4933,8 @@ async function maskPlacedLayer() {
       _options: { dialogOptions: "dontDisplay" },
     },
     selectionCommand({ _ref: "channel", _name: "ComfyTVBlend" }),
-  ], { modalBehavior: "execute" })
+  )
+  await action.batchPlay(commands, { modalBehavior: "execute" })
   await deleteNamedChannel("ComfyTVBlend")
 }
 
@@ -4124,7 +5049,7 @@ async function groupPlacedLayers(document, layers, name) {
 }
 
 async function addLayeredResult(document, layered, placement) {
-  const root = await storage.localFileSystem.getDataFolder()
+  const root = await historyStorageRoot()
   const layers = layered.layers.slice().sort((left, right) => left.zIndex - right.zIndex)
   const placedLayers = []
   for (let index = 0; index < layers.length; index += 1) {
@@ -4185,6 +5110,7 @@ function setDirectModelOptions() {
     { name: "NanoBanana", family: "nanobanana" },
     { name: "NanoBanana Pro", family: "pro" },
     { name: "GPT", family: "gpt" },
+    { name: "Seedream 生图", family: "seedreamImage" },
     { name: "Seedream 图层分离", family: "seedream" },
   ]
   select.textContent = ""
@@ -4257,6 +5183,32 @@ const GPT_SIZE_ASPECT = {
   "2160x3840": "9:16",
   Custom: "auto",
 }
+const SEEDREAM_IMAGE_ASPECTS = ["1:1", "3:4", "4:3", "16:9", "9:16", "2:3", "3:2", "21:9"]
+const SEEDREAM_IMAGE_PRESETS = {
+  common: {
+    "1K": ["1024x1024", "864x1152", "1152x864", "1312x736", "736x1312", "832x1248", "1248x832", "1568x672"],
+    "2K": ["2048x2048", "1728x2304", "2304x1728", "2848x1600", "1600x2848", "1664x2496", "2496x1664", "3136x1344"],
+    "3K": ["3072x3072", "2592x3456", "3456x2592", "4096x2304", "2304x4096", "2496x3744", "3744x2496", "4704x2016"],
+    "4K": ["4096x4096", "3520x4704", "4704x3520", "5504x3040", "3040x5504", "3328x4992", "4992x3328", "6240x2656"],
+  },
+  flash: {
+    "1K": ["1024x1024", "864x1152", "1152x864", "1424x800", "800x1424", "832x1248", "1248x832", "1568x672"],
+    "1.5K": ["1536x1536", "1344x1792", "1792x1344", "2048x1152", "1152x2048", "1248x1872", "1872x1248", "2352x1008"],
+    "2K": ["2048x2048", "1776x2368", "2368x1776", "2816x1584", "1584x2816", "1664x2496", "2496x1664", "3136x1344"],
+  },
+  latest: {
+    "1K": ["1024x1024", "880x1184", "1184x880", "1360x768", "768x1360", "832x1248", "1248x832", "1568x672"],
+    "1.5K": ["1536x1536", "1328x1776", "1776x1328", "2048x1152", "1152x2048", "1248x1888", "1888x1248", "2352x1008"],
+    "2K": ["2048x2048", "1776x2368", "2368x1776", "2736x1536", "1536x2736", "1680x2512", "2512x1680", "3136x1344"],
+  },
+}
+const SEEDREAM_IMAGE_LIMITS = {
+  "seedream 5.5": { minPixels: 921600, maxPixels: 4624220, minSide: 240, maxWidth: 8594, maxHeight: 8594, maxRatio: 16 },
+  "seedream 5.0 pro": { minPixels: 921600, maxPixels: 4624220, minSide: 1024, maxWidth: 4514, maxHeight: 4514 },
+  "seedream 5.0 flash": { minPixels: 921600, maxPixels: 4624220, minSide: 1024, maxWidth: 4514, maxHeight: 4514 },
+  "seedream 5.0 lite": { minPixels: 3686400, maxPixels: 16777216, minSide: 1024, maxWidth: 6240, maxHeight: 4992 },
+  "seedream-4-5-251128": { minPixels: 3686400, maxPixels: 16777216, minSide: 1024, maxWidth: 6240, maxHeight: 4992 },
+}
 const RENDER_FAMILIES = {
   nanobanana: {
     label: "NanoBanana",
@@ -4306,11 +5258,37 @@ const RENDER_FAMILIES = {
     defaultResolution: "auto",
     defaultQuality: "standard",
   },
+  seedreamImage: {
+    label: "Seedream 生图",
+    short: "Seedream",
+    aspects: SEEDREAM_IMAGE_ASPECTS,
+    resolutions: ["1K", "1.5K", "2K", "3K", "4K", "Custom"],
+    models: [
+      { value: "seedream 5.5", label: "Seedream 5.5", presetSet: "latest", resolutions: ["1K", "1.5K", "2K", "Custom"], backgrounds: ["auto", "opaque", "transparent"], qualities: [], defaultResolution: "2K" },
+      { value: "seedream 5.0 pro", label: "Seedream 5.0 Pro", presetSet: "common", resolutions: ["1K", "2K", "Custom"], backgrounds: [], qualities: [{ value: "standard", label: "标准" }, { value: "fast", label: "快速" }], defaultResolution: "1K", defaultQuality: "standard" },
+      { value: "seedream 5.0 flash", label: "Seedream 5.0 Flash", presetSet: "flash", resolutions: ["1K", "1.5K", "2K", "Custom"], backgrounds: [], qualities: [], defaultResolution: "1K" },
+      { value: "seedream 5.0 lite", label: "Seedream 5.0 Lite", presetSet: "common", resolutions: ["2K", "3K", "4K", "Custom"], backgrounds: [], qualities: [], defaultResolution: "2K" },
+      { value: "seedream-4-5-251128", label: "Seedream 4.5", presetSet: "common", resolutions: ["2K", "4K", "Custom"], backgrounds: [], qualities: [], defaultResolution: "2K" },
+    ],
+    defaultModel: "seedream 5.5",
+    qualityLabel: "提示词优化",
+    qualities: [],
+    backgrounds: [
+      { value: "auto", label: "自动" },
+      { value: "opaque", label: "不透明" },
+      { value: "transparent", label: "透明" },
+    ],
+    defaultResolution: "2K",
+    defaultQuality: "",
+    defaultBackground: "auto",
+  },
   gpt: {
     label: "GPT",
     short: "GPT",
     resolutions: ["auto", "1K", "2K", "4K"],
     models: [
+      { value: "gpt-image-2.6-flare", label: "GPT Image 2.6 Flare", resolutions: GPT_NODE_SIZES.slice(), qualities: ["low", "medium", "high", "xhigh", "max"], backgrounds: ["auto", "opaque", "transparent"], complexities: ["low", "medium", "high"], defaultComplexity: "high" },
+      { value: "gpt-image-2.6-sunburst", label: "GPT Image 2.6 Sunburst", resolutions: GPT_NODE_SIZES.slice(), qualities: ["low", "medium", "high", "xhigh", "max"], backgrounds: ["auto", "opaque", "transparent"], complexities: ["low", "medium", "high"], defaultComplexity: "high" },
       { value: "gpt-image-2.5-flare", label: "GPT Image 2.5 Flare", resolutions: GPT_NODE_SIZES.slice(), qualities: ["low", "medium", "high", "xhigh", "max"], backgrounds: ["auto", "opaque", "transparent"] },
       { value: "gpt-image-2.5-sunburst", label: "GPT Image 2.5 Sunburst", resolutions: GPT_NODE_SIZES.slice(), qualities: ["low", "medium", "high", "xhigh", "max"], backgrounds: ["auto", "opaque", "transparent"] },
       { value: "gpt-image-2", label: "GPT Image 2", resolutions: GPT_NODE_SIZES.slice(), qualities: ["low", "medium", "high"], backgrounds: ["auto", "opaque"] },
@@ -4325,6 +5303,12 @@ const RENDER_FAMILIES = {
       { value: "high", label: "高" },
       { value: "xhigh", label: "超高" },
       { value: "max", label: "最高" },
+    ],
+    complexityLabel: "复杂度",
+    complexities: [
+      { value: "low", label: "低" },
+      { value: "medium", label: "中" },
+      { value: "high", label: "高" },
     ],
     backgrounds: [
       { value: "auto", label: "自动" },
@@ -4342,6 +5326,7 @@ let renderProfile = {
   aspect: "auto",
   resolution: "2K",
   quality: "MINIMAL",
+  complexity: "",
   background: "",
   customWidth: 1024,
   customHeight: 1024,
@@ -4386,6 +5371,15 @@ function profileBackgrounds(profile) {
     : value)
 }
 
+function profileComplexities(profile) {
+  const family = RENDER_FAMILIES[profile.family]
+  const model = profileModel(profile)
+  if (!model || !Array.isArray(model.complexities)) return []
+  return model.complexities.map((value) => typeof value === "string"
+    ? ((family.complexities || []).find((item) => item.value === value) || { value, label: value })
+    : value)
+}
+
 function profileResolutions(profile) {
   const family = RENDER_FAMILIES[profile.family]
   const model = profileModel(profile)
@@ -4394,7 +5388,89 @@ function profileResolutions(profile) {
 
 function aspectChoices(profile) {
   if (profile.family === "gpt") return [GPT_SIZE_ASPECT[profile.resolution] || "auto"]
-  return RENDER_FAMILIES[profile.family].aspects
+  const model = profileModel(profile)
+  return model && Array.isArray(model.aspects) ? model.aspects : RENDER_FAMILIES[profile.family].aspects
+}
+
+function evenDimension(value) {
+  return Math.max(2, Math.round(Number(value) / 2) * 2)
+}
+
+function fitSeedreamImageSize(model, width, height) {
+  const limits = SEEDREAM_IMAGE_LIMITS[model] || SEEDREAM_IMAGE_LIMITS["seedream 5.5"]
+  let fittedWidth = Math.max(1, Number(width) || 2048)
+  let fittedHeight = Math.max(1, Number(height) || 2048)
+  const pixelRatioLimit = limits.maxPixels / (limits.minSide * limits.minSide)
+  const landscapeLimit = Math.min(limits.maxRatio || Infinity, limits.maxWidth / limits.minSide, pixelRatioLimit)
+  const portraitLimit = Math.min(limits.maxRatio || Infinity, limits.maxHeight / limits.minSide, pixelRatioLimit)
+  const ratio = fittedWidth / fittedHeight
+  if (ratio > landscapeLimit) fittedWidth = fittedHeight * landscapeLimit
+  else if (ratio < 1 / portraitLimit) fittedHeight = fittedWidth * portraitLimit
+  const pixels = fittedWidth * fittedHeight
+  const grow = Math.max(limits.minSide / fittedWidth, limits.minSide / fittedHeight, Math.sqrt(limits.minPixels / pixels), 1)
+  fittedWidth *= grow
+  fittedHeight *= grow
+  const shrink = Math.min(limits.maxWidth / fittedWidth, limits.maxHeight / fittedHeight, Math.sqrt(limits.maxPixels / (fittedWidth * fittedHeight)), 1)
+  fittedWidth *= shrink
+  fittedHeight *= shrink
+  let widthEven = evenDimension(fittedWidth)
+  let heightEven = evenDimension(fittedHeight)
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const total = widthEven * heightEven
+    if (total > limits.maxPixels || widthEven > limits.maxWidth || heightEven > limits.maxHeight) {
+      const scale = Math.min(limits.maxWidth / widthEven, limits.maxHeight / heightEven, Math.sqrt(limits.maxPixels / total)) * 0.999
+      widthEven = Math.max(2, Math.floor(widthEven * scale / 2) * 2)
+      heightEven = Math.max(2, Math.floor(heightEven * scale / 2) * 2)
+      continue
+    }
+    if (total < limits.minPixels || widthEven < limits.minSide || heightEven < limits.minSide) {
+      const scale = Math.max(limits.minSide / widthEven, limits.minSide / heightEven, Math.sqrt(limits.minPixels / total)) * 1.001
+      widthEven = Math.ceil(widthEven * scale / 2) * 2
+      heightEven = Math.ceil(heightEven * scale / 2) * 2
+      continue
+    }
+    break
+  }
+  return { width: widthEven, height: heightEven }
+}
+
+function seedreamImagePreset(profile) {
+  const model = profileModel(profile)
+  if (profile.resolution === "Custom") {
+    const fitted = fitSeedreamImageSize(profile.model, profile.customWidth, profile.customHeight)
+    return { label: "Custom", ...fitted }
+  }
+  const aspectIndex = SEEDREAM_IMAGE_ASPECTS.indexOf(profile.aspect)
+  const values = SEEDREAM_IMAGE_PRESETS[model?.presetSet || "latest"]?.[profile.resolution] || []
+  const dimensions = String(values[aspectIndex] || values[0] || "2048x2048").split("x").map(Number)
+  return {
+    label: `(${profile.resolution}) ${dimensions[0]}x${dimensions[1]} (${profile.aspect})`,
+    width: dimensions[0],
+    height: dimensions[1],
+  }
+}
+
+function seedreamImageSizeChoices(profile) {
+  const model = profileModel(profile)
+  const presetSet = model?.presetSet || "latest"
+  const choices = []
+  profileResolutions(profile).forEach((resolution) => {
+    if (resolution === "Custom") return
+    const values = SEEDREAM_IMAGE_PRESETS[presetSet]?.[resolution] || []
+    values.forEach((dimensions, index) => {
+      const aspect = SEEDREAM_IMAGE_ASPECTS[index] || "1:1"
+      choices.push({
+        value: `${resolution}|${aspect}`,
+        resolution,
+        aspect,
+        label: `(${resolution}) ${String(dimensions).replace("x", "×")} (${aspect})`,
+      })
+    })
+  })
+  if (profileResolutions(profile).includes("Custom")) {
+    choices.push({ value: "Custom", resolution: "Custom", aspect: profile.aspect, label: "Custom" })
+  }
+  return choices
 }
 
 function orderedAspects(values) {
@@ -4416,49 +5492,84 @@ function normalizeProfile(raw) {
   const aspects = aspectChoices(draft)
   const aspect = familyId === "gpt" ? aspects[0] : (aspects.includes(raw && raw.aspect) ? raw.aspect : aspects[0])
   const qualities = profileQualities(draft)
+  const complexities = profileComplexities(draft)
   const backgrounds = profileBackgrounds(draft)
   const quality = qualities.some((item) => item.value === (raw && raw.quality))
     ? raw.quality
     : (modelInfo && modelInfo.defaultQuality) || family.defaultQuality || (qualities[0] && qualities[0].value) || ""
+  const complexity = complexities.some((item) => item.value === (raw && raw.complexity))
+    ? raw.complexity
+    : (modelInfo && modelInfo.defaultComplexity) || family.defaultComplexity || (complexities[0] && complexities[0].value) || ""
   const background = backgrounds.some((item) => item.value === (raw && raw.background))
     ? raw.background
     : family.defaultBackground || (backgrounds[0] && backgrounds[0].value) || ""
-  const customWidth = Math.max(480, Math.min(3840, Number.parseInt(raw?.customWidth, 10) || 1024))
-  const customHeight = Math.max(480, Math.min(3840, Number.parseInt(raw?.customHeight, 10) || 1024))
-  return { family: familyId, model, aspect, resolution, quality, background, customWidth, customHeight }
+  const seedreamLimits = familyId === "seedreamImage" ? SEEDREAM_IMAGE_LIMITS[model] : null
+  const minimumWidth = seedreamLimits?.minSide || 480
+  const minimumHeight = seedreamLimits?.minSide || 480
+  const maximumWidth = seedreamLimits?.maxWidth || 3840
+  const maximumHeight = seedreamLimits?.maxHeight || 3840
+  let customWidth = evenDimension(Math.max(minimumWidth, Math.min(maximumWidth, Number.parseInt(raw?.customWidth, 10) || 1024)))
+  let customHeight = evenDimension(Math.max(minimumHeight, Math.min(maximumHeight, Number.parseInt(raw?.customHeight, 10) || 1024)))
+  if (familyId === "seedreamImage" && resolution === "Custom") {
+    const fitted = fitSeedreamImageSize(model, customWidth, customHeight)
+    customWidth = fitted.width
+    customHeight = fitted.height
+  }
+  return { family: familyId, model, aspect, resolution, quality, complexity, background, customWidth, customHeight }
 }
 
 function profileGroupName(profile) {
   if (profile.family === "nanobanana") return `NanoBanana ${profile.resolution}`
   if (profile.family === "pro") return `NanoBanana Pro ${profile.resolution}`
   if (profile.family === "seedream") return "Seedream 图层分离"
+  if (profile.family === "seedreamImage") return "Seedream 生图"
   const background = { auto: "自动", opaque: "不透明", transparent: "半透明" }[profile.background] || "自动"
   return `GPT ${background}`
 }
 
 function profilePayload(profile, imageSize = null) {
   const normalized = normalizeProfile(profile)
-  if (normalized.family === "gpt" && imageSize && (normalized.resolution === "Custom" || normalized.resolution === "auto")) {
-    const width = Number.parseInt(imageSize.width, 10)
-    const height = Number.parseInt(imageSize.height, 10)
-    if (Number.isFinite(width) && width > 0) normalized.customWidth = width
-    if (Number.isFinite(height) && height > 0) normalized.customHeight = height
+  const imageWidth = Number.parseInt(imageSize?.width, 10)
+  const imageHeight = Number.parseInt(imageSize?.height, 10)
+  const hasImageSize = Number.isFinite(imageWidth) && imageWidth > 0
+    && Number.isFinite(imageHeight) && imageHeight > 0
+  if (normalized.family === "gpt" && hasImageSize && (normalized.resolution === "Custom" || normalized.resolution === "auto")) {
+    normalized.customWidth = imageWidth
+    normalized.customHeight = imageHeight
+  }
+  if (normalized.family === "seedreamImage") {
+    if (normalized.resolution === "Custom" && hasImageSize) {
+      normalized.sizePreset = "Custom"
+      normalized.customWidth = imageWidth
+      normalized.customHeight = imageHeight
+    } else {
+      const preset = seedreamImagePreset(normalized)
+      normalized.sizePreset = preset.label
+      normalized.customWidth = preset.width
+      normalized.customHeight = preset.height
+    }
   }
   const size = normalized.family === "gpt" && normalized.resolution === "auto" && imageSize
     ? "Custom"
-    : (normalized.family === "gpt" || normalized.family === "seedream" ? normalized.resolution : "")
+    : (normalized.family === "gpt" || normalized.family === "seedream" || normalized.family === "seedreamImage" ? normalized.resolution : "")
   return { ...normalized, group: profileGroupName(normalized), size }
 }
 
 function modeButtonLabel(profile) {
   if (profile.family === "gpt") return gptSizeLabel(profile.resolution)
   if (profile.family === "seedream") return optionLabel(profile.resolution)
+  if (profile.family === "seedreamImage") {
+    if (profile.resolution === "Custom") return "自定义"
+    const preset = seedreamImagePreset(profile)
+    return `${preset.width}×${preset.height}`
+  }
   return `${optionLabel(profile.aspect)} · ${optionLabel(profile.resolution)}`
 }
 
 function familyFromModelName(name) {
   const text = String(name || "")
-  if (text.includes("Seedream")) return "seedream"
+  if (text.includes("Seedream 图层分离")) return "seedream"
+  if (text.includes("Seedream 生图")) return "seedreamImage"
   if (text.includes("Pro")) return "pro"
   if (text.includes("GPT")) return "gpt"
   if (text.includes("Nano")) return "nanobanana"
@@ -4528,9 +5639,15 @@ function appendChip(parent, label, on, onClick) {
   chip.setAttribute("role", "button")
   chip.tabIndex = 0
   chip.textContent = label
-  chip.addEventListener("click", (event) => {
+  const activate = (event) => {
+    event.preventDefault()
     event.stopPropagation()
     onClick()
+  }
+  chip.addEventListener("pointerdown", activate)
+  chip.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return
+    activate(event)
   })
   parent.appendChild(chip)
 }
@@ -4575,7 +5692,7 @@ function fillModeSheet(menu) {
     }
   }
 
-  if (profile.family !== "gpt") {
+  if (profile.family !== "gpt" && profile.family !== "seedreamImage") {
   const aspects = aspectChoices(profile)
   if (aspects.length > 1) {
   const ratioSection = appendSection(menu, "比例")
@@ -4627,13 +5744,37 @@ function fillModeSheet(menu) {
   ratioSection.appendChild(layout)
   }
 
-  const resolutionSection = appendSection(menu, "分辨率")
+  const resolutionSection = appendSection(menu, profile.family === "seedream" ? "尺寸" : "分辨率")
   const resolutionRow = document.createElement("div")
   resolutionRow.className = "mode-chip-row"
   profileResolutions(profile).forEach((value) => {
     appendChip(resolutionRow, optionLabel(value), profile.resolution === value, () => chooseRenderProfile({ resolution: value }))
   })
   resolutionSection.appendChild(resolutionRow)
+  }
+
+  if (profile.family === "seedreamImage") {
+    const sizeSection = appendSection(menu, "尺寸")
+    const sizeRow = document.createElement("div")
+    sizeRow.className = "mode-chip-row mode-size-chip-row"
+    const selectedSize = profile.resolution === "Custom" ? "Custom" : `${profile.resolution}|${profile.aspect}`
+    seedreamImageSizeChoices(profile).forEach((choice) => {
+      appendChip(sizeRow, choice.label, choice.value === selectedSize, () => {
+        if (choice.resolution === "Custom") {
+          const currentSize = seedreamImagePreset(profile)
+          chooseRenderProfile({
+            resolution: "Custom",
+            aspect: choice.aspect,
+            customWidth: currentSize.width,
+            customHeight: currentSize.height,
+          })
+          return
+        }
+        chooseRenderProfile({ resolution: choice.resolution, aspect: choice.aspect })
+      })
+    })
+    sizeSection.appendChild(sizeRow)
+
   }
 
   const qualities = profileQualities(profile)
@@ -4645,6 +5786,17 @@ function fillModeSheet(menu) {
       appendChip(qualityRow, item.label, profile.quality === item.value, () => chooseRenderProfile({ quality: item.value }))
     })
     qualitySection.appendChild(qualityRow)
+  }
+
+  const complexities = profileComplexities(profile)
+  if (complexities.length) {
+    const complexitySection = appendSection(menu, RENDER_FAMILIES[profile.family].complexityLabel || "复杂度")
+    const complexityRow = document.createElement("div")
+    complexityRow.className = "mode-chip-row"
+    complexities.forEach((item) => {
+      appendChip(complexityRow, item.label, profile.complexity === item.value, () => chooseRenderProfile({ complexity: item.value }))
+    })
+    complexitySection.appendChild(complexityRow)
   }
 
   const backgrounds = profileBackgrounds(profile)
@@ -6959,7 +8111,7 @@ async function downloadAndInstallPluginUpdate() {
 
 async function switchRuntimeMode(mode, options = {}) {
   if (mode !== RUNTIME_DIRECT && mode !== RUNTIME_COMFYUI) return
-  if ((batchRunning || renderInFlight()) && runtimeMode && runtimeMode !== mode) {
+  if ((batchRunning || renderInFlight() || promptEnhanceJob) && runtimeMode && runtimeMode !== mode) {
     showStatus("当前还有生成任务，完成后再切换运行模式", true)
     return
   }
@@ -6970,6 +8122,7 @@ async function switchRuntimeMode(mode, options = {}) {
   element("comfyui-settings")?.classList.toggle("hidden", mode !== RUNTIME_COMFYUI)
   element("web-toggle")?.classList.toggle("hidden", mode !== RUNTIME_COMFYUI)
   element("send-layer")?.classList.toggle("hidden", mode !== RUNTIME_COMFYUI)
+  element("prompt-enhance")?.classList.remove("hidden")
   element("settings-direct-mode")?.classList.toggle("active", mode === RUNTIME_DIRECT)
   element("settings-comfyui-mode")?.classList.toggle("active", mode === RUNTIME_COMFYUI)
   if (mode === RUNTIME_DIRECT) {
@@ -7134,6 +8287,8 @@ function composerModeOptions(profile) {
     resolutions: profile.family === "gpt" ? [] : profileResolutions(profile).slice(),
     qualityLabel: family.qualityLabel || "质量",
     qualities: profileQualities(profile).map((item) => ({ value: item.value, label: item.label })),
+    complexityLabel: family.complexityLabel || "复杂度",
+    complexities: profileComplexities(profile).map((item) => ({ value: item.value, label: item.label })),
     backgrounds: profileBackgrounds(profile).map((item) => ({ value: item.value, label: item.label })),
   }
 }
@@ -7554,7 +8709,7 @@ function saveSettings() {
     minRes: element("min-res").value,
     cropSelection: element("crop-selection").checked,
     cropPad: element("crop-pad").value,
-    maskFeather: element("mask-feather").value,
+    maskFeatherPercent: element("mask-feather").value,
     autoSeed: element("auto-seed").checked,
     batchCount: batchCount(),
     comfyLaunch: element("comfy-launch").value,
@@ -7579,7 +8734,7 @@ function restoreSettings() {
   if (savedMin !== null) element("min-res").value = savedMin
   const savedPad = localStorage.getItem(`${STORE_PREFIX}cropPad`)
   if (savedPad !== null) element("crop-pad").value = savedPad
-  const savedMaskFeather = localStorage.getItem(`${STORE_PREFIX}maskFeather`)
+  const savedMaskFeather = localStorage.getItem(`${STORE_PREFIX}maskFeatherPercent`)
   if (savedMaskFeather !== null) element("mask-feather").value = savedMaskFeather
   const checks = [
     ["crop-selection", "cropSelection", true],
@@ -7640,6 +8795,18 @@ async function initialize() {
   element("update-check").addEventListener("click", () => checkPluginUpdate())
   element("update-install").addEventListener("click", () => downloadAndInstallPluginUpdate())
   element("update-open-releases").addEventListener("click", () => openPluginReleasePage(pluginUpdateInfo?.releaseUrl))
+  element("history-storage-pick").addEventListener("click", () => {
+    chooseHistoryStorageFolder().catch((error) => showStatus(error.message || "无法选择历史目录", true))
+  })
+  element("history-storage-default").addEventListener("click", () => {
+    restoreDefaultHistoryStorage().catch((error) => showStatus(error.message || "无法恢复默认历史目录", true))
+  })
+  element("history-storage-open").addEventListener("click", () => {
+    openRenderFolder().catch((error) => showStatus(error.message || "打不开历史目录", true))
+  })
+  element("history-cache-clear").addEventListener("click", () => {
+    clearHistoryCache().catch((error) => showStatus(error.message || "清理缓存失败", true))
+  })
   setTimeout(() => checkPluginUpdate({ silent: true }), 2500)
   element("history-toggle").addEventListener("click", (event) => {
     event.stopPropagation()
@@ -7664,6 +8831,13 @@ async function initialize() {
   element("history-panel-prev").addEventListener("click", () => showHistoryPanelPage(historyPanelPage - 1))
   element("history-panel-next").addEventListener("click", () => showHistoryPanelPage(historyPanelPage + 1))
   element("history-panel-grid").addEventListener("click", (event) => {
+    const cancel = historyJobCancelFromEvent(event, element("history-panel-grid"))
+    if (cancel) {
+      event.preventDefault()
+      event.stopPropagation()
+      cancelRenderJob(cancel.dataset.jobId)
+      return
+    }
     const card = historyPanelCardFromEvent(event)
     if (!card) return
     if (historyPanelEditing) {
@@ -7672,8 +8846,21 @@ async function initialize() {
     }
     selectHistory(Number(card.dataset.index)).catch((error) => showStatus(error.message, true))
   })
+  element("history-panel-grid").addEventListener("contextmenu", (event) => {
+    const card = historyPanelCardFromEvent(event)
+    if (!card || historyPanelEditing) return
+    event.preventDefault()
+    restoreHistoryRequest(renderHistory[Number(card.dataset.index)]).catch((error) => showStatus(error.message, true))
+  })
   element("history-panel-grid").addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return
+    const cancel = historyJobCancelFromEvent(event, element("history-panel-grid"))
+    if (cancel) {
+      event.preventDefault()
+      event.stopPropagation()
+      cancelRenderJob(cancel.dataset.jobId)
+      return
+    }
     const card = historyPanelCardFromEvent(event)
     if (!card) return
     event.preventDefault()
@@ -7792,6 +8979,7 @@ async function initialize() {
     randomSeed()
     if (!element("render").disabled) renderBatch()
   })
+  element("prompt-enhance").addEventListener("click", enhancePrompt)
   element("send-layer").addEventListener("click", sendLayer)
   element("connect").addEventListener("click", connect)
   element("pick-comfy").addEventListener("click", () => {
@@ -7858,6 +9046,7 @@ async function initialize() {
     if (pendingHistoryClock) clearInterval(pendingHistoryClock)
     for (const controller of directAbortControllers.values()) controller.abort()
     directAbortControllers.clear()
+    promptEnhanceJob?.controller?.abort()
     if (socket) socket.close()
   })
   const historyHover = element("history-hover")
@@ -7868,9 +9057,22 @@ async function initialize() {
   historyHotspot.addEventListener("mouseleave", scheduleHideHistory)
   historyStrip.addEventListener("mouseleave", scheduleHideHistory)
   historyStrip.addEventListener("click", (event) => {
+    const cancel = historyJobCancelFromEvent(event, historyStrip)
+    if (cancel) {
+      event.preventDefault()
+      event.stopPropagation()
+      cancelRenderJob(cancel.dataset.jobId)
+      return
+    }
     const card = historyCardFromEvent(event)
     if (!card) return
     selectHistory(Number(card.dataset.index)).catch((error) => showStatus(error.message, true))
+  })
+  historyStrip.addEventListener("contextmenu", (event) => {
+    const card = historyCardFromEvent(event)
+    if (!card) return
+    event.preventDefault()
+    restoreHistoryRequest(renderHistory[Number(card.dataset.index)]).catch((error) => showStatus(error.message, true))
   })
   historyStrip.addEventListener("wheel", onHistoryWheel, true)
   historyStrip.addEventListener("mousewheel", onHistoryWheel, true)
@@ -7886,6 +9088,7 @@ async function initialize() {
   })
   await initializeDocumentWorkspaces()
   await restoreRenderHistory()
+  await syncHistoryStorageControls()
   scheduleDurableStateBackup(0)
 }
 

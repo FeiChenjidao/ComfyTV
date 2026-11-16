@@ -558,6 +558,29 @@ describe('settings api', () => {
   })
 })
 
+describe('plugin update api', () => {
+  beforeEach(() => vi.resetModules())
+
+  it('rollbackPluginUpdate posts to the rollback route', async () => {
+    const fetchApi = vi.fn(async (_url: string, _init?: any) => json({
+      ok: true,
+      is_repo: true,
+      has_git: true,
+      update_available: true,
+      local_version: '1.0.0',
+      rolled_back: true,
+    }))
+    const { rollbackPluginUpdate } = await loadWithFetch(fetchApi)
+
+    const result = await rollbackPluginUpdate()
+
+    expect(result.rolled_back).toBe(true)
+    const [url, init] = fetchApi.mock.calls[0]!
+    expect(url).toBe('/comfytv/plugin/rollback')
+    expect(init.method).toBe('POST')
+  })
+})
+
 
 describe('stage preset api', () => {
   beforeEach(() => vi.resetModules())

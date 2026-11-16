@@ -15,6 +15,20 @@
     maxRatio: 3,
     step: 16,
   })
+  const SEEDREAM_IMAGE_MODELS = Object.freeze({
+    "seedream 5.5": "seedream-5-5-261028",
+    "seedream 5.0 pro": "seedream-5-0-pro-260628",
+    "seedream 5.0 flash": "seedream-5-0-flash-260915",
+    "seedream 5.0 lite": "seedream-5-0-260128",
+    "seedream-4-5-251128": "seedream-4-5-251128",
+  })
+  const SEEDREAM_IMAGE_LIMITS = Object.freeze({
+    "seedream 5.5": { minPixels: 921600, maxPixels: 4624220, minSide: 240, maxWidth: 8594, maxHeight: 8594, maxRatio: 16 },
+    "seedream 5.0 pro": { minPixels: 921600, maxPixels: 4624220, minSide: 1024, maxWidth: 4514, maxHeight: 4514 },
+    "seedream 5.0 flash": { minPixels: 921600, maxPixels: 4624220, minSide: 1024, maxWidth: 4514, maxHeight: 4514 },
+    "seedream 5.0 lite": { minPixels: 3686400, maxPixels: 16777216, minSide: 1024, maxWidth: 6240, maxHeight: 4992 },
+    "seedream-4-5-251128": { minPixels: 3686400, maxPixels: 16777216, minSide: 1024, maxWidth: 6240, maxHeight: 4992 },
+  })
   const GEMINI_SYSTEM_PROMPT = [
     "You are an expert image-generation engine. You must ALWAYS produce an image.",
     "Interpret all user input, regardless of format, intent, or abstraction, as literal visual directives for image composition.",
@@ -89,6 +103,26 @@
     }
   }
 
+  function validateSeedreamImageSize(profile = {}) {
+    const model = String(profile.model || "seedream 5.5")
+    const limits = SEEDREAM_IMAGE_LIMITS[model] || SEEDREAM_IMAGE_LIMITS["seedream 5.5"]
+    const width = Number.parseInt(profile.customWidth, 10)
+    const height = Number.parseInt(profile.customHeight, 10)
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1) {
+      throw new DirectApiError("invalid_size", "Seedream 输出尺寸无效")
+    }
+    const pixels = width * height
+    const isCustom = profile.resolution === "Custom" || profile.sizePreset === "Custom"
+    if (width % 2 || height % 2) throw new DirectApiError("invalid_size", "Seedream 自定义尺寸必须是偶数")
+    if (isCustom && (width < limits.minSide || height < limits.minSide)) throw new DirectApiError("invalid_size", `Seedream 自定义边长不能小于 ${limits.minSide}`)
+    if (width > limits.maxWidth || height > limits.maxHeight) throw new DirectApiError("invalid_size", "Seedream 自定义尺寸超过当前模型限制")
+    if (pixels < limits.minPixels || pixels > limits.maxPixels) throw new DirectApiError("invalid_size", "Seedream 自定义尺寸像素总量超出当前模型限制")
+    if (limits.maxRatio && Math.max(width / height, height / width) > limits.maxRatio) {
+      throw new DirectApiError("invalid_size", `Seedream 宽高比不能超过 ${limits.maxRatio}:1`)
+    }
+    return `${width}x${height}`
+  }
+
   function cleanBase64(value) {
     return String(value || "").replace(/^data:[^;]+;base64,/i, "").replace(/\s+/g, "")
   }
@@ -116,6 +150,17 @@
     if (bytes.length < 24 || bytes[0] !== 137 || bytes[1] !== 80 || bytes[2] !== 78 || bytes[3] !== 71) return null
     const read = (offset) => (((bytes[offset] << 24) >>> 0) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3]) >>> 0
     return { width: read(16), height: read(20) }
+  }
+
+  function imageMimeType(value, contentType = "") {
+    const bytes = value instanceof Uint8Array ? value : new Uint8Array(value || [])
+    if (pngSize(bytes)) return "image/png"
+    if (bytes.length >= 3 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return "image/jpeg"
+    if (bytes.length >= 12
+      && bytes[0] === 82 && bytes[1] === 73 && bytes[2] === 70 && bytes[3] === 70
+      && bytes[8] === 87 && bytes[9] === 69 && bytes[10] === 66 && bytes[11] === 80) return "image/webp"
+    const normalized = String(contentType || "").split(";", 1)[0].trim().toLowerCase()
+    return ["image/png", "image/jpeg", "image/webp"].includes(normalized) ? normalized : ""
   }
 
   function requestId(jobId, batchIndex) {
@@ -368,6 +413,90 @@
     return results
   }
 
+  function parseResponseText(payload) {
+    const output = Array.isArray(payload?.output) ? payload.output : []
+    for (const item of output) {
+      if (item?.type !== "message" || !Array.isArray(item.content)) continue
+      for (const content of item.content) {
+        if (content?.type === "output_text" && String(content.text || "").trim()) {
+          return String(content.text).trim()
+        }
+      }
+    }
+    return ""
+  }
+
+  async function enhancePrompt(job, options = {}) {
+    const apiKey = String(job?.apiKey || "").trim()
+    if (!apiKey) throw new DirectApiError("missing_key", "请先在设置中保存 Comfy API Key")
+    const prompt = String(job?.prompt || "").trim()
+    if (!prompt) throw new DirectApiError("invalid_request", "提示词优化请求不能为空")
+    const image = String(job?.imageBase64 || "").trim()
+    const idempotencyKey = requestId(job.jobId || "prompt-enhance", 0)
+    const timeout = linkedController(job.signal, job.timeoutMs || options.timeoutMs || 3 * 60 * 1000)
+    const pollIntervalMs = Number.isFinite(options.pollIntervalMs) ? Math.max(0, options.pollIntervalMs) : 1000
+    const content = [{ type: "input_text", text: prompt }]
+    if (image) {
+      content.push({
+        type: "input_image",
+        detail: "auto",
+        image_url: `data:image/png;base64,${cleanBase64(image)}`,
+      })
+    }
+    try {
+      let response = await fetchWithRetry("/proxy/openai/v1/responses", {
+        fetchImpl: options.fetchImpl,
+        signal: timeout.signal,
+        timeoutMs: 30000,
+        attempts: options.attempts || 3,
+        onRetry: options.onRetry,
+        buildRequest: () => ({
+          method: "POST",
+          headers: authHeaders(apiKey, idempotencyKey, true),
+          body: JSON.stringify({
+            input: [{ role: "user", content }],
+            store: true,
+            stream: false,
+            model: String(job?.model || "gpt-5.6-sol"),
+          }),
+        }),
+      })
+      let payload = response.payload || {}
+      let credits = response.response?.headers?.get?.("x-comfy-credits-used") || ""
+      for (;;) {
+        const text = parseResponseText(payload)
+        const status = String(payload?.status || "").toLowerCase()
+        if (text && (!status || status === "completed" || status === "incomplete")) {
+          return { text, credits, id: String(payload.id || ""), idempotencyKey }
+        }
+        if (status === "completed" || status === "incomplete") {
+          throw new DirectApiError("invalid_response", "GPT 没有返回可用提示词")
+        }
+        if (["failed", "cancelled"].includes(status)) {
+          throw new DirectApiError("server_error", String(payload?.error?.message || "GPT 提示词优化失败"))
+        }
+        const responseId = String(payload?.id || "")
+        if (!responseId) throw new DirectApiError("invalid_response", "GPT 没有返回可读取的任务编号")
+        await delay(pollIntervalMs, timeout.signal)
+        response = await fetchWithRetry(`/proxy/openai/v1/responses/${encodeURIComponent(responseId)}`, {
+          fetchImpl: options.fetchImpl,
+          signal: timeout.signal,
+          timeoutMs: 30000,
+          attempts: options.attempts || 3,
+          onRetry: options.onRetry,
+          buildRequest: () => ({
+            method: "GET",
+            headers: { "X-API-KEY": apiKey, "Comfy-Usage-Source": USAGE_SOURCE },
+          }),
+        })
+        payload = response.payload || {}
+        credits = response.response?.headers?.get?.("x-comfy-credits-used") || credits
+      }
+    } finally {
+      timeout.dispose()
+    }
+  }
+
   function geminiBody(job) {
     const profile = job.profile || {}
     const imageConfig = { imageSize: profile.resolution || "2K" }
@@ -395,9 +524,11 @@
       const mimeType = image.mimeType || "image/png"
       form.append(field, new Blob([base64Bytes(image.base64)], { type: mimeType }), `image_${index + 1}.png`)
     })
-    form.append("model", String(job.profile?.model || "gpt-image-2.5-flare"))
+    const model = String(job.profile?.model || "gpt-image-2.5-flare")
+    form.append("model", model)
     form.append("prompt", String(job.prompt || ""))
     form.append("quality", String(job.profile?.quality || "high"))
+    if (model.startsWith("gpt-image-2.6-")) form.append("complexity", String(job.profile?.complexity || "high"))
     form.append("background", String(job.profile?.background || "auto"))
     form.append("n", "1")
     form.append("size", validateGptSize(job.profile || {}))
@@ -405,35 +536,50 @@
     return form
   }
 
+  function cachedUpload(job, key, factory) {
+    const cache = job?.uploadCache
+    if (!cache || typeof cache.get !== "function" || typeof cache.set !== "function") return factory()
+    if (cache.has(key)) return cache.get(key)
+    const task = Promise.resolve().then(factory).catch((error) => {
+      if (cache.get(key) === task) cache.delete(key)
+      throw error
+    })
+    cache.set(key, task)
+    return task
+  }
+
   async function uploadSeedreamImage(job, options, idempotencyKey) {
     const canvas = (job.images || []).find((item) => item?.role === "canvas" && item.base64)
     if (!canvas) throw new DirectApiError("invalid_request", "Seedream 图层分离需要 Photoshop 画布")
-    const created = await fetchWithRetry("/customers/storage", {
-      fetchImpl: options.fetchImpl,
-      signal: job.signal,
-      timeoutMs: job.timeoutMs || options.timeoutMs,
-      attempts: options.attempts || 3,
-      onRetry: options.onRetry,
-      buildRequest: () => ({
-        method: "POST",
-        headers: authHeaders(job.apiKey, `${idempotencyKey}-upload`, true),
-        body: JSON.stringify({ file_name: "photoshop-seedream.png", content_type: "image/png" }),
-      }),
+    return cachedUpload(job, "seedream-layer-canvas", async () => {
+      const uploadSignal = job.uploadSignal || job.signal
+      const created = await fetchWithRetry("/customers/storage", {
+        fetchImpl: options.fetchImpl,
+        signal: uploadSignal,
+        timeoutMs: job.timeoutMs || options.timeoutMs,
+        attempts: options.attempts || 3,
+        onRetry: options.onRetry,
+        buildRequest: () => ({
+          method: "POST",
+          headers: authHeaders(job.apiKey, `${idempotencyKey}-upload`, true),
+          body: JSON.stringify({ file_name: "photoshop-seedream.png", content_type: "image/png" }),
+        }),
+      })
+      const uploadUrl = String(created.payload?.upload_url || "")
+      const downloadUrl = String(created.payload?.download_url || "")
+      if (!uploadUrl || !downloadUrl) throw new DirectApiError("invalid_response", "Comfy API 没有返回图片上传地址")
+      await fetchAbsolute(uploadUrl, {
+        fetchImpl: options.fetchImpl,
+        signal: uploadSignal,
+        timeoutMs: job.timeoutMs || options.timeoutMs,
+        request: {
+          method: "PUT",
+          headers: { "Content-Type": "image/png" },
+          body: base64Bytes(canvas.base64),
+        },
+      })
+      return { canvas, downloadUrl }
     })
-    const uploadUrl = String(created.payload?.upload_url || "")
-    const downloadUrl = String(created.payload?.download_url || "")
-    if (!uploadUrl || !downloadUrl) throw new DirectApiError("invalid_response", "Comfy API 没有返回图片上传地址")
-    await fetchAbsolute(uploadUrl, {
-      fetchImpl: options.fetchImpl,
-      signal: job.signal,
-      timeoutMs: job.timeoutMs || options.timeoutMs,
-      request: {
-        method: "PUT",
-        headers: { "Content-Type": "image/png" },
-        body: base64Bytes(canvas.base64),
-      },
-    })
-    return { canvas, downloadUrl }
   }
 
   async function downloadSeedreamLayer(item, index, job, options) {
@@ -460,6 +606,105 @@
       width: index === 0 ? dimensions.width : Math.max(1, right - left),
       height: index === 0 ? dimensions.height : Math.max(1, bottom - top),
       zIndex: Number.isFinite(Number(item?.z_index)) ? Math.round(Number(item.z_index)) : index,
+    }
+  }
+
+  async function uploadSeedreamReference(image, index, job, options, idempotencyKey) {
+    return cachedUpload(job, `seedream-image-${index}`, async () => {
+      const uploadSignal = job.uploadSignal || job.signal
+      const created = await fetchWithRetry("/customers/storage", {
+        fetchImpl: options.fetchImpl,
+        signal: uploadSignal,
+        timeoutMs: job.timeoutMs || options.timeoutMs,
+        attempts: options.attempts || 3,
+        onRetry: options.onRetry,
+        buildRequest: () => ({
+          method: "POST",
+          headers: authHeaders(job.apiKey, `${idempotencyKey}-image-${index + 1}`, true),
+          body: JSON.stringify({ file_name: `photoshop-seedream-${index + 1}.png`, content_type: image.mimeType || "image/png" }),
+        }),
+      })
+      const uploadUrl = String(created.payload?.upload_url || "")
+      const downloadUrl = String(created.payload?.download_url || "")
+      if (!uploadUrl || !downloadUrl) throw new DirectApiError("invalid_response", "Comfy API 没有返回 Seedream 图片上传地址")
+      await fetchAbsolute(uploadUrl, {
+        fetchImpl: options.fetchImpl,
+        signal: uploadSignal,
+        timeoutMs: job.timeoutMs || options.timeoutMs,
+        request: {
+          method: "PUT",
+          headers: { "Content-Type": image.mimeType || "image/png" },
+          body: base64Bytes(image.base64),
+        },
+      })
+      return downloadUrl
+    })
+  }
+
+  async function downloadSeedreamImage(item, index, job, options) {
+    const url = String(item?.url || "")
+    if (!url) throw new DirectApiError("invalid_response", `Seedream 第 ${index + 1} 张图片没有下载地址`)
+    const response = await fetchAbsolute(url, {
+      fetchImpl: options.fetchImpl,
+      signal: job.signal,
+      timeoutMs: job.timeoutMs || options.timeoutMs,
+    })
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    const mimeType = imageMimeType(bytes, response.headers?.get?.("content-type"))
+    if (!mimeType) throw new DirectApiError("invalid_response", `Seedream 第 ${index + 1} 张图片下载结果不是有效图片`)
+    return { base64: bytesBase64(bytes), mimeType, text: "" }
+  }
+
+  async function generateSeedreamImage(job, options, idempotencyKey) {
+    const profile = job.profile || {}
+    const selectedModel = String(profile.model || "seedream 5.5")
+    const model = SEEDREAM_IMAGE_MODELS[selectedModel]
+    if (!model) throw new DirectApiError("invalid_request", "不支持的 Seedream 生图模型")
+    const references = (job.images || []).filter((image) => image?.base64 && image.role !== "mask").slice(0, selectedModel === "seedream 5.0 lite" ? 14 : 10)
+    const imageUrls = await Promise.all(references.map((image, index) => uploadSeedreamReference(image, index, job, options, idempotencyKey)))
+    const body = {
+      model,
+      prompt: String(job.prompt || "").trim(),
+      image: imageUrls.length ? imageUrls : null,
+      size: validateSeedreamImageSize(profile),
+      seed: Math.max(0, Math.min(2147483647, Math.floor(Number(job.seed) || 0))),
+      response_format: "url",
+      watermark: false,
+    }
+    if (selectedModel !== "seedream-4-5-251128") body.output_format = "png"
+    if (selectedModel === "seedream 5.5") {
+      body.background = String(profile.background || "auto")
+    }
+    if (selectedModel === "seedream 5.0 pro" && profile.quality === "fast") {
+      body.optimize_prompt_options = { mode: "fast" }
+    }
+    if (!["seedream 5.5", "seedream 5.0 pro", "seedream 5.0 flash"].includes(selectedModel)) {
+      body.sequential_image_generation = "disabled"
+      body.sequential_image_generation_options = { max_images: 1 }
+    }
+    const response = await fetchWithRetry("/proxy/byteplus/api/v3/images/generations", {
+      fetchImpl: options.fetchImpl,
+      signal: job.signal,
+      timeoutMs: job.timeoutMs || options.timeoutMs,
+      attempts: options.attempts || 3,
+      onRetry: options.onRetry,
+      buildRequest: () => ({
+        method: "POST",
+        headers: authHeaders(job.apiKey, idempotencyKey, true),
+        body: JSON.stringify(body),
+      }),
+    })
+    if (response.payload?.error?.message) throw new DirectApiError("server_error", String(response.payload.error.message))
+    const items = Array.isArray(response.payload?.data) ? response.payload.data.filter((item) => item?.url) : []
+    if (!items.length) throw new DirectApiError("invalid_response", "Seedream 没有返回图片")
+    const images = []
+    for (let index = 0; index < items.length; index += 1) {
+      images.push(await downloadSeedreamImage(items[index], index, job, options))
+    }
+    return {
+      images,
+      credits: response.response?.headers?.get?.("x-comfy-credits-used") || "",
+      idempotencyKey,
     }
   }
 
@@ -520,6 +765,7 @@
       onRetry: options.onRetry,
     }
     if (profile.family === "seedream") return generateSeedream(job, options, idempotencyKey)
+    if (profile.family === "seedreamImage") return generateSeedreamImage(job, options, idempotencyKey)
     let response
     if (profile.family === "gpt") {
       response = await fetchWithRetry("/proxy/openai/images/edits", {
@@ -554,8 +800,10 @@
     fitGptSize,
     validateApiKey,
     validateGptSize,
+    validateSeedreamImageSize,
+    enhancePrompt,
     generate,
-    _test: { geminiBody, geminiImageParts, gptForm, parseGemini, parseGpt, mapHttpError, requestId, pngSize },
+    _test: { geminiBody, geminiImageParts, gptForm, parseGemini, parseGpt, parseResponseText, mapHttpError, requestId, pngSize, imageMimeType },
   }
 
   root.ComfyDirectApi = api

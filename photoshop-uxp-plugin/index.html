@@ -146,8 +146,8 @@
               <input id="crop-pad" type="number" min="0" max="200" step="1" value="32" title="裁切时每边按选区尺寸的这个百分比向外扩，把周围一起传进去">
             </div>
             <div class="field-row">
-              <label for="mask-feather">蒙版羽化 (px)</label>
-              <input id="mask-feather" type="number" min="0" max="1000" step="1" value="0" title="羽化发送给模型的选区蒙版边缘，0 表示硬边">
+              <label for="mask-feather">蒙版羽化 (%)</label>
+              <input id="mask-feather" type="number" min="0" max="50" step="1" value="5" title="按选区短边的百分比控制发送蒙版和图层蒙版羽化，0% 表示硬边">
             </div>
           </div>
           <div class="settings-section general-settings">
@@ -165,6 +165,24 @@
             <label class="check-row"><input id="auto-seed" type="checkbox" checked><span>每次自动随机种子</span></label>
             <button id="send-layer" class="secondary-button" type="button">发送当前图层到 ComfyTV</button>
             <button id="add-layer" class="secondary-button" type="button" disabled>把结果添加为图层</button>
+          </div>
+          <div class="settings-section history-storage-settings">
+            <div class="settings-section-head">
+              <strong>历史与缓存</strong>
+              <span id="history-cache-status">缩略图按需加载</span>
+            </div>
+            <div class="field-row field-stack">
+              <label for="history-storage-path">历史存放路径</label>
+              <input id="history-storage-path" type="text" readonly value="插件默认目录">
+            </div>
+            <div class="server-row history-storage-actions">
+              <button id="history-storage-pick" type="button">选择目录</button>
+              <button id="history-storage-default" type="button">恢复默认</button>
+            </div>
+            <div class="server-row history-storage-actions">
+              <button id="history-storage-open" type="button">打开目录</button>
+              <button id="history-cache-clear" type="button">一键清理缓存</button>
+            </div>
           </div>
             </div>
           </div>
@@ -247,6 +265,9 @@
                 <span id="count-label">1x</span>
                 <span class="icon-slot" data-icon="caret"></span>
               </span>
+              <span id="prompt-enhance" class="tiny-btn hidden" role="button" tabindex="0" title="根据当前画布美化提示词">
+                <span class="icon-slot" data-icon="spark-button"></span>
+              </span>
               <div class="generate-wrap">
                 <span class="icon-slot generate-disk" data-icon="render-disk"></span>
                 <span class="icon-slot" data-icon="render-up"></span>
@@ -258,7 +279,8 @@
             <option value="0" selected>NanoBanana</option>
             <option value="1">NanoBanana Pro</option>
             <option value="2">GPT</option>
-            <option value="3">Seedream 图层分离</option>
+            <option value="3">Seedream 生图</option>
+            <option value="4">Seedream 图层分离</option>
           </select>
           <input id="batch-count" class="composer-native" type="number" min="1" max="8" step="1" value="1">
         </footer>
