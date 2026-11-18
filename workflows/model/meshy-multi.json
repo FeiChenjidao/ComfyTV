@@ -92,13 +92,13 @@
         300000,
         "auto",
         "true",
-        false,
+        true,
         "",
-        "2k",
+        "8k",
         "",
         0,
         "randomize",
-        false
+        true
       ],
       "widgets_values_named": {
         "model": "meshy-7.1",
@@ -107,13 +107,13 @@
         "should_remesh.target_polycount": 300000,
         "symmetry_mode": "auto",
         "should_texture": "true",
-        "should_texture.enable_pbr": false,
+        "should_texture.enable_pbr": true,
         "should_texture.texture_prompt": "",
-        "should_texture.texture_resolution": "2k",
+        "should_texture.texture_resolution": "8k",
         "pose_mode": "",
         "seed": 0,
         "control_after_generate": "randomize",
-        "ultra_mode": false
+        "ultra_mode": true
       },
       "color": "#432",
       "bgcolor": "#653"
@@ -566,13 +566,14 @@
         300000,
         "auto",
         "true",
-        false,
+        true,
         "",
-        "2k",
+        "8k",
         "",
         0,
         "randomize",
-        false
+        true,
+        "4k"
       ],
       "widgets_values_named": {
         "model": "meshy-7.1",
@@ -581,13 +582,14 @@
         "should_remesh.target_polycount": 300000,
         "symmetry_mode": "auto",
         "should_texture": "true",
-        "should_texture.enable_pbr": false,
+        "should_texture.enable_pbr": true,
         "should_texture.texture_prompt": "",
-        "should_texture.texture_resolution": "2k",
+        "should_texture.texture_resolution": "8k",
         "pose_mode": "",
         "seed": 0,
         "control_after_generate": "randomize",
-        "ultra_mode": false
+        "ultra_mode": true,
+        "ultra_resolution": "4k"
       },
       "color": "#432",
       "bgcolor": "#653",

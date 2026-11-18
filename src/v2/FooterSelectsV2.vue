@@ -38,13 +38,13 @@
       @click.stop="a.onClick()"
       v-html="a.icon"
     />
-    <div v-if="(!gptImageOptions || imagePanelMode !== 'gpt') && (has('aspect_ratio') || has('resolution') || has('batch_size'))" class="v2-fsel__item">
+    <div v-if="(!gptImageOptions || imagePanelMode !== 'gpt') && (autoHas('aspect_ratio') || autoHas('resolution') || autoHas('batch_size'))" class="v2-fsel__item">
       <GenOptionsV2
-        :ratio="has('aspect_ratio') ? sv('aspect_ratio') : null"
+        :ratio="autoHas('aspect_ratio') ? sv('aspect_ratio') : null"
         :ratio-options="optionsOf('aspect_ratio')"
-        :resolution="has('resolution') ? sv('resolution') : null"
+        :resolution="autoHas('resolution') ? sv('resolution') : null"
         :resolution-options="optionsOf('resolution')"
-        :batch="has('batch_size') ? (sv('batch_size') || '1') : null"
+        :batch="autoHas('batch_size') ? (sv('batch_size') || '1') : null"
         @update="(name, v) => writeVal(name, v)"
       />
     </div>
@@ -133,6 +133,24 @@ watch(() => String(values.workflow ?? ''), async (label) => {
     if (request === panelRequest) imagePanelMode.value = 'nanobanana'
   }
 }, { immediate: true })
+
+const IGNIS_AUTO_FIELDS: Record<string, Set<string>> = {
+  'Ignis Seedance 2.5': new Set(['aspect_ratio', 'resolution']),
+  'Ignis Kling': new Set(),
+  'Ignis Sora': new Set(['aspect_ratio']),
+  'Ignis PixVerse': new Set(),
+}
+
+function autoHas(name: string): boolean {
+  if (!has(name)) return false
+  if (
+    String(values.workflow ?? '') === 'Seedance 2.5 Official'
+    && String(values.mode ?? '') !== '\u6587\u751f\u89c6\u9891'
+    && name === 'aspect_ratio'
+  ) return false
+  const fields = IGNIS_AUTO_FIELDS[String(values.workflow ?? '')]
+  return fields ? fields.has(name) : true
+}
 
 function sv(name: string): string {
   const v = values[name]

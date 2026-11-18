@@ -1,0 +1,107 @@
+{
+  "_comment": "Shipped Seedream 5.5 image workflow. Uses custom width/height derived from the Image Stage resolution and aspect ratio, clamped to Seedream 5.5 API pixel limits. Optional reference-image branches are pruned when not connected.",
+  "label": "Seedream 5.5",
+  "order": 30,
+  "description": "ByteDance Seedream 5.5 API image generation and editing with up to 3 reference images, stage-controlled aspect ratio, resolution, batch size, and seed.",
+  "result": {
+    "type": "ui_save_batch",
+    "node": "282"
+  },
+  "sizing": {
+    "type": "image",
+    "base": 2048,
+    "snap": 2,
+    "min_pixels": 921600,
+    "max_pixels": 4624220
+  },
+  "inputs": {
+    "277": {
+      "image": {
+        "from": "upstream_image:annotated[0]"
+      }
+    },
+    "278": {
+      "image": {
+        "from": "upstream_image:annotated[1]"
+      }
+    },
+    "279": {
+      "image": {
+        "from": "upstream_image:annotated[2]"
+      }
+    },
+    "280": {
+      "prompt": {
+        "from": "main_prompt",
+        "required": true,
+        "error": "Seedream 5.5 needs a prompt."
+      },
+      "model": {
+        "from": "literal:seedream 5.5",
+        "default": "seedream 5.5"
+      },
+      "model.size_preset": {
+        "from": "literal:Custom",
+        "default": "Custom"
+      },
+      "model.width": {
+        "from": "computed:width",
+        "cast": "int"
+      },
+      "model.height": {
+        "from": "computed:height",
+        "cast": "int"
+      },
+      "model.background": {
+        "from": "option:background",
+        "default": "auto"
+      },
+      "model.seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      },
+      "model.watermark": {
+        "from": "literal:false",
+        "default": "false",
+        "cast": "bool"
+      }
+    },
+    "291": {
+      "batch_size": {
+        "from": "option:batch_size",
+        "default": "1",
+        "cast": "int"
+      }
+    }
+  },
+  "prune_when_missing": [
+    {
+      "when": "upstream_image:value[0]",
+      "drop_upstream_of": [
+        {
+          "node": "280",
+          "input": "model.images.image_1"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[1]",
+      "drop_upstream_of": [
+        {
+          "node": "280",
+          "input": "model.images.image_2"
+        }
+      ]
+    },
+    {
+      "when": "upstream_image:value[2]",
+      "drop_upstream_of": [
+        {
+          "node": "280",
+          "input": "model.images.image_3"
+        }
+      ]
+    }
+  ]
+}

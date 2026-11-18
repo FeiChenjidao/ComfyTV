@@ -361,6 +361,26 @@ class TestShippedPresetRefresh:
         wdb.seed_workflows_from_disk(("video",))
         assert wdb.get_default_label("video") == "H3"
 
+    def test_refresh_applies_shipped_is_hidden(
+            self, reset_db, tmp_path, monkeypatch):
+        """Shipped internal workflows stay hidden after every rescan."""
+        legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)
+        self._seed_v1(legacy)
+
+        preset = dict(self.PRESET_V1)
+        preset["is_hidden"] = True
+        self._ship(legacy, {"nodes": []}, preset)
+        wdb.seed_workflows_from_disk(("video",))
+
+        cfg = wdb.get_workflow_config("video", "H3")
+        overview = {row["label"]: row for row in wdb.list_workflows_overview("video")}
+        assert overview["H3"]["is_hidden"] is True
+
+        wdb.set_hidden_workflow(cfg["id"], False)
+        wdb.seed_workflows_from_disk(("video",))
+        overview = {row["label"]: row for row in wdb.list_workflows_overview("video")}
+        assert overview["H3"]["is_hidden"] is True
+
     def test_preset_update_resets_row_with_gui_edits(
             self, reset_db, tmp_path, monkeypatch):
         legacy, user_root = self._setup_dirs(tmp_path, monkeypatch)

@@ -122,6 +122,10 @@ def workflow_info_payload() -> dict:
     for r in RUNNER_REGISTRY.all():
         for k in r.kinds:
             if k in out and r.label not in out[k]:
+                usage_fn = getattr(r, "workflow_usage", None)
+                if callable(usage_fn):
+                    out[k][r.label] = usage_fn()
+                    continue
                 out[k][r.label] = {
                     "uses":           {k_: False for k_ in _KINDS},
                     "requires":       {k_: False for k_ in _KINDS},

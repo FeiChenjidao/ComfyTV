@@ -5,7 +5,8 @@ import re
 from aiohttp import web
 
 from ..runners import (
-    workflow_db, refresh_registry, seed_workflows, last_scan_added, WORKFLOW_KINDS,
+    RUNNER_REGISTRY, workflow_db, refresh_registry, seed_workflows,
+    last_scan_added, WORKFLOW_KINDS,
 )
 from ..runners.vendor.workflow_to_api import WorkflowConversionError
 from ._common import routes, broadcast_workflow_event
@@ -40,6 +41,15 @@ async def workflow_state(request: web.Request) -> web.Response:
         return web.json_response({"error": "kind and label required"}, status=400)
     state = workflow_db.get_workflow_state(kind, label)
     if state is None:
+        runner = RUNNER_REGISTRY.by_label(label, kind)
+        if callable(getattr(runner, "workflow_config", None)):
+            state = {
+                "has_api": True,
+                "file_path": "",
+                "file_mtime": None,
+                "file_exists": False,
+            }
+    if state is None:
         return web.json_response({"error": "workflow not found"}, status=404)
     return web.json_response(state)
 
@@ -71,6 +81,11 @@ async def workflow_get_config(request: web.Request) -> web.Response:
         return web.json_response({"error": "kind and label required"}, status=400)
     cfg = workflow_db.get_workflow_config(kind, label)
     if cfg is None:
+        runner = RUNNER_REGISTRY.by_label(label, kind)
+        config_fn = getattr(runner, "workflow_config", None)
+        if callable(config_fn):
+            cfg = config_fn()
+    if cfg is None:
         return web.json_response({"error": "workflow not found"}, status=404)
     return web.json_response(cfg)
 
@@ -99,6 +114,16 @@ async def workflow_api_cost(request: web.Request) -> web.Response:
         if indexes:
             upstream_slots[media_kind] = indexes
     payload = workflow_db.get_workflow_api_cost(kind, label, upstream_slots)
+    if payload is None:
+        runner = RUNNER_REGISTRY.by_label(label, kind)
+        if callable(getattr(runner, "workflow_config", None)):
+            payload = {
+                "kind": kind,
+                "label": label,
+                "has_api": False,
+                "nodes": [],
+                "bindings": [],
+            }
     if payload is None:
         return web.json_response({"error": "workflow not found"}, status=404)
     return web.json_response(payload)

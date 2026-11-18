@@ -1,0 +1,5 @@
+{
+  "_comment": "Photoshop bridge workflow. It remains shipped for the PS plugin backend but must not appear in the regular Image Stage workflow picker.",
+  "label": "PS_NanoBanana_GPTImage",
+  "is_hidden": true
+}

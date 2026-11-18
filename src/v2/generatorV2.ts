@@ -306,6 +306,7 @@ const GENERATORS: Record<string, GeneratorConfig> = {
   'ComfyTV.VideoStage':            {
     preview: 'video', linkKind: 'video', refTypes: ['image', 'video', 'audio'],
     controls: [
+      { name: 'mode', control: 'select', labelKey: 'v2.ctl.mode', boundOnly: true },
       { name: 'duration_s', control: 'slider', labelKey: 'v2.ctl.duration' },
       { name: 'generate_audio', control: 'toggle', labelKey: 'v2.ctl.generateAudio' },
     ],

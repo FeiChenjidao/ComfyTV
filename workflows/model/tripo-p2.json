@@ -153,8 +153,8 @@
       "widgets_values": [
         "P2",
         false,
-        -1,
-        "standard",
+        50000,
+        "extreme",
         true,
         42,
         "randomize",
@@ -168,8 +168,8 @@
       "widgets_values_named": {
         "model": "P2",
         "model.quad": false,
-        "model.face_limit": -1,
-        "model.texture": "standard",
+        "model.face_limit": 50000,
+        "model.texture": "extreme",
         "model.pbr": true,
         "model.model_seed": 42,
         "model.texture_alignment": "original_image",
@@ -541,8 +541,8 @@
       "widgets_values": [
         "P2",
         false,
-        -1,
-        "standard",
+        50000,
+        "extreme",
         true,
         42,
         "randomize",
@@ -557,8 +557,8 @@
       "widgets_values_named": {
         "model": "P2",
         "model.quad": false,
-        "model.face_limit": -1,
-        "model.texture": "standard",
+        "model.face_limit": 50000,
+        "model.texture": "extreme",
         "model.pbr": true,
         "model.model_seed": 42,
         "model.enable_image_autofix": false,

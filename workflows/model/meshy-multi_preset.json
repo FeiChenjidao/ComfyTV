@@ -110,7 +110,7 @@
       },
       "should_texture.texture_resolution": {
         "from": "option:texture_resolution",
-        "default": "2k"
+        "default": "8k"
       },
       "symmetry_mode": {
         "from": "option:symmetry_mode",
@@ -118,7 +118,7 @@
       },
       "ultra_mode": {
         "from": "option:ultra_mode",
-        "default": "false",
+        "default": "true",
         "cast": "bool"
       }
     },
@@ -187,7 +187,7 @@
       },
       "should_texture.texture_resolution": {
         "from": "option:texture_resolution",
-        "default": "2k"
+        "default": "8k"
       },
       "symmetry_mode": {
         "from": "option:symmetry_mode",
@@ -195,8 +195,12 @@
       },
       "ultra_mode": {
         "from": "option:ultra_mode",
-        "default": "false",
+        "default": "true",
         "cast": "bool"
+      },
+      "ultra_resolution": {
+        "from": "option:ultra_resolution",
+        "default": "4k"
       }
     }
   }

@@ -173,6 +173,17 @@ def _apply_is_default_from_preset(s, row: db.Workflow, preset: dict) -> bool:
     return changed
 
 
+def _apply_is_hidden_from_preset(row: db.Workflow, preset: dict) -> bool:
+    """Honor shipped ``is_hidden``. Returns True if the row changed."""
+    if "is_hidden" not in preset:
+        return False
+    want = bool(preset["is_hidden"])
+    if bool(getattr(row, "is_hidden", False)) == want:
+        return False
+    row.is_hidden = want
+    return True
+
+
 def _apply_preset_to_new_row(s, row: db.Workflow, preset: dict) -> None:
     if preset.get("label"):
         _claim_label_or_skip(s, row, str(preset["label"]))
@@ -193,6 +204,7 @@ def _apply_preset_to_new_row(s, row: db.Workflow, preset: dict) -> None:
     s.flush()
     _add_preset_bindings(s, row, preset)
     _apply_is_default_from_preset(s, row, preset)
+    _apply_is_hidden_from_preset(row, preset)
 
 
 def _add_preset_bindings(s, row: db.Workflow, preset: dict) -> None:
@@ -257,14 +269,18 @@ def _refresh_shipped_preset(s, manifest: dict, ledger: dict, root: Path,
     if (isinstance(entry, dict)
             and entry.get("preset") == preset_hash
             and entry.get("row") == row_hash):
-        # Bindings already match; still re-assert shipped is_default (e.g. Tripo).
-        return _apply_is_default_from_preset(s, row, preset)
+        # Bindings already match; still re-assert shipped visibility/defaults.
+        default_changed = _apply_is_default_from_preset(s, row, preset)
+        hidden_changed = _apply_is_hidden_from_preset(row, preset)
+        return default_changed or hidden_changed
     if _preset_state_hash(preset) == row_hash:
         _record_applied_preset(ledger, rel_key, preset_hash, row_hash)
         _apply_is_default_from_preset(s, row, preset)
+        _apply_is_hidden_from_preset(row, preset)
         return True
     _reapply_preset_to_row(s, row, preset)
     _apply_is_default_from_preset(s, row, preset)
+    _apply_is_hidden_from_preset(row, preset)
     _record_applied_preset(ledger, rel_key, preset_hash, _row_state_hash(s, row))
     _log.info("[ComfyTV/workflow_db] re-applied shipped preset for %s/%s",
               row.kind, row.label)

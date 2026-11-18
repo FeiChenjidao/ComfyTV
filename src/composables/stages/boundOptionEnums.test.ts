@@ -20,6 +20,7 @@ import {
   clearBoundOptionEnumsCache,
   defaultsFromExposedWidgets,
   enumsFromExposedWidgets,
+  enumsFromWorkflowMeta,
   loadBoundOptionEnums,
   applyBoundOptionDefaults,
   syncBoundOptionEnums,
@@ -131,12 +132,62 @@ describe('enumsFromExposedWidgets', () => {
   })
 })
 
+describe('enumsFromWorkflowMeta', () => {
+  it('uses canonical Stage values declared by the shipped workflow', () => {
+    expect(enumsFromWorkflowMeta({
+      option_enums: {
+        mode: ['\u6587\u751f\u89c6\u9891', '\u56fe\u751f\u89c6\u9891'],
+        resolution: ['480P', '720P', '1080P', '4K'],
+        aspect_ratio: ['auto', '16:9'],
+        ignored: ['x'],
+      },
+    })).toEqual({
+      mode: ['\u6587\u751f\u89c6\u9891', '\u56fe\u751f\u89c6\u9891'],
+      resolution: ['480P', '720P', '1080P', '4K'],
+      aspect_ratio: ['auto', '16:9'],
+    })
+  })
+})
+
 describe('syncBoundOptionEnums', () => {
   beforeEach(() => {
     clearBoundOptionEnumsCache()
     comboOptionsVersion.value = 0
     vi.mocked(fetchWorkflowConfig).mockReset()
     apiSend.mockClear()
+  })
+
+  it('lets workflow meta override provider-specific combo casing', async () => {
+    vi.mocked(fetchWorkflowConfig).mockResolvedValue({
+      id: 12,
+      meta: {
+        option_enums: {
+          mode: ['\u6587\u751f\u89c6\u9891', '\u56fe\u751f\u89c6\u9891', '\u9996\u5c3e\u5e27'],
+          resolution: ['480P', '720P', '1080P', '4K'],
+        },
+      },
+      exposed_widgets: [{
+        node_id: '2',
+        widget_name: 'model.resolution',
+        stage_binding: 'option:resolution',
+        widget_type: 'COMBO',
+        widget_props: { values: ['480p', '720p', '1080p', '4k'] },
+      }],
+    } as any)
+
+    const node: any = {
+      widgets: [
+        { name: 'workflow', type: 'combo', value: 'Seedance 2.5 Official', options: { values: [] } },
+        { name: 'mode', type: 'combo', value: '\u9996\u5c3e\u5e27', options: { values: ['\u6587\u751f\u89c6\u9891', '\u56fe\u751f\u89c6\u9891', '\u9996\u5c3e\u5e27'] }, callback: vi.fn() },
+        { name: 'resolution', type: 'combo', value: '720P', options: { values: [...RESOLUTIONS] }, callback: vi.fn() },
+      ],
+    }
+
+    await syncBoundOptionEnums(node, 'video', 'Seedance 2.5 Official')
+    expect(node.widgets[1].options.values).toEqual(['\u6587\u751f\u89c6\u9891', '\u56fe\u751f\u89c6\u9891', '\u9996\u5c3e\u5e27'])
+    expect(node.widgets[1].value).toBe('\u9996\u5c3e\u5e27')
+    expect(node.widgets[2].options.values).toEqual(['480P', '720P', '1080P', '4K'])
+    expect(node.widgets[2].value).toBe('720P')
   })
 
   it('patches Stage combo lists from unbound model.* widgets and auto-binds', async () => {

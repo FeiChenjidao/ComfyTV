@@ -4,6 +4,7 @@
       <button type="button" class="v2-gptopt__chip" :aria-expanded="open" @pointerdown.stop>
         <span>{{ size }}</span>
         <span class="v2-gptopt__muted">{{ quality }}</span>
+        <span class="v2-gptopt__muted">{{ complexity }}</span>
         <span class="v2-gptopt__muted">{{ t('v2.batchCount', { n: batch }) }}</span>
         <svg viewBox="0 0 10 6" fill="none" :class="['v2-gptopt__chev', open && 'v2-gptopt__chev--open']"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" /></svg>
       </button>
@@ -68,6 +69,8 @@
       <ComfyTVSelect :model-value="background" :options="BACKGROUND_OPTIONS" :filterable="false" @update:model-value="v => setValue('background', v)" />
       <div class="v2-gptopt__title">质量</div>
       <ComfyTVSelect :model-value="quality" :options="QUALITY_OPTIONS" :filterable="false" @update:model-value="v => setValue('quality', v)" />
+      <div class="v2-gptopt__title">规划强度</div>
+      <ComfyTVSelect :model-value="complexity" :options="COMPLEXITY_OPTIONS" :filterable="false" @update:model-value="v => setValue('complexity', v)" />
       <div class="v2-gptopt__title">{{ t('v2.genopt.count') }}</div>
       <div class="v2-gptopt__row">
         <button
@@ -94,8 +97,9 @@ import { useWidgetValues } from '@/v2/useWidgetValues'
 const SIZE_OPTIONS = ['auto', '1024x1024', '1024x1536', '1536x1024', '2048x2048', '2048x1152', '1152x2048', '3840x2160', '2160x3840', 'Custom']
 const BACKGROUND_OPTIONS = ['auto', 'transparent', 'opaque']
 const QUALITY_OPTIONS = ['low', 'medium', 'high', 'xhigh', 'max']
+const COMPLEXITY_OPTIONS = ['low', 'medium', 'high']
 const BATCH_OPTIONS = Array.from({ length: 8 }, (_, i) => String(i + 1))
-const DIM_MIN = 408
+const DIM_MIN = 480
 const DIM_MAX = 3840
 const DIM_STEP = 16
 
@@ -117,6 +121,7 @@ function read(key: string, fallback: string | number): string | number {
 const size = computed(() => String(read('size', 'auto')))
 const background = computed(() => String(read('background', 'auto')))
 const quality = computed(() => String(read('quality', 'high')))
+const complexity = computed(() => String(read('complexity', 'high')))
 const width = computed(() => Number(read('custom_width', 1024)) || 1024)
 const height = computed(() => Number(read('custom_height', 1024)) || 1024)
 const batch = computed(() => {

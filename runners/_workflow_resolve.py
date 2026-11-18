@@ -1,4 +1,5 @@
 import logging
+import math
 import random
 import re
 import urllib.parse
@@ -58,7 +59,22 @@ def _resolve_wh(sizing: dict, options: dict) -> tuple[int, int]:
         w = short
         h = int(round(short / ar))
     floor = max(snap, 16)
-    return max(floor, (w // snap) * snap), max(floor, (h // snap) * snap)
+    w = max(floor, (w // snap) * snap)
+    h = max(floor, (h // snap) * snap)
+
+    max_pixels = int(sizing.get("max_pixels") or 0)
+    if max_pixels > 0 and w * h > max_pixels:
+        scale = math.sqrt(max_pixels / (w * h))
+        w = max(floor, (int(w * scale) // snap) * snap)
+        h = max(floor, (int(h * scale) // snap) * snap)
+
+    min_pixels = int(sizing.get("min_pixels") or 0)
+    if min_pixels > 0 and w * h < min_pixels:
+        scale = math.sqrt(min_pixels / (w * h))
+        w = max(floor, math.ceil(w * scale / snap) * snap)
+        h = max(floor, math.ceil(h * scale / snap) * snap)
+
+    return w, h
 
 
 def _resolve_length(sizing: dict, options: dict) -> int:
@@ -127,10 +143,16 @@ def _cast(value: Any, cast: str | None) -> Any:
     if cast == "int":   return int(value)
     if cast == "float": return float(value)
     if cast == "str":   return str(value)
+    if cast == "lower": return str(value).lower()
     if cast == "bool":
         if isinstance(value, bool): return value
         s = str(value).strip().lower()
-        return s in ("true", "1", "yes", "on")
+        return s in (
+            "true", "1", "yes", "on",
+            "\u56fe\u751f\u89c6\u9891", "\u9996\u5c3e\u5e27",
+        )
+    if cast == "transition_mode":
+        return str(value).strip() == "\u9996\u5c3e\u5e27"
     if cast == "truefalse":
         if isinstance(value, bool):
             return "true" if value else "false"

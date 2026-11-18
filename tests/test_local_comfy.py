@@ -30,6 +30,10 @@ class TestCast:
         assert lc._cast(42, "str") == "42"
         assert lc._cast(None, "str") == "None"
 
+    def test_lower(self):
+        assert lc._cast("1080P", "lower") == "1080p"
+        assert lc._cast("4K", "lower") == "4k"
+
     def test_bool_truthy_strings(self):
         for s in ("true", "True", "1", "yes", "on", " ON ", "TRUE"):
             assert lc._cast(s, "bool") is True, s
@@ -41,6 +45,16 @@ class TestCast:
     def test_bool_real_bool(self):
         assert lc._cast(True, "bool") is True
         assert lc._cast(False, "bool") is False
+
+    def test_bool_video_mode(self):
+        assert lc._cast("\u56fe\u751f\u89c6\u9891", "bool") is True
+        assert lc._cast("\u9996\u5c3e\u5e27", "bool") is True
+        assert lc._cast("\u6587\u751f\u89c6\u9891", "bool") is False
+
+    def test_transition_video_mode(self):
+        assert lc._cast("\u9996\u5c3e\u5e27", "transition_mode") is True
+        assert lc._cast("\u56fe\u751f\u89c6\u9891", "transition_mode") is False
+        assert lc._cast("\u6587\u751f\u89c6\u9891", "transition_mode") is False
 
     def test_unknown_cast_raises(self):
         with pytest.raises(RuntimeError, match="unknown cast"):
@@ -160,6 +174,22 @@ class TestResolveWH:
         # Tiny base + giant aspect — must still respect the floor.
         w, h = lc._resolve_wh({"base": 1, "snap": 1}, {"aspect_ratio": "1:1"})
         assert w >= 16 and h >= 16
+
+    def test_pixel_limits_preserve_aspect_ratio(self):
+        sizing = {
+            "base": 2048,
+            "snap": 2,
+            "max_pixels": 4_624_220,
+            "min_pixels": 921_600,
+        }
+        w, h = lc._resolve_wh(sizing, {"aspect_ratio": "16:9"})
+        assert w * h <= 4_624_220
+        assert abs((w / h) - (16 / 9)) < 0.01
+
+        w, h = lc._resolve_wh(
+            {**sizing, "base": 240}, {"aspect_ratio": "1:1"}
+        )
+        assert w * h >= 921_600
 
 
 # ─── _resolve_length ─────────────────────────────────────────────────────────

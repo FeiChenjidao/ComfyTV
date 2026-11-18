@@ -1,0 +1,75 @@
+{
+  "_comment": "Exported preset for the 'GPT_Image_2.6' workflow (kind=image). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
+  "label": "GPT_Image_2.6",
+  "result": {
+    "type": "ui_save_batch",
+    "node": "282"
+  },
+  "meta": {
+    "image_panel": "gpt"
+  },
+  "inputs": {
+    "277": {
+      "image": {
+        "from": "upstream_image:annotated[0]"
+      }
+    },
+    "278": {
+      "image": {
+        "from": "upstream_image:annotated[1]"
+      }
+    },
+    "279": {
+      "image": {
+        "from": "upstream_image:annotated[2]"
+      }
+    },
+    "280": {
+      "model": {
+        "from": "literal:gpt-image-2.6-flare",
+        "default": "gpt-image-2.6-flare"
+      },
+      "model.prompt": {
+        "from": "main_prompt"
+      },
+      "model.background": {
+        "from": "option:background",
+        "default": "auto"
+      },
+      "model.custom_height": {
+        "from": "option:custom_height",
+        "default": "1024",
+        "cast": "int"
+      },
+      "model.custom_width": {
+        "from": "option:custom_width",
+        "default": "1024",
+        "cast": "int"
+      },
+      "model.quality": {
+        "from": "option:quality",
+        "default": "high"
+      },
+      "model.complexity": {
+        "from": "option:complexity",
+        "default": "high"
+      },
+      "model.size": {
+        "from": "option:size",
+        "default": "auto"
+      },
+      "model.seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      }
+    },
+    "291": {
+      "batch_size": {
+        "from": "option:batch_size",
+        "default": "1",
+        "cast": "int"
+      }
+    }
+  }
+}

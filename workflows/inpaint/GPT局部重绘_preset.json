@@ -10,7 +10,12 @@
     },
     "10": {
       "model": {
-        "from": "option:model_version"
+        "from": "option:model_version",
+        "default": "gpt-image-2.6-flare"
+      },
+      "model.complexity": {
+        "from": "literal:high",
+        "default": "high"
       }
     },
     "13": {

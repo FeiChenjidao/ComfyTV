@@ -50,11 +50,12 @@ export interface ControlSpec {
   control: 'slider' | 'toggle' | 'textarea' | 'text' | 'number' | 'select'
   labelKey: string
   wide?: boolean
+  boundOnly?: boolean
 }
 </script>
 
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
+import { computed, toRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useBoundOptionKeys } from '@/composables/stages/useBoundOptionKeys'
@@ -92,12 +93,57 @@ const { keys: boundKeys } = useBoundOptionKeys(
   toRef(props, 'workflowKind'),
 )
 
+const WORKFLOW_CONTROLS: Record<string, Set<string>> = {
+  'Seedance 2.5 Official': new Set(['mode', 'duration_s', 'generate_audio']),
+  'Ignis Seedance 2.5': new Set(['mode', 'duration_s']),
+  'Ignis Kling': new Set(['mode']),
+  'Ignis Sora': new Set(['mode']),
+  'Ignis PixVerse': new Set(['mode']),
+}
+
+function resetWidgetBounds() {
+  for (const control of props.controls) {
+    const widget = widgetOf(control.name) as any
+    if (!widget?.options) continue
+    if (!widget.__comfytvBaseBounds) {
+      widget.__comfytvBaseBounds = {
+        min: widget.options.min,
+        max: widget.options.max,
+        step: widget.options.step,
+        step2: widget.options.step2,
+      }
+    }
+    Object.assign(widget.options, widget.__comfytvBaseBounds)
+  }
+}
+
+function applyWorkflowWidgetBounds(label: string) {
+  resetWidgetBounds()
+  if (label !== 'Ignis Seedance 2.5' && label !== 'Seedance 2.5 Official') return
+  const duration = widgetOf('duration_s') as any
+  if (!duration?.options) return
+  Object.assign(duration.options, { min: 4, max: 30, step: 1 })
+  const value = Number(duration.value)
+  if (!Number.isFinite(value) || value < 4 || value > 30) {
+    duration.value = 5
+    duration.callback?.(5)
+  }
+}
+
+watch(
+  () => String(values.workflow ?? ''),
+  label => applyWorkflowWidgetBounds(label),
+  { immediate: true },
+)
+
 const present = computed(() => {
   void comboOptionsVersion.value
   void boundKeys.value
+  const workflowControls = WORKFLOW_CONTROLS[String(values.workflow ?? '')]
   return props.controls.filter(c => {
     if (!widgetOf(c.name)) return false
-    if (!props.boundOnly) return true
+    if (workflowControls) return workflowControls.has(c.name)
+    if (!props.boundOnly && !c.boundOnly) return true
     return boundKeys.value.has(c.name)
   })
 })

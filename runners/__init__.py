@@ -9,6 +9,7 @@ from .base import (
 )
 from .local_comfy import LocalComfyUIRunner
 from .fake_multishot import FakeMultishotRunner
+from .ignis_video import ignis_video_runners
 from . import workflow_db
 
 
@@ -44,6 +45,7 @@ def _workflow_runners_from_db() -> list[LocalComfyUIRunner]:
 def _populate(registry: RunnerRegistry) -> None:
     for r in _workflow_runners_from_db():
         registry.register(r)
+    registry.register_all(ignis_video_runners())
     registry.register(
         FakeMultishotRunner('local-multishot-fake', 'Multishot (placeholder)', {'timeline'})
     )

@@ -1,0 +1,59 @@
+{
+  "_comment": "Single official ComfyUI Credits workflow for Seedance 2.5. Lazy switches execute only the selected text-to-video, first-frame, or first-last-frame API branch.",
+  "label": "Seedance 2.5 Official",
+  "order": 5,
+  "description": "Official ComfyUI Credits Seedance 2.5 workflow with text-to-video, image-to-video, and first-last-frame modes.",
+  "result": {"type": "ui_save_url", "node": "5"},
+  "inputs": {
+    "1": {
+      "image": {"from": "upstream_image:annotated[0]"}
+    },
+    "6": {
+      "image": {"from": "upstream_image:annotated[1]"}
+    },
+    "2": {
+      "model": {"from": "literal:Seedance 2.5"},
+      "model.prompt": {"from": "main_prompt", "required": true, "error": "Seedance needs a video prompt."},
+      "model.resolution": {"from": "option:resolution", "default": "720P", "cast": "lower"},
+      "model.ratio": {"from": "option:aspect_ratio", "default": "16:9"},
+      "model.duration": {"from": "option:duration_s", "default": 5, "cast": "int"},
+      "model.generate_audio": {"from": "option:generate_audio", "default": false, "cast": "bool"},
+      "model.output_format": {"from": "literal:mp4"},
+      "seed": {"from": "option:seed", "default": "random_int31", "cast": "int"},
+      "watermark": {"from": "literal:false", "cast": "bool"}
+    },
+    "3": {
+      "model": {"from": "literal:Seedance 2.5"},
+      "model.prompt": {"from": "main_prompt", "required": true, "error": "Seedance needs a video prompt."},
+      "model.resolution": {"from": "option:resolution", "default": "720P", "cast": "lower"},
+      "model.duration": {"from": "option:duration_s", "default": 5, "cast": "int"},
+      "model.generate_audio": {"from": "option:generate_audio", "default": false, "cast": "bool"},
+      "model.output_format": {"from": "literal:mp4"},
+      "seed": {"from": "option:seed", "default": "random_int31", "cast": "int"},
+      "watermark": {"from": "literal:false", "cast": "bool"}
+    },
+    "8": {
+      "model": {"from": "literal:Seedance 2.5"},
+      "model.prompt": {"from": "main_prompt", "required": true, "error": "Seedance needs a video prompt."},
+      "model.resolution": {"from": "option:resolution", "default": "720P", "cast": "lower"},
+      "model.duration": {"from": "option:duration_s", "default": 5, "cast": "int"},
+      "model.generate_audio": {"from": "option:generate_audio", "default": false, "cast": "bool"},
+      "model.output_format": {"from": "literal:mp4"},
+      "seed": {"from": "option:seed", "default": "random_int31", "cast": "int"},
+      "watermark": {"from": "literal:false", "cast": "bool"}
+    },
+    "4": {
+      "switch": {"from": "option:mode", "default": "\u6587\u751f\u89c6\u9891", "cast": "transition_mode"}
+    },
+    "7": {
+      "switch": {"from": "option:mode", "default": "\u6587\u751f\u89c6\u9891", "cast": "bool"}
+    }
+  },
+  "meta": {
+    "option_enums": {
+      "mode": ["\u6587\u751f\u89c6\u9891", "\u56fe\u751f\u89c6\u9891", "\u9996\u5c3e\u5e27"],
+      "resolution": ["480P", "720P", "1080P", "4K"],
+      "aspect_ratio": ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9"]
+    }
+  }
+}

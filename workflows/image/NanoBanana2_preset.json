@@ -47,6 +47,14 @@
         "from": "option:seed",
         "default": "random_int31",
         "cast": "int"
+      },
+      "model": {
+        "from": "literal:Gemini Nano Banana 2.1",
+        "default": "Gemini Nano Banana 2.1"
+      },
+      "model.thinking_level": {
+        "from": "literal:MEDIUM",
+        "default": "MEDIUM"
       }
     },
     "2": {

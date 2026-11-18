@@ -389,6 +389,7 @@
       "moveDown": "下移"
     },
     "ctl": {
+      "mode": "模式",
       "duration": "时长（秒）",
       "generateAudio": "生成伴音",
       "lyrics": "歌词",

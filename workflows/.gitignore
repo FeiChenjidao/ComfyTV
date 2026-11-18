@@ -22,11 +22,14 @@
 !image-edit/qwen-edit-2511_preset.json
 !image-edit/qwen-image-2.1-edit.json
 !image-edit/qwen-image-2.1-edit_preset.json
-!image/GPT_Image_2.5.json
-!image/GPT_Image_2.5_preset.json
+!image/GPT_Image_2.6.json
+!image/GPT_Image_2.6_preset.json
 !image/NanoBanana2.json
 !image/NanoBanana2_preset.json
 !image/PS_NanoBanana_GPTImage.json
+!image/PS_NanoBanana_GPTImage_preset.json
+!image/Seedream_5.5.json
+!image/Seedream_5.5_preset.json
 !inpaint/GPT局部重绘.json
 !inpaint/GPT局部重绘_preset.json
 !inpaint/Nanobanana 局部重绘.json
@@ -72,17 +75,5 @@
 !upscale/magnific-v2_preset.json
 !upscale/WaveSpeed（省钱超分）.json
 !upscale/WaveSpeed（省钱超分）_preset.json
-!video/local-ltx-2.3-flf2v.json
-!video/local-ltx-2.3-flf2v_preset.json
-!video/local-ltx-2.3-i2v.json
-!video/local-ltx-2.3-i2v_preset.json
-!video/local-ltx-2.3-ia2v.json
-!video/local-ltx-2.3-ia2v_preset.json
-!video/local-ltx-2.3-t2v.json
-!video/local-ltx-2.3-t2v_preset.json
-!video/local-minimax-h3-flf2v.json
-!video/local-minimax-h3-flf2v_preset.json
-!video/local-minimax-h3-r2v.json
-!video/local-minimax-h3-r2v_preset.json
-!video/local-minimax-h3-t2v.json
-!video/local-minimax-h3-t2v_preset.json
+!video/seedance-2.5-official.json
+!video/seedance-2.5-official_preset.json

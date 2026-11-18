@@ -18,7 +18,7 @@ workflows/
 | 文件夹 | 对应 Stage | 已测试的内置 | per-kind 文档 |
 |---|---|---|---|
 | `audio/`       | Audio Stage             | ACE-Step v1 Song | [README](audio/README.zh.md) |
-| `image/`       | Image Stage              | NanoBanana2、GPT Image 2.5 | [README](image/README.zh.md) |
+| `image/`       | Image Stage              | NanoBanana2、GPT Image 2.6、Seedream 5.5 | [README](image/README.zh.md) |
 | `image-edit/`  | Image Edit              | Flux Canny Edit | [README](image-edit/README.zh.md) |
 | `inpaint/`     | Inpaint                 | Flux Fill Inpaint（子图）；Fooocus SDXL Inpaint *（需装插件）* | [README](inpaint/README.zh.md) |
 | `outpaint/`    | Outpaint                | Flux Fill Outpaint；Fooocus SDXL Outpaint *（需装插件）* | [README](outpaint/README.zh.md) |

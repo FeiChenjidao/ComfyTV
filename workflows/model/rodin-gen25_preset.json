@@ -63,6 +63,7 @@
       },
       "addon_highpack": {
         "from": "option:addon_highpack",
+        "default": "true",
         "cast": "bool"
       },
       "bbox_height": {
@@ -82,6 +83,7 @@
       },
       "hd_texture": {
         "from": "option:hd_texture",
+        "default": "true",
         "cast": "bool"
       },
       "height_cm": {
@@ -89,10 +91,12 @@
         "cast": "int"
       },
       "material": {
-        "from": "option:material"
+        "from": "option:material",
+        "default": "PBR"
       },
       "mode": {
-        "from": "option:mode"
+        "from": "option:mode",
+        "default": "Extreme-High"
       },
       "mode.creative": {
         "from": "option:creative",
@@ -100,14 +104,17 @@
       },
       "mode.is_micro": {
         "from": "option:is_micro",
+        "default": "true",
         "cast": "bool"
       },
       "mode.mesh_faces": {
         "from": "option:mesh_faces",
+        "default": "2000000",
         "cast": "int"
       },
       "mode.mesh_mode": {
-        "from": "option:mesh_mode"
+        "from": "option:mesh_mode",
+        "default": "Raw"
       },
       "mode.polygon_count": {
         "from": "option:polygon_count"
@@ -125,7 +132,8 @@
         "cast": "bool"
       },
       "texture_mode": {
-        "from": "option:texture_mode"
+        "from": "option:texture_mode",
+        "default": "high"
       },
       "use_original_alpha": {
         "from": "option:use_original_alpha",

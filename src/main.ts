@@ -57,6 +57,10 @@ import { installAppModeHint } from '@/composables/appModeHint'
 import { installPluginUpdateCheck } from '@/composables/pluginUpdateCheck'
 import { guardGhostPlacement } from '@/composables/ghostPlacementInert'
 import { installWorkflowRegistrySync } from '@/composables/stages/workflowRegistrySync'
+import {
+  migrateVideoStageConfigureInfo,
+  normalizeVideoStageWidgets,
+} from '@/composables/stages/videoStageMigration'
 import '@/v2/imageBatchShell'
 import '@/v2/layerSeparationShell'
 import '@/v2/poolPickersV2'
@@ -403,6 +407,15 @@ const extension: ComfyExtension = {
         // cannot wipe sockets before links are reattached.
         const ret = prevConfigure?.call(this, info)
         restoreMergeInputsFromSaved(this, info)
+        return ret
+      }
+    }
+    if (nodeData.name === 'ComfyTV.VideoStage') {
+      const prevConfigure = proto.onConfigure
+      proto.onConfigure = function (this: ComfyNode, info: any) {
+        migrateVideoStageConfigureInfo(this, info)
+        const ret = prevConfigure?.call(this, info)
+        normalizeVideoStageWidgets(this)
         return ret
       }
     }

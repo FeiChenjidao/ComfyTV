@@ -109,6 +109,12 @@ type BoundPayload = {
   defaults: Record<string, string>
 }
 
+type BoundOptionConfig = {
+  id?: number
+  exposed_widgets?: ExposedLike[]
+  meta?: { option_enums?: unknown } | null
+}
+
 const cache = new Map<string, BoundPayload>()
 const syncRequestIds = new WeakMap<object, number>()
 
@@ -239,9 +245,25 @@ export function enumsFromExposedWidgets(
   return out
 }
 
+export function enumsFromWorkflowMeta(
+  meta: BoundOptionConfig['meta'],
+  stageComboNames: readonly string[] = BOUND_OPTION_WIDGETS,
+): Record<string, string[]> {
+  const raw = meta?.option_enums
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const wanted = new Set(stageComboNames)
+  const out: Record<string, string[]> = {}
+  for (const [key, values] of Object.entries(raw as Record<string, unknown>)) {
+    if (!wanted.has(key) || !Array.isArray(values)) continue
+    const normalized = values.map(String).filter(Boolean)
+    if (normalized.length) out[key] = normalized
+  }
+  return out
+}
+
 /** Auto-bind unbound workflow COMBOs whose leaf maps onto a Stage option key. */
 export async function ensureOptionBindings(
-  cfg: { id?: number; exposed_widgets?: ExposedLike[] } | null | undefined,
+  cfg: BoundOptionConfig | null | undefined,
   stageComboNames: readonly string[] = BOUND_OPTION_WIDGETS,
 ): Promise<boolean> {
   if (!cfg?.id || !Array.isArray(cfg.exposed_widgets)) return false
@@ -292,7 +314,10 @@ async function loadBoundOptionPayload(
     }
     const widgets = cfg.exposed_widgets ?? []
     const payload: BoundPayload = {
-      enums: enumsFromExposedWidgets(widgets, stageComboNames),
+      enums: {
+        ...enumsFromExposedWidgets(widgets, stageComboNames),
+        ...enumsFromWorkflowMeta(cfg.meta, stageComboNames),
+      },
       defaults: defaultsFromExposedWidgets(widgets),
     }
     cache.set(cacheKey, payload)

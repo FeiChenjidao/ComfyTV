@@ -136,3 +136,97 @@ def test_shipped_model_versions_are_valid_stage_values():
                 f"{preset_path}: model_version default {default!r} is rejected "
                 "by ComfyTV.Model3DStage"
             )
+
+
+def test_shipped_model_workflows_default_to_high_quality():
+    def workflow(name: str) -> dict:
+        path = WORKFLOWS_DIR / "model" / name
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def preset(name: str) -> dict:
+        path = WORKFLOWS_DIR / "model" / name
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    tripo = workflow("tripo.json")
+    for node_id in (47, 48):
+        node = next(node for node in tripo["nodes"] if node["id"] == node_id)
+        assert node["widgets_values_named"]["texture_quality"] == "extreme"
+        assert node["widgets_values_named"]["geometry_quality"] == "detailed"
+
+    tripo_p2 = workflow("tripo-p2.json")
+    for node_id in (47, 48):
+        node = next(node for node in tripo_p2["nodes"] if node["id"] == node_id)
+        assert node["widgets_values_named"]["model.texture"] == "extreme"
+        assert node["widgets_values_named"]["model.face_limit"] == 50_000
+
+    meshy = workflow("meshy-multi.json")
+    for node_id in (1, 2):
+        node = next(node for node in meshy["nodes"] if node["id"] == node_id)
+        named = node["widgets_values_named"]
+        assert named["should_remesh.target_polycount"] == 300_000
+        assert named["should_texture.enable_pbr"] is True
+        assert named["should_texture.texture_resolution"] == "8k"
+        assert named["ultra_mode"] is True
+    assert next(node for node in meshy["nodes"] if node["id"] == 2)[
+        "widgets_values_named"
+    ]["ultra_resolution"] == "4k"
+
+    rodin = next(node for node in workflow("rodin-gen25.json")["nodes"] if node["id"] == 1)
+    rodin_named = rodin["widgets_values_named"]
+    assert rodin_named["mode"] == "Extreme-High"
+    assert rodin_named["mode.mesh_faces"] == 2_000_000
+    assert rodin_named["mode.is_micro"] is True
+    assert rodin_named["texture_mode"] == "high"
+    assert rodin_named["hd_texture"] is True
+    assert rodin_named["addon_highpack"] is True
+    assert rodin["widgets_values"][10:15] == [False, True, False, False, True]
+
+    assert next(_bound_defaults(preset("tripo_preset.json"), "option:texture_quality")) == "extreme"
+    assert next(_bound_defaults(preset("tripo_preset.json"), "option:geometry_quality")) == "detailed"
+    assert next(_bound_defaults(preset("meshy-multi_preset.json"), "option:texture_resolution")) == "8k"
+    assert next(_bound_defaults(preset("rodin-gen25_preset.json"), "option:mode")) == "Extreme-High"
+
+
+def test_seedance_official_video_workflow_contract():
+    workflow = json.loads(
+        (WORKFLOWS_DIR / "video" / "seedance-2.5-official.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    preset = json.loads(
+        (WORKFLOWS_DIR / "video" / "seedance-2.5-official_preset.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert {node["type"] for node in workflow["nodes"]} == {
+        "LoadImage",
+        "ByteDance2TextToVideoNode",
+        "ByteDance2FirstLastFrameNode",
+        "ComfySwitchNode",
+        "SaveVideo",
+    }
+    nodes = {node["id"]: node for node in workflow["nodes"]}
+    assert sum(node["type"] == "LoadImage" for node in workflow["nodes"]) == 2
+    assert sum(
+        node["type"] == "ByteDance2FirstLastFrameNode"
+        for node in workflow["nodes"]
+    ) == 2
+    assert sum(node["type"] == "ComfySwitchNode" for node in workflow["nodes"]) == 2
+    assert nodes[3]["inputs"][1]["link"] is None
+    assert nodes[8]["inputs"][1]["link"] == 5
+    assert preset["inputs"]["4"]["switch"]["cast"] == "transition_mode"
+    assert preset["inputs"]["7"]["switch"]["cast"] == "bool"
+    assert preset["inputs"]["2"]["model.resolution"]["cast"] == "lower"
+    assert preset["meta"]["option_enums"]["mode"] == [
+        "\u6587\u751f\u89c6\u9891", "\u56fe\u751f\u89c6\u9891", "\u9996\u5c3e\u5e27",
+    ]
+    assert preset["meta"]["option_enums"]["resolution"] == [
+        "480P", "720P", "1080P", "4K",
+    ]
+    assert preset["inputs"]["1"]["image"] == {
+        "from": "upstream_image:annotated[0]",
+    }
+    assert preset["inputs"]["6"]["image"] == {
+        "from": "upstream_image:annotated[1]",
+    }

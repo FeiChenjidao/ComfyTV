@@ -24,13 +24,17 @@
       },
       "model.face_limit": {
         "from": "option:face_limit",
+        "default": "50000",
         "cast": "int"
       },
       "model.texture": {
-        "from": "option:texture_quality"
+        "from": "option:texture_quality",
+        "default": "extreme"
       },
       "model.pbr": {
-        "from": "option:pbr"
+        "from": "option:pbr",
+        "default": "true",
+        "cast": "bool"
       },
       "model.model_seed": {
         "from": "option:seed",
@@ -89,13 +93,17 @@
       },
       "model.face_limit": {
         "from": "option:face_limit",
+        "default": "50000",
         "cast": "int"
       },
       "model.texture": {
-        "from": "option:texture_quality"
+        "from": "option:texture_quality",
+        "default": "extreme"
       },
       "model.pbr": {
-        "from": "option:pbr"
+        "from": "option:pbr",
+        "default": "true",
+        "cast": "bool"
       },
       "model.model_seed": {
         "from": "option:seed",

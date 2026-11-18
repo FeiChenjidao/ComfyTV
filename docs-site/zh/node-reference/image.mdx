@@ -11,7 +11,7 @@ translationSourceHash: "b944ce75af675c89"
 
 ## 这个节点是做什么的
 
-**Image Stage** 负责**文生图**和**带参考图生图**。你写 **main_prompt**（画面描述），选 **workflow**（例如 NanoBanana2 或 GPT Image 2.5），按工作流需要设置分辨率、比例和批量大小，点 **▶ 运行**，节点上会显示缩略图预览。
+**Image Stage** 负责**文生图**和**带参考图生图**。你写 **main_prompt**（画面描述），选 **workflow**（例如 NanoBanana2、GPT Image 2.6 或 Seedream 5.5），按工作流需要设置分辨率、比例和批量大小，点 **▶ 运行**，节点上会显示缩略图预览。
 
 它有两个输出口：
 
@@ -63,8 +63,9 @@ i2i workflow 额外把 **images** 上游的第一张图绑到子图里的 `LoadI
 
 | 选项 | 模式 | 说明 |
 | --- | --- | --- |
-| **NanoBanana2** | API | Gemini NanoBanana 2；可选参考图 |
-| **GPT Image 2.5** | API | OpenAI GPT Image；可选参考图 |
+| **NanoBanana2** | API | Gemini Nano Banana 2.1；可选参考图 |
+| **GPT Image 2.6** | API | OpenAI GPT Image；可选参考图 |
+| **Seedream 5.5** | API | ByteDance Seedream；可选参考图 |
 
 模型文件见 [models.zh.md](https://github.com/jtydhr88/ComfyTV/blob/main/docs/models.zh.md)。workflow 详情：[README.zh.md](https://github.com/jtydhr88/ComfyTV/blob/main/workflows/image/README.zh.md)。
 
@@ -92,7 +93,7 @@ i2i workflow 额外把 **images** 上游的第一张图绑到子图里的 `LoadI
 
 ### images（上游参考图）
 
-可选参考图：把图接到 **images.image0**…，供 NanoBanana2 / GPT Image 2.5 使用。未接的槽位会被忽略。
+可选参考图：把图接到 **images.image0**…，供 NanoBanana2 / GPT Image 2.6 / Seedream 5.5 使用。未接的槽位会被忽略。
 
 可接：Image Stage 的 **image**、Image Picker、Asset Loader、Bridge → ComfyTV Image。
 
@@ -114,7 +115,7 @@ i2i workflow 额外把 **images** 上游的第一张图绑到子图里的 `LoadI
 ## 新手一步一步
 
 1. 放 **Project**，再 **Add Node → ComfyTV → Generate → Image Stage**。
-2. **workflow** 选 **NanoBanana2** 或 **GPT Image 2.5**（先配好 API 凭证）。
+2. **workflow** 选 **NanoBanana2**、**GPT Image 2.6** 或 **Seedream 5.5**（先配好 API 凭证）。
 3. **main_prompt** 输入：`a red apple on a wooden table`。
 4. 按工作流需要设置 **resolution** / **aspect_ratio** / **batch_size**。
 5. 点 **▶ 运行**，等待缩略图出现；首次运行可能自动出现 **Image Picker**。

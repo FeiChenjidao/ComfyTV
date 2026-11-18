@@ -85,6 +85,21 @@ class TestSchemaDefinitions:
         # _Schema stores kw — node_id is always set in real definitions.
         assert "node_id" in schema.kw
 
+    def test_model3d_stage_uses_high_quality_defaults(self):
+        schema = _import_all_stage_modules()["Model3DStage"].define_schema()
+        inputs = {
+            item.args[0]: item
+            for item in schema.kw["inputs"]
+            if hasattr(item, "args") and item.args
+        }
+        assert inputs["texture_quality"].kw["default"] == "extreme"
+        assert inputs["geometry_quality"].kw["default"] == "detailed"
+        assert inputs["mode"].kw["default"] == "Extreme-High"
+        assert inputs["polygon_count"].kw["default"] == "1M-Triangle"
+        assert inputs["texture_mode"].kw["default"] == "high"
+        assert inputs["hd_texture"].kw["default"] is True
+        assert inputs["addon_highpack"].kw["default"] is True
+
 
 # ─── Loaders: ImageLoaderStage / VideoLoaderStage execute() ─────────────────
 

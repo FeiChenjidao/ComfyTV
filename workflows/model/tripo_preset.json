@@ -85,7 +85,8 @@
         "cast": "int"
       },
       "geometry_quality": {
-        "from": "option:geometry_quality"
+        "from": "option:geometry_quality",
+        "default": "detailed"
       },
       "model_seed": {
         "from": "option:seed",
@@ -123,7 +124,7 @@
       },
       "texture_quality": {
         "from": "option:texture_quality",
-        "default": "standard"
+        "default": "extreme"
       },
       "texture_seed": {
         "from": "option:seed",
@@ -161,7 +162,8 @@
         "cast": "int"
       },
       "geometry_quality": {
-        "from": "option:geometry_quality"
+        "from": "option:geometry_quality",
+        "default": "detailed"
       },
       "model_seed": {
         "from": "option:seed",
@@ -199,7 +201,7 @@
       },
       "texture_quality": {
         "from": "option:texture_quality",
-        "default": "standard"
+        "default": "extreme"
       },
       "texture_seed": {
         "from": "option:seed",

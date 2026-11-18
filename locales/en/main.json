@@ -389,6 +389,7 @@
       "moveDown": "Move down"
     },
     "ctl": {
+      "mode": "Mode",
       "duration": "Duration (s)",
       "generateAudio": "Generate audio",
       "lyrics": "Lyrics",
