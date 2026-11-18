@@ -59989,7 +59989,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-4ui187Te.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-Du4_9I9o.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -90442,7 +90442,7 @@ const _sfc_main$4F = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-B-KJq0N1.mjs"),
+      loader: () => import("./AgentPanelRoot-D8-4Xm0R.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -160769,7 +160769,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-DV-fwcjC.mjs");
+    const { TGALoader } = await import("./TGALoader-IwWyghFq.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -160782,7 +160782,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-BQL8vJVD.mjs");
+      const { MTLLoader } = await import("./MTLLoader-BL3MF-SV.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -160791,7 +160791,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-daouMTaW.mjs");
+    const { STLLoader } = await import("./STLLoader-BTZwZj8g.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -160799,7 +160799,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-BlVyv40z.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-FbZH5gtt.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -238338,7 +238338,8 @@ const _sfc_main$11 = /* @__PURE__ */ defineComponent({
       { value: "hevc", label: "HEVC" },
       { value: "prores", label: "ProRes" },
       { value: "vp8", label: "WebM VP8" },
-      { value: "vp9_alpha", label: "WebM Alpha" }
+      { value: "vp8_alpha", label: "WebM VP8 Alpha" },
+      { value: "vp9_alpha", label: "WebM VP9 Alpha" }
     ];
     const QUALITIES = computed(() => [
       { value: "draft", label: t2("fxChain.qDraft") },
@@ -238351,7 +238352,7 @@ const _sfc_main$11 = /* @__PURE__ */ defineComponent({
     const outCodec = useStrWidget(props.node, "out_codec", "h264");
     const outQuality = useStrWidget(props.node, "out_quality", "standard");
     watch(outCodec, (codec) => {
-      if (codec !== "vp9_alpha") return;
+      if (codec !== "vp8_alpha" && codec !== "vp9_alpha") return;
       outSize.value = "source";
       outFps.value = "source";
       outColorspace.value = "bt709";
@@ -264023,7 +264024,8 @@ const _sfc_main$9 = /* @__PURE__ */ defineComponent({
       { value: "hevc", label: "HEVC" },
       { value: "prores", label: "ProRes" },
       { value: "vp8", label: "WebM VP8" },
-      { value: "vp9_alpha", label: "WebM Alpha" }
+      { value: "vp8_alpha", label: "WebM VP8 Alpha" },
+      { value: "vp9_alpha", label: "WebM VP9 Alpha" }
     ];
     const QUALITIES = computed(() => [
       { value: "draft", label: t2("fxChain.qDraft") },
@@ -264036,7 +264038,7 @@ const _sfc_main$9 = /* @__PURE__ */ defineComponent({
     const outCodec = useStrWidget(props.node, "out_codec", "h264");
     const outQuality = useStrWidget(props.node, "out_quality", "standard");
     watch(outCodec, (codec) => {
-      if (codec !== "vp9_alpha") return;
+      if (codec !== "vp8_alpha" && codec !== "vp9_alpha") return;
       outSize.value = "source";
       outFps.value = "source";
       outColorspace.value = "bt709";
@@ -264322,7 +264324,7 @@ const _sfc_main$9 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const FxChainCardV2 = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-b8c699f4"]]);
+const FxChainCardV2 = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["__scopeId", "data-v-770e5334"]]);
 const ICON_COLOR = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18c-1.5 0-2-1-1.3-2.2.8-1.4-.2-2.8-1.9-2.8H7a4 4 0 01-4-4"/><circle cx="8" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="17" cy="11" r="1.2" fill="currentColor" stroke="none"/></svg>`;
 const ICON_CURVE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20C10 20 14 4 20 4"/><path d="M4 20V4M4 20h16"/></svg>`;
 const ICON_CHAIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="5" height="5" rx="1.2"/><rect x="16" y="6" width="5" height="5" rx="1.2"/><rect x="9.5" y="14" width="5" height="5" rx="1.2"/><path d="M8 8.5h8M5.5 11v3.5a2 2 0 002 2h2M18.5 11v3.5a2 2 0 01-2 2h-2"/></svg>`;
@@ -269355,4 +269357,4 @@ export {
   DropdownMenuRadioItem_default as y,
   DropdownMenuRoot_default as z
 };
-//# sourceMappingURL=main-TJ_D5Run.mjs.map
+//# sourceMappingURL=main-DvM1cyF0.mjs.map

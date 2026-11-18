@@ -173,7 +173,8 @@ const CODECS = [
   { value: 'hevc', label: 'HEVC' },
   { value: 'prores', label: 'ProRes' },
   { value: 'vp8', label: 'WebM VP8' },
-  { value: 'vp9_alpha', label: 'WebM Alpha' },
+  { value: 'vp8_alpha', label: 'WebM VP8 Alpha' },
+  { value: 'vp9_alpha', label: 'WebM VP9 Alpha' },
 ]
 const QUALITIES = computed(() => [
   { value: 'draft', label: t('fxChain.qDraft') },
@@ -187,7 +188,7 @@ const outCodec = useStrWidget(props.node, 'out_codec', 'h264')
 const outQuality = useStrWidget(props.node, 'out_quality', 'standard')
 
 watch(outCodec, (codec) => {
-  if (codec !== 'vp9_alpha') return
+  if (codec !== 'vp8_alpha' && codec !== 'vp9_alpha') return
   outSize.value = 'source'
   outFps.value = 'source'
   outColorspace.value = 'bt709'

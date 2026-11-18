@@ -66,8 +66,36 @@ class TestThreshold:
         assert proxy_dims(640, 360) == (640, 360)
         assert proxy_dims(1921, 1080) == (1280, 718)
 
+    def test_alpha_webm_detection_uses_stream_metadata(self, monkeypatch):
+        from types import SimpleNamespace
+        from ComfyTV.runners.proxy import _is_alpha_webm
+
+        class Container:
+            streams = SimpleNamespace(video=[SimpleNamespace(
+                metadata={'alpha_mode': '1'},
+            )])
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return None
+
+        monkeypatch.setattr(av, 'open', lambda _path: Container())
+        assert _is_alpha_webm(Path('clip.webm'))
+        assert not _is_alpha_webm(Path('clip.mp4'))
+
 
 class TestLifecycle:
+    def test_alpha_webm_never_builds_lossy_proxy(self, clip_url, force_proxy,
+                                                  monkeypatch):
+        from ComfyTV.runners import proxy
+        monkeypatch.setattr(proxy, '_is_alpha_webm', lambda _src: True)
+
+        assert proxy.ensure_proxy(clip_url)['status'] == 'original'
+        assert proxy.ensure_proxy(clip_url, create=True)['status'] == 'original'
+        assert proxy.build_proxy(clip_url) == clip_url
+
     def test_query_only_reports_candidate(self, clip_url, force_proxy):
         from ComfyTV.runners.proxy import ensure_proxy
         assert ensure_proxy(clip_url)['status'] == 'candidate'

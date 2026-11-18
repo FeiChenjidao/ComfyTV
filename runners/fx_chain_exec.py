@@ -461,9 +461,9 @@ def _segment_progress(progress, index, count):
 def run_fx_chain(view_url: str, entries, progress=None,
                  delivery=None) -> str:
     d = _delivery_norm(delivery)
-    alpha_delivery = d['codec'] == 'vp9_alpha'
-    webm_delivery = d['codec'] in {'vp8', 'vp9_alpha'}
-    if d['codec'] == 'vp8' and not has_encoder('libvpx'):
+    alpha_delivery = d['codec'] in {'vp8_alpha', 'vp9_alpha'}
+    webm_delivery = d['codec'] in {'vp8', 'vp8_alpha', 'vp9_alpha'}
+    if d['codec'] in {'vp8', 'vp8_alpha'} and not has_encoder('libvpx'):
         raise RuntimeError(
             "FX Chain: this PyAV build lacks the libvpx encoder needed "
             "for WebM VP8 output."
@@ -560,7 +560,9 @@ def run_fx_chain(view_url: str, entries, progress=None,
                                       progress=seg_progress,
                                       alpha_in=alpha_delivery,
                                       out_alpha=alpha_delivery,
-                                      alpha_options=alpha_options)
+                                      alpha_options=alpha_options,
+                                      alpha_vcodec=DELIVERY_CODECS[
+                                          d['codec']]['vcodec'])
     needs_delivery_pass = _delivery_active(d) \
         and (not segments or segments[-1][0] == 'torch') \
         and not alpha_delivery

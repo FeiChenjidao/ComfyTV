@@ -134,7 +134,8 @@ def _from_tensor(t, dither=None):
 
 def torch_process_video(view_url: str, frame_fn, *, progress=None,
                         alpha_in=False, out_fps=None, out_alpha=False,
-                        alpha_options=None) -> str:
+                        alpha_options=None,
+                        alpha_vcodec='libvpx-vp9') -> str:
     import av
 
     src = localize(view_url)
@@ -150,8 +151,10 @@ def torch_process_video(view_url: str, frame_fn, *, progress=None,
         in_a = inp.streams.audio[0] if (inp.streams.audio and not out_alpha) else None
         out_a = outp.add_stream_from_template(in_a) if in_a is not None else None
         alpha_decoder = None
-        if alpha_in and in_v.codec_context.name == 'vp9':
-            alpha_decoder = av.CodecContext.create('libvpx-vp9', 'r')
+        if alpha_in and in_v.codec_context.name in ('vp8', 'vp9'):
+            decoder_name = 'libvpx' if in_v.codec_context.name == 'vp8' \
+                else 'libvpx-vp9'
+            alpha_decoder = av.CodecContext.create(decoder_name, 'r')
             if in_v.codec_context.extradata:
                 alpha_decoder.extradata = in_v.codec_context.extradata
 
@@ -164,7 +167,7 @@ def torch_process_video(view_url: str, frame_fn, *, progress=None,
             if enc is None:
                 rate = out_fps or info['fps'] or 24
                 if out_alpha:
-                    enc = outp.add_stream('libvpx-vp9', rate=round(rate))
+                    enc = outp.add_stream(alpha_vcodec, rate=round(rate))
                     enc.pix_fmt = 'yuva420p'
                     enc.options = dict(alpha_options or {
                         'crf': '32', 'b': '0', 'row-mt': '1',

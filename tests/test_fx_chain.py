@@ -113,7 +113,9 @@ def _alpha_range(view_url):
     low, high, has_partial = 255, 0, False
     with av.open(str(localize(view_url))) as container:
         stream = container.streams.video[0]
-        decoder = av.CodecContext.create('libvpx-vp9', 'r')
+        decoder_name = 'libvpx' if stream.codec_context.name == 'vp8' \
+            else 'libvpx-vp9'
+        decoder = av.CodecContext.create(decoder_name, 'r')
         if stream.codec_context.extradata:
             decoder.extradata = stream.codec_context.extradata
         for packet in container.demux(stream):
@@ -173,6 +175,26 @@ class TestDeliveryParams:
         assert str(localize(url)).endswith('.webm')
         assert _vcodec_name(url) == 'vp8'
         assert get_video_info(url)['has_audio'] is False
+
+    @needs_torch
+    def test_vp8_alpha_webm(self, clip):
+        from ComfyTV.nodes.stages.video_keying import KeyerStage
+        from ComfyTV.runners.media import localize
+        from ComfyTV.runners.media_filter import has_encoder
+        if not has_encoder('libvpx'):
+            pytest.skip("no libvpx encoder in this build")
+        keyed = KeyerStage.execute(
+            project_id='p1', mode='luminance', output='alpha', video=clip,
+        ).values[0]
+        out = _chain().execute(project_id='p1', out_codec='vp8_alpha',
+                               video=keyed)
+        url = out.values[0]
+        assert str(localize(url)).endswith('.webm')
+        assert _vcodec_name(url) == 'vp8'
+        low, high, has_partial = _alpha_range(url)
+        assert low < 250
+        assert high > 5
+        assert has_partial
 
     @needs_torch
     def test_vp9_alpha_webm(self, clip):

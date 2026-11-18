@@ -22,6 +22,23 @@ _original: set = set()
 _lock = threading.Lock()
 
 
+def _is_alpha_webm(src: Path) -> bool:
+    if src.suffix.lower() != '.webm':
+        return False
+    try:
+        import av
+        with av.open(str(src)) as container:
+            if not container.streams.video:
+                return False
+            metadata = container.streams.video[0].metadata or {}
+            return any(
+                str(key).lower() == 'alpha_mode' and str(value) == '1'
+                for key, value in metadata.items()
+            )
+    except Exception:
+        return False
+
+
 def proxy_dir() -> Path:
     d = Path(folder_paths.get_output_directory()) / PROXY_SUBFOLDER
     d.mkdir(parents=True, exist_ok=True)
@@ -57,6 +74,10 @@ def ensure_proxy(view_url: str, retry: bool = False,
     with _lock:
         if identity in _original:
             return {'status': 'original'}
+    if _is_alpha_webm(src):
+        with _lock:
+            _original.add(identity)
+        return {'status': 'original'}
 
     row = storage.get_proxy(str(src), PROXY_PROFILE)
     fresh = (row is not None
@@ -103,6 +124,8 @@ def build_proxy(view_url: str, progress=None) -> str:
         raise RuntimeError(f"proxy: bad source url: {e}") from e
     if src is None or not src.is_file():
         raise RuntimeError("proxy: source file not found")
+    if _is_alpha_webm(src):
+        return view_url
 
     st = src.stat()
     row = storage.get_proxy(str(src), PROXY_PROFILE)

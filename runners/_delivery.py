@@ -20,6 +20,17 @@ DELIVERY_CODECS = {
             'high': {'crf': '20', 'b': '0', 'cpu-used': '2'},
         },
     },
+    'vp8_alpha': {
+        'vcodec': 'libvpx', 'ext': '.webm', 'pix_fmt': 'yuva420p',
+        'quality': {
+            'draft': {'crf': '40', 'b': '0', 'cpu-used': '8',
+                      'auto-alt-ref': '0'},
+            'standard': {'crf': '32', 'b': '0', 'cpu-used': '4',
+                         'auto-alt-ref': '0'},
+            'high': {'crf': '20', 'b': '0', 'cpu-used': '2',
+                     'auto-alt-ref': '0'},
+        },
+    },
     'vp9_alpha': {
         'vcodec': 'libvpx-vp9', 'ext': '.webm', 'pix_fmt': 'yuva420p',
         'quality': {

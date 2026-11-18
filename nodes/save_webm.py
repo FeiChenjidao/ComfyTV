@@ -17,7 +17,7 @@ def _codec_settings(codec: str, has_alpha: bool) -> tuple[str, str, bool]:
     codec = str(codec or "").lower()
     if codec not in _CODEC_NAMES:
         raise ValueError(f"unsupported WebM codec: {codec!r}")
-    save_alpha = has_alpha and codec == "vp9"
+    save_alpha = has_alpha and codec in {"vp8", "vp9"}
     pixel_format = "yuva420p" if save_alpha else (
         "yuv420p10le" if codec == "av1" else "yuv420p"
     )
@@ -47,6 +47,8 @@ def _encode_webm_file(images, output_path: str, codec: str, fps: float, crf: flo
         stream.pix_fmt = pixel_format
         stream.bit_rate = 0
         stream.options = {"crf": str(float(crf))}
+        if save_alpha:
+            stream.options["auto-alt-ref"] = "0"
         if codec == "av1":
             stream.options["preset"] = "6"
 
@@ -97,7 +99,7 @@ class SaveWebM(io.ComfyNode):
             inputs=[
                 io.Image.Input(
                     "images",
-                    tooltip="Image frames to encode. RGBA transparency is preserved only with VP9.",
+                    tooltip="Image frames to encode. RGBA transparency is preserved with VP8 or VP9.",
                 ),
                 io.String.Input("filename_prefix", default="ComfyTV/video"),
                 io.Combo.Input(

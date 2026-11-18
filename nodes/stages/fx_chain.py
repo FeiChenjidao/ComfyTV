@@ -6,7 +6,9 @@ from .common.fx_helpers import _hidden_combo, _progress_cb  # noqa: F401
 COLORSPACE_TARGETS = ['bt709', 'bt601-6-625', 'bt2020', 'smpte170m']
 DELIVERY_SIZES = ['source', '2160', '1440', '1080', '720', '540', '480']
 DELIVERY_FPS = ['source', '24', '25', '30', '50', '60']
-DELIVERY_CODEC_IDS = ['h264', 'hevc', 'prores', 'vp8', 'vp9_alpha']
+DELIVERY_CODEC_IDS = [
+    'h264', 'hevc', 'prores', 'vp8', 'vp8_alpha', 'vp9_alpha',
+]
 DELIVERY_QUALITIES = ['draft', 'standard', 'high']
 
 
