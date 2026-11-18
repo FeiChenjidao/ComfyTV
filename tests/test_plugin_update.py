@@ -131,6 +131,10 @@ class TestPluginUpdateCheck:
     def test_apply_ff_only(self, twin_repos):
         mod = _load_mod()
         local, other, _remote = twin_repos
+        rescans = []
+        mod._rescan_workflows_after_update = lambda: rescans.append(True) or {
+            "added": [], "pruned": 1, "total": 1,
+        }
         (other / "pyproject.toml").write_text(
             '[project]\nname = "ComfyTV"\nversion = "2.0.0"\n',
             encoding="utf-8",
@@ -148,6 +152,8 @@ class TestPluginUpdateCheck:
         assert after["update_available"] is False
         assert after["behind"] == 0
         assert "2.0.0" in (local / "pyproject.toml").read_text(encoding="utf-8")
+        assert rescans == [True]
+        assert after["workflow_rescan"]["pruned"] == 1
 
     def test_force_overwrites_dirty(self, twin_repos):
         mod = _load_mod()

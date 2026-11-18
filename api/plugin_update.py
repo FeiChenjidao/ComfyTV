@@ -44,6 +44,20 @@ def _plugin_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def _rescan_workflows_after_update() -> dict[str, Any]:
+    """Rebuild the workflow mirror and DB after replacing plugin files."""
+    try:
+        from ..runners import seed_workflows
+
+        return seed_workflows()
+    except Exception as error:
+        _log.exception("workflow rescan after plugin update failed")
+        return {
+            "ok": False,
+            "error": str(error) or type(error).__name__,
+        }
+
+
 def _git_bin() -> Optional[str]:
     return shutil.which("git")
 
@@ -579,6 +593,7 @@ def apply_plugin_update(*, root: Optional[Path] = None) -> dict[str, Any]:
             status["local_backups"] = local_backups
             return status
 
+        workflow_rescan = _rescan_workflows_after_update()
         dependency_files = _changed_dependency_files(root, previous_sha, target_sha)
         refreshed = check_plugin_update(fetch=False, root=root)
         state = {
@@ -592,6 +607,7 @@ def apply_plugin_update(*, root: Optional[Path] = None) -> dict[str, Any]:
             "dirty_patch": patch_path,
             "local_backups": local_backups,
             "dependency_files_changed": dependency_files,
+            "workflow_rescan": workflow_rescan,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
         _write_state(root, state)
@@ -601,6 +617,7 @@ def apply_plugin_update(*, root: Optional[Path] = None) -> dict[str, Any]:
         refreshed["restart_required"] = True
         refreshed["error"] = ""
         refreshed["error_code"] = ""
+        refreshed["workflow_rescan"] = workflow_rescan
         refreshed["forced"] = bool(status.get("dirty") or status.get("ahead", 0) > 0)
         refreshed["update_in_progress"] = False
         return refreshed
