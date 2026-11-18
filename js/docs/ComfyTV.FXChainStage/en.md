@@ -26,7 +26,7 @@ Delivery short-side resolution: `source` (default, keep original), `2160`, `1440
 Delivery frame rate: `source` (default), `24`, `25`, `30`, `50`, `60`.
 
 ### out_codec
-Output codec: `h264` (default), `hevc`, `prores`, `vp8`, `vp8_alpha`, `vp9_alpha`. `vp8` writes an opaque WebM; the alpha variants preserve transparency. `vp8_alpha` first renders a VP9 alpha master, then converts it to a high-bit-rate VP8 alpha file for better edge quality. WebM delivery has no audio track, so export audio separately.
+Output codec: `h264` (default), `hevc`, `prores`, `vp8`, `vp8_alpha`, `vp9_alpha`. `vp8` writes an opaque WebM; the alpha variants preserve transparency. `vp8_alpha` directly renders a high-bit-rate VP8 alpha file. WebM delivery has no audio track, so export audio separately.
 
 ### out_quality
 Encode quality: `draft`, `standard` (default), `high`.
@@ -43,7 +43,7 @@ Encode quality: `draft`, `standard` (default), `high`.
 - Keep FX Chain last on the video wire — everything upstream is a spec, and this node is where it actually renders.
 - One pass means better quality and speed than re-encoding at each FX stage; the trade-off is you don't get an intermediate file between effects.
 - Use `source` size/fps to preserve the original; only downscale or change frame rate here for the final deliverable.
-- `prores` is for editorial/mezzanine delivery; `h264`/`hevc` for distribution; `vp8` is opaque WebM; `vp8_alpha` and `vp9_alpha` preserve transparency. VP8 alpha takes an extra conversion pass and usually creates a larger file.
+- `prores` is for editorial/mezzanine delivery; `h264`/`hevc` for distribution; `vp8` is opaque WebM; `vp8_alpha` and `vp9_alpha` preserve transparency. VP8 alpha uses a high bit rate to protect edge quality and usually creates a larger file.
 - With an alpha codec, keep the alpha-output Keyer, PIK, or Select0r at the end of the FX chain; the UI uses source size, source frame rate, and `bt709`.
 
 ## Types and bridges

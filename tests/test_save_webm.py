@@ -55,3 +55,38 @@ def test_vp8_alpha_bitrate_scales_with_frame_size():
         'b' not in options
         for options in DELIVERY_CODECS['vp8_alpha']['quality'].values()
     )
+
+
+def test_fx_chain_vp8_alpha_encodes_directly(monkeypatch):
+    import ComfyTV.runners.fx_chain_exec as fx_chain_exec
+
+    calls = []
+    monkeypatch.setattr(fx_chain_exec, 'has_encoder', lambda _name: True)
+    monkeypatch.setattr(
+        fx_chain_exec,
+        'get_video_info',
+        lambda _url: {'fps': 24.0, 'width': 1920, 'height': 1080},
+    )
+
+    def fake_torch_process(view_url, _frame_fn, **kwargs):
+        calls.append((view_url, kwargs))
+        return '/view?filename=direct-vp8.webm&type=output'
+
+    monkeypatch.setattr(
+        fx_chain_exec, 'torch_process_video', fake_torch_process,
+    )
+    result = fx_chain_exec.run_fx_chain(
+        '/view?filename=source.mp4&type=output',
+        [{
+            'domain': 'video',
+            'engine': 'torch',
+            'op': 'keyer',
+            'params': {'mode': 'luminance', 'output': 'alpha'},
+        }],
+        delivery={'codec': 'vp8_alpha', 'quality': 'high'},
+    )
+
+    assert result == '/view?filename=direct-vp8.webm&type=output'
+    assert len(calls) == 1
+    assert calls[0][1]['alpha_vcodec'] == 'libvpx'
+    assert calls[0][1]['alpha_options']['crf'] == '4'
