@@ -8,6 +8,7 @@ import type { StageState } from '@/stores/stageStore'
 const mocks = vi.hoisted(() => ({
   uploadBlobNamed: vi.fn(),
   uploadCanvas: vi.fn(),
+  exportModel: vi.fn(),
 }))
 
 vi.mock('@/utils/uploadCanvas', () => ({
@@ -19,6 +20,7 @@ vi.mock('@/components/stages/ModelPreview.vue', () => ({
   default: {
     name: 'ModelPreview',
     props: ['src', 'pickable', 'partMaterials', 'selectedPart'],
+    methods: { exportModel: mocks.exportModel },
     template: '<div data-testid="model-preview-stub" :data-src="src" />',
   },
 }))
@@ -93,6 +95,7 @@ function renderCard(node = makeNode()) {
 
 beforeEach(() => {
   mocks.uploadBlobNamed.mockReset()
+  mocks.exportModel.mockReset().mockResolvedValue(undefined)
 })
 
 describe('ModelLoaderCard', () => {
@@ -140,6 +143,19 @@ describe('ModelLoaderCard', () => {
   it('restores the saved selection and shows its basename', async () => {
     renderCard(makeNode({ value: '3d/saved.glb', values: [] }))
     expect(await screen.findByText('saved.glb')).toBeInTheDocument()
+  })
+
+  it('exports the loaded model as GLB, OBJ, STL, or FBX', async () => {
+    renderCard(makeNode({ value: '3d/saved.glb', values: [] }))
+    await screen.findByTestId('model-preview-stub')
+    await userEvent.click(screen.getByTitle('Export model'))
+
+    for (const label of ['GLB', 'OBJ', 'STL', 'FBX']) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+    }
+
+    await userEvent.click(screen.getByRole('button', { name: 'FBX' }))
+    await waitFor(() => expect(mocks.exportModel).toHaveBeenCalledWith('fbx', 'saved'))
   })
 
   it('opens the dropdown with the sorted file grid', async () => {

@@ -76,12 +76,30 @@
         :class="previewActionsClass"
         :data-busy="exporting ? '1' : undefined"
       >
-        <button type="button" :class="previewActionBtn"
-                :disabled="exporting"
-                :title="exporting ? $t('stage.action.exportObjZipBusy') : $t('stage.action.exportObjZip')"
-                @click.stop="onDownloadModel">
-          <i :class="exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download'" />
-        </button>
+        <div class="ctv:relative">
+          <button type="button" :class="previewActionBtn"
+                  :disabled="exporting"
+                  :title="exporting ? $t('stage.action.exportModelBusy', { format: activeExportFormat.toUpperCase() }) : $t('stage.action.exportModel')"
+                  @click.stop="exportMenuOpen = !exportMenuOpen">
+            <i :class="exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download'" />
+          </button>
+          <div
+            v-if="exportMenuOpen"
+            class="ctv:absolute ctv:top-6 ctv:right-0 ctv:z-20 ctv:min-w-16 ctv:overflow-hidden ctv:rounded-md ctv:border ctv:border-border-subtle ctv:bg-secondary-background ctv:shadow-lg"
+            @pointerdown.stop
+            @mousedown.stop
+          >
+            <button
+              v-for="format in MODEL_EXPORT_FORMATS"
+              :key="format"
+              type="button"
+              class="ctv:block ctv:w-full ctv:border-0 ctv:bg-transparent ctv:px-3 ctv:py-1.5 ctv:text-left ctv:text-2xs ctv:text-base-foreground ctv:cursor-pointer ctv:hover:bg-secondary-background-hover"
+              @click.stop="onDownloadModel(format)"
+            >
+              {{ format.toUpperCase() }}
+            </button>
+          </div>
+        </div>
         <button type="button" :class="previewTagBtn"
                 :disabled="exporting"
                 :title="$t('stage.action.addTag')"
@@ -350,11 +368,17 @@ import {
 } from '@/composables/stages/useModelLoader'
 import { isPrimitivePayload } from '@/widgets/three/primitiveGeometry'
 import { useOutputAssetTagging } from '@/composables/stages/useOutputAssetTagging'
-import { downloadModelObjZip } from '@/utils/download'
 import { MODEL_FILE_EXTENSIONS } from '@/widgets/three/modelFormats'
+import { isModelResourceFile, MODEL_RESOURCE_EXTENSIONS } from '@/widgets/three/convertToGlb'
+import {
+  MODEL_EXPORT_FORMATS,
+  type ModelExportFormat,
+} from '@/widgets/three/modelExporter'
 
 const { t } = useI18n()
 const exporting = ref(false)
+const exportMenuOpen = ref(false)
+const activeExportFormat = ref<ModelExportFormat>('glb')
 
 function toast(severity: 'info' | 'success' | 'warn' | 'error', summary: string, detail = '') {
   ;(app as any)?.extensionManager?.toast?.add?.({
@@ -371,7 +395,7 @@ const props = defineProps<{
   node: LGraphNode
 }>()
 
-const fileAccept = MODEL_FILE_EXTENSIONS.join(',')
+const fileAccept = [...MODEL_FILE_EXTENSIONS, ...MODEL_RESOURCE_EXTENSIONS].join(',')
 
 const triggerEl = ref<HTMLButtonElement | null>(null)
 const searchEl = ref<HTMLInputElement | null>(null)
@@ -471,16 +495,19 @@ const previewTagBtn = computed(() => PREVIEW_BTN_BASE
     ? ' ctv:bg-primary-background ctv:text-white ctv:hover:bg-primary-background/90'
     : ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'))
 
-async function onDownloadModel(): Promise<void> {
-  if (!modelSrc.value || exporting.value) return
+async function onDownloadModel(format: ModelExportFormat): Promise<void> {
+  if (!modelSrc.value || !previewEl.value || exporting.value) return
+  exportMenuOpen.value = false
+  activeExportFormat.value = format
   exporting.value = true
-  toast('info', t('stage.action.exportObjZipBusy'))
+  const label = format.toUpperCase()
+  toast('info', t('stage.action.exportModelBusy', { format: label }))
   try {
-    await downloadModelObjZip(modelSrc.value)
-    toast('success', t('stage.action.exportObjZipDone'))
+    await previewEl.value.exportModel(format, nameFromUrl(modelSrc.value))
+    toast('success', t('stage.action.exportModelDone', { format: label }))
   } catch (e: any) {
-    console.error('[ComfyTV/model-loader] OBJ zip export failed', e)
-    toast('error', t('stage.action.exportObjZipFailed'), String(e?.message || e))
+    console.error(`[ComfyTV/model-loader] ${label} export failed`, e)
+    toast('error', t('stage.action.exportModelFailed', { format: label }), String(e?.message || e))
   } finally {
     exporting.value = false
   }
@@ -520,11 +547,13 @@ function toggleMenu(): void {
 const fileDrop = useLoaderFileDrop({
   kind: () => 'model',
   onFiles: uploadModelFiles,
+  relatedFile: (file) => isModelResourceFile(file.name),
 })
 
 function onKeydown(e: KeyboardEvent): void {
   if (e.key !== 'Escape') return
   if (tagMenu.value) closeTagMenu()
+  else if (exportMenuOpen.value) exportMenuOpen.value = false
   else if (menuOpen.value) menuOpen.value = false
 }
 

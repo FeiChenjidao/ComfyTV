@@ -10,7 +10,7 @@ import { useLoaderFileDrop } from './useLoaderFileDrop'
 
 interface DragEventOpts {
   types?: string[]
-  items?: Array<{ kind: string; type: string }>
+  items?: Array<{ kind: string; type: string; getAsFile?: () => File | null }>
   files?: File[]
   assetId?: string
 }
@@ -32,7 +32,7 @@ function dragEvent(opts: DragEventOpts = {}): DragEvent {
 function fileDragEvent(files: File[]): DragEvent {
   return dragEvent({
     types: ['Files'],
-    items: files.map((f) => ({ kind: 'file', type: f.type })),
+    items: files.map((f) => ({ kind: 'file', type: f.type, getAsFile: () => f })),
     files,
   })
 }
@@ -154,6 +154,36 @@ describe('useLoaderFileDrop — file drops', () => {
     const obj = new File(['x'], 'scan.obj', { type: '' })
     drop.onDrop(fileDragEvent([glb, obj]))
     expect(onFiles).toHaveBeenCalledWith([glb, obj])
+  })
+
+  it('matches an OBJ drag even when the browser reports text/plain', () => {
+    const onFiles = vi.fn()
+    const drop = useLoaderFileDrop({ kind: () => 'model', onFiles })
+    const obj = new File(['x'], 'scan.obj', { type: 'text/plain' })
+    const event = fileDragEvent([obj])
+
+    drop.onDragOver(event)
+    drop.onDrop(event)
+
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(onFiles).toHaveBeenCalledWith([obj])
+  })
+
+  it('forwards related material files together with a dropped model', () => {
+    const onFiles = vi.fn()
+    const drop = useLoaderFileDrop({
+      kind: () => 'model',
+      onFiles,
+      relatedFile: (file) => /\.(?:mtl|png)$/.test(file.name),
+    })
+    const obj = new File(['x'], 'scan.obj', { type: '' })
+    const mtl = new File(['x'], 'scan.mtl', { type: '' })
+    const texture = new File(['x'], 'albedo.png', { type: 'image/png' })
+    const note = new File(['x'], 'notes.txt', { type: 'text/plain' })
+
+    drop.onDrop(fileDragEvent([obj, mtl, texture, note]))
+
+    expect(onFiles).toHaveBeenCalledWith([obj, mtl, texture])
   })
 
   it('toasts instead of loading when a claimed drop has no matching file', () => {

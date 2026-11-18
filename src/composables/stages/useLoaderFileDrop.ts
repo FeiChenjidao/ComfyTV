@@ -11,6 +11,7 @@ export interface LoaderFileDropOptions {
   kind: () => AssetMediaType | AssetMediaType[]
   onFiles: (files: File[]) => void | Promise<void>
   onAsset?: (asset: Asset) => void
+  relatedFile?: (file: File) => boolean
 }
 
 function toast(severity: 'warn' | 'error', summary: string, detail: string): void {
@@ -104,18 +105,21 @@ export function useLoaderFileDrop(opts: LoaderFileDropOptions) {
     if (!isFileDrag(e) || !accepted.some((k) => dragMayMatchKind(e, k))) return
     accept(e)
     reset()
-    const matched = Array.from(e.dataTransfer?.files ?? [])
-      .filter((f) => {
-        const kind = mediaTypeOf(f)
-        return kind !== null && accepted.includes(kind)
-      })
+    const files = Array.from(e.dataTransfer?.files ?? [])
+    const matched = files.filter((file) => {
+      const kind = mediaTypeOf(file)
+      return kind !== null && accepted.includes(kind)
+    })
     if (matched.length === 0) {
       toast('warn', t('loaderDrop.mismatchTitle'), t('loaderDrop.typeMismatch', {
         kind: kindLabel(),
       }))
       return
     }
-    void opts.onFiles(matched)
+    const related = opts.relatedFile
+      ? files.filter((file) => !matched.includes(file) && opts.relatedFile?.(file))
+      : []
+    void opts.onFiles([...matched, ...related])
   }
 
   return { dragActive, onDragEnter, onDragOver, onDragLeave, onDrop }

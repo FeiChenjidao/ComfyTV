@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   uploadBlobNamed: vi.fn(),
   uploadCanvas: vi.fn(),
-  isConvertibleModelFile: vi.fn(() => false),
+  isConvertibleModelFile: vi.fn((_name: string) => false),
+  isModelResourceFile: vi.fn((_name: string) => false),
   convertModelFileToGlb: vi.fn(),
   toastLoaderUploadFailed: vi.fn(),
 }))
@@ -16,6 +17,7 @@ vi.mock('@/utils/uploadCanvas', () => ({
 
 vi.mock('@/widgets/three/convertToGlb', () => ({
   isConvertibleModelFile: mocks.isConvertibleModelFile,
+  isModelResourceFile: mocks.isModelResourceFile,
   convertModelFileToGlb: mocks.convertModelFileToGlb,
 }))
 
@@ -103,6 +105,7 @@ beforeEach(() => {
   mocks.uploadBlobNamed.mockReset()
   mocks.uploadCanvas.mockReset()
   mocks.isConvertibleModelFile.mockReset().mockReturnValue(false)
+  mocks.isModelResourceFile.mockReset().mockReturnValue(false)
   mocks.convertModelFileToGlb.mockReset()
   mocks.toastLoaderUploadFailed.mockReset()
 })
@@ -289,7 +292,25 @@ describe('useModelLoader', () => {
     const { loader } = makeLoader()
     const source = new File(['obj'], 'mesh.obj')
     await loader.uploadModelFiles([source])
-    expect(mocks.convertModelFileToGlb).toHaveBeenCalledWith(source)
+    expect(mocks.convertModelFileToGlb).toHaveBeenCalledWith(source, [source])
+    expect(mocks.uploadBlobNamed).toHaveBeenCalledWith(converted, { subfolder: 'comfytv/3d', filename: 'mesh.glb' })
+  })
+
+  it('uses MTL and texture files as conversion resources without uploading them separately', async () => {
+    mocks.isConvertibleModelFile.mockImplementation((name: string) => name.endsWith('.obj'))
+    mocks.isModelResourceFile.mockImplementation((name: string) => /\.(?:mtl|png)$/.test(name))
+    const converted = new File(['glb'], 'mesh.glb')
+    mocks.convertModelFileToGlb.mockResolvedValue(converted)
+    mocks.uploadBlobNamed.mockResolvedValue({ name: 'mesh.glb', subfolder: 'comfytv/3d', type: 'input', url: '/u' })
+    const { loader } = makeLoader()
+    const source = new File(['obj'], 'mesh.obj')
+    const material = new File(['mtl'], 'mesh.mtl')
+    const texture = new File(['png'], 'albedo.png', { type: 'image/png' })
+
+    await loader.uploadModelFiles([source, material, texture])
+
+    expect(mocks.convertModelFileToGlb).toHaveBeenCalledWith(source, [source, material, texture])
+    expect(mocks.uploadBlobNamed).toHaveBeenCalledTimes(1)
     expect(mocks.uploadBlobNamed).toHaveBeenCalledWith(converted, { subfolder: 'comfytv/3d', filename: 'mesh.glb' })
   })
 

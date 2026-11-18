@@ -3,10 +3,15 @@ import { computed, ref, watch } from 'vue'
 import type { LGraphNode } from '@/lib/comfyApp'
 import type { ResolvedInput, StageState } from '@/stores/stageStore'
 import { toastLoaderUploadFailed } from '@/composables/stages/useLoaderFileDrop'
+import { isModelFile } from '@/utils/mediaFileTypes'
 import { uploadBlobNamed, uploadCanvas } from '@/utils/uploadCanvas'
 import { getWidget, onNodeConfigure, readWidgetStr, writeWidget } from '@/utils/widget'
 import { parseMaterialState, type MaterialParams } from '@/widgets/material/types'
-import { convertModelFileToGlb, isConvertibleModelFile } from '@/widgets/three/convertToGlb'
+import {
+  convertModelFileToGlb,
+  isConvertibleModelFile,
+  isModelResourceFile,
+} from '@/widgets/three/convertToGlb'
 import {
   builtinPrimitivePayload,
   isPrimitivePayload,
@@ -240,9 +245,14 @@ export function useModelLoader(node: LGraphNode, opts: UseModelLoaderOptions) {
     uploading.value = true
     uploadError.value = ''
     try {
+      const modelFiles = picked.filter((file) => isModelFile(file.name))
+      if (!modelFiles.length) throw new Error('No supported 3D model selected')
       let lastPath = ''
-      for (const file of picked) {
-        const toUpload = isConvertibleModelFile(file.name) ? await convertModelFileToGlb(file) : file
+      for (const file of modelFiles) {
+        const resources = picked.filter((resource) => resource === file || isModelResourceFile(resource.name))
+        const toUpload = isConvertibleModelFile(file.name)
+          ? await convertModelFileToGlb(file, resources)
+          : file
         const uploaded = await uploadBlobNamed(toUpload, { subfolder: 'comfytv/3d', filename: toUpload.name })
         lastPath = uploaded.subfolder
           ? `${uploaded.subfolder}/${uploaded.name}`

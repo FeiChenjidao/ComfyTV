@@ -55,6 +55,8 @@ export function dragMayMatchKind(e: DragEvent, kind: AssetMediaType): boolean {
   if (!items || items.length === 0) return true
   for (const item of Array.from(items)) {
     if (item.kind !== 'file') continue
+    const draggedFile = item.getAsFile?.()
+    if (kind === 'model' && draggedFile && isModelFile(draggedFile.name)) return true
     if (!item.type) return true
     if (kind === 'model') {
       if (item.type.startsWith('model/')) return true

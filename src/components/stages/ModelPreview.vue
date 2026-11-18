@@ -60,6 +60,7 @@ import {
   type ModelStats,
 } from '@/composables/stages/useModelPreview'
 import { buildPointCloud, classifyModelBytes, loadSpark } from '@/widgets/three/modelFormats'
+import { exportModelObject, type ModelExportFormat } from '@/widgets/three/modelExporter'
 import { guardOrbitControlsDragEnd } from '@/widgets/three/orbitControlsGuard'
 import { RendererView } from '@/widgets/three/RendererView'
 import { buildPrimitiveMesh, parsePrimitiveRecipe } from '@/widgets/three/primitiveGeometry'
@@ -635,6 +636,12 @@ onBeforeUnmount(() => {
 })
 
 defineExpose({
+  async exportModel(format: ModelExportFormat, baseName = 'model'): Promise<void> {
+    if (!modelRoot || !modelReady.value) throw new Error('No model is ready to export')
+    const exportRoot = cloneSkinned(modelRoot)
+    exportRoot.animations = [...(modelRoot.animations ?? [])]
+    await exportModelObject(exportRoot, format, baseName)
+  },
   cameraState(): { position: number[]; target: number[]; fov: number } | null {
     if (!camera || !controlsOrbit) return null
     return {
