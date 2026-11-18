@@ -1,5 +1,5 @@
-import { TGALoader } from "./TGALoader-BqvwEUKl.mjs";
-import { a3 as MathUtils, i as Color, j as ColorManagement, au as SRGBColorSpace, aW as Vector3, a6 as Matrix4, al as Quaternion, aY as VectorKeyframeTrack, am as QuaternionKeyframeTrack, V as InterpolateDiscrete, U as InterpolateBezier, c as AnimationClip, a9 as MeshBasicMaterial, aa as MeshLambertMaterial, ab as MeshPhongMaterial, aV as Vector2, u as DoubleSide, P as FrontSide, ah as PerspectiveCamera, af as OrthographicCamera, b as AmbientLight, aH as SpotLight, ai as PointLight, t as DirectionalLight, f as BufferGeometry, K as Float32BufferAttribute, aR as Triangle, az as ShapeUtils, aA as Skeleton, B as Bone, R as Group, a1 as Loader, X as LineBasicMaterial, aB as SkinnedMesh, a8 as Mesh, W as Line, Y as LineSegments, at as RepeatWrapping, g as ClampToEdgeWrapping, a2 as LoaderUtils, J as FileLoader, av as Scene, aL as TextureLoader } from "./main-B1_lVLuh.mjs";
+import { TGALoader } from "./TGALoader-FMCpeVPB.mjs";
+import { a3 as MathUtils, i as Color, j as ColorManagement, au as SRGBColorSpace, aW as Vector3, a6 as Matrix4, al as Quaternion, aY as VectorKeyframeTrack, am as QuaternionKeyframeTrack, V as InterpolateDiscrete, U as InterpolateBezier, c as AnimationClip, a9 as MeshBasicMaterial, aa as MeshLambertMaterial, ab as MeshPhongMaterial, aV as Vector2, u as DoubleSide, P as FrontSide, ah as PerspectiveCamera, af as OrthographicCamera, b as AmbientLight, aH as SpotLight, ai as PointLight, t as DirectionalLight, f as BufferGeometry, K as Float32BufferAttribute, aR as Triangle, az as ShapeUtils, aA as Skeleton, B as Bone, R as Group, a1 as Loader, X as LineBasicMaterial, aB as SkinnedMesh, a8 as Mesh, W as Line, Y as LineSegments, at as RepeatWrapping, g as ClampToEdgeWrapping, a2 as LoaderUtils, J as FileLoader, av as Scene, aL as TextureLoader } from "./main-DqdM0VEf.mjs";
 function getElementsByTagName(xml, name) {
   const array = [];
   const childNodes = xml.childNodes;
@@ -2975,4 +2975,4 @@ class ColladaLoader extends Loader {
 export {
   ColladaLoader
 };
-//# sourceMappingURL=ColladaLoader-CHVXbejP.mjs.map
+//# sourceMappingURL=ColladaLoader-DmPnMJUW.mjs.map

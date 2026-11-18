@@ -1188,6 +1188,20 @@
       }
     }
   },
+  "ComfyTV_BatchImageStage": {
+    "display_name": "批量生图",
+    "inputs": {
+      "outputs_per_image": { "name": "每张生成数" },
+      "start_index": { "name": "开始序号" },
+      "max_items": { "name": "最多处理数量" },
+      "continue_on_error": { "name": "失败后继续" },
+      "images": { "name": "图片批次" }
+    },
+    "outputs": {
+      "0": { "name": "图片批次" },
+      "1": { "name": "选中图片" }
+    }
+  },
   "ComfyTV_LayerSeparationStage": {
     "display_name": "图层分离",
     "inputs": {
@@ -1820,6 +1834,9 @@
   },
   "ComfyTV_VideoFramesStage": {
     "display_name": "批量抽帧"
+  },
+  "ComfyTV_VideoToFramesStage": {
+    "display_name": "视频拆帧"
   },
   "ComfyTV_VideoConcatStage": {
     "display_name": "视频拼接",

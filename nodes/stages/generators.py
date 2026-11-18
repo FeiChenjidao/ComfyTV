@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ._common import *  # noqa: F401, F403
 from ...runners.custom_io import autogrow_by_index
+from ...runners._batch_loop import images_from_payload
 
 _log = logging.getLogger(__name__)
 
@@ -170,6 +171,131 @@ class ImageStage(io.ComfyNode):
             },
             custom_params=custom_params,
         )
+        picked_idx = int(selected_index or 1)
+        picked_url = _pick_image_from_batch(payload, picked_idx)
+        return _stage_emit_auto(cls, project_id=project_id, payload_str=payload,
+                                parent_output_id=parent_output_id,
+                                picked_payload=picked_url, picked_index=picked_idx)
+
+
+class BatchImageStage(io.ComfyNode):
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="ComfyTV.BatchImageStage",
+            display_name="Batch Image Generate",
+            category="ComfyTV/Generate",
+            inputs=[
+                *_standard_stage_inputs(),
+                io.Combo.Input("workflow", options=labels_for('image') or [""],
+                               default=default_for('image'),
+                               tooltip="Image workflow applied once to each source image."),
+                io.Combo.Input("resolution", options=RESOLUTIONS, default="1K"),
+                io.Combo.Input("aspect_ratio", options=ASPECT_RATIOS, default="1:1"),
+                io.Int.Input("outputs_per_image", default=1, min=1, max=4, step=1,
+                             display_mode=io.NumberDisplay.slider,
+                             tooltip="How many results to generate for each input image."),
+                io.Int.Input("start_index", default=1, min=1, max=100000, step=1,
+                             tooltip="First source image to process (1-indexed)."),
+                io.Int.Input("max_items", default=16, min=0, max=100000, step=1,
+                             tooltip="Maximum source images to process. 0 means all remaining images."),
+                io.Boolean.Input("continue_on_error", default=True,
+                                 tooltip="Continue processing later images when one source fails."),
+                _main_prompt_input(tooltip="Prompt applied to every source image."),
+                io.Autogrow.Input("texts", template=_text_template(8)),
+                COMFYTV_IMAGES.Input("images", optional=True),
+                _selected_index_input(),
+                _custom_params_input(),
+            ],
+            outputs=[COMFYTV_IMAGES.Output("images"), COMFYTV_IMAGE.Output("image")],
+            is_output_node=True,
+            hidden=[io.Hidden.unique_id],
+        )
+
+    @classmethod
+    async def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
+                      workflow="", resolution="", aspect_ratio="",
+                      outputs_per_image=1, start_index=1, max_items=16,
+                      continue_on_error=True, main_prompt="", texts=None,
+                      images=None, selected_index=1, custom_params="{}"):
+        source_images = images_from_payload(images)
+        if not source_images:
+            raise RuntimeError(
+                "Batch Image Generate needs an upstream image batch — connect Video to Frames "
+                "or another image-batch node."
+            )
+        start = max(0, int(start_index or 1) - 1)
+        limit = max(0, int(max_items or 0))
+        selected_sources = source_images[start:] if limit == 0 else source_images[start:start + limit]
+        if not selected_sources:
+            raise RuntimeError(
+                f"Batch Image Generate: start_index {start + 1} is past the "
+                f"{len(source_images)} available source images"
+            )
+
+        text_vals = _autogrow_values(texts)
+        combined_prompt = _combine_prompt(main_prompt, text_vals)
+        output_images: list[dict] = []
+        errors: list[dict] = []
+        per_source = max(1, min(4, int(outputs_per_image or 1)))
+
+        for offset, source in enumerate(selected_sources):
+            import comfy.model_management
+            comfy.model_management.throw_exception_if_processing_interrupted()
+            source_number = start + offset + 1
+            source_url = str(source.get('image_url') or '')
+            _emit_progress(cls, offset, len(selected_sources),
+                           text=f"image {offset + 1}/{len(selected_sources)}")
+            try:
+                payload = await invoke_runner(
+                    kind='image',
+                    label=workflow,
+                    main_prompt=combined_prompt,
+                    upstream={'texts': text_vals, 'images': [source_url]},
+                    options={
+                        'resolution': resolution,
+                        'aspect_ratio': aspect_ratio,
+                        'batch_size': per_source,
+                    },
+                    custom_params=custom_params,
+                )
+                generated = images_from_payload(payload)
+                if not generated:
+                    raise RuntimeError("workflow returned no images")
+                for result_number, result in enumerate(generated, start=1):
+                    output_images.append({
+                        'index': str(len(output_images) + 1),
+                        'label': f"Source {source_number} · Result {result_number}",
+                        'image_url': result['image_url'],
+                        'source_index': str(source.get('index') or source_number),
+                        'source_label': str(source.get('label') or f"#{source_number}"),
+                        'source_image_url': source_url,
+                    })
+            except Exception as exc:
+                comfy.model_management.throw_exception_if_processing_interrupted()
+                if not continue_on_error:
+                    raise
+                errors.append({
+                    'source_index': str(source.get('index') or source_number),
+                    'message': str(exc),
+                })
+                _log.warning("[ComfyTV/batch-image] source %s failed: %s", source_number, exc)
+
+        _emit_progress(cls, len(selected_sources), len(selected_sources), text="done")
+        if not output_images:
+            detail = errors[0]['message'] if errors else 'workflow returned no images'
+            raise RuntimeError(f"Batch Image Generate produced no images: {detail}")
+
+        payload = json.dumps({
+            'images': output_images,
+            'meta': {
+                'source_count': len(selected_sources),
+                'result_count': len(output_images),
+                'failed_count': len(errors),
+                'errors': errors,
+            },
+        })
         picked_idx = int(selected_index or 1)
         picked_url = _pick_image_from_batch(payload, picked_idx)
         return _stage_emit_auto(cls, project_id=project_id, payload_str=payload,

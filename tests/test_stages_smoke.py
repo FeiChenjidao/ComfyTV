@@ -48,7 +48,7 @@ class TestSchemaDefinitions:
         "ModelLoaderStage", "AssetModelLoaderStage", "AssetTextLoaderStage",
         "PsdLayerTreeStage",
         # Generators
-        "ProjectStage", "TextStage", "ImageStage", "VideoStage",
+        "ProjectStage", "TextStage", "ImageStage", "BatchImageStage", "VideoStage",
         "AudioStage", "SpeechStage", "ShotImagesStage", "StoryboardStage",
         "Model3DStage",
         # Edits
@@ -64,7 +64,7 @@ class TestSchemaDefinitions:
         # Video / audio edits
         "VideoClipStage", "VideoConcatStage", "VideoUpscaleStage",
         "VideoSpeedStage", "VideoRotateStage", "VideoSplitStage",
-        "VideoVolumeStage", "VideoMuxAudioStage", "VideoFramesStage",
+        "VideoVolumeStage", "VideoMuxAudioStage", "VideoFramesStage", "VideoToFramesStage",
         "VideoSubtitleSmartEraseStage", "VideoSubtitleSelectEraseStage",
         "AudioExtractVocalStage", "AudioExtractBgStage",
         "AudioVideoDemuxAudioStage", "AudioVideoDemuxVideoStage",

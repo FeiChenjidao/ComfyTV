@@ -1188,6 +1188,20 @@
       }
     }
   },
+  "ComfyTV_BatchImageStage": {
+    "display_name": "Batch Image Generate",
+    "inputs": {
+      "outputs_per_image": { "name": "Outputs per image" },
+      "start_index": { "name": "Start index" },
+      "max_items": { "name": "Maximum items" },
+      "continue_on_error": { "name": "Continue on error" },
+      "images": { "name": "Image batch" }
+    },
+    "outputs": {
+      "0": { "name": "Images" },
+      "1": { "name": "Selected image" }
+    }
+  },
   "ComfyTV_LayerSeparationStage": {
     "display_name": "Layer Separation",
     "inputs": {
@@ -1804,6 +1818,9 @@
   },
   "ComfyTV_VideoFramesStage": {
     "display_name": "Extract Frames"
+  },
+  "ComfyTV_VideoToFramesStage": {
+    "display_name": "Video to Frames"
   },
   "ComfyTV_VideoConcatStage": {
     "display_name": "Video Concat",

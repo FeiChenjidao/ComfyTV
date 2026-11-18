@@ -625,6 +625,160 @@ def extract_frames_multi(view_url: str, times) -> str:
     return json.dumps({'images': images})
 
 
+def extract_video_frames(view_url: str, mode: str = 'all', every_n: int = 1,
+                         target_fps: float = 12.0, start_s: float = 0.0,
+                         end_s: float = 0.0, max_frames: int = 2000,
+                         image_format: str = 'png', jpeg_quality: int = 95,
+                         progress=None) -> str:
+    import av
+    import json
+
+    src = localize(view_url)
+    mode = str(mode or 'all').strip().lower()
+    if mode not in {'all', 'every_n', 'target_fps'}:
+        raise RuntimeError(f"video_to_frames: unsupported mode {mode!r}")
+
+    every_n = max(1, int(every_n or 1))
+    target_fps = max(0.01, float(target_fps or 12.0))
+    start_s = max(0.0, float(start_s or 0.0))
+    end_s = max(0.0, float(end_s or 0.0))
+    if end_s > 0 and end_s <= start_s:
+        raise RuntimeError(
+            f"video_to_frames: end_s ({end_s}) must be greater than start_s ({start_s})"
+        )
+    max_frames = max(0, int(max_frames or 0))
+    image_format = str(image_format or 'png').strip().lower()
+    if image_format not in {'png', 'jpeg'}:
+        raise RuntimeError(f"video_to_frames: unsupported image format {image_format!r}")
+    jpeg_quality = max(1, min(100, int(jpeg_quality or 95)))
+
+    images = []
+    written_paths: list[Path] = []
+    decoded_frames = 0
+    selected_frames = 0
+    truncated = False
+    next_target_s = start_s
+
+    try:
+        with av.open(str(src)) as container:
+            if not container.streams.video:
+                raise RuntimeError(f"video_to_frames: no video stream in {src}")
+            stream = container.streams.video[0]
+            try:
+                source_fps = float(stream.average_rate) if stream.average_rate else 24.0
+            except (TypeError, ValueError, ZeroDivisionError):
+                source_fps = 24.0
+            source_fps = source_fps if source_fps > 0 else 24.0
+            effective_target_fps = min(target_fps, source_fps)
+            duration = 0.0
+            if stream.duration and stream.time_base:
+                duration = float(stream.duration * stream.time_base)
+            elif container.duration:
+                duration = float(container.duration) / 1_000_000.0
+            range_end = end_s if end_s > 0 else duration
+            estimated_total = max(1, int(round(max(0.0, range_end - start_s) * source_fps)))
+
+            if stream.time_base and start_s > 0:
+                try:
+                    container.seek(
+                        int(start_s / float(stream.time_base)),
+                        stream=stream,
+                        any_frame=False,
+                        backward=True,
+                    )
+                except Exception:
+                    pass
+
+            fallback_index = 0
+            for frame in container.decode(stream):
+                if frame.pts is not None and frame.time_base:
+                    timestamp = float(frame.pts * frame.time_base)
+                else:
+                    timestamp = start_s + fallback_index / source_fps
+                fallback_index += 1
+                if timestamp + 1e-6 < start_s:
+                    continue
+                if end_s > 0 and timestamp >= end_s - 1e-6:
+                    break
+
+                range_index = decoded_frames
+                decoded_frames += 1
+                if mode == 'all':
+                    selected = True
+                elif mode == 'every_n':
+                    selected = range_index % every_n == 0
+                else:
+                    selected = timestamp + (0.5 / source_fps) >= next_target_s
+                    if selected:
+                        while next_target_s <= timestamp + (0.5 / source_fps):
+                            next_target_s += 1.0 / effective_target_fps
+
+                if not selected:
+                    if progress is not None and decoded_frames % 25 == 0:
+                        progress(min(decoded_frames, estimated_total), estimated_total,
+                                 f"scanned {decoded_frames} frames")
+                    continue
+                if max_frames and selected_frames >= max_frames:
+                    truncated = True
+                    break
+
+                suffix = '.jpg' if image_format == 'jpeg' else '.png'
+                out_path = fresh_output_path(suffix, subfolder='comfytv/frames')
+                save_kwargs = ({'quality': jpeg_quality, 'subsampling': 0}
+                               if image_format == 'jpeg' else {'compress_level': 4})
+                frame.to_image().save(
+                    str(out_path),
+                    'JPEG' if image_format == 'jpeg' else 'PNG',
+                    **save_kwargs,
+                )
+                written_paths.append(out_path)
+                selected_frames += 1
+                images.append({
+                    'index': str(selected_frames),
+                    'label': f"Frame {selected_frames} · {timestamp:.3f}s",
+                    'image_url': path_to_view_url(out_path),
+                    'timestamp_s': round(timestamp, 6),
+                    'source_frame': range_index + 1,
+                })
+                if progress is not None:
+                    progress(min(decoded_frames, estimated_total), estimated_total,
+                             f"saved {selected_frames} frames")
+
+        if not images:
+            raise RuntimeError("video_to_frames: no frames matched the selected range")
+        if progress is not None:
+            progress(max(1, decoded_frames), max(1, decoded_frames),
+                     f"saved {selected_frames} frames")
+        output_fps = (
+            source_fps if mode == 'all'
+            else source_fps / every_n if mode == 'every_n'
+            else effective_target_fps
+        )
+        return json.dumps({
+            'images': images,
+            'meta': {
+                'mode': mode,
+                'source_fps': round(source_fps, 6),
+                'output_fps': round(output_fps, 6),
+                'every_n': every_n,
+                'target_fps': effective_target_fps,
+                'start_s': start_s,
+                'end_s': end_s,
+                'decoded_frames': decoded_frames,
+                'frame_count': selected_frames,
+                'truncated': truncated,
+                'image_format': image_format,
+            },
+        })
+    except Exception:
+        for path in written_paths:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
+
+
 def concat_videos(view_urls: list, progress=None) -> str:
     import av
     import numpy as np
@@ -762,6 +916,6 @@ __all__ = [
     'extract_frame',
     'trim_video', 'trim_video_precise', 'crop_video', 'resize_video', 'concat_videos',
     'speed_video', 'transpose_video', 'adjust_volume', 'mux_audio',
-    'extract_frames_multi',
+    'extract_frames_multi', 'extract_video_frames',
     'demux_audio', 'silence_video',
 ]

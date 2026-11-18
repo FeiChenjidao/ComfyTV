@@ -260,6 +260,7 @@
       "muxAudio": "合成音轨 · 剪辑",
       "resize": "缩放 · 剪辑",
       "frames": "逐帧抽取 · 剪辑",
+      "videoToFrames": "视频拆帧 · 剪辑",
       "timeRemap": "时间重映射 · 剪辑",
       "sequence": "片段序列 · 剪辑",
       "sceneDetect": "场景检测 · 剪辑",
@@ -1889,6 +1890,20 @@
     "readyToRun": "已标记 {n} 帧 — 点 Run 抽取",
     "processing": "抽取中…",
     "done": "抽帧完成 — 下游可直接使用"
+  },
+  "videoToFrames": {
+    "all": "全部帧",
+    "interval": "每隔 N 帧",
+    "fps": "目标帧率",
+    "everyN": "帧间隔",
+    "targetFps": "目标 FPS",
+    "start": "开始（秒）",
+    "end": "结束（秒，0 到末尾）",
+    "maxFrames": "最多帧数（0 不限制）",
+    "jpegQuality": "JPEG 质量",
+    "processing": "正在拆帧…",
+    "done": "图片批次已生成 — 下游可直接使用",
+    "ready": "选择抽取方式，然后运行"
   },
   "videoResize": {
     "source": "原尺寸",

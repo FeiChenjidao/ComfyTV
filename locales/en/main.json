@@ -260,6 +260,7 @@
       "muxAudio": "Mux Audio · Cut",
       "resize": "Resize · Cut",
       "frames": "Frames · Cut",
+      "videoToFrames": "Video to Frames · Cut",
       "timeRemap": "Time Remap · Cut",
       "sequence": "Sequence · Cut",
       "sceneDetect": "Scene Detect · Cut",
@@ -1821,6 +1822,20 @@
     "readyToRun": "{n} frames marked — Run to extract",
     "processing": "Extracting…",
     "done": "Frames extracted — ready for downstream"
+  },
+  "videoToFrames": {
+    "all": "All frames",
+    "interval": "Every N",
+    "fps": "Target FPS",
+    "everyN": "Frame interval",
+    "targetFps": "Target FPS",
+    "start": "Start (s)",
+    "end": "End (s, 0 = end)",
+    "maxFrames": "Maximum frames (0 = all)",
+    "jpegQuality": "JPEG quality",
+    "processing": "Extracting frames…",
+    "done": "Frame batch ready for downstream",
+    "ready": "Choose a sampling mode, then Run"
   },
   "videoResize": {
     "source": "Source",

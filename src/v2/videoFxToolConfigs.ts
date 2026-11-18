@@ -36,6 +36,7 @@ import VideoClipStageCard from '@/components/stages/VideoClipStageCard.vue'
 import VideoConcatStageCard from '@/components/stages/VideoConcatStageCard.vue'
 import VideoCropStageCard from '@/components/stages/VideoCropStageCard.vue'
 import VideoFramesStageCard from '@/components/stages/VideoFramesStageCard.vue'
+import VideoToFramesStageCard from '@/components/stages/VideoToFramesStageCard.vue'
 import VideoMuxAudioStageCard from '@/components/stages/VideoMuxAudioStageCard.vue'
 import VideoResizeStageCard from '@/components/stages/VideoResizeStageCard.vue'
 import VideoRotateStageCard from '@/components/stages/VideoRotateStageCard.vue'
@@ -144,6 +145,10 @@ const CONFIGS: Record<string, FxShellConfig> = {
   'ComfyTV.VideoFramesStage': {
     titleKey: 'v2.fx.frames', icon: ICON_FRAMES,
     card: markRaw(VideoFramesStageCard), hasRun: true, plain: true, outputStrip: false, minH: 700,
+  },
+  'ComfyTV.VideoToFramesStage': {
+    titleKey: 'v2.fx.videoToFrames', icon: ICON_FRAMES,
+    card: markRaw(VideoToFramesStageCard), hasRun: true, plain: true, outputStrip: false, minH: 700,
   },
   'ComfyTV.TimeRemapStage': {
     titleKey: 'v2.fx.timeRemap', icon: ICON_TIMEREMAP,

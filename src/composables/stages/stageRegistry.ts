@@ -11,6 +11,7 @@ import VideoSplitStageCard from '@/components/stages/VideoSplitStageCard.vue'
 import VideoVolumeStageCard from '@/components/stages/VideoVolumeStageCard.vue'
 import VideoMuxAudioStageCard from '@/components/stages/VideoMuxAudioStageCard.vue'
 import VideoFramesStageCard from '@/components/stages/VideoFramesStageCard.vue'
+import VideoToFramesStageCard from '@/components/stages/VideoToFramesStageCard.vue'
 import VideoResizeStageCard from '@/components/stages/VideoResizeStageCard.vue'
 import RotateStageCard from '@/components/stages/RotateStageCard.vue'
 import MirrorStageCard from '@/components/stages/MirrorStageCard.vue'
@@ -206,6 +207,7 @@ export const RICH_STAGE_CARDS: Record<string, any> = {
   'ComfyTV.VideoVolumeStage': VideoVolumeStageCard,
   'ComfyTV.VideoMuxAudioStage': VideoMuxAudioStageCard,
   'ComfyTV.VideoFramesStage': VideoFramesStageCard,
+  'ComfyTV.VideoToFramesStage': VideoToFramesStageCard,
   'ComfyTV.VideoResizeStage': VideoResizeStageCard,
   'ComfyTV.RotateStage':     RotateStageCard,
   'ComfyTV.MirrorStage':     MirrorStageCard,
@@ -337,6 +339,7 @@ export const FLEX_FILL_STAGES = new Set([
   'ComfyTV.RotoMaskStage',
   'ComfyTV.VideoCompositeStage',
   'ComfyTV.VideoFramesStage',
+  'ComfyTV.VideoToFramesStage',
   'ComfyTV.MaterialStage',
   'ComfyTV.CropStage',
   'ComfyTV.VideoCropStage',
@@ -365,6 +368,7 @@ export const RICH_STAGE_MIN_HEIGHTS: Record<string, number> = {
   'ComfyTV.VideoVolumeStage': 620,
   'ComfyTV.VideoMuxAudioStage': 620,
   'ComfyTV.VideoFramesStage': 700,
+  'ComfyTV.VideoToFramesStage': 700,
   'ComfyTV.VideoResizeStage': 620,
   'ComfyTV.RotateStage':     600,
   'ComfyTV.MirrorStage':     520,

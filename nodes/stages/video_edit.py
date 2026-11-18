@@ -3,6 +3,7 @@ from .common.fx_helpers import _progress_cb, _need_video, _simple_video_op  # no
 from ...runners.media import (
     extract_frame, trim_video, crop_video, resize_video, concat_videos,
     speed_video, transpose_video, adjust_volume, mux_audio, extract_frames_multi,
+    extract_video_frames,
     demux_audio, silence_video, get_video_info,
 )
 
@@ -376,6 +377,66 @@ class VideoFramesStage(io.ComfyNode):
         return _simple_video_op(cls, video=video, label="Extract Frames",
                                 project_id=project_id, parent_output_id=parent_output_id,
                                 run=lambda v: extract_frames_multi(v, times))
+
+
+class VideoToFramesStage(io.ComfyNode):
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="ComfyTV.VideoToFramesStage",
+            display_name="Video to Frames",
+            category="ComfyTV/Video",
+            inputs=[
+                *_standard_stage_inputs(),
+                io.Combo.Input("mode", options=['all', 'every_n', 'target_fps'],
+                               default='all', socketless=True,
+                               extra_dict={"hidden": True},
+                               tooltip="Extract every frame, every Nth frame, or frames at a target FPS."),
+                io.Int.Input("every_n", default=1, min=1, max=1000, step=1,
+                             socketless=True, extra_dict={"hidden": True},
+                             tooltip="Used in every_n mode."),
+                io.Float.Input("target_fps", default=12.0, min=0.1, max=240.0, step=0.1,
+                               socketless=True, extra_dict={"hidden": True},
+                               tooltip="Used in target_fps mode."),
+                io.Float.Input("start_s", default=0.0, min=0.0, max=86400.0, step=0.01,
+                               socketless=True, extra_dict={"hidden": True}),
+                io.Float.Input("end_s", default=0.0, min=0.0, max=86400.0, step=0.01,
+                               socketless=True, extra_dict={"hidden": True},
+                               tooltip="0 means the end of the video."),
+                io.Int.Input("max_frames", default=2000, min=0, max=100000, step=1,
+                             socketless=True, extra_dict={"hidden": True},
+                             tooltip="Safety limit. 0 means unlimited."),
+                io.Combo.Input("image_format", options=['png', 'jpeg'], default='png',
+                               socketless=True, extra_dict={"hidden": True}),
+                io.Int.Input("jpeg_quality", default=95, min=1, max=100, step=1,
+                             socketless=True, extra_dict={"hidden": True}),
+                COMFYTV_VIDEO.Input("video", optional=True),
+            ],
+            outputs=[COMFYTV_IMAGES.Output("images")],
+            is_output_node=True,
+            hidden=[io.Hidden.unique_id],
+        )
+
+    @classmethod
+    def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
+                mode='all', every_n=1, target_fps=12.0, start_s=0.0, end_s=0.0,
+                max_frames=2000, image_format='png', jpeg_quality=95, video=""):
+        _need_video(video, "Video to Frames")
+        payload = extract_video_frames(
+            video,
+            mode=mode,
+            every_n=every_n,
+            target_fps=target_fps,
+            start_s=start_s,
+            end_s=end_s,
+            max_frames=max_frames,
+            image_format=image_format,
+            jpeg_quality=jpeg_quality,
+            progress=_progress_cb(cls),
+        )
+        return _stage_emit_auto(cls, project_id=project_id, payload_str=payload,
+                                parent_output_id=parent_output_id)
 
 
 class VideoResizeStage(io.ComfyNode):

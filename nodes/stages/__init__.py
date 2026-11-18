@@ -3,7 +3,7 @@ from ._common import *  # noqa: F401, F403
 from .common.meta import NON_STAGE_NODES, PENDING_STAGES
 
 from .generators import (
-    ProjectStage, TextStage, ImageStage, VideoStage, AudioStage, SpeechStage,
+    ProjectStage, TextStage, ImageStage, BatchImageStage, VideoStage, AudioStage, SpeechStage,
     ImagePickerStage, AudioPickerStage, VideoPickerStage, ShotImagesStage, StoryboardStage,
     Model3DStage,
 )
@@ -19,7 +19,7 @@ from .timeline import (
 )
 from .director import DirectorStage
 from .video_edit import (
-    VideoExtractFrameStage, VideoFramesStage,
+    VideoExtractFrameStage, VideoFramesStage, VideoToFramesStage,
     VideoClipStage, VideoCropStage, VideoConcatStage, VideoResizeStage, VideoUpscaleStage,
     VideoSpeedStage, VideoRotateStage, VideoSplitStage,
     VideoVolumeStage, VideoMuxAudioStage,
@@ -128,7 +128,7 @@ from ..save_webm import SaveWebM
 def stage_classes() -> list:
     return [
         ProjectStage,
-        TextStage, ImageStage, VideoStage, AudioStage, SpeechStage,
+        TextStage, ImageStage, BatchImageStage, VideoStage, AudioStage, SpeechStage,
         DirectorStage,
         ImagePickerStage, AudioPickerStage, VideoPickerStage,
         PanoramaStage, PanoramaCurrentViewStage, PanoramaMultiViewStage,
@@ -137,7 +137,7 @@ def stage_classes() -> list:
         EraseStage, CutoutStage, CropStage,
         RotateStage, MirrorStage, ColorGradeStage, CompareStage, GridSplitStage,
         CustomSplitStage, ImagesSplitStage, ImageMergeStage,
-        VideoExtractFrameStage, VideoFramesStage,
+        VideoExtractFrameStage, VideoFramesStage, VideoToFramesStage,
         VideoClipStage, VideoCropStage, VideoConcatStage, VideoResizeStage,
         VideoSpeedStage, VideoRotateStage, VideoSplitStage,
         VideoVolumeStage, VideoMuxAudioStage, MakeProxyStage,

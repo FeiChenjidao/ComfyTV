@@ -64,6 +64,7 @@ interface Meta {
 
 const SHELL_META: Record<string, Meta> = {
   'ComfyTV.ImageStage': { kind: 'image-batch' },
+  'ComfyTV.BatchImageStage': { kind: 'image-batch' },
   'ComfyTV.ShotImagesStage': { kind: 'image-batch' },
   'ComfyTV.ImagePickerStage': { kind: 'image-picker' },
   'ComfyTV.CustomStage': { kind: 'custom' },
@@ -126,6 +127,7 @@ const SHELL_META: Record<string, Meta> = {
   'ComfyTV.VideoMuxAudioStage': { kind: 'video' },
   'ComfyTV.VideoResizeStage': { kind: 'video' },
   'ComfyTV.VideoFramesStage': { kind: 'image-batch' },
+  'ComfyTV.VideoToFramesStage': { kind: 'image-batch' },
   'ComfyTV.TimeRemapStage': { kind: 'video' },
   'ComfyTV.SequenceStage': { kind: 'video' },
   'ComfyTV.SceneDetectStage': { kind: 'image-batch' },
@@ -244,6 +246,8 @@ const SHELL_META: Record<string, Meta> = {
 
 const EXTRA_WIDGETS: Record<string, Array<[string, string]>> = {
   'ComfyTV.ImageStage': [['resolution', 'combo'], ['aspect_ratio', 'combo'], ['batch_size', 'number'], ['selected_index', 'number']],
+  'ComfyTV.BatchImageStage': [['resolution', 'combo'], ['aspect_ratio', 'combo'], ['outputs_per_image', 'number'], ['start_index', 'number'], ['max_items', 'number'], ['continue_on_error', 'toggle'], ['selected_index', 'number']],
+  'ComfyTV.VideoToFramesStage': [['mode', 'combo'], ['every_n', 'number'], ['target_fps', 'number'], ['start_s', 'number'], ['end_s', 'number'], ['max_frames', 'number'], ['image_format', 'combo'], ['jpeg_quality', 'number']],
   'ComfyTV.ShotImagesStage': [['selected_index', 'number']],
   'ComfyTV.ImagePickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.VideoPickerStage': [['selected_index', 'number'], ['pool', 'string']],

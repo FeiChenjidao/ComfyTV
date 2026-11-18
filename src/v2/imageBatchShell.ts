@@ -311,4 +311,9 @@ function makeImageBatchShell(shellCfg: ImageBatchShellConfig = {}) {
 }
 
 V2_SHELLS['ComfyTV.ImageStage'] = makeImageBatchShell({ gptImageOptions: true })
+V2_SHELLS['ComfyTV.BatchImageStage'] = makeImageBatchShell({
+  title: null,
+  linkKind: 'image',
+  footerExtra: [{ name: 'outputs_per_image' }],
+})
 V2_SHELLS['ComfyTV.ShotImagesStage'] = makeImageBatchShell({ title: null, linkKind: 'shot-images' })
