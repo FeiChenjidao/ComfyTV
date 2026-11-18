@@ -1,6 +1,6 @@
 import json
 
-from .media import get_video_info
+from .media import get_video_info, localize
 from .media_filter import filter_video, has_encoder
 from .media_torch import torch_process_video
 from ._delivery import (
@@ -516,8 +516,11 @@ def run_fx_chain(view_url: str, entries, progress=None,
     if not segments and not audio_specs:
         raise RuntimeError("FX Chain: nothing to render")
 
-    count = len(segments) + (1 if audio_specs else 0)
+    vp8_alpha_pass = d['codec'] == 'vp8_alpha'
+    count = len(segments) + (1 if audio_specs else 0) \
+        + (1 if vp8_alpha_pass else 0)
     cur = view_url
+    alpha_render_codec = 'vp9_alpha' if vp8_alpha_pass else d['codec']
     for i, (engine, group) in enumerate(segments):
         last = i == count - 1
         last_video = i == len(segments) - 1
@@ -537,7 +540,8 @@ def run_fx_chain(view_url: str, entries, progress=None,
             if fps_mult != 1:
                 out_fps = get_video_info(cur)['fps'] * fps_mult
             if alpha_delivery:
-                kwargs = _delivery_encode_kwargs(d)
+                render_delivery = dict(d, codec=alpha_render_codec)
+                kwargs = _delivery_encode_kwargs(render_delivery)
                 kwargs['keep_audio'] = False
             else:
                 opts = None if last else {'crf': '10', 'preset': 'veryfast'}
@@ -555,14 +559,31 @@ def run_fx_chain(view_url: str, entries, progress=None,
             ctx = {'info': get_video_info(cur)}
             alpha_options = None
             if alpha_delivery and last_video:
-                alpha_options = DELIVERY_CODECS[d['codec']]['quality'][d['quality']]
+                alpha_options = DELIVERY_CODECS[alpha_render_codec][
+                    'quality'][d['quality']]
             cur = torch_process_video(cur, _torch_frame_fn(group, ctx),
                                       progress=seg_progress,
                                       alpha_in=alpha_delivery,
                                       out_alpha=alpha_delivery,
                                       alpha_options=alpha_options,
                                       alpha_vcodec=DELIVERY_CODECS[
-                                          d['codec']]['vcodec'])
+                                          alpha_render_codec]['vcodec'])
+    if vp8_alpha_pass:
+        vp9_intermediate = cur
+        try:
+            cur = torch_process_video(
+                vp9_intermediate, lambda img, _t: img,
+                progress=_segment_progress(progress, len(segments), count),
+                alpha_in=True, out_alpha=True,
+                alpha_options=DELIVERY_CODECS['vp8_alpha']['quality'][
+                    d['quality']],
+                alpha_vcodec='libvpx',
+            )
+        finally:
+            try:
+                localize(vp9_intermediate).unlink(missing_ok=True)
+            except Exception:
+                pass
     needs_delivery_pass = _delivery_active(d) \
         and (not segments or segments[-1][0] == 'torch') \
         and not alpha_delivery

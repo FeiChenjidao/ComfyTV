@@ -172,7 +172,7 @@ const CODECS = [
   { value: 'h264', label: 'H.264' },
   { value: 'hevc', label: 'HEVC' },
   { value: 'prores', label: 'ProRes' },
-  { value: 'vp8', label: 'WebM VP8' },
+  { value: 'vp8', label: 'WebM VP8 Opaque' },
   { value: 'vp8_alpha', label: 'WebM VP8 Alpha' },
   { value: 'vp9_alpha', label: 'WebM VP9 Alpha' },
 ]

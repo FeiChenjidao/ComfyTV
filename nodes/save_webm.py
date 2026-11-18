@@ -5,6 +5,8 @@ from fractions import Fraction
 import folder_paths
 from comfy_api.latest import io
 
+from ..runners._delivery import vp8_alpha_bit_rate
+
 
 _CODEC_NAMES = {
     "vp8": "libvpx",
@@ -45,7 +47,9 @@ def _encode_webm_file(images, output_path: str, codec: str, fps: float, crf: flo
         stream.width = int(images.shape[-2])
         stream.height = int(images.shape[-3])
         stream.pix_fmt = pixel_format
-        stream.bit_rate = 0
+        stream.bit_rate = vp8_alpha_bit_rate(
+            stream.width, stream.height, fps, crf,
+        ) if save_alpha and codec == "vp8" else 0
         stream.options = {"crf": str(float(crf))}
         if save_alpha:
             stream.options["auto-alt-ref"] = "0"

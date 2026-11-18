@@ -43,3 +43,15 @@ def test_codec_settings_reject_unknown_codec():
 
     with pytest.raises(ValueError, match="unsupported WebM codec"):
         _codec_settings("h264", False)
+
+
+def test_vp8_alpha_bitrate_scales_with_frame_size():
+    from ComfyTV.runners._delivery import DELIVERY_CODECS, vp8_alpha_bit_rate
+
+    assert vp8_alpha_bit_rate(1920, 1080, 24, 24) == 23_887_872
+    assert vp8_alpha_bit_rate(16, 16, 1, 63) == 1_000_000
+    assert vp8_alpha_bit_rate(7680, 4320, 60, 0) == 80_000_000
+    assert all(
+        'b' not in options
+        for options in DELIVERY_CODECS['vp8_alpha']['quality'].values()
+    )

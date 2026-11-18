@@ -7,6 +7,7 @@ import numpy as np
 from .media import (
     localize, fresh_output_path, path_to_view_url, get_video_info,
 )
+from ._delivery import vp8_alpha_bit_rate
 from .keyframes import KeyframeCurve, resolve_param
 
 _OUT_TB = Fraction(1, 90000)
@@ -169,15 +170,24 @@ def torch_process_video(view_url: str, frame_fn, *, progress=None,
                 if out_alpha:
                     enc = outp.add_stream(alpha_vcodec, rate=round(rate))
                     enc.pix_fmt = 'yuva420p'
-                    enc.options = dict(alpha_options or {
-                        'crf': '32', 'b': '0', 'row-mt': '1',
-                        'cpu-used': '4', 'auto-alt-ref': '0',
-                    })
+                    defaults = {
+                        'crf': '32', 'cpu-used': '4',
+                        'auto-alt-ref': '0',
+                    }
+                    if alpha_vcodec == 'libvpx-vp9':
+                        defaults['b'] = '0'
+                        defaults['row-mt'] = '1'
+                    enc.options = dict(alpha_options or defaults)
                 else:
                     enc = outp.add_stream('libx264', rate=round(rate))
                     enc.pix_fmt = 'yuv420p'
                 enc.width = tensor.shape[1] - (tensor.shape[1] % 2)
                 enc.height = tensor.shape[0] - (tensor.shape[0] % 2)
+                if out_alpha and alpha_vcodec == 'libvpx':
+                    enc.bit_rate = vp8_alpha_bit_rate(
+                        enc.width, enc.height, rate,
+                        enc.options.get('crf', '32'),
+                    )
                 enc.codec_context.time_base = _OUT_TB
                 if not out_alpha:
                     from .media_filter import tag_bt709

@@ -23,11 +23,11 @@ DELIVERY_CODECS = {
     'vp8_alpha': {
         'vcodec': 'libvpx', 'ext': '.webm', 'pix_fmt': 'yuva420p',
         'quality': {
-            'draft': {'crf': '40', 'b': '0', 'cpu-used': '8',
+            'draft': {'crf': '40', 'cpu-used': '8',
                       'auto-alt-ref': '0'},
-            'standard': {'crf': '32', 'b': '0', 'cpu-used': '4',
+            'standard': {'crf': '24', 'cpu-used': '4',
                          'auto-alt-ref': '0'},
-            'high': {'crf': '20', 'b': '0', 'cpu-used': '2',
+            'high': {'crf': '4', 'cpu-used': '2',
                      'auto-alt-ref': '0'},
         },
     },
@@ -46,6 +46,13 @@ DELIVERY_CODECS = {
 
 
 DELIVERY_COLORSPACES = {'bt709', 'bt601-6-625', 'bt2020', 'smpte170m'}
+
+
+def vp8_alpha_bit_rate(width, height, fps, crf):
+    quality = max(0.18, min(0.65, 0.72 - float(crf) * 0.01))
+    rate = int(max(1, width) * max(1, height) * max(1.0, float(fps))
+               * quality)
+    return max(1_000_000, min(80_000_000, rate))
 
 
 def _delivery_norm(delivery):

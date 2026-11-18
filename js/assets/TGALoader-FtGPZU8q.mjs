@@ -1,4 +1,4 @@
-import { p as DataTextureLoader, $ as LinearMipmapLinearFilter } from "./main-DvM1cyF0.mjs";
+import { p as DataTextureLoader, $ as LinearMipmapLinearFilter } from "./main-lhKM5dg8.mjs";
 class TGALoader extends DataTextureLoader {
   /**
    * Constructs a new TGA loader.
@@ -301,4 +301,4 @@ class TGALoader extends DataTextureLoader {
 export {
   TGALoader
 };
-//# sourceMappingURL=TGALoader-IwWyghFq.mjs.map
+//# sourceMappingURL=TGALoader-FtGPZU8q.mjs.map
