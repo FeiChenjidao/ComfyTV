@@ -57,7 +57,7 @@ def test_photoshop_workflow_is_hidden_from_image_stage() -> None:
     assert preset["is_hidden"] is True
 
 
-def test_seedream_5_5_workflow_uses_stage_sizing_and_batch_loop() -> None:
+def test_seedream_5_5_workflow_uses_official_options_and_batch_loop() -> None:
     workflow = _workflow("workflows/image/Seedream_5.5.json")
     preset = _workflow("workflows/image/Seedream_5.5_preset.json")
     node = _node(workflow, 280)
@@ -65,10 +65,12 @@ def test_seedream_5_5_workflow_uses_stage_sizing_and_batch_loop() -> None:
     assert node["type"] == "ByteDanceSeedreamNodeV3"
     assert node["widgets_values_named"]["model"] == "seedream 5.5"
     assert node["widgets_values_named"]["model.size_preset"] == "Custom"
-    assert preset["sizing"]["min_pixels"] == 921_600
-    assert preset["sizing"]["max_pixels"] == 4_624_220
-    assert preset["inputs"]["280"]["model.width"]["from"] == "computed:width"
-    assert preset["inputs"]["280"]["model.height"]["from"] == "computed:height"
+    assert preset["meta"]["image_panel"] == "seedream"
+    assert preset["inputs"]["280"]["model"]["from"] == "option:model"
+    assert preset["inputs"]["280"]["model.size_preset"]["from"] == "option:size_preset"
+    assert preset["inputs"]["280"]["model.width"]["from"] == "option:width"
+    assert preset["inputs"]["280"]["model.height"]["from"] == "option:height"
+    assert preset["inputs"]["280"]["model.background"]["from"] == "option:background"
     assert len(preset["prune_when_missing"]) == 3
     assert any(item["type"] == "ComfyTV.BatchLoop" for item in workflow["nodes"])
     _assert_link_slots_match_inputs(workflow, node)

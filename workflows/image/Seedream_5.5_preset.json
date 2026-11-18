@@ -1,18 +1,14 @@
 {
-  "_comment": "Shipped Seedream 5.5 image workflow. Uses custom width/height derived from the Image Stage resolution and aspect ratio, clamped to Seedream 5.5 API pixel limits. Optional reference-image branches are pruned when not connected.",
+  "_comment": "Shipped Seedream image workflow. The Image Stage exposes the official model, size preset, custom dimensions, background, seed, and ComfyTV batch count. Optional reference-image branches are pruned when not connected.",
   "label": "Seedream 5.5",
   "order": 30,
-  "description": "ByteDance Seedream 5.5 API image generation and editing with up to 3 reference images, stage-controlled aspect ratio, resolution, batch size, and seed.",
+  "description": "ByteDance Seedream API image generation and editing with up to 3 reference images, official model-specific sizing controls, background, seed, and batch count.",
   "result": {
     "type": "ui_save_batch",
     "node": "282"
   },
-  "sizing": {
-    "type": "image",
-    "base": 2048,
-    "snap": 2,
-    "min_pixels": 921600,
-    "max_pixels": 4624220
+  "meta": {
+    "image_panel": "seedream"
   },
   "inputs": {
     "277": {
@@ -37,19 +33,21 @@
         "error": "Seedream 5.5 needs a prompt."
       },
       "model": {
-        "from": "literal:seedream 5.5",
+        "from": "option:model",
         "default": "seedream 5.5"
       },
       "model.size_preset": {
-        "from": "literal:Custom",
-        "default": "Custom"
+        "from": "option:size_preset",
+        "default": "(2K) 2048x2048 (1:1)"
       },
       "model.width": {
-        "from": "computed:width",
+        "from": "option:width",
+        "default": "2048",
         "cast": "int"
       },
       "model.height": {
-        "from": "computed:height",
+        "from": "option:height",
+        "default": "2048",
         "cast": "int"
       },
       "model.background": {
@@ -64,6 +62,25 @@
       "model.watermark": {
         "from": "literal:false",
         "default": "false",
+        "cast": "bool"
+      },
+      "model.prompt_optimization": {
+        "from": "literal:standard",
+        "default": "standard"
+      },
+      "model.max_images": {
+        "from": "literal:1",
+        "default": "1",
+        "cast": "int"
+      },
+      "model.fail_on_partial": {
+        "from": "literal:false",
+        "default": "false",
+        "cast": "bool"
+      },
+      "model.thinking": {
+        "from": "literal:true",
+        "default": "true",
         "cast": "bool"
       }
     },

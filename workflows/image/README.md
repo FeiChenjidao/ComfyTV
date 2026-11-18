@@ -21,7 +21,7 @@ To add your own workflow see [docs/custom-workflows.md](../../docs/custom-workfl
 
 - **NanoBanana2** (`NanoBanana2.json` + `_preset.json`) — Gemini Nano Banana 2.1 API image generation / edit (`GeminiNanoBanana2V2`). Up to 3 upstream reference images; aspect ratio from the stage. Requires a configured Gemini / NanoBanana API credential in ComfyUI.
 - **GPT Image 2.6** (`GPT_Image_2.6.json` + `_preset.json`) — OpenAI GPT Image 2.6 API (`OpenAIGPTImageNodeV3`). Up to 3 upstream reference images; size, background, quality, complexity, and batch controls come from the preset. Requires a configured OpenAI API credential in ComfyUI.
-- **Seedream 5.5** (`Seedream_5.5.json` + `_preset.json`) — ByteDance Seedream 5.5 API generation / editing (`ByteDanceSeedreamNodeV3`). Up to 3 reference images; stage resolution and aspect ratio are converted to custom dimensions clamped to the model's 0.92–4.62MP range.
+- **Seedream 5.5** (`Seedream_5.5.json` + `_preset.json`) — ByteDance Seedream API generation / editing (`ByteDanceSeedreamNodeV3`). Up to 3 reference images; the Image Stage exposes the official model, size preset, custom dimensions, background, and seed controls while retaining ComfyTV's generation count.
 
 `PS_NanoBanana_GPTImage` remains shipped for the Photoshop bridge, but its `is_hidden` preset keeps it out of the regular Image Stage picker.
 

@@ -488,16 +488,21 @@ const mentionStyleOptions = computed(() => [
   { value: 'qwen_tags', label: t('configSidebar.mentionStyle.qwenTags') },
 ])
 
-const imagePanelMode = computed(() => config.value?.meta?.image_panel === 'gpt' ? 'gpt' : 'nanobanana')
+const imagePanelMode = computed(() => {
+  const value = String(config.value?.meta?.image_panel ?? '')
+  return value === 'gpt' || value === 'seedream' ? value : 'nanobanana'
+})
 const isImageWorkflowConfig = computed(() =>
   String(config.value?.kind ?? selected.value?.workflowKind ?? '').toLowerCase() === 'image',
 )
 const imagePanelOptions = [
   { value: 'nanobanana', label: 'NanoBanana：比例 + 分辨率' },
   { value: 'gpt', label: 'GPT Image：尺寸 + 宽高 + 背景 + 质量' },
+  { value: 'seedream', label: 'Seedream：模型 + 尺寸预设 + 背景 + 种子' },
 ]
 async function onImagePanelChange(value: string) {
-  const meta = { ...(config.value?.meta ?? {}), image_panel: value === 'gpt' ? 'gpt' : 'nanobanana' }
+  const mode = value === 'gpt' || value === 'seedream' ? value : 'nanobanana'
+  const meta = { ...(config.value?.meta ?? {}), image_panel: mode }
   await postMeta({ meta })
 }
 async function onMentionStyleChange(style: string) {

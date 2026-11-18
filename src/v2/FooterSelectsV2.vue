@@ -38,7 +38,7 @@
       @click.stop="a.onClick()"
       v-html="a.icon"
     />
-    <div v-if="(!gptImageOptions || imagePanelMode !== 'gpt') && (autoHas('aspect_ratio') || autoHas('resolution') || autoHas('batch_size'))" class="v2-fsel__item">
+    <div v-if="(!gptImageOptions || imagePanelMode === 'nanobanana') && (autoHas('aspect_ratio') || autoHas('resolution') || autoHas('batch_size'))" class="v2-fsel__item">
       <GenOptionsV2
         :ratio="autoHas('aspect_ratio') ? sv('aspect_ratio') : null"
         :ratio-options="optionsOf('aspect_ratio')"
@@ -49,6 +49,7 @@
       />
     </div>
     <GptImageOptionsV2 v-if="gptImageOptions && imagePanelMode === 'gpt'" :get-node="props.getNode" />
+    <SeedreamOptionsV2 v-if="gptImageOptions && imagePanelMode === 'seedream'" :get-node="props.getNode" />
     <template v-for="x in extra ?? []" :key="x.name">
       <div v-if="has(x.name) && (x.type ?? 'combo') === 'combo'" class="v2-fsel__item">
         <ComfyTVSelect :model-value="sv(x.name)" :options="optionsOf(x.name)" :filterable="false" @update:model-value="v => writeVal(x.name, v)" />
@@ -91,6 +92,7 @@ import { useI18n } from 'vue-i18n'
 import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import GenOptionsV2 from '@/v2/GenOptionsV2.vue'
 import GptImageOptionsV2 from '@/v2/GptImageOptionsV2.vue'
+import SeedreamOptionsV2 from '@/v2/SeedreamOptionsV2.vue'
 import { openLinkWorkflow } from '@/composables/stages/openLinkWorkflow'
 import { useWorkflowApiCostBadge } from '@/composables/stages/useWorkflowApiCostBadge'
 import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
@@ -116,7 +118,7 @@ const { values, widgetOf, write } = useWidgetValues(
   [...new Set([...AUTO_NAMES, 'custom_params', ...nodeWidgetNames, ...(props.extra ?? []).map(x => x.name)])],
 )
 
-const imagePanelMode = ref<'nanobanana' | 'gpt'>('nanobanana')
+const imagePanelMode = ref<'nanobanana' | 'gpt' | 'seedream'>('nanobanana')
 let panelRequest = 0
 watch(() => String(values.workflow ?? ''), async (label) => {
   if (!props.gptImageOptions || !label) {
@@ -127,7 +129,8 @@ watch(() => String(values.workflow ?? ''), async (label) => {
   try {
     const config = await fetchWorkflowConfig('image', label)
     if (request === panelRequest) {
-      imagePanelMode.value = config.meta?.image_panel === 'gpt' ? 'gpt' : 'nanobanana'
+      const panel = String(config.meta?.image_panel ?? '')
+      imagePanelMode.value = panel === 'gpt' || panel === 'seedream' ? panel : 'nanobanana'
     }
   } catch {
     if (request === panelRequest) imagePanelMode.value = 'nanobanana'

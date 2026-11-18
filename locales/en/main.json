@@ -69,6 +69,15 @@
       "ratio": "Aspect ratio",
       "count": "Count"
     },
+    "seedream": {
+      "model": "Model",
+      "sizePreset": "Size preset",
+      "width": "Width",
+      "height": "Height",
+      "background": "Background",
+      "seed": "Seed",
+      "randomSeed": "Random seed"
+    },
     "panelCollapse": "Collapse the panel — keeps a one-line summary and Run",
     "panelExpand": "Expand the panel",
     "imageStageTitle": "Image · ImageStage",

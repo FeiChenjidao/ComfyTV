@@ -69,6 +69,15 @@
       "ratio": "比例",
       "count": "生成数量"
     },
+    "seedream": {
+      "model": "模型",
+      "sizePreset": "尺寸预设",
+      "width": "宽度",
+      "height": "高度",
+      "background": "背景",
+      "seed": "种子",
+      "randomSeed": "随机种子"
+    },
     "panelCollapse": "收起面板——只保留一行信息和运行按钮",
     "panelExpand": "展开面板",
     "imageStageTitle": "图像阶段 · 生成",
