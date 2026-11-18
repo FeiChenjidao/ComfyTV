@@ -644,6 +644,16 @@
       "saveOk": "已保存到本机",
       "saveFailed": "保存失败"
     },
+    "ignis": {
+      "section": "Ignis 视频生成",
+      "desc": "用于 Seedance、Kling、Sora 和 PixVerse 视频生成。Token 只保存在本机，不会写入工作流或提交到 Git。",
+      "configured": "已配置（{hint}）",
+      "missing": "尚未配置 Token",
+      "placeholder": "粘贴 Ignis Token（ignis_ct_…）",
+      "save": "保存 Token",
+      "saveOk": "已保存到本机",
+      "saveFailed": "保存失败"
+    },
     "fields": {
       "enable-v2": {
         "label": "启用 ComfyTV V2 节点",

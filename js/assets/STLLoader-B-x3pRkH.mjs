@@ -1,4 +1,4 @@
-import { L as Loader, F as FileLoader, B as BufferGeometry, C as Color, S as SRGBColorSpace, a as BufferAttribute, V as Vector3, b as Float32BufferAttribute } from './main-zNEpLne4.mjs';
+import { L as Loader, F as FileLoader, B as BufferGeometry, C as Color, S as SRGBColorSpace, a as BufferAttribute, V as Vector3, b as Float32BufferAttribute } from './main-zV7Ms1ng.mjs';
 
 /**
  * A loader for the STL format, as created by Solidworks and other CAD programs.
@@ -410,4 +410,4 @@ class STLLoader extends Loader {
 }
 
 export { STLLoader };
-//# sourceMappingURL=STLLoader-kdsp-H-t.mjs.map
+//# sourceMappingURL=STLLoader-B-x3pRkH.mjs.map

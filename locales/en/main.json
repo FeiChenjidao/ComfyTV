@@ -637,6 +637,16 @@
       "saveOk": "Saved locally",
       "saveFailed": "Save failed"
     },
+    "ignis": {
+      "section": "Ignis video generation",
+      "desc": "Used for Seedance, Kling, Sora, and PixVerse video generation. The token stays on this machine and is never written into workflows or Git.",
+      "configured": "Configured ({hint})",
+      "missing": "No token configured",
+      "placeholder": "Paste Ignis token (ignis_ct_…)",
+      "save": "Save token",
+      "saveOk": "Saved locally",
+      "saveFailed": "Save failed"
+    },
     "fields": {
       "enable-v2": {
         "label": "Enable ComfyTV V2 nodes",

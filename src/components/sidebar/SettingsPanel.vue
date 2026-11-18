@@ -98,6 +98,45 @@
         </SettingsSection>
 
         <SettingsSection
+          v-if="ignisVisible"
+          :section="{ id: 'ignis', master: null, rows: [], experimental: false, dirty: false, probe: null }"
+          :title="$t('settings.ignis.section')"
+          :collapsed="isCollapsed('ignis')"
+          :master-on="false"
+          @toggle="toggleCollapsed('ignis')"
+        >
+          <div class="ctv:flex ctv:flex-col ctv:gap-1.5 ctv:px-2 ctv:py-1.5">
+            <div class="ctv:text-2xs ctv:text-muted-foreground ctv:leading-relaxed">
+              {{ $t('settings.ignis.desc') }}
+            </div>
+            <div class="ctv:text-2xs" :class="ignisConfigured ? 'ctv:text-emerald-400' : 'ctv:text-amber-400'">
+              {{ ignisConfigured
+                ? $t('settings.ignis.configured', { hint: ignisHint || '••••' })
+                : $t('settings.ignis.missing') }}
+            </div>
+            <input
+              class="ctv-text-input ctv:w-full ctv:box-border"
+              type="password"
+              autocomplete="off"
+              :value="ignisInput"
+              :placeholder="$t('settings.ignis.placeholder')"
+              @input="ignisInput = ($event.target as HTMLInputElement).value"
+            >
+            <div class="ctv:flex ctv:items-center ctv:gap-1.5">
+              <button
+                :class="chipBtnClass"
+                :disabled="ignisSaving || !ignisInput.trim()"
+                @click="saveIgnisTokenValue"
+              >
+                {{ ignisSaving ? $t('settings.saving') : $t('settings.ignis.save') }}
+              </button>
+              <span v-if="ignisError" class="ctv:text-2xs ctv:text-destructive-background">{{ ignisError }}</span>
+              <span v-else-if="ignisFlash" class="ctv:text-2xs ctv:text-emerald-400">{{ ignisFlash }}</span>
+            </div>
+          </div>
+        </SettingsSection>
+
+        <SettingsSection
           v-if="teamGitVisible"
           :section="{ id: 'teamGit', master: null, rows: [], experimental: false, dirty: false, probe: null }"
           :title="$t('settings.teamGit.section')"
@@ -137,7 +176,7 @@
         </SettingsSection>
 
         <div
-          v-if="!sections.length && !teamGitVisible && !pluginUpdateVisible"
+          v-if="!sections.length && !teamGitVisible && !ignisVisible && !pluginUpdateVisible"
           class="ctv:py-5 ctv:px-1.5 ctv:text-center ctv:italic ctv:text-muted-foreground/60"
         >
           {{ $t('settings.noMatch') }}
@@ -157,7 +196,12 @@ import { computed, ref, watch } from 'vue'
 import { TooltipProvider } from 'reka-ui'
 import { useI18n } from 'vue-i18n'
 
-import { fetchNativeWorkflowGitToken, saveNativeWorkflowGitToken } from '@/api'
+import {
+  fetchIgnisToken,
+  fetchNativeWorkflowGitToken,
+  saveIgnisToken,
+  saveNativeWorkflowGitToken,
+} from '@/api'
 import SettingItem from '@/components/sidebar/SettingItem.vue'
 import PluginUpdateSettings from '@/components/sidebar/PluginUpdateSettings.vue'
 import SettingsSection from '@/components/sidebar/SettingsSection.vue'
@@ -202,6 +246,24 @@ const teamGitInput = ref('')
 const teamGitSaving = ref(false)
 const teamGitError = ref('')
 const teamGitFlash = ref('')
+const ignisConfigured = ref(false)
+const ignisHint = ref('')
+const ignisInput = ref('')
+const ignisSaving = ref(false)
+const ignisError = ref('')
+const ignisFlash = ref('')
+
+const ignisVisible = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return true
+  return [
+    t('settings.ignis.section'),
+    t('settings.ignis.desc'),
+    t('settings.ignis.save'),
+    'ignis',
+    'token',
+  ].join(' ').toLowerCase().includes(q)
+})
 
 const teamGitVisible = computed(() => {
   const q = query.value.trim().toLowerCase()
@@ -249,6 +311,39 @@ async function refreshTeamGitToken() {
   }
 }
 
+async function refreshIgnisToken() {
+  try {
+    const res = await fetchIgnisToken()
+    ignisConfigured.value = !!res.configured
+    ignisHint.value = res.hint || ''
+  } catch {
+    /* keep last known */
+  }
+}
+
+async function saveIgnisTokenValue() {
+  const token = ignisInput.value.trim()
+  if (!token) return
+  ignisSaving.value = true
+  ignisError.value = ''
+  ignisFlash.value = ''
+  try {
+    const res = await saveIgnisToken(token)
+    if (!res.ok) {
+      ignisError.value = res.error || t('settings.ignis.saveFailed')
+      return
+    }
+    ignisConfigured.value = !!res.configured
+    ignisHint.value = res.hint || ''
+    ignisInput.value = ''
+    ignisFlash.value = t('settings.ignis.saveOk')
+  } catch (e: any) {
+    ignisError.value = String(e?.message || e)
+  } finally {
+    ignisSaving.value = false
+  }
+}
+
 async function saveTeamGitToken() {
   const token = teamGitInput.value.trim()
   if (!token) return
@@ -275,7 +370,10 @@ async function saveTeamGitToken() {
 watch(
   () => props.active,
   (on) => {
-    if (on) void refreshTeamGitToken()
+    if (on) {
+      void refreshIgnisToken()
+      void refreshTeamGitToken()
+    }
   },
   { immediate: true },
 )

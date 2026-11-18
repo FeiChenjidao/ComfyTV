@@ -51,6 +51,7 @@ import {
   NativeWorkflowGitStatusSchema,
   NativeWorkflowGitTokenSchema,
   PluginUpdateStatusSchema,
+  IgnisTokenSchema,
 } from './schemas'
 import type {
   WorkflowConfig,
@@ -60,6 +61,7 @@ import type {
   NativeWorkflowGitStatus,
   NativeWorkflowGitToken,
   PluginUpdateStatus,
+  IgnisToken,
   AdoptAssetsResult,
   ApiSidecarResult,
   BackupResult,
@@ -554,6 +556,14 @@ export function applyPluginUpdate(): Promise<PluginUpdateStatus> {
 
 export function rollbackPluginUpdate(): Promise<PluginUpdateStatus> {
   return apiSend('/comfytv/plugin/rollback', 'POST', PluginUpdateStatusSchema, {})
+}
+
+export function fetchIgnisToken(): Promise<IgnisToken> {
+  return apiFetch('/comfytv/ignis/token', IgnisTokenSchema)
+}
+
+export function saveIgnisToken(token: string): Promise<IgnisToken> {
+  return apiSend('/comfytv/ignis/token', 'PUT', IgnisTokenSchema, { token })
 }
 
 export * from './schemas'
