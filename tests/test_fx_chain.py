@@ -162,6 +162,18 @@ class TestDeliveryParams:
             first = next(c.decode(c.streams.video[0]))
             assert first.format.name == 'yuv422p10le'
 
+    def test_vp8_webm(self, clip):
+        from ComfyTV.runners.media import get_video_info, localize
+        from ComfyTV.runners.media_filter import has_encoder
+        if not has_encoder('libvpx'):
+            pytest.skip("no libvpx encoder in this build")
+        out = _chain().execute(project_id='p1', out_codec='vp8',
+                               video=_darker(clip))
+        url = out.values[0]
+        assert str(localize(url)).endswith('.webm')
+        assert _vcodec_name(url) == 'vp8'
+        assert get_video_info(url)['has_audio'] is False
+
     @needs_torch
     def test_vp9_alpha_webm(self, clip):
         from ComfyTV.nodes.stages.video_keying import KeyerStage

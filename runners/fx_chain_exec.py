@@ -462,6 +462,12 @@ def run_fx_chain(view_url: str, entries, progress=None,
                  delivery=None) -> str:
     d = _delivery_norm(delivery)
     alpha_delivery = d['codec'] == 'vp9_alpha'
+    webm_delivery = d['codec'] in {'vp8', 'vp9_alpha'}
+    if d['codec'] == 'vp8' and not has_encoder('libvpx'):
+        raise RuntimeError(
+            "FX Chain: this PyAV build lacks the libvpx encoder needed "
+            "for WebM VP8 output."
+        )
     if alpha_delivery and not has_encoder('libvpx-vp9'):
         raise RuntimeError(
             "FX Chain: this PyAV build lacks the libvpx-vp9 encoder needed "
@@ -476,10 +482,10 @@ def run_fx_chain(view_url: str, entries, progress=None,
     video_entries = [e for e in entries if e['domain'] == 'video']
     audio_specs = [tuple(s) for e in entries if e['domain'] == 'audio'
                    for s in e['specs']]
-    if alpha_delivery and audio_specs:
+    if webm_delivery and audio_specs:
         raise RuntimeError(
-            "FX Chain: WebM alpha delivery does not support audio FX. "
-            "Render the transparent video and audio separately."
+            "FX Chain: WebM delivery does not support audio FX. "
+            "Render the video and audio separately."
         )
 
     segments = []
@@ -541,7 +547,7 @@ def run_fx_chain(view_url: str, entries, progress=None,
                 if d['fps'] > 0:
                     out_fps = d['fps']
                 kwargs = _delivery_encode_kwargs(d)
-                if alpha_delivery:
+                if webm_delivery:
                     kwargs['keep_audio'] = False
             cur = filter_video(cur, specs, out_fps=out_fps,
                                progress=seg_progress, **kwargs)
@@ -560,6 +566,8 @@ def run_fx_chain(view_url: str, entries, progress=None,
         and not alpha_delivery
     if needs_delivery_pass:
         kwargs = _delivery_encode_kwargs(d)
+        if webm_delivery:
+            kwargs['keep_audio'] = False
         cur = filter_video(cur, _delivery_specs(d) or [('null', None)],
                            out_fps=d['fps'] or None,
                            **kwargs)

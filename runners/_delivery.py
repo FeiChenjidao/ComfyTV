@@ -12,6 +12,14 @@ DELIVERY_CODECS = {
                'quality': {'draft': {'profile': '0'},
                            'standard': {'profile': '2'},
                            'high': {'profile': '3'}}},
+    'vp8': {
+        'vcodec': 'libvpx', 'ext': '.webm', 'pix_fmt': 'yuv420p',
+        'quality': {
+            'draft': {'crf': '40', 'b': '0', 'cpu-used': '8'},
+            'standard': {'crf': '32', 'b': '0', 'cpu-used': '4'},
+            'high': {'crf': '20', 'b': '0', 'cpu-used': '2'},
+        },
+    },
     'vp9_alpha': {
         'vcodec': 'libvpx-vp9', 'ext': '.webm', 'pix_fmt': 'yuva420p',
         'quality': {

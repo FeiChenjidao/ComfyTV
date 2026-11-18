@@ -33,7 +33,7 @@ translationSourceHash: "123d233c36606076"
 交付帧率：`source`（默认）、`24`、`25`、`30`、`50`、`60`。
 
 ### out_codec（输出编码器）
-输出编码器：`h264`（默认）、`hevc`、`prores`、`vp9_alpha`。`vp9_alpha` 输出带半透明通道的 WebM；透明交付不包含音轨，音频请单独导出。
+输出编码器：`h264`（默认）、`hevc`、`prores`、`vp8`、`vp9_alpha`。`vp8` 输出不透明 WebM；`vp9_alpha` 输出带半透明通道的 WebM。WebM 交付不包含音轨，音频请单独导出。
 
 ### out_quality（输出质量）
 编码质量：`draft`、`standard`（默认）、`high`。
@@ -50,7 +50,7 @@ translationSourceHash: "123d233c36606076"
 - 把 FX Chain 放在视频线的最后——上游全是 spec，真正渲染发生在本节点。
 - 单次转码比在每个 FX 阶段各自重编码质量更好、更快；代价是各效果之间没有中间文件。
 - 用 `source` 的尺寸/帧率保留原样；只在这里为最终交付做降分辨率或改帧率。
-- `prores` 用于剪辑/母带交付；`h264`/`hevc` 用于分发；`vp9_alpha` 用于网页合成或需要半透明通道的素材。
+- `prores` 用于剪辑/母带交付；`h264`/`hevc` 用于分发；`vp8` 用于兼容性优先的不透明 WebM；`vp9_alpha` 用于网页合成或需要半透明通道的素材。
 - 使用 `vp9_alpha` 时，把输出 `alpha` 的 Keyer、PIK 或 Select0r 放在 FX 链最后；界面会自动使用源尺寸、源帧率和 `bt709`。
 
 ## 类型与 Bridge

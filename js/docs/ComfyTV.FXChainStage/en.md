@@ -26,7 +26,7 @@ Delivery short-side resolution: `source` (default, keep original), `2160`, `1440
 Delivery frame rate: `source` (default), `24`, `25`, `30`, `50`, `60`.
 
 ### out_codec
-Output codec: `h264` (default), `hevc`, `prores`, `vp9_alpha`. `vp9_alpha` writes a WebM with transparency; alpha delivery has no audio track, so export audio separately.
+Output codec: `h264` (default), `hevc`, `prores`, `vp8`, `vp9_alpha`. `vp8` writes an opaque WebM; `vp9_alpha` writes a WebM with transparency. WebM delivery has no audio track, so export audio separately.
 
 ### out_quality
 Encode quality: `draft`, `standard` (default), `high`.
@@ -43,7 +43,7 @@ Encode quality: `draft`, `standard` (default), `high`.
 - Keep FX Chain last on the video wire — everything upstream is a spec, and this node is where it actually renders.
 - One pass means better quality and speed than re-encoding at each FX stage; the trade-off is you don't get an intermediate file between effects.
 - Use `source` size/fps to preserve the original; only downscale or change frame rate here for the final deliverable.
-- `prores` is for editorial/mezzanine delivery; `h264`/`hevc` for distribution; `vp9_alpha` is for web compositing or assets that need transparency.
+- `prores` is for editorial/mezzanine delivery; `h264`/`hevc` for distribution; `vp8` is for compatibility-focused opaque WebM; `vp9_alpha` is for web compositing or assets that need transparency.
 - With `vp9_alpha`, keep the alpha-output Keyer, PIK, or Select0r at the end of the FX chain; the UI uses source size, source frame rate, and `bt709`.
 
 ## Types and bridges
