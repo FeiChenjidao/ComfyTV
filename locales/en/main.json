@@ -178,6 +178,8 @@
     },
     "stageHint": "Connect references, press ↑ to generate",
     "apiCostHint": "Estimated workflow API cost",
+    "ignisCredits": "Ignis credits",
+    "ignisCreditsHint": "This generation is billed to the configured Ignis account; the Ignis service determines the final charge",
     "toolbar": { "generate": "Generate" },
     "pickerHint": "Connect an upstream batch, click to pick",
     "cropHint": "Connect an upstream image to start cropping",
@@ -652,8 +654,8 @@
       "saveFailed": "Save failed"
     },
     "ignis": {
-      "section": "Ignis video generation",
-      "desc": "Used for Seedance, Kling, Sora, and PixVerse video generation. The token stays on this machine and is never written into workflows or Git.",
+      "section": "Ignis image and video generation",
+      "desc": "Used for Ignis image models and Seedance, Kling, Sora, and PixVerse video generation. The token stays on this machine and is never written into workflows or Git.",
       "configured": "Configured ({hint})",
       "missing": "No token configured",
       "placeholder": "Paste Ignis token (ignis_ct_…)",

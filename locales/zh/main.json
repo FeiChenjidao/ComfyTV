@@ -178,6 +178,8 @@
     },
     "stageHint": "连入参考，点 ↑ 生成",
     "apiCostHint": "估算工作流 API 费用",
+    "ignisCredits": "Ignis 积分",
+    "ignisCreditsHint": "本次生成由 Ignis 账户结算积分，实际扣费以 Ignis 服务端为准",
     "toolbar": { "generate": "生成" },
     "pickerHint": "连入上游批次，点选一张",
     "cropHint": "连入上游图片开始裁剪",
@@ -659,8 +661,8 @@
       "saveFailed": "保存失败"
     },
     "ignis": {
-      "section": "Ignis 视频生成",
-      "desc": "用于 Seedance、Kling、Sora 和 PixVerse 视频生成。Token 只保存在本机，不会写入工作流或提交到 Git。",
+      "section": "Ignis 图片和视频生成",
+      "desc": "用于 Ignis 图片模型以及 Seedance、Kling、Sora 和 PixVerse 视频生成。Token 只保存在本机，不会写入工作流或提交到 Git。",
       "configured": "已配置（{hint}）",
       "missing": "尚未配置 Token",
       "placeholder": "粘贴 Ignis Token（ignis_ct_…）",

@@ -10,10 +10,10 @@
       />
     </div>
     <span
-      v-if="costVisible"
+      v-if="displayCostVisible"
       class="v2-fsel__cost"
-      :title="costDetail || t('v2.apiCostHint')"
-    >{{ costLabel }}</span>
+      :title="displayCostDetail"
+    >{{ displayCostLabel }}</span>
     <button
       v-if="linkKind"
       type="button"
@@ -119,30 +119,35 @@ const { values, widgetOf, write } = useWidgetValues(
 )
 
 const imagePanelMode = ref<'nanobanana' | 'gpt' | 'seedream'>('nanobanana')
+const boundOnlyFields = ref<Set<string> | null>(null)
+const remoteProvider = ref('')
 let panelRequest = 0
 watch(() => String(values.workflow ?? ''), async (label) => {
-  if (!props.gptImageOptions || !label) {
+  const request = ++panelRequest
+  if (!label) {
     imagePanelMode.value = 'nanobanana'
+    boundOnlyFields.value = null
+    remoteProvider.value = ''
     return
   }
-  const request = ++panelRequest
   try {
-    const config = await fetchWorkflowConfig('image', label)
+    const config = await fetchWorkflowConfig(props.linkKind ?? 'image', label)
     if (request === panelRequest) {
       const panel = String(config.meta?.image_panel ?? '')
       imagePanelMode.value = panel === 'gpt' || panel === 'seedream' ? panel : 'nanobanana'
+      remoteProvider.value = String(config.meta?.remote_provider ?? '')
+      boundOnlyFields.value = config.meta?.bound_only_params === true
+        ? new Set(config.exposed_widgets.map(widget => String(widget.widget_name)))
+        : null
     }
   } catch {
-    if (request === panelRequest) imagePanelMode.value = 'nanobanana'
+    if (request === panelRequest) {
+      imagePanelMode.value = 'nanobanana'
+      boundOnlyFields.value = null
+      remoteProvider.value = ''
+    }
   }
 }, { immediate: true })
-
-const IGNIS_AUTO_FIELDS: Record<string, Set<string>> = {
-  'Ignis Seedance 2.5': new Set(['aspect_ratio', 'resolution']),
-  'Ignis Kling': new Set(),
-  'Ignis Sora': new Set(['aspect_ratio']),
-  'Ignis PixVerse': new Set(),
-}
 
 function autoHas(name: string): boolean {
   if (!has(name)) return false
@@ -151,8 +156,7 @@ function autoHas(name: string): boolean {
     && String(values.mode ?? '') !== '\u6587\u751f\u89c6\u9891'
     && name === 'aspect_ratio'
   ) return false
-  const fields = IGNIS_AUTO_FIELDS[String(values.workflow ?? '')]
-  return fields ? fields.has(name) : true
+  return boundOnlyFields.value ? boundOnlyFields.value.has(name) : true
 }
 
 function sv(name: string): string {
@@ -186,6 +190,16 @@ const {
   detail: costDetail,
   visible: costVisible,
 } = useWorkflowApiCostBadge(props.getNode, () => sv('workflow'), costTick)
+
+const displayCostVisible = computed(() => remoteProvider.value === 'ignis' || costVisible.value)
+const displayCostLabel = computed(() => (
+  remoteProvider.value === 'ignis' ? t('v2.ignisCredits') : costLabel.value
+))
+const displayCostDetail = computed(() => (
+  remoteProvider.value === 'ignis'
+    ? t('v2.ignisCreditsHint')
+    : (costDetail.value || t('v2.apiCostHint'))
+))
 
 function isNumberWidget(name: string): boolean {
   const type = String(widgetOf(name)?.type ?? '')

@@ -5,27 +5,27 @@ import json
 
 
 def test_load_ignis_config_prefers_environment(monkeypatch, tmp_path):
-    from ComfyTV.runners import ignis_video
+    from ComfyTV.runners import _ignis
 
     monkeypatch.setenv("IGNIS_BASE_URL", "https://example.invalid/")
     monkeypatch.setenv("IGNIS_CLI_TOKEN", "env-token")
-    monkeypatch.setattr(ignis_video.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(_ignis.Path, "home", lambda: tmp_path)
 
-    assert ignis_video.load_ignis_config() == (
+    assert _ignis.load_ignis_config() == (
         "https://example.invalid",
         "env-token",
     )
 
 
 def test_load_ignis_config_reads_compatible_config(monkeypatch, tmp_path):
-    from ComfyTV.runners import ignis_video
+    from ComfyTV.runners import _ignis
 
     monkeypatch.delenv("IGNIS_BASE_URL", raising=False)
     monkeypatch.delenv("IGNIS_CLI_TOKEN", raising=False)
     monkeypatch.delenv("MAI_BASE_URL", raising=False)
     monkeypatch.delenv("MAI_CLI_TOKEN", raising=False)
-    monkeypatch.setattr(ignis_video, "_plugin_root", lambda: tmp_path / "plugin")
-    monkeypatch.setattr(ignis_video.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(_ignis, "_plugin_root", lambda: tmp_path / "plugin")
+    monkeypatch.setattr(_ignis.Path, "home", lambda: tmp_path)
     config_dir = tmp_path / ".ignis"
     config_dir.mkdir()
     (config_dir / "config.json").write_text(
@@ -33,7 +33,7 @@ def test_load_ignis_config_reads_compatible_config(monkeypatch, tmp_path):
         encoding="utf-8",
     )
 
-    assert ignis_video.load_ignis_config() == (
+    assert _ignis.load_ignis_config() == (
         "https://ignis.example",
         "config-token",
     )
@@ -183,7 +183,7 @@ def test_invalid_mode_is_inferred_from_connected_materials():
 
 
 def test_runner_builds_transition_payload(monkeypatch, tmp_path):
-    from ComfyTV.runners import ignis_video
+    from ComfyTV.runners import _ignis, ignis_video
     from ComfyTV.runners.base import RunnerContext
 
     output_root = tmp_path / "output"
@@ -198,7 +198,7 @@ def test_runner_builds_transition_payload(monkeypatch, tmp_path):
         lambda: ("https://ignis.example", "token"),
     )
     monkeypatch.setattr(
-        ignis_video,
+        _ignis,
         "view_url_to_path",
         lambda value: start if "start" in value else end,
     )

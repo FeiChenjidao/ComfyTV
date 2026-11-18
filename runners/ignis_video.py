@@ -1,25 +1,23 @@
 from __future__ import annotations
 
-import asyncio
-import json
-import os
-import re
 import uuid
 from pathlib import Path
-from urllib.parse import quote
 
 import aiohttp
 import folder_paths
 
-from ._media_paths import path_to_view_url, view_url_to_path
+from ._ignis import (
+    IgnisClient as _IgnisClient,
+    client_timeout,
+    download_media,
+    failure_message as _failure_message,
+    load_ignis_config,
+    output_filename,
+    upload_values as _upload_values,
+    values as _values,
+)
+from ._media_paths import path_to_view_url
 from .base import Runner, RunnerContext
-
-
-DEFAULT_BASE_URL = "https://ignis-cli.funplus-marketing.ai"
-MEDIA_CDN_BASE = "https://cdn-asia.funplus-marketing.ai/ultra"
-CLIENT_VERSION = "0.12.4"
-WAIT_TIMEOUT_S = 20 * 60
-TERMINAL_STATUSES = {"completed", "failed"}
 
 MODE_TEXT = "\u6587\u751f\u89c6\u9891"
 MODE_IMAGE = "\u56fe\u751f\u89c6\u9891"
@@ -114,178 +112,12 @@ IGNIS_VIDEO_SPECS = {
     },
 }
 
-_SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
-
-
-def _plugin_root() -> Path:
-    return Path(__file__).resolve().parents[1]
-
-
-def _read_text(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig").strip()
-    except OSError:
-        return ""
-
-
-def load_ignis_config() -> tuple[str, str]:
-    base_url = (
-        os.environ.get("IGNIS_BASE_URL", "").strip()
-        or os.environ.get("MAI_BASE_URL", "").strip()
-    )
-    token = (
-        os.environ.get("IGNIS_CLI_TOKEN", "").strip()
-        or os.environ.get("MAI_CLI_TOKEN", "").strip()
-    )
-    secrets_dir = _plugin_root() / "secrets"
-    base_url = base_url or _read_text(secrets_dir / "ignis-base-url")
-    token = token or _read_text(secrets_dir / "ignis-token")
-
-    if not base_url or not token:
-        try:
-            config = json.loads(
-                (Path.home() / ".ignis" / "config.json").read_text(
-                    encoding="utf-8-sig"
-                )
-            )
-        except (OSError, ValueError, TypeError):
-            config = {}
-        base_url = base_url or str(
-            config.get("baseUrl") or config.get("base_url") or ""
-        ).strip()
-        token = token or str(
-            config.get("cliToken") or config.get("cli_token") or ""
-        ).strip()
-
-    if not token:
-        raise RuntimeError(
-            "Ignis token is not configured. Set IGNIS_CLI_TOKEN or save it to "
-            "ComfyTV/secrets/ignis-token."
-        )
-    return (base_url or DEFAULT_BASE_URL).rstrip("/"), token
-
-
-async def _read_json_response(response: aiohttp.ClientResponse) -> dict:
-    text = await response.text()
-    try:
-        payload = json.loads(text) if text else {}
-    except ValueError:
-        payload = {"message": text}
-    if response.status >= 400:
-        message = response.reason
-        if isinstance(payload, dict):
-            message = payload.get("message") or payload.get("detail") or message
-        raise RuntimeError(f"Ignis request failed ({response.status}): {message}")
-    if not isinstance(payload, dict):
-        raise RuntimeError("Ignis returned an invalid JSON response.")
-    return payload
-
-
-class _IgnisClient:
-    def __init__(self, base_url: str, token: str):
-        self.base_url = base_url.rstrip("/")
-        self.token = token
-
-    def _headers(self) -> dict[str, str]:
-        return {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {self.token}",
-            "X-Ignis-CLI-Version": CLIENT_VERSION,
-        }
-
-    async def upload(self, session: aiohttp.ClientSession, path: Path) -> dict:
-        form = aiohttp.FormData()
-        with path.open("rb") as handle:
-            form.add_field(
-                "file",
-                handle,
-                filename=path.name,
-                content_type="application/octet-stream",
-            )
-            async with session.post(
-                f"{self.base_url}/api/cli/files",
-                headers=self._headers(),
-                data=form,
-            ) as response:
-                return await _read_json_response(response)
-
-    async def submit(self, session: aiohttp.ClientSession, payload: dict) -> dict:
-        async with session.post(
-            f"{self.base_url}/api/cli/imagine",
-            headers={**self._headers(), "Content-Type": "application/json"},
-            json=payload,
-        ) as response:
-            return await _read_json_response(response)
-
-    async def get_task(self, session: aiohttp.ClientSession, task_id: str) -> dict:
-        async with session.get(
-            f"{self.base_url}/api/cli/imagine/{quote(task_id, safe='')}",
-            headers=self._headers(),
-        ) as response:
-            return await _read_json_response(response)
-
-    async def wait(self, session: aiohttp.ClientSession, task: dict) -> dict:
-        started = asyncio.get_running_loop().time()
-        current = task
-        while str(current.get("status") or "") not in TERMINAL_STATUSES:
-            task_id = str(current.get("task_id") or "")
-            if not task_id:
-                raise RuntimeError("Ignis task response did not include task_id.")
-            if asyncio.get_running_loop().time() - started >= WAIT_TIMEOUT_S:
-                raise RuntimeError(
-                    f"Ignis task {task_id} timed out after 20 minutes."
-                )
-            delay_ms = max(
-                500, min(int(current.get("poll_interval_ms") or 2000), 30000)
-            )
-            await asyncio.sleep(delay_ms / 1000)
-            current = await self.get_task(session, task_id)
-        return current
-
-
-def _media_url(item: dict) -> str:
-    url = str(item.get("url") or "").strip()
-    if url:
-        return url
-    file_id = str(item.get("file_id") or "").strip()
-    if not file_id:
-        raise RuntimeError("Ignis completed without a downloadable video file.")
-    encoded = "/".join(quote(part, safe="") for part in file_id.split("/"))
-    return f"{MEDIA_CDN_BASE}/{encoded}"
-
-
-def _output_filename(item: dict) -> str:
-    file_id = str(item.get("file_id") or "video.mp4").replace("\\", "/")
-    name = _SAFE_FILENAME_RE.sub("_", file_id.rsplit("/", 1)[-1]).strip("._")
-    return name or "video.mp4"
 
 
 async def _download_video(
     session: aiohttp.ClientSession, item: dict, destination: Path
 ) -> None:
-    async with session.get(_media_url(item)) as response:
-        if response.status >= 400:
-            raise RuntimeError(f"Ignis video download failed ({response.status}).")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        with destination.open("wb") as handle:
-            async for chunk in response.content.iter_chunked(1024 * 1024):
-                handle.write(chunk)
-
-
-def _failure_message(task: dict) -> str:
-    failed = (task.get("result") or {}).get("failed", [])
-    if failed:
-        first = failed[0] if isinstance(failed[0], dict) else {}
-        return str(
-            first.get("message")
-            or first.get("error")
-            or first.get("status")
-            or "generation failed"
-        )
-    error = task.get("error")
-    if isinstance(error, dict):
-        return str(error.get("message") or error.get("detail") or error)
-    return str(error or "generation failed")
+    await download_media(session, item, destination, media_label="video")
 
 
 def _build_payload(
@@ -365,43 +197,6 @@ def _build_payload(
     if audio_urls:
         payload["audio_urls"] = audio_urls
     return payload
-
-
-def _values(value) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, dict):
-        raw = value.values()
-    elif isinstance(value, (list, tuple)):
-        raw = value
-    else:
-        raw = [value]
-    return [str(item).strip() for item in raw if str(item or "").strip()]
-
-
-async def _upload_values(
-    client: _IgnisClient,
-    session: aiohttp.ClientSession,
-    values: list[str],
-) -> list[str]:
-    out: list[str] = []
-    for value in values:
-        if value.startswith(("http://", "https://")):
-            raise RuntimeError(
-                "Remote reference URLs are not accepted. Load the media into ComfyTV first."
-            )
-        path = view_url_to_path(value)
-        if path is None:
-            if value.startswith(("/view?", "/api/view?")):
-                raise RuntimeError(f"Reference media does not exist: {value}")
-            out.append(value)
-            continue
-        upload = await client.upload(session, path)
-        file_id = str(upload.get("file_id") or "").strip()
-        if not file_id:
-            raise RuntimeError("Ignis upload response did not include file_id.")
-        out.append(file_id)
-    return out
 
 
 def _widget(
@@ -576,22 +371,26 @@ class IgnisVideoRunner(Runner):
 
         base_url, token = load_ignis_config()
         client = _IgnisClient(base_url, token)
-        timeout = aiohttp.ClientTimeout(
-            total=None, connect=30, sock_connect=30, sock_read=120
-        )
+        timeout = client_timeout()
         async with aiohttp.ClientSession(timeout=timeout) as session:
             file_ids = await _upload_values(
                 client,
                 session,
                 images[:1] if mode == MODE_TRANSITION else images,
+                progress=ctx.progress,
             )
             tail_file_ids = await _upload_values(
                 client,
                 session,
                 images[1:2] if mode == MODE_TRANSITION else [],
+                progress=ctx.progress,
             )
-            video_urls = await _upload_values(client, session, videos)
-            audio_urls = await _upload_values(client, session, audio)
+            video_urls = await _upload_values(
+                client, session, videos, progress=ctx.progress
+            )
+            audio_urls = await _upload_values(
+                client, session, audio, progress=ctx.progress
+            )
             payload = _build_payload(
                 prompt=prompt,
                 model=self.model,
@@ -615,7 +414,11 @@ class IgnisVideoRunner(Runner):
                 video_urls=video_urls,
                 audio_urls=audio_urls,
             )
-            task = await client.wait(session, await client.submit(session, payload))
+            task = await client.wait(
+                session,
+                await client.submit(session, payload),
+                progress=ctx.progress,
+            )
             successful = (task.get("result") or {}).get("successful", [])
             if task.get("status") != "completed" or not successful:
                 raise RuntimeError(
@@ -630,7 +433,7 @@ class IgnisVideoRunner(Runner):
                 / "ComfyTV"
                 / "ignis"
                 / uuid.uuid4().hex
-                / _output_filename(item)
+                / output_filename(item, "video.mp4")
             )
             await _download_video(session, item, destination)
             return path_to_view_url(destination, "output")

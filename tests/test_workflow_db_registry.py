@@ -248,7 +248,8 @@ class TestHiddenWorkflow:
         _, ids = self._seed_two(tmp_path, monkeypatch)
         wdb.set_hidden_workflow(ids["bbb"], True)
         refresh_registry()
-        assert RUNNER_REGISTRY.labels_for_kind("image") == ["aaa"]
+        labels = RUNNER_REGISTRY.labels_for_kind("image")
+        assert [label for label in labels if not label.startswith("Ignis ")] == ["aaa"]
         assert RUNNER_REGISTRY.by_label("bbb", "image") is not None
 
     def test_hidden_survives_rescan(self, reset_db, tmp_path, monkeypatch):
