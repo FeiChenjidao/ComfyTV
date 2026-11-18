@@ -521,6 +521,9 @@
     },
     "MidiEditorStage": {
       "display_name": "MIDI 编辑器"
+    },
+    "SaveWebM": {
+      "display_name": "保存 WebM (ComfyTV)"
     }
   },
   "ComfyTV_AssetAudioLoaderStage": {

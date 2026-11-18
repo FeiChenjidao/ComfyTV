@@ -122,6 +122,7 @@ from .split_part import SplitPartStage, MaskCleanup
 from .batch_loop import BatchLoop
 from .custom_stage import CustomStage
 from ..file3d_first import File3DFirst
+from ..save_webm import SaveWebM
 
 
 def stage_classes() -> list:
@@ -194,7 +195,7 @@ def stage_classes() -> list:
         MaterialStage,
         SplitPartStage, MaskCleanup, BatchLoop,
         CustomStage,
-        File3DFirst,
+        File3DFirst, SaveWebM,
         *_bridge_classes(),
     ]
 

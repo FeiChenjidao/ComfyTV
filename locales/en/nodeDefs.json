@@ -521,6 +521,9 @@
     },
     "MidiEditorStage": {
       "display_name": "MIDI Editor"
+    },
+    "SaveWebM": {
+      "display_name": "Save WebM (ComfyTV)"
     }
   },
   "ComfyTV_AssetAudioLoaderStage": {

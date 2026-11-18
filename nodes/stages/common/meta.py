@@ -7,7 +7,7 @@ PENDING_STAGES: frozenset[str] = frozenset({
 })
 
 NON_STAGE_NODES: frozenset[str] = frozenset({
-    'MaskCleanup', 'MakeProxyStage', 'BatchLoop', 'File3DFirst',
+    'MaskCleanup', 'MakeProxyStage', 'BatchLoop', 'File3DFirst', 'SaveWebM',
 })
 
 STAGE_META: dict[str, dict] = {
