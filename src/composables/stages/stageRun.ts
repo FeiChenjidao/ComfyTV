@@ -1,4 +1,4 @@
-import { cancelRemoteJob, remoteRun } from '@/api'
+import { cancelRemoteJob, cancelStageRun, remoteRun, startStageRun } from '@/api'
 import { isAutoPickerEnabled } from '@/composables/stages/autoPicker'
 import { outputHasLinks, spawnConsumingNode } from '@/composables/stages/spawnFollowUp'
 import { ensureStageUid } from '@/composables/stages/stageIdentity'
@@ -42,6 +42,7 @@ export function createStageRun(opts: {
 
   let runningPromptId: string | null = null
   let runningJobId: string | null = null
+  let runningStageRunId: string | null = null
   let watchdogTimer: ReturnType<typeof setTimeout> | null = null
   const clearWatchdog = () => {
     if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null }
@@ -146,15 +147,35 @@ export function createStageRun(opts: {
         return
       }
 
-      ;(pm as any).__comfytvOwnRun = true
-      const queueResp = await a.api.queuePrompt(0, pm, { partialExecutionTargets: [targetId] })
-      runningPromptId = queueResp?.prompt_id ? String(queueResp.prompt_id) : null
+      if (isBridgeIn) {
+        ;(pm as any).__comfytvOwnRun = true
+        const queueResp = await a.api.queuePrompt(0, pm, { partialExecutionTargets: [targetId] })
+        runningPromptId = queueResp?.prompt_id ? String(queueResp.prompt_id) : null
+        return
+      }
+
+      const extraData: Record<string, string> = { comfy_usage_source: 'comfyui-frontend' }
+      if (typeof a.api?.authToken === 'string' && a.api.authToken) {
+        extraData.auth_token_comfy_org = a.api.authToken
+      }
+      if (typeof a.api?.apiKey === 'string' && a.api.apiKey) {
+        extraData.api_key_comfy_org = a.api.apiKey
+      }
+      const localRun = await startStageRun({
+        prompt: pm.output,
+        target_node_id: targetId,
+        workflow: pm.workflow,
+        client_id: a.api?.clientId ? String(a.api.clientId) : undefined,
+        extra_data: extraData,
+      })
+      runningStageRunId = localRun.job_id
     } catch (e) {
-      console.error('[ComfyTV/stage] queuePrompt failed', e)
+      console.error('[ComfyTV/stage] run failed', e)
       const err = extractRunError(e, node.id)
       store.applyExecutionError(state, err)
       runningPromptId = null
       runningJobId = null
+      runningStageRunId = null
     }
   }
 
@@ -165,6 +186,14 @@ export function createStageRun(opts: {
         await cancelRemoteJob(runningJobId)
       } catch (e) {
         console.error('[ComfyTV/stage] remote cancel failed', e)
+      }
+      return
+    }
+    if (runningStageRunId) {
+      try {
+        await cancelStageRun(runningStageRunId)
+      } catch (e) {
+        console.error('[ComfyTV/stage] local cancel failed', e)
       }
       return
     }
@@ -282,6 +311,34 @@ export function createStageRun(opts: {
     }
   }
 
+  const onStageRun = (d: any) => {
+    if (!d) return
+    if (!runningStageRunId && state.running && d.job_id) {
+      runningStageRunId = String(d.job_id)
+    }
+    if (!runningStageRunId) return
+    if (runningStageRunId && d.job_id && d.job_id !== runningStageRunId) return
+    if (d.status === 'running') return
+    runningStageRunId = null
+    if (d.status === 'done') {
+      store.applyExecutedPayload(state, d.ui || {})
+      if (kind === 'model' && state.variant === 'generator') {
+        mergeModelOutputIntoPool(node, state, store, state.output)
+      }
+    } else if (d.status === 'cancelled') {
+      store.applyExecutionError(state, {
+        message: t('error.cancelled'),
+        type: 'Cancelled',
+      })
+    } else if (d.status === 'error') {
+      store.applyExecutionError(state, {
+        message: String(d.error || 'execution failed'),
+        type: String(d.error_type || 'ExecutionError'),
+        traceback: Array.isArray(d.traceback) ? d.traceback.join('') : d.traceback,
+      })
+    }
+  }
+
   const nodeRunHandlers = {
     getNodeId: () => String(node.id),
     onProgress,
@@ -291,6 +348,7 @@ export function createStageRun(opts: {
     onSuccess: onExecSuccess,
     onStatus,
     onRemoteJob,
+    onStageRun,
   }
   executionStore.registerNodeHandlers(nodeRunHandlers)
 

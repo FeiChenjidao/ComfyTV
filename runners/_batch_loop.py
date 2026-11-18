@@ -24,9 +24,19 @@ def workflow_has_batch_loop(api_json: dict | None) -> bool:
     return False
 
 
-def batch_loop_iterations(config: dict | None, options: dict | None) -> int:
-    """Return N>1 only when the workflow contains BatchLoop; else 1."""
-    if not workflow_has_batch_loop((config or {}).get("api_json")):
+def batch_loop_iterations(
+    config: dict | None,
+    options: dict | None,
+    *,
+    stage_kind: str | None = None,
+) -> int:
+    """Return the Stage-level repeat count.
+
+    Image workflows require an explicit BatchLoop marker because many of them
+    already implement native latent batching. Video generation has no shared
+    native batch contract, so its Stage batch always means repeated jobs.
+    """
+    if stage_kind != "video" and not workflow_has_batch_loop((config or {}).get("api_json")):
         return 1
     raw = (options or {}).get("batch_size", 1)
     try:

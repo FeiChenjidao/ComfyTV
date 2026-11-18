@@ -3,7 +3,7 @@
     <template v-if="kind === 'video'">
       <ProxiedVideo
         v-if="resolvedUrl"
-        :src="url!"
+        :src="resolvedUrl"
         :poster="posterUrl"
         class="v2-mp__video"
         controls
@@ -11,6 +11,7 @@
         preload="none"
         @pointerdown.stop
       />
+      <span v-if="batchCount > 1" class="v2-mp__count">{{ batchCount }}</span>
     </template>
     <template v-else-if="kind === 'audio'">
       <div v-if="resolvedUrl" class="v2-mp__audiowrap" @pointerdown.stop>
@@ -244,7 +245,7 @@ const menuItemClass = 'ctv:flex ctv:items-center ctv:gap-1.5 ctv:w-full ctv:px-1
   + 'ctv:hover:bg-secondary-background-hover'
 
 const batchImages = computed<string[]>(() => {
-  if (props.kind !== 'image') return []
+  if (props.kind !== 'image' && props.kind !== 'video') return []
   const u = String(props.url ?? '')
   if (!u.trimStart().startsWith('{')) return []
   try {
@@ -266,7 +267,7 @@ const resolvedUrl = computed(() => {
 
 const posterUrl = computed(() => {
   if (props.kind !== 'video' || !resolvedUrl.value) return undefined
-  const raw = String(props.url ?? '').replace(/^\/api/, '')
+  const raw = String(resolvedUrl.value).replace(/^\/api/, '')
   const t = thumbUrl(raw, THUMB_CELL)
   return t === raw ? undefined : t
 })

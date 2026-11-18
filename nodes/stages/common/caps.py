@@ -13,7 +13,7 @@ CAPS_BY_KIND: dict[str, dict] = {
                            ['computed:width', 'computed:height']),
     'shot-images':   _caps(['image', 'text'],              ['option:negative', 'option:seed', 'option:batch_size', 'option:aspect_ratio', 'option:resolution'],
                            ['computed:width', 'computed:height']),
-    'video':         _caps(['image', 'video', 'text', 'audio'], ['option:negative', 'option:seed', 'option:duration_s', 'option:generate_audio', 'option:aspect_ratio', 'option:resolution'],
+    'video':         _caps(['image', 'video', 'text', 'audio'], ['option:negative', 'option:seed', 'option:batch_size', 'option:duration_s', 'option:generate_audio', 'option:aspect_ratio', 'option:resolution'],
                            ['computed:width', 'computed:height', 'computed:length']),
     'audio':         _caps([],                             ['option:seed', 'option:duration_s', 'option:lyrics', 'option:bpm', 'option:timesignature', 'option:keyscale', 'option:language'],
                            ['computed:length']),

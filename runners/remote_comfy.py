@@ -536,7 +536,7 @@ class RemoteComfyUIRunner(Runner):
         )
 
         workflow, result_meta, config = prepare_workflow(self.id, self.kinds, ctx)
-        n = batch_loop_iterations(config, ctx.options)
+        n = batch_loop_iterations(config, ctx.options, stage_kind=ctx.kind)
         client_id = f"comfytv-remote-{uuid.uuid4().hex[:12]}"
 
         timeout = aiohttp.ClientTimeout(total=JOB_TIMEOUT_S,

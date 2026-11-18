@@ -487,6 +487,8 @@ class VideoStage(io.ComfyNode):
                     default="\u6587\u751f\u89c6\u9891",
                     tooltip="Generation mode. Appended for backward-compatible widget serialization.",
                 ),
+                io.Int.Input("batch_size", default=1, min=1, max=8, step=1,
+                             tooltip="Number of video generation jobs to submit. Ignis and ComfyUI backends both support this Stage-level batch queue."),
             ],
             outputs=[COMFYTV_VIDEO.Output("video")],
             is_output_node=True,
@@ -498,7 +500,8 @@ class VideoStage(io.ComfyNode):
                 workflow="", mode="", resolution="", aspect_ratio="",
                 duration_s=VIDEO_DURATION_DEFAULT_S,
                 generate_audio=False, main_prompt="",
-                texts=None, images=None, videos=None, audio=None, custom_params="{}"):
+                texts=None, images=None, videos=None, audio=None, custom_params="{}",
+                batch_size=1):
 
         text_vals = _autogrow_values(texts)
         combined_prompt = _combine_prompt(main_prompt, text_vals)
@@ -523,6 +526,7 @@ class VideoStage(io.ComfyNode):
                 'aspect_ratio':   aspect_ratio,
                 'duration_s':     duration_s,
                 'generate_audio': generate_audio,
+                'batch_size':     int(batch_size or 1),
             },
         )
 

@@ -5,7 +5,13 @@ import { getStageMeta } from '@/composables/stages/stageMeta'
 import type { LGraphNode } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
 import { useStageParamStore } from '@/stores/stageParamStore'
-import { bindWidgetCallback, getWidget, readWidgetStr, writeWidget } from '@/utils/widget'
+import {
+  bindWidgetCallback,
+  getWidget,
+  markNodeChanged,
+  readWidgetStr,
+  writeWidget,
+} from '@/utils/widget'
 
 export interface ParamItem {
   key: string
@@ -95,6 +101,7 @@ export function useCustomParams(node: LGraphNode, getState: () => StageState) {
 
   function persist(): void {
     writeWidget(node, 'custom_params', serializeParamItems(items.value))
+    markNodeChanged(node)
   }
 
   function attach(d: StageParam): void {

@@ -62,7 +62,7 @@ def test_seedance_virtual_config_exposes_matching_parameters():
     }
 
     assert config["meta"]["bound_only_params"] is True
-    assert set(widgets) == {"mode", "aspect_ratio", "resolution", "duration_s"}
+    assert set(widgets) == {"mode", "aspect_ratio", "resolution", "duration_s", "batch_size"}
     assert widgets["aspect_ratio"]["widget_props"]["values"][0] == "auto"
     assert widgets["resolution"]["widget_props"]["values"] == [
         "480P", "720P", "1080P",
@@ -70,6 +70,11 @@ def test_seedance_virtual_config_exposes_matching_parameters():
     assert widgets["duration_s"]["widget_props"] == {
         "min": 4,
         "max": 30,
+        "step": 1,
+    }
+    assert widgets["batch_size"]["widget_props"] == {
+        "min": 1,
+        "max": 8,
         "step": 1,
     }
 
@@ -82,10 +87,10 @@ def test_model_configs_only_expose_supported_parameters():
     pixverse = IgnisVideoRunner("pixverse").workflow_config()
 
     assert [w["widget_name"] for w in sora["exposed_widgets"]] == [
-        "mode", "aspect_ratio",
+        "mode", "aspect_ratio", "batch_size",
     ]
-    assert [w["widget_name"] for w in kling["exposed_widgets"]] == ["mode"]
-    assert [w["widget_name"] for w in pixverse["exposed_widgets"]] == ["mode"]
+    assert [w["widget_name"] for w in kling["exposed_widgets"]] == ["mode", "batch_size"]
+    assert [w["widget_name"] for w in pixverse["exposed_widgets"]] == ["mode", "batch_size"]
 
 
 def test_virtual_configs_fit_video_stage_validation_contract():
@@ -164,6 +169,16 @@ def test_build_payload_recovers_stale_model_options():
     assert payload["aspect_ratio"] == "16:9"
     assert payload["resolution"] == "720p"
     assert payload["duration"] == 5
+
+
+def test_build_batch_payload_repeats_video_requests():
+    from ComfyTV.runners.ignis_video import _build_batch_payload
+
+    request = {"model": "seedance-2-5", "prompt": "waves"}
+    payload = _build_batch_payload(request, 3)
+
+    assert payload == {"requests": [request, request, request]}
+    assert payload["requests"][0] is not request
 
 
 def test_invalid_mode_is_inferred_from_connected_materials():

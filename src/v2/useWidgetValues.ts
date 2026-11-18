@@ -1,6 +1,7 @@
 import { onBeforeUnmount, reactive } from 'vue'
 
 import type { LGraphNode } from '@/lib/comfyApp'
+import { markNodeChanged } from '@/utils/widget'
 import { observeProperty } from '@/v2/observeProps'
 
 interface WidgetLike {
@@ -39,10 +40,13 @@ export function useWidgetValues(getNode: () => LGraphNode | undefined, names: st
   })
 
   function write(name: string, v: unknown) {
+    const node = getNode()
     const w = widgetOf(name)
     if (!w) return
+    if (w.value === v) return
     w.value = v
     w.callback?.(v)
+    markNodeChanged(node)
   }
 
   return { values, widgetOf, write }

@@ -120,6 +120,14 @@ def get_api_node_defs() -> dict[str, dict]:
     return out
 
 
+def workflow_has_api_nodes(api_json: dict) -> bool:
+    definitions = get_api_node_defs()
+    return any(
+        isinstance(node, dict) and node.get("class_type") in definitions
+        for node in (api_json or {}).values()
+    )
+
+
 def _node_io(node: dict) -> tuple[dict[str, Any], dict[str, bool], dict[str, int]]:
     """Split api-format inputs into widgets / connection flags / group counts."""
     widgets: dict[str, Any] = {}

@@ -5,7 +5,7 @@ import {
 } from '@/api'
 import type { StagePreset } from '@/api'
 import type { LGraphNode } from '@/lib/comfyApp'
-import { bindWidgetCallback, getWidget, writeWidget } from '@/utils/widget'
+import { bindWidgetCallback, getWidget, markNodeChanged, writeWidget } from '@/utils/widget'
 
 const _defaultsCache = new Map<string, Promise<Record<string, unknown>>>()
 
@@ -131,6 +131,7 @@ export function useStagePresets(getNode: () => LGraphNode | undefined) {
     } finally {
       suppressDirty = false
     }
+    markNodeChanged(node)
   }
 
   function resetToDefaults(): void {

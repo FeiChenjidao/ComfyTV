@@ -15,6 +15,13 @@ def test_no_loop_without_marker():
     assert batch_loop_iterations(cfg, {"batch_size": 4}) == 1
 
 
+def test_video_stage_batch_does_not_require_marker():
+    cfg = {"api_json": {"1": {"class_type": "VHS_VideoCombine", "inputs": {}}}}
+    assert batch_loop_iterations(
+        cfg, {"batch_size": 4}, stage_kind="video"
+    ) == 4
+
+
 def test_loop_reads_stage_batch_size():
     cfg = {"api_json": {"9": {"class_type": BATCH_LOOP_CLASS, "inputs": {"batch_size": 1}}}}
     assert workflow_has_batch_loop(cfg["api_json"])

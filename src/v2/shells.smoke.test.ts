@@ -253,7 +253,7 @@ const EXTRA_WIDGETS: Record<string, Array<[string, string]>> = {
   'ComfyTV.VideoPickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.AudioPickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.Model3DStage': [['selected_index', 'number'], ['pool', 'string'], ['append_results', 'toggle']],
-  'ComfyTV.VideoStage': [['mode', 'combo'], ['resolution', 'combo'], ['aspect_ratio', 'combo'], ['duration_s', 'number'], ['generate_audio', 'toggle']],
+  'ComfyTV.VideoStage': [['mode', 'combo'], ['resolution', 'combo'], ['aspect_ratio', 'combo'], ['duration_s', 'number'], ['generate_audio', 'toggle'], ['batch_size', 'number']],
   'ComfyTV.AudioStage': [['lyrics', 'customtext'], ['duration_s', 'number'], ['bpm', 'number'], ['timesignature', 'combo'], ['keyscale', 'combo'], ['language', 'combo']],
   'ComfyTV.SpeechStage': [['voice', 'string'], ['language', 'combo'], ['speed', 'number'], ['reference_text', 'customtext']],
   'ComfyTV.UpscaleStage': [['scale', 'combo']],

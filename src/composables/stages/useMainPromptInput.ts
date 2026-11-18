@@ -29,7 +29,7 @@ import type { LGraphNode } from '@/lib/comfyApp'
 import { useEntryStore } from '@/stores/entryStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { useStageStore } from '@/stores/stageStore'
-import { getWidget, writeWidget } from '@/utils/widget'
+import { getWidget, markNodeChanged, writeWidget } from '@/utils/widget'
 
 export const ENTRY_CHIP_CLASS = 'mention-chip '
   + 'ctv:inline-block ctv:py-0 ctv:px-1 ctv:mx-px ctv:rounded ctv:font-medium ctv:whitespace-nowrap '
@@ -304,7 +304,11 @@ export function useMainPromptInput(
     source: () => nodeMentionSource(getNode),
     mentionList: mentionListComponent,
     onTextChange: (text) => {
-      if (widget.value) writeWidget(getNode(), 'main_prompt', text, { fireCallback: false })
+      const node = getNode()
+      if (widget.value) {
+        writeWidget(node, 'main_prompt', text, { fireCallback: false })
+        markNodeChanged(node)
+      }
       const st = stageState.value
       if (st && st.mainPrompt !== text) st.mainPrompt = text
     },

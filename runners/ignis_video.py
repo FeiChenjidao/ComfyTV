@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from pathlib import Path
 
@@ -9,10 +10,12 @@ import folder_paths
 from ._ignis import (
     IgnisClient as _IgnisClient,
     client_timeout,
+    check_cancel,
     download_media,
     failure_message as _failure_message,
     load_ignis_config,
     output_filename,
+    report_progress,
     upload_values as _upload_values,
     values as _values,
 )
@@ -52,6 +55,39 @@ def _coerce_duration(value, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _batch_size(value) -> int:
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        count = 1
+    if not 1 <= count <= 8:
+        raise RuntimeError("Ignis video batch size must be between 1 and 8.")
+    return count
+
+
+def _build_batch_payload(request: dict, batch_size: int) -> dict:
+    if batch_size == 1:
+        return request
+    return {"requests": [dict(request) for _ in range(batch_size)]}
+
+
+def _collect_media_items(value) -> list[dict]:
+    if isinstance(value, list):
+        out: list[dict] = []
+        for item in value:
+            out.extend(_collect_media_items(item))
+        return out
+    if not isinstance(value, dict):
+        return []
+    if value.get("file_id") or value.get("url"):
+        return [value]
+    out: list[dict] = []
+    for key in ("output", "outputs", "video", "videos", "result", "results", "files"):
+        if key in value:
+            out.extend(_collect_media_items(value[key]))
+    return out
 
 
 def _resolve_mode(spec: dict, value: str, *, images=0, videos=0, audio=0) -> str:
@@ -279,6 +315,14 @@ class IgnisVideoRunner(Runner):
                     duration["default"],
                 )
             )
+        widgets.append(
+            _widget(
+                "batch_size",
+                "INT",
+                {"min": 1, "max": 8, "step": 1},
+                1,
+            )
+        )
         return {
             "id": -list(IGNIS_VIDEO_SPECS).index(self.model) - 1,
             "kind": "video",
@@ -317,7 +361,7 @@ class IgnisVideoRunner(Runner):
         max_images = int(self.spec["max_images"])
         max_videos = int(self.spec["max_videos"])
         max_audio = int(self.spec["max_audio"])
-        options = {"mode": True}
+        options = {"mode": True, "batch_size": True}
         for key in ("aspect_ratio", "resolution", "duration_s"):
             if any(w["widget_name"] == key for w in self.workflow_config()["exposed_widgets"]):
                 options[key] = True
@@ -359,6 +403,7 @@ class IgnisVideoRunner(Runner):
             videos=len(videos),
             audio=len(audio),
         )
+        batch_size = _batch_size(ctx.options.get("batch_size"))
 
         if mode == MODE_TEXT and (images or videos or audio):
             raise RuntimeError("Text-to-video mode does not accept reference media.")
@@ -391,7 +436,7 @@ class IgnisVideoRunner(Runner):
             audio_urls = await _upload_values(
                 client, session, audio, progress=ctx.progress
             )
-            payload = _build_payload(
+            request = _build_payload(
                 prompt=prompt,
                 model=self.model,
                 mode=mode,
@@ -414,29 +459,53 @@ class IgnisVideoRunner(Runner):
                 video_urls=video_urls,
                 audio_urls=audio_urls,
             )
+            payload = _build_batch_payload(request, batch_size)
+            report_progress(ctx.progress, 0, 1, "Submitting videos to Ignis")
             task = await client.wait(
                 session,
                 await client.submit(session, payload),
                 progress=ctx.progress,
             )
-            successful = (task.get("result") or {}).get("successful", [])
+            result = task.get("result") or {}
+            successful = _collect_media_items(result.get("successful") or [])
             if task.get("status") != "completed" or not successful:
                 raise RuntimeError(
                     f"Ignis video generation failed: {_failure_message(task)}"
                 )
-            item = successful[0]
-            if not isinstance(item, dict):
-                raise RuntimeError("Ignis returned an invalid video result.")
             output_root = Path(folder_paths.get_output_directory()).resolve()
-            destination = (
-                output_root
-                / "ComfyTV"
-                / "ignis"
-                / uuid.uuid4().hex
-                / output_filename(item, "video.mp4")
-            )
-            await _download_video(session, item, destination)
-            return path_to_view_url(destination, "output")
+            run_dir = output_root / "ComfyTV" / "ignis" / uuid.uuid4().hex
+            videos_out: list[dict] = []
+            total = len(successful)
+            for index, item in enumerate(successful, start=1):
+                check_cancel()
+                report_progress(
+                    ctx.progress, index - 1, total,
+                    f"Downloading video {index}/{total}",
+                )
+                filename = output_filename(item, f"video-{index}.mp4")
+                destination = run_dir / f"{index:02d}-{filename}"
+                await _download_video(session, item, destination)
+                videos_out.append({
+                    "index": str(index),
+                    "label": f"#{index}",
+                    "image_url": path_to_view_url(destination, "output"),
+                    "provider": "ignis",
+                    "model": self.model,
+                })
+
+            report_progress(ctx.progress, total, total, "Ignis videos ready")
+            if batch_size == 1 and len(videos_out) == 1:
+                return videos_out[0]["image_url"]
+            return json.dumps({
+                "images": videos_out,
+                "meta": {
+                    "provider": "ignis",
+                    "model": self.model,
+                    "request_count": batch_size,
+                    "result_count": len(videos_out),
+                    "failed_count": len(result.get("failed") or []),
+                },
+            })
 
 
 def ignis_video_runners() -> list[IgnisVideoRunner]:

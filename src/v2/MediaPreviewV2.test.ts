@@ -29,6 +29,24 @@ describe('MediaPreviewV2', () => {
     expect(video.muted).toBe(false)
   })
 
+  it('plays the first video from a batch payload and shows the count', () => {
+    ;(app as any).api.apiURL = (p: string) => p
+    const batch = JSON.stringify({
+      images: [
+        { image_url: '/view?filename=a.mp4&type=output' },
+        { image_url: '/view?filename=b.mp4&type=output' },
+      ],
+    })
+    const wrapper = mountPreview(
+      { kind: 'video', url: batch, hint: '' },
+      { ProxiedVideo: { template: '<video v-bind="$attrs" />' } },
+    )
+
+    expect(wrapper.find('video').attributes('src'))
+      .toBe('/view?filename=a.mp4&type=output')
+    expect(wrapper.find('.v2-mp__count').text()).toBe('2')
+  })
+
   it('shows model history as prev/next pager at the top', async () => {
     const onPickIndex = vi.fn()
     const poolJson = JSON.stringify({

@@ -26,6 +26,7 @@ export interface NodeRunHandlers {
   onSuccess?: (detail: any) => void
   onStatus?: (detail: any) => void
   onRemoteJob?: (detail: any) => void
+  onStageRun?: (detail: any) => void
 }
 
 const HISTORY_LIMIT = 30
@@ -203,8 +204,23 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
       })
       handlersForId(nodeId)?.onRemoteJob?.(d)
     }
+    const onStageRun = (e: any) => {
+      const d = e?.detail
+      if (!d?.node_id) return
+      const nodeId = String(d.node_id)
+      const status = String(d.status || '')
+      if (status === 'done' || status === 'error' || status === 'cancelled') {
+        nodeProgress.delete(nodeId)
+      }
+      pushEvent({
+        kind: `stage-${status}`,
+        label: status === 'error' ? String(d.error || 'stage run failed') : undefined,
+      })
+      handlersForId(nodeId)?.onStageRun?.(d)
+    }
 
     api.addEventListener('status', onStatus)
+    api.addEventListener('comfytv-stage-run', onStageRun)
     api.addEventListener('comfytv-remote-job', onRemoteJob)
     api.addEventListener('comfytv-remote-progress', onRemoteProgress)
     api.addEventListener('execution_start', onExecutionStart)
@@ -218,6 +234,7 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
 
     return () => {
       api.removeEventListener('status', onStatus)
+      api.removeEventListener('comfytv-stage-run', onStageRun)
       api.removeEventListener('comfytv-remote-job', onRemoteJob)
       api.removeEventListener('comfytv-remote-progress', onRemoteProgress)
       api.removeEventListener('execution_start', onExecutionStart)

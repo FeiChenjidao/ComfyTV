@@ -7,6 +7,8 @@ const DEFAULT_ASPECT_RATIO = '16:9'
 const DEFAULT_DURATION_S = 5
 const MIN_DURATION_S = 1
 const MAX_DURATION_S = 120
+const MIN_BATCH_SIZE = 1
+const MAX_BATCH_SIZE = 8
 
 type ConfigureInfo = { widgets_values?: unknown[] }
 
@@ -140,6 +142,7 @@ export function normalizeVideoStageWidgets(node: LGraphNode): void {
   const duration = node.widgets?.find(widget => widget.name === 'duration_s')
   const audio = node.widgets?.find(widget => widget.name === 'generate_audio')
   const mode = node.widgets?.find(widget => widget.name === 'mode')
+  const batch = node.widgets?.find(widget => widget.name === 'batch_size')
 
   if (resolution) resolution.value = normalizeResolution(resolution.value) || DEFAULT_RESOLUTION
   if (aspect && String(aspect.value ?? '') === 'adaptive') aspect.value = 'auto'
@@ -147,4 +150,10 @@ export function normalizeVideoStageWidgets(node: LGraphNode): void {
   if (duration) duration.value = normalizeDuration(duration.value)
   if (audio && audio.value !== true && audio.value !== false) audio.value = audio.value === 1
   if (mode && !VIDEO_MODES.has(String(mode.value ?? ''))) mode.value = DEFAULT_MODE
+  if (batch) {
+    const value = Number(batch.value)
+    batch.value = Number.isFinite(value)
+      ? Math.max(MIN_BATCH_SIZE, Math.min(MAX_BATCH_SIZE, Math.round(value)))
+      : MIN_BATCH_SIZE
+  }
 }

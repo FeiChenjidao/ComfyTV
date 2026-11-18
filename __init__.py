@@ -20,6 +20,8 @@ else:
     _db.init()
 
     from . import runners as _runners
+    from .runners.progress_isolation import install_progress_isolation as _install_progress_isolation
+    _install_progress_isolation()
     _runners.seed_workflows()
 
     from . import api as _api

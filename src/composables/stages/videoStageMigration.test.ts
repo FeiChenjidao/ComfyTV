@@ -16,6 +16,7 @@ function makeNode() {
       { name: 'main_prompt', value: '' },
       { name: 'custom_params', value: '{}' },
       { name: 'mode', value: '文生视频' },
+      { name: 'batch_size', value: 1 },
     ],
   } as any
 }
@@ -76,11 +77,12 @@ describe('normalizeVideoStageWidgets', () => {
     node.widgets.find((widget: any) => widget.name === 'duration_s').value = 0
     node.widgets.find((widget: any) => widget.name === 'generate_audio').value = 'prompt'
     node.widgets.find((widget: any) => widget.name === 'mode').value = '720P'
+    node.widgets.find((widget: any) => widget.name === 'batch_size').value = 99
 
     normalizeVideoStageWidgets(node)
 
     expect(node.widgets.map((widget: any) => widget.value)).toEqual([
-      '', '1080P', 'auto', 5, false, '', '{}', '文生视频',
+      '', '1080P', 'auto', 5, false, '', '{}', '文生视频', 8,
     ])
   })
 })

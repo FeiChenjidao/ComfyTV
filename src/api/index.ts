@@ -42,6 +42,7 @@ import {
   SetDefaultWorkflowResultSchema,
   SetHiddenWorkflowResultSchema,
   StageDefaultsSchema,
+  StageRunStartSchema,
   TestServerResultSchema,
   UnlinkWorkflowResultSchema,
   WorkflowConfigSchema,
@@ -446,6 +447,20 @@ export function expressionEval(body: {
   seed?: number
 }): Promise<z.infer<typeof ExpressionEvalSchema>> {
   return apiSend('/comfytv/expression_eval', 'POST', ExpressionEvalSchema, body)
+}
+
+export function startStageRun(body: {
+  prompt: Record<string, unknown>
+  target_node_id: string
+  workflow?: Record<string, unknown>
+  client_id?: string
+  extra_data?: Record<string, string>
+}): Promise<z.infer<typeof StageRunStartSchema>> {
+  return apiSend('/comfytv/stage_runs', 'POST', StageRunStartSchema, body)
+}
+
+export function cancelStageRun(jobId: string): Promise<z.infer<typeof OkSchema>> {
+  return apiSend(`/comfytv/stage_runs/${encodeURIComponent(jobId)}/cancel`, 'POST', OkSchema, {})
 }
 
 export function fxClipPreview(

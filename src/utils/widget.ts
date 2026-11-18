@@ -42,6 +42,11 @@ export function writeWidget(
   w.callback?.(value)
 }
 
+export function markNodeChanged(node: MaybeNode): void {
+  ;(node as any)?.graph?.change?.()
+  ;(node as any)?.setDirtyCanvas?.(true, true)
+}
+
 export function bindWidgetCallback(
   node: MaybeNode,
   name: string,

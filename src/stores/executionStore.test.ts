@@ -31,7 +31,7 @@ describe('executionStore.bindToApi', () => {
     store.bindToApi(api)
     const names = ['status', 'execution_start', 'executing',
       'execution_success', 'execution_error', 'execution_interrupted',
-      'execution_cached']
+      'execution_cached', 'comfytv-stage-run']
     for (const name of names) {
       expect(api.listeners.get(name)?.size).toBeGreaterThanOrEqual(1)
     }
@@ -235,6 +235,17 @@ describe('executionStore.bindToApi', () => {
     api.fire('status', { status: { exec_info: { queue_remaining: 0 } } })
     expect(successes).toBe(2)
     expect(statuses).toBe(2)
+  })
+
+  it('comfytv-stage-run routes only to the matching stage', () => {
+    const store = useExecutionStore()
+    store.bindToApi(api)
+    const seen: any[] = []
+    store.registerNodeHandlers({ getNodeId: () => '7', onStageRun: d => seen.push(d) })
+    store.registerNodeHandlers({ getNodeId: () => '8', onStageRun: () => { throw new Error('wrong node') } })
+    api.fire('comfytv-stage-run', { node_id: '7', job_id: 'job-1', status: 'done' })
+    expect(seen).toEqual([{ node_id: '7', job_id: 'job-1', status: 'done' }])
+    expect(store.recentEvents[0]).toMatchObject({ kind: 'stage-done' })
   })
 
   it('unregister stops dispatch and clears progress', () => {

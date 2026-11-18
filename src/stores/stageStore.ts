@@ -306,7 +306,8 @@ export const useStageStore = defineStore('comfytv-stage', () => {
     if (state.outputType === 'COMFYTV_VIDEO' && !isPoolPickerKind(state.kind)
         && state.variant !== 'loader'
         && !state.inputs.some((i) => i.content === s)) {
-      void autoProxyOutput(s)
+      const videoUrl = computePickedFromBatch(toImagePoolJson(s), 1)
+      if (videoUrl) void autoProxyOutput(videoUrl)
     }
     // Some ComfyUI execution paths preserve output but drop custom UI fields.
     // Recover the selected image from the batch so slot 1 remains usable.
