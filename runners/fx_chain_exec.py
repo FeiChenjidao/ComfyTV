@@ -1,7 +1,7 @@
 import json
 
 from .media import get_video_info
-from .media_filter import filter_video
+from .media_filter import filter_video, has_encoder
 from .media_torch import torch_process_video
 from ._delivery import (
     DELIVERY_CODECS,
@@ -82,6 +82,11 @@ def _pack_key_output(out, alpha, output):
     if output == 'matte':
         return alpha.unsqueeze(-1).expand(alpha.shape[0], alpha.shape[1], 3) \
             .clamp(0, 1)
+    if output == 'alpha':
+        import torch
+        return torch.cat([
+            out.clamp(0, 1), alpha.unsqueeze(-1).clamp(0, 1),
+        ], dim=-1)
     return out.clamp(0, 1)
 
 
@@ -427,11 +432,17 @@ def _torch_frame_fn(entries, ctx=None):
         builder = TORCH_FX_OPS.get(op)
         if builder is None:
             raise RuntimeError(f"FX Chain: unknown torch op {op!r}")
-        fns.append(builder(e.get('params') or {}, ctx))
+        params = e.get('params') or {}
+        replaces_alpha = op in {'keyer', 'pik', 'select0r'}
+        fns.append((builder(params, ctx), replaces_alpha))
 
     def frame_fn(img, t):
-        for fn in fns:
+        for fn, replaces_alpha in fns:
+            alpha = img[..., 3:4] if img.shape[-1] == 4 else None
             img = fn(img, t).clamp(0.0, 1.0)
+            if alpha is not None and img.shape[-1] == 3 and not replaces_alpha:
+                import torch
+                img = torch.cat([img, alpha], dim=-1)
         return img
 
     return frame_fn
@@ -450,9 +461,26 @@ def _segment_progress(progress, index, count):
 def run_fx_chain(view_url: str, entries, progress=None,
                  delivery=None) -> str:
     d = _delivery_norm(delivery)
+    alpha_delivery = d['codec'] == 'vp9_alpha'
+    if alpha_delivery and not has_encoder('libvpx-vp9'):
+        raise RuntimeError(
+            "FX Chain: this PyAV build lacks the libvpx-vp9 encoder needed "
+            "for WebM alpha output."
+        )
+    if alpha_delivery and (d['size'] > 0 or d['fps'] > 0
+                           or d['colorspace'] != 'bt709'):
+        raise RuntimeError(
+            "FX Chain: WebM alpha currently requires source size, source "
+            "frame rate, and bt709. Resize or retime before the keyer."
+        )
     video_entries = [e for e in entries if e['domain'] == 'video']
     audio_specs = [tuple(s) for e in entries if e['domain'] == 'audio'
                    for s in e['specs']]
+    if alpha_delivery and audio_specs:
+        raise RuntimeError(
+            "FX Chain: WebM alpha delivery does not support audio FX. "
+            "Render the transparent video and audio separately."
+        )
 
     segments = []
     for e in video_entries:
@@ -461,6 +489,23 @@ def run_fx_chain(view_url: str, entries, progress=None,
             segments[-1][1].append(e)
         else:
             segments.append((engine, [e]))
+
+    if alpha_delivery and (not segments or segments[-1][0] != 'torch'):
+        raise RuntimeError(
+            "FX Chain: WebM alpha requires a Torch keyer/effect at the end "
+            "of the video FX chain."
+        )
+    if alpha_delivery:
+        for engine, group in segments[:-1]:
+            if engine == 'torch' and any(
+                e.get('op') in {'keyer', 'pik', 'select0r'}
+                and (e.get('params') or {}).get('output') == 'alpha'
+                for e in group
+            ):
+                raise RuntimeError(
+                    "FX Chain: put the alpha-output Keyer, PIK, or Select0r "
+                    "in the final Torch segment so transparency is preserved."
+                )
 
     if not segments and not audio_specs:
         raise RuntimeError("FX Chain: nothing to render")
@@ -476,7 +521,8 @@ def run_fx_chain(view_url: str, entries, progress=None,
             fps_mult = 1
             for j, e in enumerate(group):
                 if j:
-                    specs.append(('format', 'yuv420p'))
+                    specs.append(('format',
+                                  'yuva420p' if alpha_delivery else 'yuv420p'))
                 specs.extend(tuple(s) for s in e['specs'])
                 m = e.get('out_fps_mult')
                 if isinstance(m, (int, float)) and m > 1:
@@ -484,23 +530,39 @@ def run_fx_chain(view_url: str, entries, progress=None,
             out_fps = None
             if fps_mult != 1:
                 out_fps = get_video_info(cur)['fps'] * fps_mult
-            opts = None if last else {'crf': '10', 'preset': 'veryfast'}
-            kwargs = {'vcodec_options': opts}
+            if alpha_delivery:
+                kwargs = _delivery_encode_kwargs(d)
+                kwargs['keep_audio'] = False
+            else:
+                opts = None if last else {'crf': '10', 'preset': 'veryfast'}
+                kwargs = {'vcodec_options': opts}
             if last_video:
                 specs.extend(_delivery_specs(d))
                 if d['fps'] > 0:
                     out_fps = d['fps']
                 kwargs = _delivery_encode_kwargs(d)
+                if alpha_delivery:
+                    kwargs['keep_audio'] = False
             cur = filter_video(cur, specs, out_fps=out_fps,
                                progress=seg_progress, **kwargs)
         else:
             ctx = {'info': get_video_info(cur)}
+            alpha_options = None
+            if alpha_delivery and last_video:
+                alpha_options = DELIVERY_CODECS[d['codec']]['quality'][d['quality']]
             cur = torch_process_video(cur, _torch_frame_fn(group, ctx),
-                                      progress=seg_progress)
-    if _delivery_active(d) and (not segments or segments[-1][0] == 'torch'):
+                                      progress=seg_progress,
+                                      alpha_in=alpha_delivery,
+                                      out_alpha=alpha_delivery,
+                                      alpha_options=alpha_options)
+    needs_delivery_pass = _delivery_active(d) \
+        and (not segments or segments[-1][0] == 'torch') \
+        and not alpha_delivery
+    if needs_delivery_pass:
+        kwargs = _delivery_encode_kwargs(d)
         cur = filter_video(cur, _delivery_specs(d) or [('null', None)],
                            out_fps=d['fps'] or None,
-                           **_delivery_encode_kwargs(d))
+                           **kwargs)
     if audio_specs:
         cur = filter_video(cur, None, audio_specs,
                            out_ext=DELIVERY_CODECS[d['codec']]['ext'],

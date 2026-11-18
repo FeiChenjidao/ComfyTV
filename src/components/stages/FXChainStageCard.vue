@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { LGraphNode } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
@@ -128,6 +128,7 @@ const CODECS = [
   { value: 'h264', label: 'H.264' },
   { value: 'hevc', label: 'HEVC' },
   { value: 'prores', label: 'ProRes' },
+  { value: 'vp9_alpha', label: 'WebM Alpha' },
 ]
 const QUALITIES = computed(() => [
   { value: 'draft', label: t('fxChain.qDraft') },
@@ -139,6 +140,13 @@ const outSize = useStrWidget(props.node, 'out_size', 'source')
 const outFps = useStrWidget(props.node, 'out_fps', 'source')
 const outCodec = useStrWidget(props.node, 'out_codec', 'h264')
 const outQuality = useStrWidget(props.node, 'out_quality', 'standard')
+
+watch(outCodec, (codec) => {
+  if (codec !== 'vp9_alpha') return
+  outSize.value = 'source'
+  outFps.value = 'source'
+  outColorspace.value = 'bt709'
+}, { immediate: true })
 
 const sourceVideoUrl = computed(() => pickSourceImageUrl(props.state.inputs, 'video'))
 const playerRef = ref<InstanceType<typeof VideoPlayerLite> | null>(null)

@@ -12,6 +12,17 @@ DELIVERY_CODECS = {
                'quality': {'draft': {'profile': '0'},
                            'standard': {'profile': '2'},
                            'high': {'profile': '3'}}},
+    'vp9_alpha': {
+        'vcodec': 'libvpx-vp9', 'ext': '.webm', 'pix_fmt': 'yuva420p',
+        'quality': {
+            'draft': {'crf': '40', 'b': '0', 'row-mt': '1',
+                      'cpu-used': '6', 'auto-alt-ref': '0'},
+            'standard': {'crf': '32', 'b': '0', 'row-mt': '1',
+                         'cpu-used': '4', 'auto-alt-ref': '0'},
+            'high': {'crf': '20', 'b': '0', 'row-mt': '1',
+                     'cpu-used': '2', 'auto-alt-ref': '0'},
+        },
+    },
 }
 
 

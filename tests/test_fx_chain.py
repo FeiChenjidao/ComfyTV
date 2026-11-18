@@ -108,6 +108,25 @@ def _vcodec_name(view_url):
         return c.streams.video[0].codec_context.name
 
 
+def _alpha_range(view_url):
+    from ComfyTV.runners.media import localize
+    low, high, has_partial = 255, 0, False
+    with av.open(str(localize(view_url))) as container:
+        stream = container.streams.video[0]
+        decoder = av.CodecContext.create('libvpx-vp9', 'r')
+        if stream.codec_context.extradata:
+            decoder.extradata = stream.codec_context.extradata
+        for packet in container.demux(stream):
+            for frame in decoder.decode(packet):
+                alpha = frame.to_ndarray(format='rgba')[..., 3]
+                low = min(low, int(alpha.min()))
+                high = max(high, int(alpha.max()))
+                has_partial = has_partial or bool(
+                    np.any((alpha > 0) & (alpha < 255))
+                )
+    return low, high, has_partial
+
+
 class TestDeliveryParams:
     def test_size_short_side(self, clip):
         from ComfyTV.runners.fx_chain_exec import run_fx_chain
@@ -142,6 +161,26 @@ class TestDeliveryParams:
         with av.open(str(localize(url))) as c:
             first = next(c.decode(c.streams.video[0]))
             assert first.format.name == 'yuv422p10le'
+
+    @needs_torch
+    def test_vp9_alpha_webm(self, clip):
+        from ComfyTV.nodes.stages.video_keying import KeyerStage
+        from ComfyTV.runners.media import localize
+        from ComfyTV.runners.media_filter import has_encoder
+        if not has_encoder('libvpx-vp9'):
+            pytest.skip("no libvpx-vp9 encoder in this build")
+        keyed = KeyerStage.execute(
+            project_id='p1', mode='luminance', output='alpha', video=clip,
+        ).values[0]
+        out = _chain().execute(project_id='p1', out_codec='vp9_alpha',
+                               video=keyed)
+        url = out.values[0]
+        assert str(localize(url)).endswith('.webm')
+        assert _vcodec_name(url) == 'vp9'
+        low, high, has_partial = _alpha_range(url)
+        assert low < 250
+        assert high > 5
+        assert has_partial
 
     @needs_torch
     def test_torch_tail_gets_delivery(self, clip):

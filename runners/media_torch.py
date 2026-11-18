@@ -133,7 +133,8 @@ def _from_tensor(t, dither=None):
 
 
 def torch_process_video(view_url: str, frame_fn, *, progress=None,
-                        alpha_in=False, out_fps=None, out_alpha=False) -> str:
+                        alpha_in=False, out_fps=None, out_alpha=False,
+                        alpha_options=None) -> str:
     import av
 
     src = localize(view_url)
@@ -148,6 +149,11 @@ def torch_process_video(view_url: str, frame_fn, *, progress=None,
         in_v = inp.streams.video[0]
         in_a = inp.streams.audio[0] if (inp.streams.audio and not out_alpha) else None
         out_a = outp.add_stream_from_template(in_a) if in_a is not None else None
+        alpha_decoder = None
+        if alpha_in and in_v.codec_context.name == 'vp9':
+            alpha_decoder = av.CodecContext.create('libvpx-vp9', 'r')
+            if in_v.codec_context.extradata:
+                alpha_decoder.extradata = in_v.codec_context.extradata
 
         enc = None
         n = 0
@@ -160,8 +166,10 @@ def torch_process_video(view_url: str, frame_fn, *, progress=None,
                 if out_alpha:
                     enc = outp.add_stream('libvpx-vp9', rate=round(rate))
                     enc.pix_fmt = 'yuva420p'
-                    enc.options = {'crf': '32', 'b': '0', 'row-mt': '1',
-                                   'cpu-used': '4', 'auto-alt-ref': '0'}
+                    enc.options = dict(alpha_options or {
+                        'crf': '32', 'b': '0', 'row-mt': '1',
+                        'cpu-used': '4', 'auto-alt-ref': '0',
+                    })
                 else:
                     enc = outp.add_stream('libx264', rate=round(rate))
                     enc.pix_fmt = 'yuv420p'
@@ -182,17 +190,23 @@ def torch_process_video(view_url: str, frame_fn, *, progress=None,
                     outp.mux(held.pop(0))
                 outp.mux(pkt)
 
+        def _process_frame(frame):
+            nonlocal n
+            t = float(frame.pts * frame.time_base) if frame.pts is not None else 0.0
+            tensor = _to_tensor(frame, device, alpha=alpha_in)
+            result = frame_fn(tensor, t)
+            _encode(result, t)
+            n += 1
+            report_progress(n)
+
         for packet in inp.demux():
             if packet.dts is None:
                 continue
             if packet.stream is in_v:
-                for frame in packet.decode():
-                    t = float(frame.pts * frame.time_base) if frame.pts is not None else 0.0
-                    tensor = _to_tensor(frame, device, alpha=alpha_in)
-                    result = frame_fn(tensor, t)
-                    _encode(result, t)
-                    n += 1
-                    report_progress(n)
+                frames = alpha_decoder.decode(packet) if alpha_decoder is not None \
+                    else packet.decode()
+                for frame in frames:
+                    _process_frame(frame)
             elif out_a is not None and packet.stream is in_a:
                 packet.stream = out_a
                 if enc is None:
@@ -201,6 +215,9 @@ def torch_process_video(view_url: str, frame_fn, *, progress=None,
                     while held:
                         outp.mux(held.pop(0))
                     outp.mux(packet)
+        if alpha_decoder is not None:
+            for frame in alpha_decoder.decode(None):
+                _process_frame(frame)
         if enc is not None:
             for pkt in enc.encode():
                 outp.mux(pkt)
