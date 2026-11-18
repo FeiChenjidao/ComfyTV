@@ -11,6 +11,7 @@ import { bindClusterHoverIntent, nudgeSlotAnchors } from '@/v2/nodeDrag'
 import { observeProperty } from '@/v2/observeProps'
 import { bindLodPoster, registerCull } from '@/v2/lodV2'
 import { cancelMeasure, scheduleMeasure } from '@/v2/measureBatch'
+import { closeOpenPopovers } from '@/components/widgets/popoverState'
 import {
   bindPanelOnSelectSize,
   isPanelOnSelectEnabled,
@@ -201,6 +202,7 @@ export function bindShellChrome(node: ComfyNode, opts: {
     if (!root) return
     const next = !!anyNode.selected
     const was = root.hasAttribute('data-v2-selected')
+    if (was !== next) closeOpenPopovers()
     // Delta hooks no-op when bindPanelOnSelectSize was not registered (manageHeight cards).
     if (was && !next) panelOnSelectBeforeHide(anyNode)
     root.toggleAttribute('data-v2-selected', next)

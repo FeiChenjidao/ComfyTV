@@ -30,7 +30,9 @@ let closeCurrent: (() => void) | null = null
 
 <script setup lang="ts">
 import { PopoverAnchor, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
-import { computed, onScopeDispose, ref, watch } from 'vue'
+import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
+
+import { CLOSE_POPOVERS_EVENT } from './popoverState'
 
 const props = withDefaults(defineProps<{
   open?: boolean
@@ -47,6 +49,9 @@ const open = computed({
   set: (value) => { local.value = value; emit('update:open', value) },
 })
 const close = () => { open.value = false }
+const onCloseAll = () => close()
+
+onMounted(() => document.addEventListener(CLOSE_POPOVERS_EVENT, onCloseAll))
 
 watch(open, (isOpen) => {
   if (isOpen) {
@@ -56,7 +61,11 @@ watch(open, (isOpen) => {
     closeCurrent = null
   }
 })
-onScopeDispose(() => { if (closeCurrent === close) closeCurrent = null })
+onScopeDispose(() => {
+  document.removeEventListener(CLOSE_POPOVERS_EVENT, onCloseAll)
+  close()
+  if (closeCurrent === close) closeCurrent = null
+})
 </script>
 
 <style>

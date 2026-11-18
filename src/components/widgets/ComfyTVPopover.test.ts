@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 
 import ComfyTVPopover from './ComfyTVPopover.vue'
+import { closeOpenPopovers } from './popoverState'
 
 const Host = {
   components: { ComfyTVPopover },
@@ -89,5 +90,17 @@ describe('ComfyTVPopover', () => {
     await flush()
     expect(document.body.querySelectorAll('.v2-pop').length).toBe(1)
     expect((first.vm as any).shown).toBe(false)
+  })
+
+  it('closes when the graph selection changes', async () => {
+    const wrapper = track(mount(AnchorHost, { attachTo: document.body }))
+    ;(wrapper.vm as any).shown = true
+    await flush()
+    expect(document.body.querySelector('.v2-pop .panel')).toBeTruthy()
+
+    closeOpenPopovers()
+    await flush()
+    expect(document.body.querySelector('.v2-pop .panel')).toBeNull()
+    expect((wrapper.vm as any).shown).toBe(false)
   })
 })
