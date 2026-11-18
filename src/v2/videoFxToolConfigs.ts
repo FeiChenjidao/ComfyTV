@@ -95,11 +95,11 @@ const ICON_SLITSCAN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const CONFIGS: Record<string, FxShellConfig> = {
   'ComfyTV.VideoColorStage': {
     titleKey: 'v2.videoColorTitle', icon: ICON_COLOR,
-    card: markRaw(VideoColorStageCard), hasRun: false, videoToolbar: 'vfx',
+    card: markRaw(VideoColorStageCard), hasRun: false, videoToolbar: 'vfx', minH: 840,
   },
   'ComfyTV.VideoCurvesStage': {
     titleKey: 'v2.videoCurvesTitle', icon: ICON_CURVE,
-    card: markRaw(VideoCurvesStageCard), hasRun: false, videoToolbar: 'vfx',
+    card: markRaw(VideoCurvesStageCard), hasRun: false, videoToolbar: 'vfx', minH: 760,
   },
   'ComfyTV.FXChainStage': {
     titleKey: 'v2.fxChainTitle', icon: ICON_CHAIN,
@@ -107,71 +107,71 @@ const CONFIGS: Record<string, FxShellConfig> = {
   },
   'ComfyTV.VideoClipStage': {
     titleKey: 'v2.fx.trim', icon: ICON_TRIM,
-    card: markRaw(VideoClipStageCard), hasRun: true, plain: true,
+    card: markRaw(VideoClipStageCard), hasRun: true, plain: true, minH: 680,
   },
   'ComfyTV.VideoCropStage': {
     titleKey: 'v2.fx.vcrop', icon: ICON_VCROP,
-    card: markRaw(VideoCropStageCard), hasRun: true, plain: true,
+    card: markRaw(VideoCropStageCard), hasRun: true, plain: true, minH: 700,
   },
   'ComfyTV.VideoSplitStage': {
     titleKey: 'v2.fx.vsplit', icon: ICON_VSPLIT,
-    card: markRaw(VideoSplitStageCard), hasRun: true, plain: true,
+    card: markRaw(VideoSplitStageCard), hasRun: true, plain: true, minH: 680,
   },
   'ComfyTV.VideoConcatStage': {
     titleKey: 'v2.fx.concat', icon: ICON_CONCAT,
-    card: markRaw(VideoConcatStageCard), hasRun: true, plain: true,
+    card: markRaw(VideoConcatStageCard), hasRun: true, plain: true, minH: 560,
   },
   'ComfyTV.VideoSpeedStage': {
     titleKey: 'v2.fx.speed', icon: ICON_SPEED,
-    card: markRaw(VideoSpeedStageCard), hasRun: true,
+    card: markRaw(VideoSpeedStageCard), hasRun: true, minH: 620,
   },
   'ComfyTV.VideoRotateStage': {
     titleKey: 'v2.fx.rotate', icon: ICON_ROTATE,
-    card: markRaw(VideoRotateStageCard), hasRun: true,
+    card: markRaw(VideoRotateStageCard), hasRun: true, minH: 600,
   },
   'ComfyTV.VideoVolumeStage': {
     titleKey: 'v2.fx.volume', icon: ICON_VOLUME,
-    card: markRaw(VideoVolumeStageCard), hasRun: true,
+    card: markRaw(VideoVolumeStageCard), hasRun: true, minH: 620,
   },
   'ComfyTV.VideoMuxAudioStage': {
     titleKey: 'v2.fx.muxAudio', icon: ICON_MUXAUDIO,
-    card: markRaw(VideoMuxAudioStageCard), hasRun: true,
+    card: markRaw(VideoMuxAudioStageCard), hasRun: true, minH: 620,
   },
   'ComfyTV.VideoResizeStage': {
     titleKey: 'v2.fx.resize', icon: ICON_RESIZE,
-    card: markRaw(VideoResizeStageCard), hasRun: true,
+    card: markRaw(VideoResizeStageCard), hasRun: true, minH: 620,
   },
   'ComfyTV.VideoFramesStage': {
     titleKey: 'v2.fx.frames', icon: ICON_FRAMES,
-    card: markRaw(VideoFramesStageCard), hasRun: true, plain: true, outputStrip: false,
+    card: markRaw(VideoFramesStageCard), hasRun: true, plain: true, outputStrip: false, minH: 700,
   },
   'ComfyTV.TimeRemapStage': {
     titleKey: 'v2.fx.timeRemap', icon: ICON_TIMEREMAP,
-    card: markRaw(TimeRemapStageCard), hasRun: true,
+    card: markRaw(TimeRemapStageCard), hasRun: true, minH: 700,
   },
   'ComfyTV.SequenceStage': {
     titleKey: 'v2.fx.sequence', icon: ICON_SEQUENCE,
-    card: markRaw(SequenceStageCard), hasRun: true, plain: true,
+    card: markRaw(SequenceStageCard), hasRun: true, plain: true, minH: 700,
   },
   'ComfyTV.SceneDetectStage': {
     titleKey: 'v2.fx.sceneDetect', icon: ICON_SCENEDETECT,
-    card: markRaw(SceneDetectStageCard), hasRun: true, outputStrip: false,
+    card: markRaw(SceneDetectStageCard), hasRun: true, outputStrip: false, minH: 700,
   },
   'ComfyTV.VideoChromaKeyStage': {
     titleKey: 'v2.fx.chromaKey', icon: ICON_CHROMAKEY,
-    card: markRaw(VideoChromaKeyStageCard), hasRun: true,
+    card: markRaw(VideoChromaKeyStageCard), hasRun: true, minH: 780,
   },
   'ComfyTV.VideoCompositeStage': {
     titleKey: 'v2.fx.composite', icon: ICON_COMPOSITE,
-    card: markRaw(VideoCompositeStageCard), hasRun: true, plain: true,
+    card: markRaw(VideoCompositeStageCard), hasRun: true, plain: true, minH: 820,
   },
   'ComfyTV.CornerPinStage': {
     titleKey: 'v2.fx.cornerPin', icon: ICON_CORNERPIN,
-    card: markRaw(CornerPinStageCard), hasRun: true, plain: true,
+    card: markRaw(CornerPinStageCard), hasRun: true, plain: true, minH: 640,
   },
   'ComfyTV.RotoMaskStage': {
     titleKey: 'v2.fx.rotoMask', icon: ICON_ROTOMASK,
-    card: markRaw(RotoMaskStageCard), hasRun: true, plain: true,
+    card: markRaw(RotoMaskStageCard), hasRun: true, plain: true, minH: 700,
   },
   'ComfyTV.KeyMixStage': {
     titleKey: 'v2.fx.keyMix', icon: ICON_KEYMIX,
@@ -183,15 +183,15 @@ const CONFIGS: Record<string, FxShellConfig> = {
   },
   'ComfyTV.MaskPropagateStage': {
     titleKey: 'v2.fx.maskPropagate', icon: ICON_MASKPROP,
-    card: markRaw(MaskPropagateStageCard), hasRun: true,
+    card: markRaw(MaskPropagateStageCard), hasRun: true, minH: 700,
   },
   'ComfyTV.PaintStrokeStage': {
     titleKey: 'v2.fx.paintStroke', icon: ICON_PAINTSTROKE,
-    card: markRaw(PaintStrokeStageCard), hasRun: true, plain: true,
+    card: markRaw(PaintStrokeStageCard), hasRun: true, plain: true, minH: 800,
   },
   'ComfyTV.STMapStage': {
     titleKey: 'v2.fx.stmap', icon: ICON_STMAP,
-    card: markRaw(STMapStageCard), hasRun: true,
+    card: markRaw(STMapStageCard), hasRun: true, minH: 700,
   },
   'ComfyTV.STMapGenStage': {
     titleKey: 'v2.fx.stmapGen', icon: ICON_STMAPGEN,
@@ -207,19 +207,19 @@ const CONFIGS: Record<string, FxShellConfig> = {
   },
   'ComfyTV.VideoTransitionStage': {
     titleKey: 'v2.fx.transition', icon: ICON_TRANSITION,
-    card: markRaw(VideoTransitionStageCard), hasRun: true, plain: true,
+    card: markRaw(VideoTransitionStageCard), hasRun: true, plain: true, minH: 780,
   },
   'ComfyTV.VideoLumaWipeStage': {
     titleKey: 'v2.fx.lumaWipe', icon: ICON_LUMAWIPE,
-    card: markRaw(VideoLumaWipeStageCard), hasRun: true, plain: true,
+    card: markRaw(VideoLumaWipeStageCard), hasRun: true, plain: true, minH: 780,
   },
   'ComfyTV.VideoStabilizeStage': {
     titleKey: 'v2.fx.stabilize', icon: ICON_STAB,
-    card: markRaw(VideoStabilizeStageCard), hasRun: true,
+    card: markRaw(VideoStabilizeStageCard), hasRun: true, minH: 640,
   },
   'ComfyTV.VideoStabilizeV2Stage': {
     titleKey: 'v2.fx.stabilizePro', icon: ICON_STABPRO,
-    card: markRaw(VideoStabilizeV2StageCard), hasRun: true,
+    card: markRaw(VideoStabilizeV2StageCard), hasRun: true, minH: 660,
   },
   'ComfyTV.Video360StabilizeStage': {
     titleKey: 'v2.fx.stabilize360', icon: ICON_STAB360,
@@ -227,19 +227,19 @@ const CONFIGS: Record<string, FxShellConfig> = {
   },
   'ComfyTV.VideoInterpolateStage': {
     titleKey: 'v2.fx.interpolate', icon: ICON_INTERP,
-    card: markRaw(VideoInterpolateStageCard), hasRun: true,
+    card: markRaw(VideoInterpolateStageCard), hasRun: true, minH: 660,
   },
   'ComfyTV.FaceBlurStage': {
     titleKey: 'v2.fx.faceBlur', icon: ICON_FACEBLUR,
-    card: markRaw(FaceBlurStageCard), hasRun: true,
+    card: markRaw(FaceBlurStageCard), hasRun: true, minH: 700,
   },
   'ComfyTV.SpotRemoverStage': {
     titleKey: 'v2.fx.spotRemover', icon: ICON_SPOTREM,
-    card: markRaw(SpotRemoverStageCard), hasRun: true,
+    card: markRaw(SpotRemoverStageCard), hasRun: true, minH: 720,
   },
   'ComfyTV.VideoScopesStage': {
     titleKey: 'v2.fx.scopes', icon: ICON_SCOPES,
-    card: markRaw(VideoScopesStageCard), hasRun: true, plain: true, outputKind: 'image', outputStrip: false,
+    card: markRaw(VideoScopesStageCard), hasRun: true, plain: true, outputKind: 'image', outputStrip: false, minH: 700,
   },
   'ComfyTV.ContactSheetStage': {
     titleKey: 'v2.fx.contactSheet', icon: ICON_CONTACTSHEET,

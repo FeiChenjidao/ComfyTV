@@ -92677,7 +92677,7 @@ class ArrayStream {
 
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ??= import('./spark.module-BJ6b8tTm.mjs');
+  return sparkPromise ??= import('./spark.module-CGDQNMli.mjs');
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -124615,7 +124615,7 @@ const _sfc_main$4D = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = defineAsyncComponent({
-      loader: () => import('./AgentPanelRoot-Bt5c014X.mjs'),
+      loader: () => import('./AgentPanelRoot-BepUYsQH.mjs'),
       errorComponent: AgentPanelLoadError,
       onError: (error, _retry, fail) => {
         reportError(error, { errorType: "agent_panel_load_failure" });
@@ -202426,7 +202426,7 @@ async function parseToObject(file) {
     return new OBJLoader().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import('./STLLoader-B-x3pRkH.mjs');
+    const { STLLoader } = await import('./STLLoader-DndSC1oI.mjs');
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -202434,7 +202434,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import('./ColladaLoader-Tx5paguc.mjs');
+    const { ColladaLoader } = await import('./ColladaLoader-ZoFBb9Tl.mjs');
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!collada?.scene) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -303909,11 +303909,11 @@ function attach$4(node, kind, variant) {
   editorAnchor.style.cssText = "display:flex;flex-direction:column;flex:1;min-height:0;";
   card.append(handle, editorAnchor);
   node.addDOMWidget("v2_shell", "v2", card, {
-    getMinHeight: () => 300,
+    getMinHeight: () => 620,
     hideOnZoom: false,
     serialize: false
   });
-  ensureMinSize(node, 320, 360);
+  ensureMinSize(node, 320, 620);
   const stageApi = useStageNode(node, kind, variant);
   const { state: stageState, onAction } = stageApi;
   const scope = createNodeScope(node);
@@ -305325,7 +305325,7 @@ function makeEditorShell(config) {
       card.append(label, editorAnchor);
     }
     node.addDOMWidget("v2_shell", "v2", card, {
-      getMinHeight: () => 300,
+      getMinHeight: () => config.minH ?? 360,
       hideOnZoom: false,
       serialize: false
     });
@@ -305378,35 +305378,38 @@ function makeEditorShell(config) {
 V2_SHELLS["ComfyTV.RotateStage"] = makeEditorShell({
   component: _sfc_main$b,
   titleKey: "v2.ed.rotate",
-  icon: ICON_ROTATE$1
+  icon: ICON_ROTATE$1,
+  minH: 600
 });
 V2_SHELLS["ComfyTV.MirrorStage"] = makeEditorShell({
   component: _sfc_main$c,
   titleKey: "v2.ed.mirror",
-  icon: ICON_MIRROR
+  icon: ICON_MIRROR,
+  minH: 520
 });
 V2_SHELLS["ComfyTV.ColorGradeStage"] = makeEditorShell({
   component: GradeEditorV2,
   titleKey: "v2.ed.grade",
   icon: ICON_GRADE,
-  minH: 560
+  minH: 720
 });
 V2_SHELLS["ComfyTV.CompareStage"] = makeEditorShell({
   component: CompareEditorV2,
   titleKey: "v2.ed.compare",
-  icon: ICON_COMPARE
+  icon: ICON_COMPARE,
+  minH: 480
 });
 V2_SHELLS["ComfyTV.GridSplitStage"] = makeEditorShell({
   component: GridSplitEditorV2,
   titleKey: "v2.ed.gridSplit",
   icon: ICON_GRIDSPLIT,
-  minH: 460
+  minH: 560
 });
 V2_SHELLS["ComfyTV.CustomSplitStage"] = makeEditorShell({
   component: CustomSplitEditorV2,
   titleKey: "v2.ed.customSplit",
   icon: ICON_CUSTOMSPLIT,
-  minH: 460,
+  minH: 560,
   lod: true,
   lodPreferImageInput: true
 });
@@ -306602,14 +306605,16 @@ const CONFIGS$2 = {
     icon: ICON_COLOR,
     card: markRaw(_sfc_main$2o),
     hasRun: false,
-    videoToolbar: "vfx"
+    videoToolbar: "vfx",
+    minH: 840
   },
   "ComfyTV.VideoCurvesStage": {
     titleKey: "v2.videoCurvesTitle",
     icon: ICON_CURVE,
     card: markRaw(_sfc_main$2l),
     hasRun: false,
-    videoToolbar: "vfx"
+    videoToolbar: "vfx",
+    minH: 760
   },
   "ComfyTV.FXChainStage": {
     titleKey: "v2.fxChainTitle",
@@ -306624,58 +306629,67 @@ const CONFIGS$2 = {
     icon: ICON_TRIM,
     card: markRaw(_sfc_main$3Y),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 680
   },
   "ComfyTV.VideoCropStage": {
     titleKey: "v2.fx.vcrop",
     icon: ICON_VCROP,
     card: markRaw(_sfc_main$3W),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 700
   },
   "ComfyTV.VideoSplitStage": {
     titleKey: "v2.fx.vsplit",
     icon: ICON_VSPLIT,
     card: markRaw(_sfc_main$3O),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 680
   },
   "ComfyTV.VideoConcatStage": {
     titleKey: "v2.fx.concat",
     icon: ICON_CONCAT,
     card: markRaw(_sfc_main$3V),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 560
   },
   "ComfyTV.VideoSpeedStage": {
     titleKey: "v2.fx.speed",
     icon: ICON_SPEED,
     card: markRaw(_sfc_main$3Q),
-    hasRun: true
+    hasRun: true,
+    minH: 620
   },
   "ComfyTV.VideoRotateStage": {
     titleKey: "v2.fx.rotate",
     icon: ICON_ROTATE,
     card: markRaw(_sfc_main$3P),
-    hasRun: true
+    hasRun: true,
+    minH: 600
   },
   "ComfyTV.VideoVolumeStage": {
     titleKey: "v2.fx.volume",
     icon: ICON_VOLUME,
     card: markRaw(VideoVolumeStageCard),
-    hasRun: true
+    hasRun: true,
+    minH: 620
   },
   "ComfyTV.VideoMuxAudioStage": {
     titleKey: "v2.fx.muxAudio",
     icon: ICON_MUXAUDIO,
     card: markRaw(VideoMuxAudioStageCard),
-    hasRun: true
+    hasRun: true,
+    minH: 620
   },
   "ComfyTV.VideoResizeStage": {
     titleKey: "v2.fx.resize",
     icon: ICON_RESIZE,
     card: markRaw(VideoResizeStageCard),
-    hasRun: true
+    hasRun: true,
+    minH: 620
   },
   "ComfyTV.VideoFramesStage": {
     titleKey: "v2.fx.frames",
@@ -306683,54 +306697,62 @@ const CONFIGS$2 = {
     card: markRaw(_sfc_main$3L),
     hasRun: true,
     plain: true,
-    outputStrip: false
+    outputStrip: false,
+    minH: 700
   },
   "ComfyTV.TimeRemapStage": {
     titleKey: "v2.fx.timeRemap",
     icon: ICON_TIMEREMAP,
     card: markRaw(_sfc_main$1E),
-    hasRun: true
+    hasRun: true,
+    minH: 700
   },
   "ComfyTV.SequenceStage": {
     titleKey: "v2.fx.sequence",
     icon: ICON_SEQUENCE,
     card: markRaw(SequenceStageCard),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 700
   },
   "ComfyTV.SceneDetectStage": {
     titleKey: "v2.fx.sceneDetect",
     icon: ICON_SCENEDETECT,
     card: markRaw(_sfc_main$2c),
     hasRun: true,
-    outputStrip: false
+    outputStrip: false,
+    minH: 700
   },
   "ComfyTV.VideoChromaKeyStage": {
     titleKey: "v2.fx.chromaKey",
     icon: ICON_CHROMAKEY,
     card: markRaw(VideoChromaKeyStageCard),
-    hasRun: true
+    hasRun: true,
+    minH: 780
   },
   "ComfyTV.VideoCompositeStage": {
     titleKey: "v2.fx.composite",
     icon: ICON_COMPOSITE,
     card: markRaw(_sfc_main$1L),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 820
   },
   "ComfyTV.CornerPinStage": {
     titleKey: "v2.fx.cornerPin",
     icon: ICON_CORNERPIN,
     card: markRaw(_sfc_main$1J),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 640
   },
   "ComfyTV.RotoMaskStage": {
     titleKey: "v2.fx.rotoMask",
     icon: ICON_ROTOMASK,
     card: markRaw(_sfc_main$1I),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 700
   },
   "ComfyTV.KeyMixStage": {
     titleKey: "v2.fx.keyMix",
@@ -306748,20 +306770,23 @@ const CONFIGS$2 = {
     titleKey: "v2.fx.maskPropagate",
     icon: ICON_MASKPROP,
     card: markRaw(_sfc_main$1z),
-    hasRun: true
+    hasRun: true,
+    minH: 700
   },
   "ComfyTV.PaintStrokeStage": {
     titleKey: "v2.fx.paintStroke",
     icon: ICON_PAINTSTROKE,
     card: markRaw(_sfc_main$1B),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 800
   },
   "ComfyTV.STMapStage": {
     titleKey: "v2.fx.stmap",
     icon: ICON_STMAP,
     card: markRaw(_sfc_main$1A),
-    hasRun: true
+    hasRun: true,
+    minH: 700
   },
   "ComfyTV.STMapGenStage": {
     titleKey: "v2.fx.stmapGen",
@@ -306788,26 +306813,30 @@ const CONFIGS$2 = {
     icon: ICON_TRANSITION,
     card: markRaw(_sfc_main$2f),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 780
   },
   "ComfyTV.VideoLumaWipeStage": {
     titleKey: "v2.fx.lumaWipe",
     icon: ICON_LUMAWIPE,
     card: markRaw(_sfc_main$2e),
     hasRun: true,
-    plain: true
+    plain: true,
+    minH: 780
   },
   "ComfyTV.VideoStabilizeStage": {
     titleKey: "v2.fx.stabilize",
     icon: ICON_STAB,
     card: markRaw(_sfc_main$2d),
-    hasRun: true
+    hasRun: true,
+    minH: 640
   },
   "ComfyTV.VideoStabilizeV2Stage": {
     titleKey: "v2.fx.stabilizePro",
     icon: ICON_STABPRO,
     card: markRaw(_sfc_main$1C),
-    hasRun: true
+    hasRun: true,
+    minH: 660
   },
   "ComfyTV.Video360StabilizeStage": {
     titleKey: "v2.fx.stabilize360",
@@ -306819,19 +306848,22 @@ const CONFIGS$2 = {
     titleKey: "v2.fx.interpolate",
     icon: ICON_INTERP,
     card: markRaw(_sfc_main$2b),
-    hasRun: true
+    hasRun: true,
+    minH: 660
   },
   "ComfyTV.FaceBlurStage": {
     titleKey: "v2.fx.faceBlur",
     icon: ICON_FACEBLUR,
     card: markRaw(_sfc_main$18),
-    hasRun: true
+    hasRun: true,
+    minH: 700
   },
   "ComfyTV.SpotRemoverStage": {
     titleKey: "v2.fx.spotRemover",
     icon: ICON_SPOTREM,
     card: markRaw(_sfc_main$17),
-    hasRun: true
+    hasRun: true,
+    minH: 720
   },
   "ComfyTV.VideoScopesStage": {
     titleKey: "v2.fx.scopes",
@@ -306840,7 +306872,8 @@ const CONFIGS$2 = {
     hasRun: true,
     plain: true,
     outputKind: "image",
-    outputStrip: false
+    outputStrip: false,
+    minH: 700
   },
   "ComfyTV.ContactSheetStage": {
     titleKey: "v2.fx.contactSheet",
@@ -311274,4 +311307,4 @@ const extension = {
 app$1.registerExtension(extension);
 
 export { onBeforeUnmount as $, Box3 as A, BufferGeometry as B, Color as C, DataArrayTexture as D, Euler as E, FileLoader as F, GLSL3 as G, UnsignedShortType as H, FloatType as I, ShaderChunk as J, InstancedBufferGeometry as K, Loader as L, Mesh as M, NearestFilter as N, OrthographicCamera as O, PerspectiveCamera as P, Quaternion as Q, RGBAIntegerFormat as R, SRGBColorSpace as S, Texture as T, UnsignedIntType as U, Vector3 as V, WebGLArrayRenderTarget as W, REVISION as X, Matrix2 as Y, defineComponent as Z, onMounted as _, BufferAttribute as a, parseNodeLocatorId as a$, openBlock as a0, createBlock as a1, createBaseVNode as a2, createElementBlock as a3, createCommentVNode as a4, Fragment$1 as a5, withModifiers as a6, Teleport as a7, computed as a8, DataTextureLoader as a9, LoaderUtils as aA, Scene as aB, TextureLoader as aC, useVModel as aD, toRefs as aE, useForwardExpose as aF, withCtx as aG, renderSlot as aH, unref as aI, Primitive as aJ, createContext as aK, useId as aL, ref as aM, watch as aN, nextTick as aO, useEventListener as aP, createVNode as aQ, mergeProps as aR, Presence_default as aS, injectPopperContentContext as aT, normalizeStyle as aU, useEmitAsProps as aV, normalizeProps as aW, guardReactiveProps as aX, MenuItem_default as aY, hostStore$1 as aZ, app as a_, LinearMipmapLinearFilter as aa, MathUtils as ab, VectorKeyframeTrack as ac, QuaternionKeyframeTrack as ad, InterpolateDiscrete as ae, InterpolateBezier as af, AnimationClip as ag, MeshBasicMaterial as ah, MeshLambertMaterial as ai, MeshPhongMaterial as aj, FrontSide as ak, AmbientLight as al, SpotLight as am, PointLight as an, DirectionalLight as ao, Triangle as ap, ShapeUtils as aq, Skeleton as ar, Bone as as, Group as at, LineBasicMaterial as au, SkinnedMesh as av, Line as aw, LineSegments as ax, RepeatWrapping as ay, ClampToEdgeWrapping as az, Float32BufferAttribute as b, SliderRange_default as b$, hostVersion as b0, hostManager as b1, defineStore as b2, useStorage as b3, toValue$1 as b4, clsx as b5, normalizeClass as b6, cn as b7, useModel as b8, useTemplateRef as b9, EditorView as bA, DOMParser$1 as bB, Slice as bC, Fragment as bD, closeHistory as bE, Decoration as bF, DecorationSet as bG, TextSelection as bH, EditorState as bI, shallowRef as bJ, storeToRefs as bK, useAgentRunModeStore as bL, useId$1 as bM, resolveDirective as bN, buildTooltipConfig as bO, DropdownMenuRadioGroup_default as bP, DropdownMenuRadioItem_default as bQ, reportError as bR, inject as bS, isMemoSame as bT, useClipboard as bU, watchDebounced as bV, api as bW, reactiveOmit as bX, useForwardPropsEmits as bY, SliderRoot_default as bZ, SliderTrack_default as b_, withDirectives as ba, vModelText as bb, mergeModels as bc, _export_sfc as bd, TooltipProvider_default as be, TooltipRoot_default as bf, TooltipTrigger_default as bg, TooltipPortal_default as bh, TooltipContent_default as bi, createTextVNode as bj, toDisplayString$1 as bk, useI18n as bl, renderList as bm, DropdownMenuRoot_default as bn, DropdownMenuTrigger_default as bo, DropdownMenuPortal_default as bp, DropdownMenuContent_default as bq, getCurrentScope as br, onScopeDispose as bs, Schema as bt, isNodeLocatorId as bu, history as bv, keymap as bw, redo as bx, undo as by, baseKeymap as bz, Vector2 as c, SliderThumb_default as c0, useMediaControls as c1, whenever as c2, toRef$1 as c3, defineAsyncComponent as c4, useLocalStorage as c5, useWorkflowStore as c6, toRaw as c7, useAgentPanelStore as c8, DOMSerializer as c9, agentBusy as cA, provide as cB, eagleAvailable as cC, openEaglePicker as cD, closeEaglePicker as cE, openAssetPicker as cF, isComfyTVAssetDrag as cG, isEagleDrag as cH, droppedEagleAssets as cI, droppedComfyTVAssets as cJ, uploadToLibrary as cK, toAttachment as cL, createAgentRestClient as cM, assetIdOf as cN, readonly$1 as cO, useClipboardItems as ca, withKeys as cb, useIntersectionObserver as cc, createSlots as cd, createNodeLocatorId as ce, shallowReadonly as cf, computePosition as cg, isNode as ch, getNodeName$1 as ci, useElementBounding as cj, FocusScope_default as ck, useWindowSize as cl, autoUpdate as cm, offset$2 as cn, shift$1 as co, i18n as cp, AgentApiError as cq, toTurnId as cr, isAgentEvent as cs, parseAgentWsEvent as ct, zDisownedWorkflowError as cu, zAgentAdmissionError as cv, AGENT_WS_EVENT_TYPES as cw, useTimestamp as cx, parseNodeId as cy, newChatRequests as cz, Matrix4 as d, Vector4 as e, RGIntegerFormat as f, RawShaderMaterial as g, DataTexture as h, Raycaster as i, RGBAFormat as j, UnsignedByteType as k, Object3D as l, ShaderMaterial as m, DoubleSide as n, Timer as o, WebGLRenderTarget as p, Matrix3 as q, ColorManagement as r, WebGLCubeRenderTarget as s, LinearSRGBColorSpace as t, LinearFilter as u, LinearMipMapLinearFilter as v, CubeCamera as w, Camera as x, PMREMGenerator as y, MeshStandardMaterial as z };
-//# sourceMappingURL=main-zV7Ms1ng.mjs.map
+//# sourceMappingURL=main-BugddELw.mjs.map

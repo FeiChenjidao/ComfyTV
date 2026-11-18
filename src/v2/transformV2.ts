@@ -306,7 +306,7 @@ export function makeEditorShell(config: EditorShellConfig) {
     }
 
     node.addDOMWidget('v2_shell', 'v2', card, {
-      getMinHeight: () => 300,
+      getMinHeight: () => config.minH ?? 360,
       hideOnZoom: false,
       serialize: false,
     })
@@ -370,23 +370,23 @@ export function makeEditorShell(config: EditorShellConfig) {
 }
 
 V2_SHELLS['ComfyTV.RotateStage'] = makeEditorShell({
-  component: RotateEditorV2, titleKey: 'v2.ed.rotate', icon: ICON_ROTATE,
+  component: RotateEditorV2, titleKey: 'v2.ed.rotate', icon: ICON_ROTATE, minH: 600,
 })
 V2_SHELLS['ComfyTV.MirrorStage'] = makeEditorShell({
-  component: MirrorEditorV2, titleKey: 'v2.ed.mirror', icon: ICON_MIRROR,
+  component: MirrorEditorV2, titleKey: 'v2.ed.mirror', icon: ICON_MIRROR, minH: 520,
 })
 V2_SHELLS['ComfyTV.ColorGradeStage'] = makeEditorShell({
-  component: GradeEditorV2, titleKey: 'v2.ed.grade', icon: ICON_GRADE, minH: 560,
+  component: GradeEditorV2, titleKey: 'v2.ed.grade', icon: ICON_GRADE, minH: 720,
 })
 V2_SHELLS['ComfyTV.CompareStage'] = makeEditorShell({
-  component: CompareEditorV2, titleKey: 'v2.ed.compare', icon: ICON_COMPARE,
+  component: CompareEditorV2, titleKey: 'v2.ed.compare', icon: ICON_COMPARE, minH: 480,
 })
 V2_SHELLS['ComfyTV.GridSplitStage'] = makeEditorShell({
-  component: GridSplitEditorV2, titleKey: 'v2.ed.gridSplit', icon: ICON_GRIDSPLIT, minH: 460,
+  component: GridSplitEditorV2, titleKey: 'v2.ed.gridSplit', icon: ICON_GRIDSPLIT, minH: 560,
 })
 V2_SHELLS['ComfyTV.CustomSplitStage'] = makeEditorShell({
   component: CustomSplitEditorV2, titleKey: 'v2.ed.customSplit', icon: ICON_CUSTOMSPLIT,
-  minH: 460, lod: true, lodPreferImageInput: true,
+  minH: 560, lod: true, lodPreferImageInput: true,
 })
 V2_SHELLS['ComfyTV.ImagesSplitStage'] = makeEditorShell({
   component: ImagesSplitEditorV2,

@@ -54,12 +54,12 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
   card.append(handle, editorAnchor)
 
   node.addDOMWidget('v2_shell', 'v2', card, {
-    getMinHeight: () => 300,
+    getMinHeight: () => 620,
     hideOnZoom: false,
     serialize: false,
   })
 
-  ensureMinSize(node, 320, 360)
+  ensureMinSize(node, 320, 620)
 
   const stageApi = useStageNode(node as any, kind, variant)
   const { state: stageState, onAction } = stageApi
