@@ -90,3 +90,49 @@ def test_fx_chain_vp8_alpha_encodes_directly(monkeypatch):
     assert len(calls) == 1
     assert calls[0][1]['alpha_vcodec'] == 'libvpx'
     assert calls[0][1]['alpha_options']['crf'] == '4'
+
+
+def test_vp9_to_vp8_uses_direct_alpha_encode(monkeypatch):
+    import ComfyTV.runners.vp9_to_vp8 as converter
+
+    calls = []
+    monkeypatch.setattr(converter, 'has_encoder', lambda _name: True)
+    monkeypatch.setattr(converter, '_video_codec', lambda _url: 'vp9')
+
+    def fake_torch_process(view_url, _frame_fn, **kwargs):
+        calls.append((view_url, kwargs))
+        return '/view?filename=converted.webm&type=output'
+
+    monkeypatch.setattr(converter, 'torch_process_video', fake_torch_process)
+    result = converter.vp9_to_vp8('source', quality='high')
+
+    assert result == '/view?filename=converted.webm&type=output'
+    assert len(calls) == 1
+    assert calls[0][1]['alpha_in'] is True
+    assert calls[0][1]['out_alpha'] is True
+    assert calls[0][1]['alpha_vcodec'] == 'libvpx'
+    assert calls[0][1]['alpha_options']['crf'] == '4'
+
+
+def test_vp9_to_vp8_rejects_non_vp9(monkeypatch):
+    import ComfyTV.runners.vp9_to_vp8 as converter
+
+    monkeypatch.setattr(converter, 'has_encoder', lambda _name: True)
+    monkeypatch.setattr(converter, '_video_codec', lambda _url: 'h264')
+
+    with pytest.raises(RuntimeError, match='must be VP9'):
+        converter.vp9_to_vp8('source')
+
+
+def test_vp9_to_vp8_schema():
+    from ComfyTV.nodes.vp9_to_vp8 import VP9ToVP8
+
+    schema = VP9ToVP8.define_schema()
+    fields = {
+        field.args[0]: field
+        for field in schema.kw['inputs']
+        if getattr(field, 'args', ())
+    }
+    assert schema.kw['node_id'] == 'ComfyTV.VP9ToVP8'
+    assert fields['quality'].kw['options'] == ['draft', 'standard', 'high']
+    assert fields['quality'].kw['default'] == 'high'

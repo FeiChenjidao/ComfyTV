@@ -123,6 +123,7 @@ from .batch_loop import BatchLoop
 from .custom_stage import CustomStage
 from ..file3d_first import File3DFirst
 from ..save_webm import SaveWebM
+from ..vp9_to_vp8 import VP9ToVP8
 
 
 def stage_classes() -> list:
@@ -195,7 +196,7 @@ def stage_classes() -> list:
         MaterialStage,
         SplitPartStage, MaskCleanup, BatchLoop,
         CustomStage,
-        File3DFirst, SaveWebM,
+        File3DFirst, SaveWebM, VP9ToVP8,
         *_bridge_classes(),
     ]
 
