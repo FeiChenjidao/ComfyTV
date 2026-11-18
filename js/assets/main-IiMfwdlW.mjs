@@ -61714,7 +61714,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-CwKwG02Y.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-CHdRk_bV.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -68050,6 +68050,7 @@ function useEntryEditor(projectId, activeKind, metaFields) {
   };
 }
 const DEFAULT_DOWNLOAD_FILENAME = "download";
+const BLOB_URL_REVOKE_DELAY_MS = 6e4;
 function extractFilenameFromUrl(url) {
   try {
     const u = new URL(url, location.origin);
@@ -68085,7 +68086,7 @@ function triggerLinkDownload(href, filename) {
 function downloadBlob$2(filename, blob) {
   const url = URL.createObjectURL(blob);
   triggerLinkDownload(url, filename);
-  queueMicrotask(() => URL.revokeObjectURL(url));
+  setTimeout(() => URL.revokeObjectURL(url), BLOB_URL_REVOKE_DELAY_MS);
 }
 async function downloadFile(url, filename) {
   if (!url) throw new Error("downloadFile: empty url");
@@ -92660,7 +92661,7 @@ const _sfc_main$4E = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-BUHtoVJn.mjs"),
+      loader: () => import("./AgentPanelRoot-l2pGeBBm.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -157655,7 +157656,7 @@ async function parseToObject(file) {
     return new OBJLoader2().parse(await file.text());
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-Dwml3OHy.mjs");
+    const { STLLoader } = await import("./STLLoader-ohM5Yaz1.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -157663,7 +157664,7 @@ async function parseToObject(file) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-DBscQwWr.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-BhlI_Hhz.mjs");
     const collada = new ColladaLoader().parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -266178,4 +266179,4 @@ export {
   PMREMGenerator as y,
   MeshStandardMaterial as z
 };
-//# sourceMappingURL=main-b-gLCVEF.mjs.map
+//# sourceMappingURL=main-IiMfwdlW.mjs.map

@@ -1,6 +1,7 @@
 import { app } from '@/lib/comfyApp'
 
 const DEFAULT_DOWNLOAD_FILENAME = 'download'
+const BLOB_URL_REVOKE_DELAY_MS = 60_000
 
 export function extractFilenameFromUrl(url: string): string | null {
   try {
@@ -43,7 +44,7 @@ function triggerLinkDownload(href: string, filename: string): void {
 export function downloadBlob(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob)
   triggerLinkDownload(url, filename)
-  queueMicrotask(() => URL.revokeObjectURL(url))
+  setTimeout(() => URL.revokeObjectURL(url), BLOB_URL_REVOKE_DELAY_MS)
 }
 
 export async function downloadFile(url: string, filename?: string): Promise<void> {

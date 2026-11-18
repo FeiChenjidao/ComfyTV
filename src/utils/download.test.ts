@@ -85,7 +85,10 @@ describe('downloadBlob / downloadFile', () => {
     })
   })
 
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
 
   it('downloadBlob synthesizes a blob: URL and clicks an anchor with the right name', () => {
     const blob = new Blob(['x'], { type: 'image/png' })
@@ -94,6 +97,17 @@ describe('downloadBlob / downloadFile', () => {
     expect(createdAnchors[0].download).toBe('report.png')
     expect(createdAnchors[0].href).toContain('blob:')
     expect((createdAnchors[0] as any).click).toHaveBeenCalled()
+  })
+
+  it('keeps large download blob URLs alive long enough for the browser to consume them', () => {
+    vi.useFakeTimers()
+    downloadBlob('model_obj.zip', new Blob([new Uint8Array(1024)]))
+
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(59_999)
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test/0')
   })
 
   it('downloadFile fetches → derives filename from Content-Disposition → downloads', async () => {
