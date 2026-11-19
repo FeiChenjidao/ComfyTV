@@ -65,7 +65,7 @@
 
 ## 新手一步一步
 
-1. 添加 **Project** + **Image Stage**，填 prompt，选 workflow（如 NanoBanana2）。
+1. 添加 **Project** + **Image Stage**，填 prompt，选 workflow（如 NanoBanana 2.1）。
 2. **▶ 运行** Image Stage——ComfyTV 自动插入 **Image Picker**（若尚未有）。
 3. 在 Picker 缩略图条上**点击**最满意的一张；观察工具栏出现。
 4. （可选）点 `✏️ Edit` 进入裁剪，或手动连 **Upscale** 等。

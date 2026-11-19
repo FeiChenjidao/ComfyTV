@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from ... import db
 from .auto_bind import add_size_node_bindings
-from .labels import _free_label, _is_gui_format, _label_from_stem
+from .labels import _claim_label_or_skip, _free_label, _is_gui_format, _label_from_stem
 from .presets import (
     _apply_preset_to_new_row, _file_sha256, _preset_file_path, _preset_ledger_path,
     _read_preset, _read_preset_ledger, _record_applied_preset,
@@ -21,6 +21,10 @@ _LEGACY_WORKFLOWS_DIR: Optional[Path] = (
     Path(__file__).resolve().parent.parent.parent / "workflows"
 )
 _WORKFLOWS_DIR: Optional[Path] = None
+
+_SHIPPED_LABEL_RENAMES = {
+    ("image", "NanoBanana 2.1.json", "NanoBanana2"): "NanoBanana 2.1",
+}
 
 
 def _workflows_dir() -> Path:
@@ -330,6 +334,22 @@ def _upsert_workflow_row(s, kind: str, file_path: Path) -> tuple[db.Workflow, bo
     return row, is_new_row
 
 
+def _migrate_shipped_label(s, row: db.Workflow, file_path: Path) -> bool:
+    new_label = _SHIPPED_LABEL_RENAMES.get(
+        (row.kind, file_path.name, row.label)
+    )
+    if not new_label:
+        return False
+    changed = _claim_label_or_skip(s, row, new_label)
+    if changed:
+        _log.info(
+            "[ComfyTV/workflow_db] migrated shipped workflow label %r -> %r",
+            "NanoBanana2",
+            new_label,
+        )
+    return changed
+
+
 def reset_workflow_to_preset(workflow_id: int) -> Optional[dict]:
     with db.get_session() as s:
         row = s.get(db.Workflow, workflow_id)
@@ -414,6 +434,7 @@ def seed_workflows_from_disk(kinds: tuple[str, ...]) -> dict:
                 if path.name.endswith(".api.json"):
                     continue
                 row, is_new = _upsert_workflow_row(s, kind, path)
+                _migrate_shipped_label(s, row, path)
                 if is_new:
                     added.append({"kind": kind, "label": row.label})
                     preset_hash = _file_sha256(_preset_file_path(path))

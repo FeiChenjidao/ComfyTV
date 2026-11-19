@@ -21,13 +21,13 @@ translationSourceHash: "5e4c0e3f81f44b79"
 ![Image stage](/images/image-run.png)
 
 - **提示词**：主文本框。上游 **Text** 节点内容会追加进来；上游**图片**喂给当前工作流的 `LoadImage`（只有 i2i 工作流会消费）。`@image_N` 记号可以在文中内联引用接进来的图片槽位。
-- **workflow** —— 自带：**NanoBanana2**（Gemini API）、**GPT Image 2.6**（OpenAI API）、**Seedream 5.5**（ByteDance API）——加上你 Link 或 Upload 进来的任何工作流。
+- **workflow** —— 自带：**NanoBanana 2.1**（Gemini API）、**GPT Image 2.6**（OpenAI API）、**Seedream 5.5**（ByteDance API）——加上你 Link 或 Upload 进来的任何工作流。
 - **resolution / aspect_ratio / batch_size**：目标尺寸档位、画幅、每次 Run 出几张（取决于所选工作流是否消费它们）。
 
 **两个输出**：`images` 是本次 Run 的整批；`image` 是你在节点上点选的单张（没点之前默认第一张）。
 
 ### 带参考图生图
-把参考图接进 **images** 槽，写提示词，选 **NanoBanana2**、**GPT Image 2.6** 或 **Seedream 5.5**，Run。
+把参考图接进 **images** 槽，写提示词，选 **NanoBanana 2.1**、**GPT Image 2.6** 或 **Seedream 5.5**，Run。
 
 ---
 

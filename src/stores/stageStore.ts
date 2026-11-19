@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 import { autoProxyOutput } from '@/composables/widgets/useProxiedVideoUrl'
+import { stageInstanceKey } from '@/composables/stages/stageIdentity'
 import { OUTPUT_SLOTS, parseMultiOutputs } from '@/v2/customIo'
 
 export type StageKind =
@@ -75,6 +76,9 @@ export interface StageState {
    durationMs?: number | null
    preparingWorkflow?: boolean
    directorClips?: string | null
+  runPromptId?: string | null
+  runJobId?: string | null
+  runStageRunId?: string | null
 }
 
 export const FX_PASSTHROUGH_CLASSES = new Set([
@@ -163,6 +167,7 @@ const KIND_TO_TYPE: Record<StageKind, TypedValueType> = {
 
 export const useStageStore = defineStore('comfytv-stage', () => {
   const stages = new WeakMap<object, StageState>()
+  const statesByKey = new Map<string, StageState>()
   const nodeOf = new WeakMap<StageState, any>()
   const refreshers = new WeakMap<object, () => void>()
   const stateTick = ref(0)
@@ -172,24 +177,35 @@ export const useStageStore = defineStore('comfytv-stage', () => {
     kind: StageKind,
     variant: StageVariant = 'generator',
   ): StageState {
-    const state = reactive<StageState>({
-      kind,
-      variant,
-      outputType: KIND_TO_TYPE[kind],
-      output: null,
-      outputs: [null],
-      running: false,
-      inputs: [],
-      mainPrompt: '',
-    })
+    const key = stageInstanceKey(node)
+    let state = statesByKey.get(key)
+    if (!state) {
+      state = reactive<StageState>({
+        kind,
+        variant,
+        outputType: KIND_TO_TYPE[kind],
+        output: null,
+        outputs: [null],
+        running: false,
+        inputs: [],
+        mainPrompt: '',
+      })
+      statesByKey.set(key, state)
+    } else {
+      state.kind = kind
+      state.variant = variant
+      state.outputType = KIND_TO_TYPE[kind]
+    }
     stages.set(node, state)
     nodeOf.set(state, node)
     return state
   }
 
   function unregisterStage(node: object) {
+    const state = stages.get(node)
     stages.delete(node)
     refreshers.delete(node)
+    if (state && nodeOf.get(state) === node) nodeOf.delete(state)
   }
 
   function setRefresher(node: object, fn: () => void) {

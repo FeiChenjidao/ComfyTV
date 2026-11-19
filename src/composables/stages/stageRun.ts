@@ -1,7 +1,7 @@
 import { cancelRemoteJob, cancelStageRun, remoteRun, startStageRun } from '@/api'
 import { isAutoPickerEnabled } from '@/composables/stages/autoPicker'
 import { outputHasLinks, spawnConsumingNode } from '@/composables/stages/spawnFollowUp'
-import { ensureStageUid } from '@/composables/stages/stageIdentity'
+import { stageInstanceKey } from '@/composables/stages/stageIdentity'
 import { mergeModelOutputIntoPool } from '@/composables/stages/modelPool'
 import { buildRunPrompt } from '@/composables/stages/stagePromptBuild'
 import { useRemotePreflight } from '@/composables/stages/useRemotePreflight'
@@ -41,9 +41,6 @@ export function createStageRun(opts: {
   const { node, state, store, kind, variant, refresh } = opts
   const executionStore = useExecutionStore()
 
-  let runningPromptId: string | null = null
-  let runningJobId: string | null = null
-  let runningStageRunId: string | null = null
   let watchdogTimer: ReturnType<typeof setTimeout> | null = null
   const clearWatchdog = () => {
     if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null }
@@ -141,17 +138,17 @@ export function createStageRun(opts: {
           prompt: pm.output,
           target_node_id: targetId,
           project_id: pid,
-          stage_uid: ensureStageUid(node),
+          stage_uid: stageInstanceKey(node),
         })
-        runningJobId = resp.job_id
-        executionStore.registerRemoteJob(targetId, resp.job_id)
+        state.runJobId = resp.job_id
+        executionStore.registerRemoteJob(stageInstanceKey(node), resp.job_id)
         return
       }
 
       if (isBridgeIn) {
         ;(pm as any).__comfytvOwnRun = true
         const queueResp = await a.api.queuePrompt(0, pm, { partialExecutionTargets: [targetId] })
-        runningPromptId = queueResp?.prompt_id ? String(queueResp.prompt_id) : null
+        state.runPromptId = queueResp?.prompt_id ? String(queueResp.prompt_id) : null
         return
       }
 
@@ -161,38 +158,39 @@ export function createStageRun(opts: {
         target_node_id: targetId,
         workflow: pm.workflow,
         client_id: a.api?.clientId ? String(a.api.clientId) : undefined,
+        stage_uid: stageInstanceKey(node),
         extra_data: extraData,
       })
-      runningStageRunId = localRun.job_id
+      state.runStageRunId = localRun.job_id
     } catch (e) {
       console.error('[ComfyTV/stage] run failed', e)
       const err = extractRunError(e, node.id)
       store.applyExecutionError(state, err)
-      runningPromptId = null
-      runningJobId = null
-      runningStageRunId = null
+      state.runPromptId = null
+      state.runJobId = null
+      state.runStageRunId = null
     }
   }
 
   const onCancelRequest = async () => {
     if (!state.running) return
-    if (runningJobId) {
+    if (state.runJobId) {
       try {
-        await cancelRemoteJob(runningJobId)
+        await cancelRemoteJob(state.runJobId)
       } catch (e) {
         console.error('[ComfyTV/stage] remote cancel failed', e)
       }
       return
     }
-    if (runningStageRunId) {
+    if (state.runStageRunId) {
       try {
-        await cancelStageRun(runningStageRunId)
+        await cancelStageRun(state.runStageRunId)
       } catch (e) {
         console.error('[ComfyTV/stage] local cancel failed', e)
       }
       return
     }
-    const pid = runningPromptId
+    const pid = state.runPromptId
     if (!pid) {
       markDropped(t('error.cancelled'))
       return
@@ -207,7 +205,7 @@ export function createStageRun(opts: {
 
   const markDropped = (message: string) => {
     store.applyExecutionError(state, { message, type: 'Cancelled' })
-    runningPromptId = null
+    state.runPromptId = null
     clearWatchdog()
   }
 
@@ -238,7 +236,7 @@ export function createStageRun(opts: {
       traceback: Array.isArray(d.traceback) ? d.traceback.join('') : (d.traceback || undefined),
     }
     store.applyExecutionError(state, err)
-    runningPromptId = null
+    state.runPromptId = null
     clearWatchdog()
     console.warn(`[ComfyTV/stage] execution_error on node ${node.id}:`, err)
   }
@@ -248,15 +246,15 @@ export function createStageRun(opts: {
       message: t('error.cancelled'),
       type: 'Cancelled',
     })
-    runningPromptId = null
+    state.runPromptId = null
     clearWatchdog()
     console.warn(`[ComfyTV/stage] execution_interrupted on node ${node.id}`)
   }
 
   const onExecSuccess = (d: any) => {
     if (!d) return
-    if (!runningPromptId || String(d.prompt_id) !== runningPromptId) return
-    runningPromptId = null
+    if (!state.runPromptId || String(d.prompt_id) !== state.runPromptId) return
+    state.runPromptId = null
     clearWatchdog()
     if (state.running) state.running = false
   }
@@ -264,19 +262,19 @@ export function createStageRun(opts: {
   const onStatus = async (d: any) => {
     const remaining = Number(d?.status?.exec_info?.queue_remaining ?? d?.exec_info?.queue_remaining)
     if (!Number.isFinite(remaining)) return
-    if (!runningPromptId || !state.running || runningJobId) return
+    if (!state.runPromptId || !state.running || state.runJobId) return
     if (watchdogTimer) return
-    const pid = runningPromptId
+    const pid = state.runPromptId
     const queued = remaining === 0 ? false : await promptInQueue((app as any).api, pid)
     if (queued !== false) return
-    if (runningPromptId !== pid || !state.running || watchdogTimer) return
+    if (state.runPromptId !== pid || !state.running || watchdogTimer) return
     watchdogTimer = setTimeout(() => {
       watchdogTimer = null
-      if (runningPromptId !== pid || !state.running) return
+      if (state.runPromptId !== pid || !state.running) return
       if (remaining === 0) {
         console.warn(`[ComfyTV/stage] watchdog firing on node ${node.id} — queue empty but no execution_success/error for prompt ${pid}`)
         store.applyExecutionError(state, { message: t('error.workerDied'), type: 'WorkerDied' })
-        runningPromptId = null
+        state.runPromptId = null
         return
       }
       console.warn(`[ComfyTV/stage] prompt ${pid} left the queue without running (node ${node.id})`)
@@ -286,8 +284,8 @@ export function createStageRun(opts: {
 
   const onRemoteJob = (d: any) => {
     if (!d) return
-    if (runningJobId && d.job_id && d.job_id !== runningJobId) return
-    runningJobId = null
+    if (state.runJobId && d.job_id && d.job_id !== state.runJobId) return
+    state.runJobId = null
     if (d.status === 'done') {
       store.applyExecutedPayload(state, d.ui || {})
       if (kind === 'model' && state.variant === 'generator') {
@@ -308,13 +306,13 @@ export function createStageRun(opts: {
 
   const onStageRun = (d: any) => {
     if (!d) return
-    if (!runningStageRunId && state.running && d.job_id) {
-      runningStageRunId = String(d.job_id)
+    if (!state.runStageRunId && state.running && d.job_id) {
+      state.runStageRunId = String(d.job_id)
     }
-    if (!runningStageRunId) return
-    if (runningStageRunId && d.job_id && d.job_id !== runningStageRunId) return
+    if (!state.runStageRunId) return
+    if (state.runStageRunId && d.job_id && d.job_id !== state.runStageRunId) return
     if (d.status === 'running') return
-    runningStageRunId = null
+    state.runStageRunId = null
     if (d.status === 'done') {
       store.applyExecutedPayload(state, d.ui || {})
       if (kind === 'model' && state.variant === 'generator') {
@@ -336,6 +334,7 @@ export function createStageRun(opts: {
 
   const nodeRunHandlers = {
     getNodeId: () => String(node.id),
+    getStageUid: () => stageInstanceKey(node),
     onProgress,
     onProgressText,
     onError: onExecError,
@@ -350,9 +349,9 @@ export function createStageRun(opts: {
   if (variant !== 'loader' && !isPoolPickerKind(kind)) {
     const attemptRemoteRestore = (tries = 0) => {
       if (node.id != null && node.id >= 0) {
-        void executionStore.remoteJobForNode(String(node.id)).then((jobId) => {
+        void executionStore.remoteJobForNode(stageInstanceKey(node)).then((jobId) => {
           if (jobId && !state.running) {
-            runningJobId = jobId
+            state.runJobId = jobId
             state.running = true
           }
         })

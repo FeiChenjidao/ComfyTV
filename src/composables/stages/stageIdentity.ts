@@ -1,5 +1,38 @@
+import { app } from '@/lib/comfyApp'
+
 const PROP = 'comfytv_stage_uid'
 const PROP_AT = 'comfytv_stage_uid_at'
+const WORKFLOW_KEY = '__comfytvWorkflowKey'
+
+const graphKeys = new WeakMap<object, string>()
+let nextGraphKey = 1
+
+function activeWorkflowKey(): string {
+  const workflow = (app as any)?.extensionManager?.workflow?.activeWorkflow
+  const identity = workflow?.path ?? workflow?.legacyId ?? workflow?.id ?? workflow?.activeState?.id
+  return identity != null && String(identity) ? `workflow:${String(identity)}` : ''
+}
+
+export function workflowKeyForNode(node: any): string {
+  if (!node) return 'workflow:unknown'
+  const existing = node[WORKFLOW_KEY]
+  if (typeof existing === 'string' && existing) return existing
+  let key = activeWorkflowKey()
+  if (!key && node.graph && typeof node.graph === 'object') {
+    key = graphKeys.get(node.graph) ?? ''
+    if (!key) {
+      key = `graph:${nextGraphKey++}`
+      graphKeys.set(node.graph, key)
+    }
+  }
+  if (!key) key = 'workflow:default'
+  node[WORKFLOW_KEY] = key
+  return key
+}
+
+export function stageInstanceKey(node: any): string {
+  return `${workflowKeyForNode(node)}::${ensureStageUid(node)}`
+}
 
 function genUid(): string {
   const c: any = (globalThis as any).crypto
@@ -46,29 +79,38 @@ const liveUids = new Map<string, any>()
 
 export function claimStageUid(node: any): string {
   if (!node) return ''
-  const prev = typeof node.__comfytvClaimedUid === 'string' ? node.__comfytvClaimedUid : ''
+  const prev = typeof node.__comfytvClaimedStageKey === 'string' ? node.__comfytvClaimedStageKey : ''
   let uid = ensureStageUid(node)
-  if (prev && prev !== uid && liveUids.get(prev) === node) liveUids.delete(prev)
-  const owner = liveUids.get(uid)
+  let key = `${workflowKeyForNode(node)}::${uid}`
+  if (prev && prev !== key && liveUids.get(prev) === node) liveUids.delete(prev)
+  const owner = liveUids.get(key)
   if (owner && owner !== node) {
-    uid = genUid()
-    node.properties[PROP] = uid
-    node.properties[PROP_AT] = new Date().toISOString()
-    console.warn(
-      `[ComfyTV/stage] node #${node.id}: stage uid already claimed by node #${owner.id} — regenerated`,
-    )
+    if (String(owner.id) === String(node.id)) {
+      liveUids.delete(key)
+    } else {
+      uid = genUid()
+      node.properties[PROP] = uid
+      node.properties[PROP_AT] = new Date().toISOString()
+      key = `${workflowKeyForNode(node)}::${uid}`
+      console.warn(
+        `[ComfyTV/stage] node #${node.id}: stage uid already claimed by node #${owner.id} in this workflow — regenerated`,
+      )
+    }
   }
-  liveUids.set(uid, node)
+  liveUids.set(key, node)
   node.__comfytvClaimedUid = uid
+  node.__comfytvClaimedStageKey = key
   return uid
 }
 
 export function releaseStageUid(node: any): void {
   if (!node) return
-  const claimed = typeof node.__comfytvClaimedUid === 'string' ? node.__comfytvClaimedUid : ''
-  const uid = claimed || getStageUid(node)
-  if (uid && liveUids.get(uid) === node) liveUids.delete(uid)
+  const key = typeof node.__comfytvClaimedStageKey === 'string'
+    ? node.__comfytvClaimedStageKey
+    : stageInstanceKey(node)
+  if (key && liveUids.get(key) === node) liveUids.delete(key)
   delete node.__comfytvClaimedUid
+  delete node.__comfytvClaimedStageKey
 }
 
 export function stageClassName(node: any): string {

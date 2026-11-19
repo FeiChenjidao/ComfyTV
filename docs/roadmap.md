@@ -12,7 +12,7 @@ Legend: ✅ done · ⏳ pending.
 
 | Feature | Notes |
 |---------|-------|
-| **Image · NanoBanana2 / GPT Image 2.6 / Seedream 5.5** | API-backed image generation (Gemini / OpenAI / ByteDance); optional reference images. |
+| **Image · NanoBanana 2.1 / GPT Image 2.6 / Seedream 5.5** | API-backed image generation (Gemini / OpenAI / ByteDance); optional reference images. |
 | **Image Edit · Flux Canny Edit** | Prompt-driven image editing. |
 | **Inpaint · Flux Fill Inpaint** + **Fooocus SDXL Inpaint** | Mask-driven regeneration (mask painter produces the mask). |
 | **Erase · LaMa Erase** | Promptless object removal. Requires `Acly/comfyui-inpaint-nodes` + `big-lama.pt`. |

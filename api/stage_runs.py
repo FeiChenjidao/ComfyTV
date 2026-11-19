@@ -1,4 +1,5 @@
 import asyncio
+import struct
 import uuid
 from dataclasses import dataclass
 
@@ -7,7 +8,11 @@ from aiohttp import web
 from server import PromptServer
 
 from ..nodes.stages.common.meta import STAGE_META
-from ..runners._nested_exec import last_execution_error, use_execution_server
+from ..runners._nested_exec import (
+    last_execution_error,
+    send_prompt_server_sync,
+    use_execution_server,
+)
 from ..runners.progress_isolation import install_progress_isolation
 from ._common import routes
 
@@ -17,6 +22,7 @@ class StageRun:
     id: str
     node_id: str
     client_id: str | None
+    stage_uid: str | None = None
     cancelled: bool = False
     task: asyncio.Task | None = None
 
@@ -42,24 +48,55 @@ class StageRunServer:
         if event in ("progress", "progress_text"):
             payload = dict(data) if isinstance(data, dict) else data
             if isinstance(payload, dict):
+                source_node = payload.get("nodeId", payload.get("node_id", payload.get("node")))
+                outer_node = str(self.run.node_id)
+                if source_node is not None:
+                    payload["source_node"] = str(source_node)
+                payload["node"] = outer_node
+                payload["node_id"] = outer_node
+                payload["nodeId"] = outer_node
                 payload["job_id"] = self.run.id
-            PromptServer.instance.send_sync(event, payload, self.client_id)
+                if self.run.stage_uid:
+                    payload["stage_uid"] = self.run.stage_uid
+            send_prompt_server_sync(event, payload, self.client_id)
             return
         try:
             from server import BinaryEventTypes
             preview_event = getattr(BinaryEventTypes, "PREVIEW_IMAGE_WITH_METADATA", None)
+            text_event = getattr(BinaryEventTypes, "TEXT", None)
         except Exception:
             preview_event = None
+            text_event = None
+        if text_event is not None and event == text_event and isinstance(data, (bytes, bytearray)):
+            raw = bytes(data)
+            if len(raw) >= 4:
+                source_len = struct.unpack(">I", raw[:4])[0]
+                if len(raw) >= 4 + source_len:
+                    text = raw[4 + source_len:].decode("utf-8", errors="replace")
+                    send_prompt_server_sync(
+                        "progress_text",
+                        {
+                            "node": str(self.run.node_id),
+                            "node_id": str(self.run.node_id),
+                            "nodeId": str(self.run.node_id),
+                            "text": text,
+                            "job_id": self.run.id,
+                            **({"stage_uid": self.run.stage_uid} if self.run.stage_uid else {}),
+                        },
+                        self.client_id,
+                    )
+                    return
         if preview_event is not None and event == preview_event:
-            PromptServer.instance.send_sync(event, data, self.client_id)
+            send_prompt_server_sync(event, data, self.client_id)
 
 
 def _send_run_event(run: StageRun, status: str, **payload) -> None:
-    PromptServer.instance.send_sync(
+    send_prompt_server_sync(
         "comfytv-stage-run",
         {
             "job_id": run.id,
             "node_id": run.node_id,
+            **({"stage_uid": run.stage_uid} if run.stage_uid else {}),
             "status": status,
             **payload,
         },
@@ -178,10 +215,12 @@ async def start_stage_run(request: web.Request) -> web.Response:
         )
 
     client_id = body.get("client_id")
+    stage_uid = body.get("stage_uid")
     run = StageRun(
         id=run_id,
         node_id=target_node_id,
         client_id=str(client_id) if client_id else None,
+        stage_uid=str(stage_uid) if stage_uid else None,
     )
     ACTIVE_STAGE_RUNS[run.id] = run
     run.task = asyncio.create_task(_execute_stage_run(

@@ -9,7 +9,7 @@ Classify the requested visual change before adding nodes.
 
 ## Reference edit versus upscale
 
-Use a reference-aware image-edit workflow such as `NanoBanana2` when a second image defines the desired style, material, texture, rendering language, or appearance.
+Use a reference-aware image-edit workflow such as `NanoBanana 2.1` when a second image defines the desired style, material, texture, rendering language, or appearance.
 
 - Treat image 1 as the structure and edit target.
 - Treat image 2 as the style or material reference.
@@ -31,7 +31,7 @@ Use Precise Upscale or a preservation-oriented upscaler when the request is limi
 For source-to-reference style or material work:
 
 1. Inspect both images.
-2. Add one `ComfyTV.ImageStage` with an appropriate reference-aware workflow such as `NanoBanana2`.
+2. Add one `ComfyTV.ImageStage` with an appropriate reference-aware workflow such as `NanoBanana 2.1`.
 3. Connect the source first and the reference second, then verify media order.
 4. Match resolution and aspect ratio to the actual target instead of applying a fixed enlargement.
 5. State that image 1 owns layout, silhouettes, boundaries, symmetry, colors, and proportions.

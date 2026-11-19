@@ -1,4 +1,5 @@
 import asyncio
+import struct
 import types
 
 from aiohttp import web
@@ -54,12 +55,14 @@ def test_start_and_cancel_stage_run(monkeypatch):
                 "prompt": {"7": {"class_type": "ComfyTV.ImageStage", "inputs": {}}},
                 "target_node_id": "7",
                 "client_id": "tab-1",
+                "stage_uid": "stage-uid-7",
             })
             assert response.status == 200
             body = await response.json()
             stage_run = stage_runs.ACTIVE_STAGE_RUNS[body["job_id"]]
             assert stage_run.node_id == "7"
             assert stage_run.client_id == "tab-1"
+            assert stage_run.stage_uid == "stage-uid-7"
 
             cancelled = await test_client.post(
                 f"/comfytv/stage_runs/{body['job_id']}/cancel",
@@ -117,3 +120,55 @@ def test_safe_extra_data_whitelists_auth_and_workflow():
         "api_key_comfy_org": "key",
         "extra_pnginfo": {"workflow": {"nodes": []}},
     }
+
+
+def test_stage_run_server_rewrites_inner_progress(monkeypatch):
+    from ComfyTV.api import stage_runs
+    import server as server_module
+
+    text_event = getattr(getattr(server_module, "BinaryEventTypes", None), "TEXT", 777)
+    if not hasattr(server_module, "BinaryEventTypes"):
+        monkeypatch.setattr(
+            server_module,
+            "BinaryEventTypes",
+            types.SimpleNamespace(TEXT=text_event, PREVIEW_IMAGE_WITH_METADATA=778),
+            raising=False,
+        )
+
+    sent = []
+    monkeypatch.setattr(
+        stage_runs,
+        "send_prompt_server_sync",
+        lambda event, data, sid=None: sent.append((event, data, sid)),
+    )
+    run = stage_runs.StageRun("job-1", "42", "client-1", "stage-uid-42")
+    stage_server = stage_runs.StageRunServer(run)
+
+    stage_server.send_sync("progress", {
+        "value": 3,
+        "max": 10,
+        "node": "280",
+        "prompt_id": "inner-1",
+    })
+    event, payload, sid = sent.pop(0)
+    assert event == "progress"
+    assert sid == "client-1"
+    assert payload["node"] == "42"
+    assert payload["node_id"] == "42"
+    assert payload["nodeId"] == "42"
+    assert payload["source_node"] == "280"
+    assert payload["job_id"] == "job-1"
+    assert payload["stage_uid"] == "stage-uid-42"
+
+    text = "Waiting for server: 12s".encode("utf-8")
+    inner_node = b"280"
+    stage_server.send_sync(
+        text_event,
+        struct.pack(">I", len(inner_node)) + inner_node + text,
+    )
+    event, payload, sid = sent.pop(0)
+    assert event == "progress_text"
+    assert sid == "client-1"
+    assert payload["nodeId"] == "42"
+    assert payload["text"] == text.decode("utf-8")
+    assert payload["stage_uid"] == "stage-uid-42"

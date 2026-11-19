@@ -64,9 +64,17 @@ class RunnerRegistry:
         return [r.label for r in self.for_kind(kind) if not r.hidden]
 
     def by_label(self, label: str, kind: StageKind) -> Runner | None:
+        from . import WORKFLOW_LABEL_ALIASES
+
+        original_label = label
+        label = WORKFLOW_LABEL_ALIASES.get((kind, label), label)
         for r in self.for_kind(kind):
             if r.label == label:
                 return r
+        if label != original_label:
+            for r in self.for_kind(kind):
+                if r.label == original_label:
+                    return r
         return None
 
     def all(self) -> list[Runner]:

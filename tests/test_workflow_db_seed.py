@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import pytest
+from sqlalchemy import select
 
 from ComfyTV.runners import workflow_db as wdb
 
@@ -40,6 +41,35 @@ class TestSeed:
         assert cfg["sizing"] == {"base": 512, "snap": 8}
         assert len(cfg["bindings"]) == 1
         assert cfg["bindings"][0]["from"] == "option:seed"
+
+    def test_seed_migrates_renamed_shipped_workflow_label(
+            self, reset_db, tmp_path, monkeypatch):
+        from ComfyTV import db
+
+        wdir = tmp_path / "workflows"
+        make_workflow(
+            wdir,
+            "NanoBanana 2.1",
+            "image",
+            preset={"label": "NanoBanana 2.1"},
+        )
+        monkeypatch.setattr(wdb.seed, "_WORKFLOWS_DIR", wdir)
+        wdb.seed_workflows_from_disk(("image",))
+
+        with db.get_session() as session:
+            row = session.execute(
+                select(db.Workflow).where(
+                    db.Workflow.kind == "image",
+                    db.Workflow.label == "NanoBanana 2.1",
+                )
+            ).scalar_one()
+            row.label = "NanoBanana2"
+            session.commit()
+
+        wdb.seed_workflows_from_disk(("image",))
+
+        assert wdb.get_workflow_config("image", "NanoBanana2") is None
+        assert wdb.get_workflow_config("image", "NanoBanana 2.1") is not None
 
     def test_import_workflow_writes_and_upserts(self, reset_db, tmp_path, monkeypatch):
         from pathlib import Path

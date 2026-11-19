@@ -454,6 +454,7 @@ export function startStageRun(body: {
   target_node_id: string
   workflow?: Record<string, unknown>
   client_id?: string
+  stage_uid?: string
   extra_data?: Record<string, string>
 }): Promise<z.infer<typeof StageRunStartSchema>> {
   return apiSend('/comfytv/stage_runs', 'POST', StageRunStartSchema, body)

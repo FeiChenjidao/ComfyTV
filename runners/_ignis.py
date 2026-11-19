@@ -69,6 +69,14 @@ def load_ignis_config() -> tuple[str, str]:
     return (base_url or DEFAULT_BASE_URL).rstrip("/"), token
 
 
+def has_ignis_token() -> bool:
+    try:
+        load_ignis_config()
+    except RuntimeError:
+        return False
+    return True
+
+
 def check_cancel() -> None:
     try:
         import comfy.model_management

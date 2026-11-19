@@ -238,7 +238,7 @@ describe('syncBoundOptionEnums', () => {
       ],
     }
 
-    await syncBoundOptionEnums(node, 'image', 'NanoBanana2')
+    await syncBoundOptionEnums(node, 'image', 'NanoBanana 2.1')
     expect(apiSend).toHaveBeenCalled()
     expect(node.widgets[0].options.values).toEqual(['auto', '16:9'])
     expect(node.widgets[0].value).toBe('auto')
@@ -422,7 +422,7 @@ describe('defaultsFromExposedWidgets / applyBoundOptionDefaults', () => {
         { name: 'aspect_ratio', type: 'combo', value: '1:1', options: { values: [...ASPECT_RATIOS_DEFAULT] }, callback: vi.fn() },
       ],
     }
-    await syncBoundOptionEnums(node, 'image', 'NanoBanana2', { applyDefaults: 'all' })
+    await syncBoundOptionEnums(node, 'image', 'NanoBanana 2.1', { applyDefaults: 'all' })
     expect(node.widgets[0].options.values).toEqual(['auto', '1:1', '16:9'])
     expect(node.widgets[0].value).toBe('16:9')
   })

@@ -18,7 +18,7 @@ The folder name **is** the runner kind — each stage scans only its own folder 
 | Folder | Stage(s) | Tested baseline | Per-kind doc |
 |---|---|---|---|
 | `audio/`       | Audio Stage              | ACE-Step v1 Song | [README](audio/README.md) |
-| `image/`       | Image Stage              | NanoBanana2, GPT Image 2.6, Seedream 5.5 | [README](image/README.md) |
+| `image/`       | Image Stage              | NanoBanana 2.1, GPT Image 2.6, Seedream 5.5 | [README](image/README.md) |
 | `image-edit/`  | Image Edit               | Flux Canny Edit | [README](image-edit/README.md) |
 | `inpaint/`     | Inpaint                  | Flux Fill Inpaint (subgraph); Fooocus SDXL Inpaint *(opt-in plugin)* | [README](inpaint/README.md) |
 | `outpaint/`    | Outpaint                 | Flux Fill Outpaint; Fooocus SDXL Outpaint *(opt-in plugin)* | [README](outpaint/README.md) |

@@ -20,13 +20,13 @@ Hover a workflow entry in the stage manager to **★ star it as the default** fo
 ![Image stage](/images/image-run.png)
 
 - **Prompt**: the main text box. Upstream **Text** nodes get appended; upstream **images** feed the current workflow's `LoadImage` (only the i2i workflow consumes them). `@image_N` tokens reference the wired image slots inline.
-- **workflow** — shipped: **NanoBanana2** (Gemini API), **GPT Image 2.6** (OpenAI API), **Seedream 5.5** (ByteDance API) — plus anything you link or upload.
+- **workflow** — shipped: **NanoBanana 2.1** (Gemini API), **GPT Image 2.6** (OpenAI API), **Seedream 5.5** (ByteDance API) — plus anything you link or upload.
 - **resolution / aspect_ratio / batch_size**: target size tier, shape, and how many images per Run (when the chosen workflow uses them).
 
 **Two outputs**: `images` is the whole batch from this Run; `image` is the single thumbnail you picked on the node (defaults to the first one until you click).
 
 ### Image with references
-Wire reference images into the **images** slots, write the prompt, pick **NanoBanana2**, **GPT Image 2.6**, or **Seedream 5.5**, then Run.
+Wire reference images into the **images** slots, write the prompt, pick **NanoBanana 2.1**, **GPT Image 2.6**, or **Seedream 5.5**, then Run.
 
 ---
 

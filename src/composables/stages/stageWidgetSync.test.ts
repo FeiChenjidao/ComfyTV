@@ -29,4 +29,27 @@ describe('bindStageWidgets', () => {
     expect(state.pickedIndex).toBe(3)
     expect(state.pool).toBe(savedPool)
   })
+
+  it('syncs the saved prompt into stage state after node configuration', () => {
+    const prompt = { name: 'main_prompt', value: '', callback: undefined as (() => void) | undefined }
+    const node = {
+      widgets: [prompt],
+      onConfigure() {
+        prompt.value = 'saved prompt'
+      },
+    }
+    const state = { mainPrompt: '' } as any
+
+    bindStageWidgets({
+      node,
+      state,
+      store: {} as any,
+      kind: 'video',
+      variant: 'generator',
+      applyPickedIndex: vi.fn(),
+    })
+    node.onConfigure()
+
+    expect(state.mainPrompt).toBe('saved prompt')
+  })
 })

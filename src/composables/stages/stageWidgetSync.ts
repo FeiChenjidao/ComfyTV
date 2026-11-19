@@ -40,10 +40,14 @@ export function bindStageWidgets(opts: {
   if (variant === 'generator') {
     const promptWidget = node.widgets?.find((w: any) => w.name === 'main_prompt')
     if (promptWidget) {
-      state.mainPrompt = String(promptWidget.value ?? '')
-      promptWidget.callback = useChainCallback(promptWidget.callback, () => {
+      const syncPrompt = () => {
         state.mainPrompt = String(promptWidget.value ?? '')
+      }
+      syncPrompt()
+      promptWidget.callback = useChainCallback(promptWidget.callback, () => {
+        syncPrompt()
       })
+      node.onConfigure = useChainCallback(node.onConfigure, syncPrompt)
     }
 
     if (isPoolPickerKind(kind) || kind === 'image-batch' || kind === 'model') {

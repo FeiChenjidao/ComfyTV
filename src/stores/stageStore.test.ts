@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import { app } from '@/lib/comfyApp'
 
 const autoProxyOutput = vi.fn(async () => {})
 vi.mock('@/composables/widgets/useProxiedVideoUrl', () => ({
@@ -68,6 +69,42 @@ describe('stageStore.registerStage', () => {
     store.registerStage(node, 'image')
     store.unregisterStage(node)
     expect(store.getStage(node)).toBeUndefined()
+  })
+
+  it('restores session state when the same workflow node is remounted', () => {
+    ;(app as any).extensionManager = { workflow: { activeWorkflow: { path: 'workflows/state-a.json' } } }
+    const store = useStageStore()
+    const first: any = { id: 5, properties: { comfytv_stage_uid: 'state-uid' } }
+    const state = store.registerStage(first, 'video')
+    state.running = true
+    state.progress = { value: 4, max: 10, text: 'working' }
+    state.runStageRunId = 'job-5'
+    store.unregisterStage(first)
+
+    const remounted: any = { id: 5, properties: { comfytv_stage_uid: 'state-uid' } }
+    const restored = store.registerStage(remounted, 'video')
+    expect(restored).toBe(state)
+    expect(restored.running).toBe(true)
+    expect(restored.progress).toEqual({ value: 4, max: 10, text: 'working' })
+    expect(restored.runStageRunId).toBe('job-5')
+  })
+
+  it('does not share state between workflows with the same node uid', () => {
+    const store = useStageStore()
+    ;(app as any).extensionManager = { workflow: { activeWorkflow: { path: 'workflows/state-one.json' } } }
+    const first = store.registerStage(
+      { id: 1, properties: { comfytv_stage_uid: 'same-uid' } },
+      'image',
+    )
+    first.mainPrompt = 'first workflow'
+
+    ;(app as any).extensionManager = { workflow: { activeWorkflow: { path: 'workflows/state-two.json' } } }
+    const second = store.registerStage(
+      { id: 1, properties: { comfytv_stage_uid: 'same-uid' } },
+      'image',
+    )
+    expect(second).not.toBe(first)
+    expect(second.mainPrompt).toBe('')
   })
 })
 

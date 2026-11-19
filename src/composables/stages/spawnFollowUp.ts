@@ -371,7 +371,7 @@ export function spawnConsumingNode(srcNode: any, targetClass: string, inputSlotN
   return newNode
 }
 
-const RELIGHT_WORKFLOW_LABEL = 'NanoBanana2'
+const RELIGHT_WORKFLOW_LABEL = 'NanoBanana 2.1'
 
 function spawnRelightPair(srcNode: any, srcSlot: number) {
   const store = useStageStore()

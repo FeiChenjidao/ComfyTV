@@ -89,7 +89,7 @@ def test_gpt_inpaint_keeps_mask_node_and_uses_2_6() -> None:
 
 def test_nanobanana_workflows_default_to_2_1() -> None:
     for relative_path, node_id in (
-        ("workflows/image/NanoBanana2.json", 17),
+        ("workflows/image/NanoBanana 2.1.json", 17),
         ("workflows/inpaint/Nanobanana 局部重绘.json", 101),
     ):
         node = _node(_workflow(relative_path), node_id)

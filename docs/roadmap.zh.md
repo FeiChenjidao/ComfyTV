@@ -12,7 +12,7 @@ ComfyTV 还是 pre-release 状态。
 
 | 能力 | 备注 |
 |---------|-------|
-| **Image · NanoBanana2 / GPT Image 2.6 / Seedream 5.5** | API 生图(Gemini / OpenAI / ByteDance);可选参考图。 |
+| **Image · NanoBanana 2.1 / GPT Image 2.6 / Seedream 5.5** | API 生图(Gemini / OpenAI / ByteDance);可选参考图。 |
 | **Image Edit · Flux Canny Edit** | 提示词驱动的图像编辑。 |
 | **Inpaint · Flux Fill Inpaint** + **Fooocus SDXL Inpaint** | 蒙版驱动的重绘(蒙版画笔产出 mask)。 |
 | **Erase · LaMa Erase** | 无提示词抹除目标。需要装 `Acly/comfyui-inpaint-nodes` + `big-lama.pt`。 |

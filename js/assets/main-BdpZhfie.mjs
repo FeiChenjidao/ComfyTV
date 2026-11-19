@@ -60005,7 +60005,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-V4Tod41h.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-YMRyOdqb.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -64131,6 +64131,34 @@ function installExecRelay(deps) {
 }
 const PROP = "comfytv_stage_uid";
 const PROP_AT = "comfytv_stage_uid_at";
+const WORKFLOW_KEY = "__comfytvWorkflowKey";
+const graphKeys = /* @__PURE__ */ new WeakMap();
+let nextGraphKey = 1;
+function activeWorkflowKey() {
+  var _a2, _b2, _c;
+  const workflow2 = (_b2 = (_a2 = app$1 == null ? void 0 : app$1.extensionManager) == null ? void 0 : _a2.workflow) == null ? void 0 : _b2.activeWorkflow;
+  const identity = (workflow2 == null ? void 0 : workflow2.path) ?? (workflow2 == null ? void 0 : workflow2.legacyId) ?? (workflow2 == null ? void 0 : workflow2.id) ?? ((_c = workflow2 == null ? void 0 : workflow2.activeState) == null ? void 0 : _c.id);
+  return identity != null && String(identity) ? `workflow:${String(identity)}` : "";
+}
+function workflowKeyForNode(node) {
+  if (!node) return "workflow:unknown";
+  const existing = node[WORKFLOW_KEY];
+  if (typeof existing === "string" && existing) return existing;
+  let key = activeWorkflowKey();
+  if (!key && node.graph && typeof node.graph === "object") {
+    key = graphKeys.get(node.graph) ?? "";
+    if (!key) {
+      key = `graph:${nextGraphKey++}`;
+      graphKeys.set(node.graph, key);
+    }
+  }
+  if (!key) key = "workflow:default";
+  node[WORKFLOW_KEY] = key;
+  return key;
+}
+function stageInstanceKey(node) {
+  return `${workflowKeyForNode(node)}::${ensureStageUid(node)}`;
+}
 function genUid() {
   const c2 = globalThis.crypto;
   if (c2 && typeof c2.randomUUID === "function") return c2.randomUUID();
@@ -64160,28 +64188,35 @@ function getStageUid(node) {
 const liveUids = /* @__PURE__ */ new Map();
 function claimStageUid(node) {
   if (!node) return "";
-  const prev = typeof node.__comfytvClaimedUid === "string" ? node.__comfytvClaimedUid : "";
+  const prev = typeof node.__comfytvClaimedStageKey === "string" ? node.__comfytvClaimedStageKey : "";
   let uid2 = ensureStageUid(node);
-  if (prev && prev !== uid2 && liveUids.get(prev) === node) liveUids.delete(prev);
-  const owner = liveUids.get(uid2);
+  let key = `${workflowKeyForNode(node)}::${uid2}`;
+  if (prev && prev !== key && liveUids.get(prev) === node) liveUids.delete(prev);
+  const owner = liveUids.get(key);
   if (owner && owner !== node) {
-    uid2 = genUid();
-    node.properties[PROP] = uid2;
-    node.properties[PROP_AT] = (/* @__PURE__ */ new Date()).toISOString();
-    console.warn(
-      `[ComfyTV/stage] node #${node.id}: stage uid already claimed by node #${owner.id} — regenerated`
-    );
+    if (String(owner.id) === String(node.id)) {
+      liveUids.delete(key);
+    } else {
+      uid2 = genUid();
+      node.properties[PROP] = uid2;
+      node.properties[PROP_AT] = (/* @__PURE__ */ new Date()).toISOString();
+      key = `${workflowKeyForNode(node)}::${uid2}`;
+      console.warn(
+        `[ComfyTV/stage] node #${node.id}: stage uid already claimed by node #${owner.id} in this workflow — regenerated`
+      );
+    }
   }
-  liveUids.set(uid2, node);
+  liveUids.set(key, node);
   node.__comfytvClaimedUid = uid2;
+  node.__comfytvClaimedStageKey = key;
   return uid2;
 }
 function releaseStageUid(node) {
   if (!node) return;
-  const claimed = typeof node.__comfytvClaimedUid === "string" ? node.__comfytvClaimedUid : "";
-  const uid2 = claimed || getStageUid(node);
-  if (uid2 && liveUids.get(uid2) === node) liveUids.delete(uid2);
+  const key = typeof node.__comfytvClaimedStageKey === "string" ? node.__comfytvClaimedStageKey : stageInstanceKey(node);
+  if (key && liveUids.get(key) === node) liveUids.delete(key);
   delete node.__comfytvClaimedUid;
+  delete node.__comfytvClaimedStageKey;
 }
 function stageClassName(node) {
   const cc = String((node == null ? void 0 : node.comfyClass) ?? (node == null ? void 0 : node.type) ?? "");
@@ -81356,27 +81391,39 @@ const KIND_TO_TYPE = {
 };
 const useStageStore = /* @__PURE__ */ defineStore("comfytv-stage", () => {
   const stages = /* @__PURE__ */ new WeakMap();
+  const statesByKey = /* @__PURE__ */ new Map();
   const nodeOf = /* @__PURE__ */ new WeakMap();
   const refreshers = /* @__PURE__ */ new WeakMap();
   const stateTick = /* @__PURE__ */ ref(0);
   function registerStage(node, kind, variant = "generator") {
-    const state2 = /* @__PURE__ */ reactive({
-      kind,
-      variant,
-      outputType: KIND_TO_TYPE[kind],
-      output: null,
-      outputs: [null],
-      running: false,
-      inputs: [],
-      mainPrompt: ""
-    });
+    const key = stageInstanceKey(node);
+    let state2 = statesByKey.get(key);
+    if (!state2) {
+      state2 = /* @__PURE__ */ reactive({
+        kind,
+        variant,
+        outputType: KIND_TO_TYPE[kind],
+        output: null,
+        outputs: [null],
+        running: false,
+        inputs: [],
+        mainPrompt: ""
+      });
+      statesByKey.set(key, state2);
+    } else {
+      state2.kind = kind;
+      state2.variant = variant;
+      state2.outputType = KIND_TO_TYPE[kind];
+    }
     stages.set(node, state2);
     nodeOf.set(state2, node);
     return state2;
   }
   function unregisterStage(node) {
+    const state2 = stages.get(node);
     stages.delete(node);
     refreshers.delete(node);
+    if (state2 && nodeOf.get(state2) === node) nodeOf.delete(state2);
   }
   function setRefresher(node, fn3) {
     refreshers.set(node, fn3);
@@ -83333,7 +83380,7 @@ function spawnConsumingNode(srcNode, targetClass, inputSlotName, srcSlot = 0) {
   stampLineage(srcNode, newNode);
   return newNode;
 }
-const RELIGHT_WORKFLOW_LABEL = "NanoBanana2";
+const RELIGHT_WORKFLOW_LABEL = "NanoBanana 2.1";
 function spawnRelightPair(srcNode, srcSlot) {
   const store2 = useStageStore();
   const relight2 = createNodeAt("ComfyTV.RelightStage", posRightOf(srcNode));
@@ -90465,7 +90512,7 @@ const _sfc_main$4G = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-xRqY5XLR.mjs"),
+      loader: () => import("./AgentPanelRoot-Di67XaUd.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -96847,7 +96894,7 @@ const _sfc_main$4u = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4u, [["__scopeId", "data-v-24cb4b3c"]]);
+const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4u, [["__scopeId", "data-v-f42c362c"]]);
 const HOST_ID = "comfytv-bottom-bar";
 const MAX_FRAMES = 600;
 let pinia$1 = null;
@@ -155393,7 +155440,7 @@ const _sfc_main$3M = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const VideoToFramesStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$3M, [["__scopeId", "data-v-74be56b2"]]);
+const VideoToFramesStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$3M, [["__scopeId", "data-v-24559916"]]);
 function evenDim(n) {
   return Math.max(2, Math.round(n / 2) * 2);
 }
@@ -160845,7 +160892,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-Ce9CgNeI.mjs");
+    const { TGALoader } = await import("./TGALoader-4P2x48G-.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -160858,7 +160905,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-CYkJpddP.mjs");
+      const { MTLLoader } = await import("./MTLLoader-Ccp87H7V.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -160867,7 +160914,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-BG7JA5dq.mjs");
+    const { STLLoader } = await import("./STLLoader-DQ7khZUX.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -160875,7 +160922,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-Bdceyagu.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-B-quoSmA.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -165749,6 +165796,16 @@ const _sfc_main$3o = /* @__PURE__ */ defineComponent({
   }
 });
 const ImagesSplitPreview = /* @__PURE__ */ _export_sfc(_sfc_main$3o, [["__scopeId", "data-v-74a28990"]]);
+function useChainCallback(originalCallback, ...callbacks) {
+  return function(...args) {
+    if (typeof originalCallback === "function") {
+      originalCallback.call(this, ...args);
+    }
+    for (const callback of callbacks) {
+      callback.call(this, ...args);
+    }
+  };
+}
 const mounts = /* @__PURE__ */ reactive([]);
 function registerMount(key, container, component, props) {
   mounts.push({
@@ -166329,6 +166386,24 @@ const MediaToolbarV2 = /* @__PURE__ */ _export_sfc(_sfc_main$3n, [["__scopeId", 
 const RUNTIME = /* @__PURE__ */ new WeakMap();
 const BAR_BTNS = /* @__PURE__ */ new WeakMap();
 const NODE_BARS = /* @__PURE__ */ new WeakMap();
+const NODE_TOOLBAR_ISLANDS = /* @__PURE__ */ new WeakMap();
+function toolbarIslands(node, supplied) {
+  if (supplied) return supplied;
+  let islands = NODE_TOOLBAR_ISLANDS.get(node);
+  if (islands) {
+    islands.unmountAll();
+    return islands;
+  }
+  islands = createIslandGroup();
+  NODE_TOOLBAR_ISLANDS.set(node, islands);
+  const owned = islands;
+  const anyNode = node;
+  anyNode.onRemoved = useChainCallback(anyNode.onRemoved, () => {
+    owned.unmountAll();
+    if (NODE_TOOLBAR_ISLANDS.get(node) === owned) NODE_TOOLBAR_ISLANDS.delete(node);
+  });
+  return islands;
+}
 function toolbarRuntime(node) {
   let rt2 = RUNTIME.get(node);
   if (!rt2) {
@@ -166442,7 +166517,7 @@ function attachPresetToolbar(opts, preset2) {
   const flavor = preset2 === "video" ? opts.videoFlavor ?? "video" : "audio";
   const bar = el$9("div", "v2-toolbar");
   opts.card.appendChild(bar);
-  const islands = opts.islands ?? createIslandGroup();
+  const islands = toolbarIslands(opts.node, opts.islands);
   islands.mount(bar, MediaToolbarV2, { state: opts.state, flavor, onAction: opts.onAction });
   return bar;
 }
@@ -166858,16 +166933,6 @@ const _sfc_main$3m = /* @__PURE__ */ defineComponent({
     };
   }
 });
-function useChainCallback(originalCallback, ...callbacks) {
-  return function(...args) {
-    if (typeof originalCallback === "function") {
-      originalCallback.call(this, ...args);
-    }
-    for (const callback of callbacks) {
-      callback.call(this, ...args);
-    }
-  };
-}
 function useImageMerge(node, state2) {
   const store2 = useStageStore();
   const mergeMode = useStrWidget(node, "merge_mode", "layers");
@@ -247432,6 +247497,8 @@ const useExecutionStore = /* @__PURE__ */ defineStore("comfytv-execution", () =>
   const recentEvents = /* @__PURE__ */ ref([]);
   const nodeProgress = /* @__PURE__ */ reactive(/* @__PURE__ */ new Map());
   const nodeHandlers = /* @__PURE__ */ new Set();
+  const stageRunEvents = /* @__PURE__ */ new Map();
+  const remoteJobEvents = /* @__PURE__ */ new Map();
   const remoteJobs = /* @__PURE__ */ reactive(/* @__PURE__ */ new Map());
   let remoteHydration = null;
   const isBusy = computed(() => currentNodeId.value != null || queueRemaining.value > 0);
@@ -247450,29 +247517,54 @@ const useExecutionStore = /* @__PURE__ */ defineStore("comfytv-execution", () =>
     }
     return void 0;
   }
+  function handlersForDetail(detail, nodeId) {
+    var _a2;
+    const uid2 = (detail == null ? void 0 : detail.stage_uid) != null ? String(detail.stage_uid) : "";
+    if (uid2) {
+      for (const handler of nodeHandlers) {
+        if (((_a2 = handler.getStageUid) == null ? void 0 : _a2.call(handler)) === uid2) return handler;
+      }
+    }
+    return handlersForId(nodeId);
+  }
   function registerNodeHandlers(handlers2) {
+    var _a2;
     nodeHandlers.add(handlers2);
+    const uid2 = (_a2 = handlers2.getStageUid) == null ? void 0 : _a2.call(handlers2);
+    const latestStage = uid2 ? stageRunEvents.get(uid2) : void 0;
+    const latestRemote = uid2 ? remoteJobEvents.get(uid2) : void 0;
+    if (latestStage || latestRemote) queueMicrotask(() => {
+      var _a3, _b2;
+      if (!nodeHandlers.has(handlers2)) return;
+      if (latestStage) (_a3 = handlers2.onStageRun) == null ? void 0 : _a3.call(handlers2, latestStage);
+      if (latestRemote) (_b2 = handlers2.onRemoteJob) == null ? void 0 : _b2.call(handlers2, latestRemote);
+    });
   }
   function unregisterNodeHandlers(handlers2) {
     nodeHandlers.delete(handlers2);
-    nodeProgress.delete(handlers2.getNodeId());
+    const id = handlers2.getNodeId();
+    if (![...nodeHandlers].some((handler) => handler.getNodeId() === id)) {
+      nodeProgress.delete(id);
+    }
   }
-  function registerRemoteJob(nodeId, jobId) {
-    remoteJobs.set(String(nodeId), jobId);
+  function registerRemoteJob(stageKey, jobId) {
+    remoteJobs.set(String(stageKey), jobId);
   }
   function hydrateRemoteJobs() {
     if (!remoteHydration) {
       remoteHydration = listRemoteJobs("running").then(({ jobs }) => {
-        for (const j2 of jobs) remoteJobs.set(String(j2.stage_node_id), j2.id);
+        for (const j2 of jobs) {
+          remoteJobs.set(String(j2.stage_uid || j2.stage_node_id), j2.id);
+        }
       }).catch((e) => {
         console.warn("[ComfyTV/execution] remote job hydrate failed", e);
       });
     }
     return remoteHydration;
   }
-  async function remoteJobForNode(nodeId) {
+  async function remoteJobForNode(stageKey) {
     await hydrateRemoteJobs();
-    return remoteJobs.get(String(nodeId));
+    return remoteJobs.get(String(stageKey));
   }
   function bindToApi(api2) {
     const onStatus = (e) => {
@@ -247488,7 +247580,7 @@ const useExecutionStore = /* @__PURE__ */ defineStore("comfytv-execution", () =>
       const d = e == null ? void 0 : e.detail;
       if (!d) return;
       const id = String(d.node);
-      const h2 = handlersForId(id);
+      const h2 = handlersForDetail(d, id);
       if (!h2) return;
       const prev = nodeProgress.get(id);
       const next = {
@@ -247504,7 +247596,7 @@ const useExecutionStore = /* @__PURE__ */ defineStore("comfytv-execution", () =>
       const d = e == null ? void 0 : e.detail;
       if (!d) return;
       const id = String(d.nodeId ?? d.node);
-      const h2 = handlersForId(id);
+      const h2 = handlersForDetail(d, id);
       if (!h2) return;
       const prev = nodeProgress.get(id) ?? { value: 0, max: 1 };
       const next = { ...prev, text: String(d.text || "") };
@@ -247562,7 +247654,7 @@ const useExecutionStore = /* @__PURE__ */ defineStore("comfytv-execution", () =>
       const d = e == null ? void 0 : e.detail;
       if (!d) return;
       const id = String(d.node);
-      const h2 = handlersForId(id);
+      const h2 = handlersForDetail(d, id);
       if (!h2) return;
       const prev = nodeProgress.get(id);
       const next = {
@@ -247573,7 +247665,12 @@ const useExecutionStore = /* @__PURE__ */ defineStore("comfytv-execution", () =>
       nodeProgress.set(id, next);
       (_a2 = h2.onProgress) == null ? void 0 : _a2.call(h2, d);
       if (d.text != null && d.text !== "") {
-        (_b2 = h2.onProgressText) == null ? void 0 : _b2.call(h2, { node: id, nodeId: id, text: String(d.text) });
+        (_b2 = h2.onProgressText) == null ? void 0 : _b2.call(h2, {
+          node: id,
+          nodeId: id,
+          text: String(d.text),
+          ...d.stage_uid != null ? { stage_uid: d.stage_uid } : {}
+        });
       }
     };
     const onRemoteJob = (e) => {
@@ -247581,8 +247678,11 @@ const useExecutionStore = /* @__PURE__ */ defineStore("comfytv-execution", () =>
       const d = e == null ? void 0 : e.detail;
       if (!(d == null ? void 0 : d.node_id)) return;
       const nodeId = String(d.node_id);
+      const stageUid = d.stage_uid != null ? String(d.stage_uid) : "";
+      if (stageUid) remoteJobEvents.set(stageUid, d);
       const status = String(d.status || "");
       if (status === "done" || status === "error" || status === "cancelled") {
+        if (stageUid) remoteJobs.delete(stageUid);
         remoteJobs.delete(nodeId);
         nodeProgress.delete(nodeId);
       }
@@ -247590,13 +247690,15 @@ const useExecutionStore = /* @__PURE__ */ defineStore("comfytv-execution", () =>
         kind: `remote-${status}`,
         label: status === "error" ? String(d.error || "remote run failed") : void 0
       });
-      (_b2 = (_a2 = handlersForId(nodeId)) == null ? void 0 : _a2.onRemoteJob) == null ? void 0 : _b2.call(_a2, d);
+      (_b2 = (_a2 = handlersForDetail(d, nodeId)) == null ? void 0 : _a2.onRemoteJob) == null ? void 0 : _b2.call(_a2, d);
     };
     const onStageRun = (e) => {
       var _a2, _b2;
       const d = e == null ? void 0 : e.detail;
       if (!(d == null ? void 0 : d.node_id)) return;
       const nodeId = String(d.node_id);
+      const stageUid = d.stage_uid != null ? String(d.stage_uid) : "";
+      if (stageUid) stageRunEvents.set(stageUid, d);
       const status = String(d.status || "");
       if (status === "done" || status === "error" || status === "cancelled") {
         nodeProgress.delete(nodeId);
@@ -247605,7 +247707,7 @@ const useExecutionStore = /* @__PURE__ */ defineStore("comfytv-execution", () =>
         kind: `stage-${status}`,
         label: status === "error" ? String(d.error || "stage run failed") : void 0
       });
-      (_b2 = (_a2 = handlersForId(nodeId)) == null ? void 0 : _a2.onStageRun) == null ? void 0 : _b2.call(_a2, d);
+      (_b2 = (_a2 = handlersForDetail(d, nodeId)) == null ? void 0 : _a2.onStageRun) == null ? void 0 : _b2.call(_a2, d);
     };
     api2.addEventListener("status", onStatus);
     api2.addEventListener("comfytv-stage-run", onStageRun);
@@ -247832,9 +247934,6 @@ async function comfyOrgExecutionExtraData(api2) {
 function createStageRun(opts) {
   const { node, state: state2, store: store2, kind, variant, refresh } = opts;
   const executionStore = useExecutionStore();
-  let runningPromptId = null;
-  let runningJobId = null;
-  let runningStageRunId = null;
   let watchdogTimer = null;
   const clearWatchdog = () => {
     if (watchdogTimer) {
@@ -247922,17 +248021,17 @@ function createStageRun(opts) {
           prompt: pm.output,
           target_node_id: targetId,
           project_id: pid,
-          stage_uid: ensureStageUid(node)
+          stage_uid: stageInstanceKey(node)
         });
-        runningJobId = resp.job_id;
-        executionStore.registerRemoteJob(targetId, resp.job_id);
+        state2.runJobId = resp.job_id;
+        executionStore.registerRemoteJob(stageInstanceKey(node), resp.job_id);
         return;
       }
       if (isBridgeIn) {
         ;
         pm.__comfytvOwnRun = true;
         const queueResp = await a2.api.queuePrompt(0, pm, { partialExecutionTargets: [targetId] });
-        runningPromptId = (queueResp == null ? void 0 : queueResp.prompt_id) ? String(queueResp.prompt_id) : null;
+        state2.runPromptId = (queueResp == null ? void 0 : queueResp.prompt_id) ? String(queueResp.prompt_id) : null;
         return;
       }
       const extraData = await comfyOrgExecutionExtraData(a2.api);
@@ -247941,37 +248040,38 @@ function createStageRun(opts) {
         target_node_id: targetId,
         workflow: pm.workflow,
         client_id: ((_n2 = a2.api) == null ? void 0 : _n2.clientId) ? String(a2.api.clientId) : void 0,
+        stage_uid: stageInstanceKey(node),
         extra_data: extraData
       });
-      runningStageRunId = localRun.job_id;
+      state2.runStageRunId = localRun.job_id;
     } catch (e) {
       console.error("[ComfyTV/stage] run failed", e);
       const err2 = extractRunError(e, node.id);
       store2.applyExecutionError(state2, err2);
-      runningPromptId = null;
-      runningJobId = null;
-      runningStageRunId = null;
+      state2.runPromptId = null;
+      state2.runJobId = null;
+      state2.runStageRunId = null;
     }
   };
   const onCancelRequest = async () => {
     if (!state2.running) return;
-    if (runningJobId) {
+    if (state2.runJobId) {
       try {
-        await cancelRemoteJob(runningJobId);
+        await cancelRemoteJob(state2.runJobId);
       } catch (e) {
         console.error("[ComfyTV/stage] remote cancel failed", e);
       }
       return;
     }
-    if (runningStageRunId) {
+    if (state2.runStageRunId) {
       try {
-        await cancelStageRun(runningStageRunId);
+        await cancelStageRun(state2.runStageRunId);
       } catch (e) {
         console.error("[ComfyTV/stage] local cancel failed", e);
       }
       return;
     }
-    const pid = runningPromptId;
+    const pid = state2.runPromptId;
     if (!pid) {
       markDropped(t("error.cancelled"));
       return;
@@ -247985,7 +248085,7 @@ function createStageRun(opts) {
   };
   const markDropped = (message2) => {
     store2.applyExecutionError(state2, { message: message2, type: "Cancelled" });
-    runningPromptId = null;
+    state2.runPromptId = null;
     clearWatchdog();
   };
   const onProgress = (d) => {
@@ -248014,7 +248114,7 @@ function createStageRun(opts) {
       traceback: Array.isArray(d.traceback) ? d.traceback.join("") : d.traceback || void 0
     };
     store2.applyExecutionError(state2, err2);
-    runningPromptId = null;
+    state2.runPromptId = null;
     clearWatchdog();
     console.warn(`[ComfyTV/stage] execution_error on node ${node.id}:`, err2);
   };
@@ -248024,14 +248124,14 @@ function createStageRun(opts) {
       message: t("error.cancelled"),
       type: "Cancelled"
     });
-    runningPromptId = null;
+    state2.runPromptId = null;
     clearWatchdog();
     console.warn(`[ComfyTV/stage] execution_interrupted on node ${node.id}`);
   };
   const onExecSuccess = (d) => {
     if (!d) return;
-    if (!runningPromptId || String(d.prompt_id) !== runningPromptId) return;
-    runningPromptId = null;
+    if (!state2.runPromptId || String(d.prompt_id) !== state2.runPromptId) return;
+    state2.runPromptId = null;
     clearWatchdog();
     if (state2.running) state2.running = false;
   };
@@ -248039,19 +248139,19 @@ function createStageRun(opts) {
     var _a2, _b2, _c;
     const remaining = Number(((_b2 = (_a2 = d == null ? void 0 : d.status) == null ? void 0 : _a2.exec_info) == null ? void 0 : _b2.queue_remaining) ?? ((_c = d == null ? void 0 : d.exec_info) == null ? void 0 : _c.queue_remaining));
     if (!Number.isFinite(remaining)) return;
-    if (!runningPromptId || !state2.running || runningJobId) return;
+    if (!state2.runPromptId || !state2.running || state2.runJobId) return;
     if (watchdogTimer) return;
-    const pid = runningPromptId;
+    const pid = state2.runPromptId;
     const queued = remaining === 0 ? false : await promptInQueue(app$1.api, pid);
     if (queued !== false) return;
-    if (runningPromptId !== pid || !state2.running || watchdogTimer) return;
+    if (state2.runPromptId !== pid || !state2.running || watchdogTimer) return;
     watchdogTimer = setTimeout(() => {
       watchdogTimer = null;
-      if (runningPromptId !== pid || !state2.running) return;
+      if (state2.runPromptId !== pid || !state2.running) return;
       if (remaining === 0) {
         console.warn(`[ComfyTV/stage] watchdog firing on node ${node.id} — queue empty but no execution_success/error for prompt ${pid}`);
         store2.applyExecutionError(state2, { message: t("error.workerDied"), type: "WorkerDied" });
-        runningPromptId = null;
+        state2.runPromptId = null;
         return;
       }
       console.warn(`[ComfyTV/stage] prompt ${pid} left the queue without running (node ${node.id})`);
@@ -248060,8 +248160,8 @@ function createStageRun(opts) {
   };
   const onRemoteJob = (d) => {
     if (!d) return;
-    if (runningJobId && d.job_id && d.job_id !== runningJobId) return;
-    runningJobId = null;
+    if (state2.runJobId && d.job_id && d.job_id !== state2.runJobId) return;
+    state2.runJobId = null;
     if (d.status === "done") {
       store2.applyExecutedPayload(state2, d.ui || {});
       if (kind === "model" && state2.variant === "generator") {
@@ -248081,13 +248181,13 @@ function createStageRun(opts) {
   };
   const onStageRun = (d) => {
     if (!d) return;
-    if (!runningStageRunId && state2.running && d.job_id) {
-      runningStageRunId = String(d.job_id);
+    if (!state2.runStageRunId && state2.running && d.job_id) {
+      state2.runStageRunId = String(d.job_id);
     }
-    if (!runningStageRunId) return;
-    if (runningStageRunId && d.job_id && d.job_id !== runningStageRunId) return;
+    if (!state2.runStageRunId) return;
+    if (state2.runStageRunId && d.job_id && d.job_id !== state2.runStageRunId) return;
     if (d.status === "running") return;
-    runningStageRunId = null;
+    state2.runStageRunId = null;
     if (d.status === "done") {
       store2.applyExecutedPayload(state2, d.ui || {});
       if (kind === "model" && state2.variant === "generator") {
@@ -248108,6 +248208,7 @@ function createStageRun(opts) {
   };
   const nodeRunHandlers = {
     getNodeId: () => String(node.id),
+    getStageUid: () => stageInstanceKey(node),
     onProgress,
     onProgressText,
     onError: onExecError,
@@ -248121,9 +248222,9 @@ function createStageRun(opts) {
   if (variant !== "loader" && !isPoolPickerKind(kind)) {
     const attemptRemoteRestore = (tries = 0) => {
       if (node.id != null && node.id >= 0) {
-        void executionStore.remoteJobForNode(String(node.id)).then((jobId) => {
+        void executionStore.remoteJobForNode(stageInstanceKey(node)).then((jobId) => {
           if (jobId && !state2.running) {
-            runningJobId = jobId;
+            state2.runJobId = jobId;
             state2.running = true;
           }
         });
@@ -248158,10 +248259,14 @@ function bindStageWidgets(opts) {
   if (variant === "generator") {
     const promptWidget = (_a2 = node.widgets) == null ? void 0 : _a2.find((w) => w.name === "main_prompt");
     if (promptWidget) {
-      state2.mainPrompt = String(promptWidget.value ?? "");
-      promptWidget.callback = useChainCallback(promptWidget.callback, () => {
+      const syncPrompt = () => {
         state2.mainPrompt = String(promptWidget.value ?? "");
+      };
+      syncPrompt();
+      promptWidget.callback = useChainCallback(promptWidget.callback, () => {
+        syncPrompt();
       });
+      node.onConfigure = useChainCallback(node.onConfigure, syncPrompt);
     }
     if (isPoolPickerKind(kind) || kind === "image-batch" || kind === "model") {
       const idxWidget = (_b2 = node.widgets) == null ? void 0 : _b2.find((w) => w.name === "selected_index");
@@ -248261,6 +248366,25 @@ async function postPickedIndex(outputId, pickedIndex) {
     console.warn("[ComfyTV/pick] persist picked_index threw", e);
   }
 }
+const WORKFLOW_LABEL_ALIASES = {
+  image: {
+    NanoBanana2: "NanoBanana 2.1"
+  }
+};
+function canonicalWorkflowLabel(kind, label) {
+  var _a2;
+  const value = String(label ?? "");
+  return ((_a2 = WORKFLOW_LABEL_ALIASES[kind]) == null ? void 0 : _a2[value]) ?? value;
+}
+function migrateWorkflowLabel(node, kind) {
+  var _a2;
+  const widget = (_a2 = node == null ? void 0 : node.widgets) == null ? void 0 : _a2.find((item) => item.name === "workflow");
+  if (!widget) return false;
+  const next = canonicalWorkflowLabel(kind, widget.value);
+  if (next === String(widget.value ?? "")) return false;
+  widget.value = next;
+  return true;
+}
 function useStageNode(node, kind, variant = "generator") {
   var _a2;
   const store2 = useStageStore();
@@ -248302,6 +248426,7 @@ function useStageNode(node, kind, variant = "generator") {
   let _prepUnsub = null;
   const meta = getStageMeta(node.comfyClass);
   const workflowKind = (meta == null ? void 0 : meta.workflow_kind) || null;
+  if (workflowKind) migrateWorkflowLabel(node, workflowKind);
   function syncMaskInput() {
     var _a3, _b2, _c;
     if (workflowKind !== "image") return;
@@ -248349,7 +248474,7 @@ function useStageNode(node, kind, variant = "generator") {
     }).catch(() => {
     });
   }
-  let _applyDefaults = "all";
+  let _applyDefaults = node.__comfytvConfigured || node.__comfytvFromSave ? false : "all";
   function syncOptionEnums() {
     var _a3;
     if (!workflowKind) return;
@@ -248416,6 +248541,7 @@ function useStageNode(node, kind, variant = "generator") {
   };
   onNodeConfigure(node, () => {
     _applyDefaults = false;
+    if (workflowKind) migrateWorkflowLabel(node, workflowKind);
     queueMicrotask(syncMedia);
     if (variant === "generator") {
       queueMicrotask(syncMaskInput);
@@ -251389,7 +251515,7 @@ const _sfc_main$t = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const GptImageOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$t, [["__scopeId", "data-v-94b6e92c"]]);
+const GptImageOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$t, [["__scopeId", "data-v-c4ddb1a2"]]);
 const _hoisted_1$r = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -251689,7 +251815,7 @@ const _sfc_main$s = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SeedreamOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$s, [["__scopeId", "data-v-a45d272c"]]);
+const SeedreamOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$s, [["__scopeId", "data-v-dfc58aa0"]]);
 const _hoisted_1$p = ["aria-expanded"];
 const _hoisted_2$o = { class: "v2-ignisopt__value" };
 const _hoisted_3$n = { class: "v2-ignisopt__title" };
@@ -262320,7 +262446,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const GradeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-e55d3f0b"]]);
+const GradeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-7897210e"]]);
 const _hoisted_1$f = { class: "v2-ed__fit" };
 const _hoisted_2$e = ["src"];
 const _hoisted_3$d = {
@@ -263456,10 +263582,10 @@ function makeEditorShell(config2) {
     const scope2 = createNodeScope(node);
     scope2.run(() => bindProgressRing(card, stageState));
     const editorIslands = createIslandGroup();
-    const toolbarIslands = createIslandGroup();
+    const toolbarIslands2 = createIslandGroup();
     attachOutputToolbar(node, card, kind, stageState, onAction, {
       toolbar: config2.toolbar,
-      islands: toolbarIslands
+      islands: toolbarIslands2
     });
     const mountApps = () => {
       editorIslands.unmountAll();
@@ -263490,7 +263616,7 @@ function makeEditorShell(config2) {
     const prevRemoved = anyNode.onRemoved;
     anyNode.onRemoved = function(...args) {
       editorIslands.unmountAll();
-      toolbarIslands.unmountAll();
+      toolbarIslands2.unmountAll();
       prevRemoved == null ? void 0 : prevRemoved.apply(this, args);
     };
     return stageApi;
@@ -266274,7 +266400,7 @@ const _sfc_main$5 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const PsdLayerTreeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-c354bcbe"]]);
+const PsdLayerTreeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-61dc2db8"]]);
 const LOADER_CSS = `
 .v2-loader-preview { cursor: pointer; }
 .v2-loader-preview[data-drag="1"] {
@@ -266553,7 +266679,7 @@ function attachAssetLoader(node, kind, variant) {
   const { state: stageState, onAction } = stageApi;
   const scope2 = createNodeScope(node);
   const embedIslands = createIslandGroup();
-  const toolbarIslands = createIslandGroup();
+  const toolbarIslands2 = createIslandGroup();
   const mountApps = () => {
     embedIslands.unmountAll();
     embedIslands.mount(embedAnchor, AssetLoaderV2, { node, state: stageState, onAction });
@@ -266566,7 +266692,7 @@ function attachAssetLoader(node, kind, variant) {
     mediaKind,
     state: stageState,
     onAction,
-    islands: toolbarIslands
+    islands: toolbarIslands2
   });
   const prevConfigure = anyNode.onConfigure;
   anyNode.onConfigure = function(...args) {
@@ -266576,7 +266702,7 @@ function attachAssetLoader(node, kind, variant) {
   const prevRemoved = anyNode.onRemoved;
   anyNode.onRemoved = function(...args) {
     embedIslands.unmountAll();
-    toolbarIslands.unmountAll();
+    toolbarIslands2.unmountAll();
     prevRemoved == null ? void 0 : prevRemoved.apply(this, args);
   };
   bindShellChrome(node, { scope: scope2, card, socketAnchor: embedAnchor, state: stageState });
@@ -269396,6 +269522,12 @@ const extension = {
     if (!stages.has(nodeData.name)) return;
     if (nodeData.name === "ComfyTV.ProjectStage") return;
     const proto = nodeType.prototype;
+    const configured = proto.onConfigure;
+    proto.onConfigure = function(info) {
+      const result = configured == null ? void 0 : configured.call(this, info);
+      this.__comfytvConfigured = true;
+      return result;
+    };
     proto.onExecuted = useChainCallback(
       proto.onExecuted,
       function(msg) {
@@ -269733,4 +269865,4 @@ export {
   DropdownMenuRadioItem_default as y,
   DropdownMenuRoot_default as z
 };
-//# sourceMappingURL=main-Ccwd033q.mjs.map
+//# sourceMappingURL=main-BdpZhfie.mjs.map

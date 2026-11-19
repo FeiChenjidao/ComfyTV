@@ -63,7 +63,7 @@ Details: [bridges.md](https://github.com/jtydhr88/ComfyTV/blob/main/docs/bridges
 
 ## Step by step for beginners
 
-1. Add **Project** + **Image Stage**, prompt, workflow (e.g. NanoBanana2).
+1. Add **Project** + **Image Stage**, prompt, workflow (e.g. NanoBanana 2.1).
 2. **▶ Run** Image Stage—ComfyTV inserts **Image Picker** if missing.
 3. **Click** your favorite thumbnail; watch the toolbar appear.
 4. (Optional) Click `✏️ Edit` or wire **Upscale** manually.

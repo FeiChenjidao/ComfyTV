@@ -4,7 +4,7 @@
 
 ## What this node does
 
-**Image Stage** handles **text-to-image** and **reference-image** generation. Write **main_prompt**, pick a **workflow** (e.g. NanoBanana2 or GPT Image 2.5), set resolution, aspect ratio, and batch size when the workflow uses them, click **▶ Run**, and thumbnails appear on the node.
+**Image Stage** handles **text-to-image** and **reference-image** generation. Write **main_prompt**, pick a **workflow** (e.g. NanoBanana 2.1 or GPT Image 2.5), set resolution, aspect ratio, and batch size when the workflow uses them, click **▶ Run**, and thumbnails appear on the node.
 
 Two outputs:
 
@@ -54,7 +54,7 @@ Backends in [`workflows/image/`](https://github.com/jtydhr88/ComfyTV/tree/main/w
 
 | Option | Mode | Notes |
 | --- | --- | --- |
-| **NanoBanana2** | API | Gemini NanoBanana 2; optional reference images |
+| **NanoBanana 2.1** | API | Gemini NanoBanana 2; optional reference images |
 | **GPT Image 2.5** | API | OpenAI GPT Image; optional reference images |
 
 Models: [models.md](https://github.com/jtydhr88/ComfyTV/blob/main/docs/models.md). Details: [README.md](https://github.com/jtydhr88/ComfyTV/blob/main/workflows/image/README.md).
@@ -83,7 +83,7 @@ Wire Text Stage **text** or other `COMFYTV_TEXT` for extra prompt context.
 
 ### images
 
-Optional references: wire images to **images.image0**… for NanoBanana2 / GPT Image 2.5. Unused slots are ignored.
+Optional references: wire images to **images.image0**… for NanoBanana 2.1 / GPT Image 2.5. Unused slots are ignored.
 
 Sources: **image** from Image Stage/Picker, Asset Loader, Bridge → ComfyTV Image.
 
@@ -105,7 +105,7 @@ Sidebar bindings for seed, negative prompt, steps, CFG, etc.
 ## Step by step for beginners
 
 1. Add **Project**, then **ComfyTV → Generate → Image Stage**.
-2. **workflow** → **NanoBanana2** or **GPT Image 2.5** (configure API credentials first).
+2. **workflow** → **NanoBanana 2.1** or **GPT Image 2.5** (configure API credentials first).
 3. **main_prompt**: `a red apple on a wooden table`.
 4. **resolution** / **aspect_ratio** / **batch_size** as needed by the workflow.
 5. **▶ Run**; Image Picker may appear automatically.

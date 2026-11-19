@@ -11,6 +11,7 @@ from .local_comfy import LocalComfyUIRunner
 from .fake_multishot import FakeMultishotRunner
 from .ignis_image import ignis_image_runners
 from .ignis_video import ignis_video_runners
+from ._ignis import has_ignis_token
 from . import workflow_db
 
 
@@ -23,6 +24,10 @@ WORKFLOW_KINDS: tuple[str, ...] = (
     'cutout', 'audio-vocal', 'audio-bg', 'model',
     'split-part', 'material-estimate', 'speech-to-text', 'layer-separation', 'custom',
 )
+
+WORKFLOW_LABEL_ALIASES: dict[tuple[str, str], str] = {
+    ('image', 'NanoBanana2'): 'NanoBanana 2.1',
+}
 
 
 def _workflow_runners_from_db() -> list[LocalComfyUIRunner]:
@@ -46,8 +51,9 @@ def _workflow_runners_from_db() -> list[LocalComfyUIRunner]:
 def _populate(registry: RunnerRegistry) -> None:
     for r in _workflow_runners_from_db():
         registry.register(r)
-    registry.register_all(ignis_image_runners())
-    registry.register_all(ignis_video_runners())
+    if has_ignis_token():
+        registry.register_all(ignis_image_runners())
+        registry.register_all(ignis_video_runners())
     registry.register(
         FakeMultishotRunner('local-multishot-fake', 'Multishot (placeholder)', {'timeline'})
     )
@@ -95,4 +101,5 @@ __all__ = [
     'seed_workflows',
     'last_scan_added',
     'refresh_registry',
+    'WORKFLOW_LABEL_ALIASES',
 ]

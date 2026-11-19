@@ -11,6 +11,12 @@ def test_ignis_token_status_masks_token(monkeypatch, tmp_path):
     monkeypatch.delenv("IGNIS_CLI_TOKEN", raising=False)
     monkeypatch.delenv("MAI_CLI_TOKEN", raising=False)
     monkeypatch.setattr(ignis.Path, "home", lambda: tmp_path)
+    refreshes = []
+    monkeypatch.setattr(
+        ignis,
+        "_refresh_ignis_workflows",
+        lambda: refreshes.append(True),
+    )
 
     assert ignis.token_status()["configured"] is False
     saved = ignis.save_token("ignis_ct_example_secret")
@@ -18,6 +24,7 @@ def test_ignis_token_status_masks_token(monkeypatch, tmp_path):
     assert saved["ok"] is True
     assert saved["configured"] is True
     assert saved["saved"] is True
+    assert refreshes == [True]
     assert saved["hint"] == "igni…cret"
     assert saved["hint"] != "ignis_ct_example_secret"
     assert token_path.read_text(encoding="utf-8").strip() == "ignis_ct_example_secret"
@@ -96,6 +103,7 @@ def test_import_ignis_config_fetches_and_saves_token(monkeypatch, tmp_path):
     monkeypatch.delenv("IGNIS_CLI_TOKEN", raising=False)
     monkeypatch.delenv("MAI_CLI_TOKEN", raising=False)
     monkeypatch.setattr(ignis.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(ignis, "_refresh_ignis_workflows", lambda: None)
     seen = []
 
     async def fake_fetch(url):
@@ -130,6 +138,7 @@ def test_import_ignis_config_accepts_pasted_json(monkeypatch, tmp_path):
     monkeypatch.delenv("IGNIS_CLI_TOKEN", raising=False)
     monkeypatch.delenv("MAI_CLI_TOKEN", raising=False)
     monkeypatch.setattr(ignis.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(ignis, "_refresh_ignis_workflows", lambda: None)
 
     result = asyncio.run(ignis.import_config_text(
         '{"cliToken":"ignis_ct_json_secret"}'

@@ -248,6 +248,70 @@ describe('executionStore.bindToApi', () => {
     expect(store.recentEvents[0]).toMatchObject({ kind: 'stage-done' })
   })
 
+  it('routes same-numbered nodes by stage uid across workflow tabs', () => {
+    const store = useExecutionStore()
+    store.bindToApi(api)
+    const first: any[] = []
+    const second: any[] = []
+    store.registerNodeHandlers({
+      getNodeId: () => '7',
+      getStageUid: () => 'uid-a',
+      onStageRun: d => first.push(d),
+    })
+    store.registerNodeHandlers({
+      getNodeId: () => '7',
+      getStageUid: () => 'uid-b',
+      onStageRun: d => second.push(d),
+    })
+    api.fire('comfytv-stage-run', {
+      node_id: '7', stage_uid: 'uid-b', job_id: 'job-b', status: 'running',
+    })
+    expect(first).toHaveLength(0)
+    expect(second).toHaveLength(1)
+  })
+
+  it('replays the latest stage event when a workflow node remounts', async () => {
+    const store = useExecutionStore()
+    store.bindToApi(api)
+    const first = {
+      getNodeId: () => '4',
+      getStageUid: () => 'uid-remount',
+      onStageRun: vi.fn(),
+    }
+    store.registerNodeHandlers(first)
+    api.fire('comfytv-stage-run', {
+      node_id: '4', stage_uid: 'uid-remount', job_id: 'job-4', status: 'running',
+    })
+    store.unregisterNodeHandlers(first)
+    api.fire('comfytv-stage-run', {
+      node_id: '4', stage_uid: 'uid-remount', job_id: 'job-4', status: 'done', ui: {},
+    })
+    const remounted = {
+      getNodeId: () => '4',
+      getStageUid: () => 'uid-remount',
+      onStageRun: vi.fn(),
+    }
+    store.registerNodeHandlers(remounted)
+    await Promise.resolve()
+    expect(remounted.onStageRun).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }))
+  })
+
+  it('replays a remote completion when a workflow node remounts', async () => {
+    const store = useExecutionStore()
+    store.bindToApi(api)
+    api.fire('comfytv-remote-job', {
+      node_id: '6', stage_uid: 'uid-remote', job_id: 'remote-6', status: 'done', ui: {},
+    })
+    const remounted = {
+      getNodeId: () => '6',
+      getStageUid: () => 'uid-remote',
+      onRemoteJob: vi.fn(),
+    }
+    store.registerNodeHandlers(remounted)
+    await Promise.resolve()
+    expect(remounted.onRemoteJob).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }))
+  })
+
   it('unregister stops dispatch and clears progress', () => {
     const store = useExecutionStore()
     store.bindToApi(api)
@@ -300,6 +364,16 @@ describe('executionStore.bindToApi', () => {
     expect(store.remoteJobs.has('4')).toBe(false)
     expect(store.progressForNode('4')).toBeUndefined()
     expect(store.recentEvents[0]).toMatchObject({ kind: 'remote-error', label: 'boom' })
+  })
+
+  it('terminal remote-job events clear workflow-scoped tracking', () => {
+    const store = useExecutionStore()
+    store.bindToApi(api)
+    store.registerRemoteJob('workflow:a::uid-4', 'j4')
+    api.fire('comfytv-remote-job', {
+      job_id: 'j4', node_id: '4', stage_uid: 'workflow:a::uid-4', status: 'done', ui: {},
+    })
+    expect(store.remoteJobs.has('workflow:a::uid-4')).toBe(false)
   })
 
   it('non-terminal remote-job events keep tracking', () => {

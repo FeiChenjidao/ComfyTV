@@ -19,7 +19,7 @@
 
 ## 当前内置
 
-- **NanoBanana2**(`NanoBanana2.json` + `_preset.json`) — Gemini Nano Banana 2.1 API 生图 / 编辑(`GeminiNanoBanana2V2`)。最多 3 张上游参考图;比例走 stage。需要在 ComfyUI 里配好 Gemini / NanoBanana API 凭证。
+- **NanoBanana 2.1**(`NanoBanana 2.1.json` + `_preset.json`) — Gemini Nano Banana 2.1 API 生图 / 编辑(`GeminiNanoBanana2V2`)。最多 3 张上游参考图;比例走 stage。需要在 ComfyUI 里配好 Gemini / NanoBanana API 凭证。
 - **GPT Image 2.6**(`GPT_Image_2.6.json` + `_preset.json`) — OpenAI GPT Image 2.6 API(`OpenAIGPTImageNodeV3`)。最多 3 张上游参考图;尺寸、背景、质量、规划强度和批量数量等旋钮在 preset 里。需要在 ComfyUI 里配好 OpenAI API 凭证。
 - **Seedream 5.5**(`Seedream_5.5.json` + `_preset.json`) — ByteDance Seedream API 生图 / 编辑(`ByteDanceSeedreamNodeV3`)。最多 3 张参考图；图像阶段直接提供官方模型、尺寸预设、自定义宽高、背景和种子参数，并保留 ComfyTV 生成数量。
 

@@ -21,6 +21,8 @@ def _view_url(filename: str, subfolder: str, type_: str) -> str:
 
 _NESTED_LOCK: LockType | None = None
 _EXECUTION_SERVER = contextvars.ContextVar("comfytv_execution_server", default=None)
+_ROUTING_PROMPT_EVENT = contextvars.ContextVar("comfytv_routing_prompt_event", default=False)
+_PROMPT_SERVER_SEND_SYNC = None
 
 
 def _get_nested_lock() -> LockType:
@@ -76,8 +78,45 @@ def _new_nested_executor(server):
     )
 
 
+def _route_contextual_prompt_event(instance, original, event, data, sid=None):
+    target = _EXECUTION_SERVER.get()
+    if target is not None and target is not instance and not _ROUTING_PROMPT_EVENT.get():
+        token = _ROUTING_PROMPT_EVENT.set(True)
+        try:
+            return target.send_sync(event, data, sid)
+        finally:
+            _ROUTING_PROMPT_EVENT.reset(token)
+    return original(event, data, sid)
+
+
+def install_contextual_prompt_routing() -> None:
+    global _PROMPT_SERVER_SEND_SYNC
+    if _PROMPT_SERVER_SEND_SYNC is not None:
+        return
+    from server import PromptServer
+
+    instance = PromptServer.instance
+    original = instance.send_sync
+
+    def wrapped(event, data, sid=None):
+        return _route_contextual_prompt_event(instance, original, event, data, sid)
+
+    wrapped._comfytv_contextual_route = True
+    _PROMPT_SERVER_SEND_SYNC = original
+    instance.send_sync = wrapped
+
+
+def send_prompt_server_sync(event, data, sid=None):
+    from server import PromptServer
+
+    if _PROMPT_SERVER_SEND_SYNC is not None:
+        return _PROMPT_SERVER_SEND_SYNC(event, data, sid)
+    return PromptServer.instance.send_sync(event, data, sid)
+
+
 @contextlib.contextmanager
 def use_execution_server(server):
+    install_contextual_prompt_routing()
     token = _EXECUTION_SERVER.set(server)
     try:
         yield

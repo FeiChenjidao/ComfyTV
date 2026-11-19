@@ -40,9 +40,10 @@ CURRENT_JOB: 'contextvars.ContextVar[RemoteJobHandle | None]' = \
 
 class RemoteJobHandle:
 
-    def __init__(self, job_id: str, stage_node_id: str):
+    def __init__(self, job_id: str, stage_node_id: str, stage_uid: str | None = None):
         self.job_id = job_id
         self.stage_node_id = str(stage_node_id)
+        self.stage_uid = str(stage_uid) if stage_uid else None
         self.cancel_event = asyncio.Event()
         self.remote_prompt_id: str | None = None
 
@@ -52,12 +53,14 @@ def _safe_path_component(s: str) -> str:
 
 
 def emit_remote_progress(node_id: str, value: float, max_: float,
-                         text: str = "") -> None:
+                         text: str = "", stage_uid: str | None = None) -> None:
     try:
         from server import PromptServer
         payload: dict = {"node": str(node_id), "value": value, "max": max_}
         if text:
             payload["text"] = text
+        if stage_uid:
+            payload["stage_uid"] = stage_uid
         PromptServer.instance.send_sync("comfytv-remote-progress", payload)
     except Exception as e:
         _log.debug("[ComfyTV/remote] progress emit failed: %s", e)
@@ -125,7 +128,12 @@ class RemoteComfyUIRunner(Runner):
     def _emit_local_progress(self, value: float, max_: float) -> None:
         if self.job is None:
             return
-        emit_remote_progress(self.job.stage_node_id, value, max_)
+        emit_remote_progress(
+            self.job.stage_node_id,
+            value,
+            max_,
+            stage_uid=self.job.stage_uid,
+        )
 
     async def _upload_local_files(self, session: aiohttp.ClientSession,
                                   workflow: dict) -> None:

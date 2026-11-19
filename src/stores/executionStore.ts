@@ -19,6 +19,7 @@ export interface NodeProgress {
 
 export interface NodeRunHandlers {
   getNodeId: () => string
+  getStageUid?: () => string
   onProgress?: (detail: any) => void
   onProgressText?: (detail: any) => void
   onError?: (detail: any) => void
@@ -39,6 +40,8 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
 
   const nodeProgress = reactive(new Map<string, NodeProgress>())
   const nodeHandlers = new Set<NodeRunHandlers>()
+  const stageRunEvents = new Map<string, any>()
+  const remoteJobEvents = new Map<string, any>()
 
   const remoteJobs = reactive(new Map<string, string>())
   let remoteHydration: Promise<void> | null = null
@@ -63,24 +66,47 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
     return undefined
   }
 
+  function handlersForDetail(detail: any, nodeId: string): NodeRunHandlers | undefined {
+    const uid = detail?.stage_uid != null ? String(detail.stage_uid) : ''
+    if (uid) {
+      for (const handler of nodeHandlers) {
+        if (handler.getStageUid?.() === uid) return handler
+      }
+    }
+    return handlersForId(nodeId)
+  }
+
   function registerNodeHandlers(handlers: NodeRunHandlers): void {
     nodeHandlers.add(handlers)
+    const uid = handlers.getStageUid?.()
+    const latestStage = uid ? stageRunEvents.get(uid) : undefined
+    const latestRemote = uid ? remoteJobEvents.get(uid) : undefined
+    if (latestStage || latestRemote) queueMicrotask(() => {
+      if (!nodeHandlers.has(handlers)) return
+      if (latestStage) handlers.onStageRun?.(latestStage)
+      if (latestRemote) handlers.onRemoteJob?.(latestRemote)
+    })
   }
 
   function unregisterNodeHandlers(handlers: NodeRunHandlers): void {
     nodeHandlers.delete(handlers)
-    nodeProgress.delete(handlers.getNodeId())
+    const id = handlers.getNodeId()
+    if (![...nodeHandlers].some(handler => handler.getNodeId() === id)) {
+      nodeProgress.delete(id)
+    }
   }
 
-  function registerRemoteJob(nodeId: string, jobId: string): void {
-    remoteJobs.set(String(nodeId), jobId)
+  function registerRemoteJob(stageKey: string, jobId: string): void {
+    remoteJobs.set(String(stageKey), jobId)
   }
 
   function hydrateRemoteJobs(): Promise<void> {
     if (!remoteHydration) {
       remoteHydration = listRemoteJobs('running')
         .then(({ jobs }) => {
-          for (const j of jobs) remoteJobs.set(String(j.stage_node_id), j.id)
+          for (const j of jobs) {
+            remoteJobs.set(String(j.stage_uid || j.stage_node_id), j.id)
+          }
         })
         .catch((e) => {
           console.warn('[ComfyTV/execution] remote job hydrate failed', e)
@@ -89,9 +115,9 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
     return remoteHydration
   }
 
-  async function remoteJobForNode(nodeId: string): Promise<string | undefined> {
+  async function remoteJobForNode(stageKey: string): Promise<string | undefined> {
     await hydrateRemoteJobs()
-    return remoteJobs.get(String(nodeId))
+    return remoteJobs.get(String(stageKey))
   }
 
   function bindToApi(api: any): () => void {
@@ -106,7 +132,7 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
       const d = e?.detail
       if (!d) return
       const id = String(d.node)
-      const h = handlersForId(id)
+      const h = handlersForDetail(d, id)
       if (!h) return
       const prev = nodeProgress.get(id)
       const next: NodeProgress = {
@@ -121,7 +147,7 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
       const d = e?.detail
       if (!d) return
       const id = String(d.nodeId ?? d.node)
-      const h = handlersForId(id)
+      const h = handlersForDetail(d, id)
       if (!h) return
       const prev = nodeProgress.get(id) ?? { value: 0, max: 1 }
       const next: NodeProgress = { ...prev, text: String(d.text || '') }
@@ -175,7 +201,7 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
       const d = e?.detail
       if (!d) return
       const id = String(d.node)
-      const h = handlersForId(id)
+      const h = handlersForDetail(d, id)
       if (!h) return
       const prev = nodeProgress.get(id)
       const next: NodeProgress = {
@@ -186,15 +212,23 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
       nodeProgress.set(id, next)
       h.onProgress?.(d)
       if (d.text != null && d.text !== '') {
-        h.onProgressText?.({ node: id, nodeId: id, text: String(d.text) })
+        h.onProgressText?.({
+          node: id,
+          nodeId: id,
+          text: String(d.text),
+          ...(d.stage_uid != null ? { stage_uid: d.stage_uid } : {}),
+        })
       }
     }
     const onRemoteJob = (e: any) => {
       const d = e?.detail
       if (!d?.node_id) return
       const nodeId = String(d.node_id)
+      const stageUid = d.stage_uid != null ? String(d.stage_uid) : ''
+      if (stageUid) remoteJobEvents.set(stageUid, d)
       const status = String(d.status || '')
       if (status === 'done' || status === 'error' || status === 'cancelled') {
+        if (stageUid) remoteJobs.delete(stageUid)
         remoteJobs.delete(nodeId)
         nodeProgress.delete(nodeId)
       }
@@ -202,12 +236,14 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
         kind: `remote-${status}`,
         label: status === 'error' ? String(d.error || 'remote run failed') : undefined,
       })
-      handlersForId(nodeId)?.onRemoteJob?.(d)
+      handlersForDetail(d, nodeId)?.onRemoteJob?.(d)
     }
     const onStageRun = (e: any) => {
       const d = e?.detail
       if (!d?.node_id) return
       const nodeId = String(d.node_id)
+      const stageUid = d.stage_uid != null ? String(d.stage_uid) : ''
+      if (stageUid) stageRunEvents.set(stageUid, d)
       const status = String(d.status || '')
       if (status === 'done' || status === 'error' || status === 'cancelled') {
         nodeProgress.delete(nodeId)
@@ -216,7 +252,7 @@ export const useExecutionStore = defineStore('comfytv-execution', () => {
         kind: `stage-${status}`,
         label: status === 'error' ? String(d.error || 'stage run failed') : undefined,
       })
-      handlersForId(nodeId)?.onStageRun?.(d)
+      handlersForDetail(d, nodeId)?.onStageRun?.(d)
     }
 
     api.addEventListener('status', onStatus)

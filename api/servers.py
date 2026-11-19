@@ -394,12 +394,14 @@ def _inject_server(kwargs: dict, server_id: int) -> None:
 
 
 def _broadcast_job(job_id: str, node_id: str, project_id: str, status: str,
-                   *, ui: dict | None = None, error: str = "") -> None:
+                   *, stage_uid: str | None = None,
+                   ui: dict | None = None, error: str = "") -> None:
     try:
         PromptServer.instance.send_sync("comfytv-remote-job", {
             "job_id": job_id,
             "node_id": str(node_id),
             "project_id": project_id,
+            **({"stage_uid": stage_uid} if stage_uid else {}),
             "status": status,
             "ui": ui or {},
             "error": error,
@@ -428,14 +430,20 @@ async def _run_job(job_id: str, handle: RemoteJobHandle, stage_cls, kwargs: dict
             remote_prompt_id=handle.remote_prompt_id,
             output_id=output_id,
         )
-        _broadcast_job(job_id, node_id, project_id, "done", ui=ui)
+        _broadcast_job(
+            job_id, node_id, project_id, "done",
+            stage_uid=handle.stage_uid, ui=ui,
+        )
     except JobCancelled as e:
         storage.update_remote_job(
             job_id, status="cancelled",
             remote_prompt_id=handle.remote_prompt_id,
             error_text=str(e),
         )
-        _broadcast_job(job_id, node_id, project_id, "cancelled", error=str(e))
+        _broadcast_job(
+            job_id, node_id, project_id, "cancelled",
+            stage_uid=handle.stage_uid, error=str(e),
+        )
     except Exception as e:
         _log.exception("[ComfyTV/servers] remote job %s failed", job_id)
         storage.update_remote_job(
@@ -443,7 +451,10 @@ async def _run_job(job_id: str, handle: RemoteJobHandle, stage_cls, kwargs: dict
             remote_prompt_id=handle.remote_prompt_id,
             error_text=str(e),
         )
-        _broadcast_job(job_id, node_id, project_id, "error", error=str(e))
+        _broadcast_job(
+            job_id, node_id, project_id, "error",
+            stage_uid=handle.stage_uid, error=str(e),
+        )
     finally:
         CURRENT_JOB.reset(token)
         ACTIVE_JOBS.pop(job_id, None)
@@ -501,7 +512,7 @@ async def remote_run(request: web.Request) -> web.Response:
     _inject_server(kwargs, server_id)
 
     job_id = uuid.uuid4().hex
-    handle = RemoteJobHandle(job_id, target)
+    handle = RemoteJobHandle(job_id, target, str(stage_uid) if stage_uid else None)
     storage.create_remote_job(
         job_id=job_id,
         server_id=server_id,

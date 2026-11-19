@@ -24,7 +24,7 @@ ComfyUI 通常会在首次启动时自动建好所有子目录;缺哪个手动�
 
 | 工作流 | 文件 | 目录 |
 |---|---|---|
-| **NanoBanana2** | *(API — Gemini Nano Banana 2.1；无本地模型)* | — |
+| **NanoBanana 2.1** | *(API — Gemini Nano Banana 2.1；无本地模型)* | — |
 | **GPT Image 2.6** | *(API — OpenAI GPT Image；无本地模型)* | — |
 | **Seedream 5.5** | *(API — ByteDance Seedream；无本地模型)* | — |
 

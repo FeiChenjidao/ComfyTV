@@ -84,3 +84,28 @@ def test_local_resource_lock_works_across_event_loops(monkeypatch):
 
     assert errors == []
     assert state["peak"] == 1
+
+
+def test_contextual_prompt_events_route_to_execution_server():
+    from ComfyTV.runners import _nested_exec as nested
+
+    routed = []
+    original = []
+    instance = object()
+    target = types.SimpleNamespace(
+        send_sync=lambda event, data, sid=None: routed.append((event, data, sid)),
+    )
+    token = nested._EXECUTION_SERVER.set(target)
+    try:
+        nested._route_contextual_prompt_event(
+            instance,
+            lambda event, data, sid=None: original.append((event, data, sid)),
+            "progress",
+            {"node": "280"},
+            "client-1",
+        )
+    finally:
+        nested._EXECUTION_SERVER.reset(token)
+
+    assert routed == [("progress", {"node": "280"}, "client-1")]
+    assert original == []

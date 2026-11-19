@@ -639,7 +639,7 @@ describe('relight handler', () => {
     const [relight, img] = created
     expect(relight.comfyClass).toBe('ComfyTV.RelightStage')
     expect(img.comfyClass).toBe('ComfyTV.ImageStage')
-    expect(widgetValue(img, 'workflow')).toBe('NanoBanana2')
+    expect(widgetValue(img, 'workflow')).toBe('NanoBanana 2.1')
     expect(src.connect).toHaveBeenCalledWith(0, img, 0)
     expect(relight.connect).toHaveBeenCalledWith(0, img, 1)
   })

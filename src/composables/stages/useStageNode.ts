@@ -53,6 +53,7 @@ import { t } from '@/i18n'
 import { useSelectionStore } from '@/stores/selectionStore'
 import { app } from '@/lib/comfyApp'
 import { onNodeConfigure } from '@/utils/widget'
+import { migrateWorkflowLabel } from '@/composables/stages/workflowLabelAliases'
 
 export interface UseStageNodeResult {
   state: ReturnType<ReturnType<typeof useStageStore>['registerStage']>
@@ -112,6 +113,7 @@ export function useStageNode(
   let _prepUnsub: (() => void) | null = null
   const meta = getStageMeta(node.comfyClass)
   const workflowKind = meta?.workflow_kind || null
+  if (workflowKind) migrateWorkflowLabel(node, workflowKind)
 
   function syncMaskInput(): void {
     if (workflowKind !== 'image') return
@@ -159,7 +161,9 @@ export function useStageNode(
       .catch(() => { /* keep generic labels when workflow config is unavailable */ })
   }
 
-  let _applyDefaults: ApplyDefaultsMode = 'all'
+  let _applyDefaults: ApplyDefaultsMode = node.__comfytvConfigured || node.__comfytvFromSave
+    ? false
+    : 'all'
 
   function syncOptionEnums(): void {
     if (!workflowKind) return
@@ -225,6 +229,7 @@ export function useStageNode(
   const syncMedia = () => { syncMediaTable(node) }
   onNodeConfigure(node, () => {
     _applyDefaults = false
+    if (workflowKind) migrateWorkflowLabel(node, workflowKind)
     queueMicrotask(syncMedia)
     if (variant === 'generator') {
       queueMicrotask(syncMaskInput)

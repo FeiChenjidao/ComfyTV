@@ -11,6 +11,7 @@
  */
 import { reactive } from 'vue'
 
+import { useChainCallback } from '@/composables/functional/useChainCallback'
 import { t } from '@/i18n'
 import type { ComfyNode } from '@/lib/comfyApp'
 import type { StageKind, StageState } from '@/stores/stageStore'
@@ -57,6 +58,28 @@ type ToolbarRuntime = {
 const RUNTIME = new WeakMap<object, ToolbarRuntime>()
 const BAR_BTNS = new WeakMap<HTMLElement, Map<string, HTMLButtonElement>>()
 const NODE_BARS = new WeakMap<object, HTMLElement>()
+const NODE_TOOLBAR_ISLANDS = new WeakMap<object, ReturnType<typeof createIslandGroup>>()
+
+function toolbarIslands(
+  node: ComfyNode,
+  supplied?: ReturnType<typeof createIslandGroup>,
+): ReturnType<typeof createIslandGroup> {
+  if (supplied) return supplied
+  let islands = NODE_TOOLBAR_ISLANDS.get(node)
+  if (islands) {
+    islands.unmountAll()
+    return islands
+  }
+  islands = createIslandGroup()
+  NODE_TOOLBAR_ISLANDS.set(node, islands)
+  const owned = islands
+  const anyNode = node as any
+  anyNode.onRemoved = useChainCallback(anyNode.onRemoved, () => {
+    owned.unmountAll()
+    if (NODE_TOOLBAR_ISLANDS.get(node) === owned) NODE_TOOLBAR_ISLANDS.delete(node)
+  })
+  return islands
+}
 
 export function toolbarRuntime(node: object): ToolbarRuntime {
   let rt = RUNTIME.get(node)
@@ -226,7 +249,7 @@ function attachPresetToolbar(
     : 'audio'
   const bar = el('div', 'v2-toolbar')
   opts.card.appendChild(bar)
-  const islands = opts.islands ?? createIslandGroup()
+  const islands = toolbarIslands(opts.node, opts.islands)
   islands.mount(bar, MediaToolbarV2, { state: opts.state, flavor, onAction: opts.onAction })
   return bar
 }

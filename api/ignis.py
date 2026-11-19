@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -11,13 +12,14 @@ from urllib.parse import urlparse
 import aiohttp
 from aiohttp import web
 
-from ._common import routes
+from ._common import routes, broadcast_workflow_event
 
 
 CONFIG_HOST = "ignis-cli-config.funplus-marketing.ai"
 CONFIG_PATH_RE = re.compile(r"^/config/[A-Za-z0-9_-]+\.json$")
 CONFIG_URL_RE = re.compile(r"https://[^\s<>'\"`]+", re.IGNORECASE)
 MAX_CONFIG_BYTES = 64 * 1024
+_log = logging.getLogger(__name__)
 
 
 def _plugin_root() -> Path:
@@ -86,7 +88,27 @@ def save_token(token: str) -> dict[str, Any]:
         path.write_text(value + "\n", encoding="utf-8")
     except OSError as exc:
         return token_status(error=f"无法保存 Ignis Token：{exc}")
+    try:
+        _refresh_ignis_workflows()
+    except Exception:
+        _log.exception("[ComfyTV/Ignis] workflow refresh failed after token save")
     return token_status(saved=True)
+
+
+def _refresh_ignis_workflows() -> None:
+    from ..runners import refresh_registry
+    from ..runners.ignis_image import ignis_image_runners
+    from ..runners.ignis_video import ignis_video_runners
+
+    registry = refresh_registry()
+    added = [
+        {"kind": kind, "label": runner.label}
+        for runner in [*ignis_image_runners(), *ignis_video_runners()]
+        for kind in runner.kinds
+        if registry.by_label(runner.label, kind) is not None
+    ]
+    if added:
+        broadcast_workflow_event("rescan", {"added": added})
 
 
 def _config_url_from_text(text: str) -> str:

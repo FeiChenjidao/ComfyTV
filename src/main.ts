@@ -400,6 +400,12 @@ const extension: ComfyExtension = {
     if (!stages.has(nodeData.name)) return  //
     if (nodeData.name === 'ComfyTV.ProjectStage') return
     const proto = nodeType.prototype as ComfyNode
+    const configured = proto.onConfigure
+    proto.onConfigure = function (this: ComfyNode, info: any) {
+      const result = configured?.call(this, info)
+      ;(this as any).__comfytvConfigured = true
+      return result
+    }
     proto.onExecuted = useChainCallback(
       proto.onExecuted,
       function (this: ComfyNode, msg: unknown) {

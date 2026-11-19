@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { claimStageUid, ensureStageUid, getStageUid, releaseStageUid, stageClassName, getStageUidClaimedAt, ensureStageUidClaimedAt } from './stageIdentity'
+import { app } from '@/lib/comfyApp'
+import { claimStageUid, ensureStageUid, getStageUid, releaseStageUid, stageClassName, getStageUidClaimedAt, ensureStageUidClaimedAt, stageInstanceKey } from './stageIdentity'
 
 describe('ensureStageUid (claim timestamp)', () => {
   it('records when a uid was first minted', () => {
@@ -62,6 +63,10 @@ describe('getStageUid', () => {
 })
 
 describe('claimStageUid / releaseStageUid', () => {
+  function setWorkflow(path: string) {
+    ;(app as any).extensionManager = { workflow: { activeWorkflow: { path } } }
+  }
+
   it('returns empty string for a missing node', () => {
     expect(claimStageUid(null)).toBe('')
     expect(claimStageUid(undefined)).toBe('')
@@ -82,6 +87,7 @@ describe('claimStageUid / releaseStageUid', () => {
   })
 
   it('regenerates the uid for a clone claiming an already-owned uid', () => {
+    setWorkflow('workflows/clone-test.json')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const original: any = { id: 1 }
     const uid = claimStageUid(original)
@@ -95,6 +101,7 @@ describe('claimStageUid / releaseStageUid', () => {
   })
 
   it('keeps the uid across release + re-claim (tab switch)', () => {
+    setWorkflow('workflows/tab-switch.json')
     const node: any = { id: 1 }
     const uid = claimStageUid(node)
     releaseStageUid(node)
@@ -103,6 +110,7 @@ describe('claimStageUid / releaseStageUid', () => {
   })
 
   it('survives repeated clear + reconfigure cycles without drift', () => {
+    setWorkflow('workflows/reconfigure.json')
     let node: any = { id: 7 }
     const uid = claimStageUid(node)
     for (let i = 0; i < 5; i++) {
@@ -113,6 +121,7 @@ describe('claimStageUid / releaseStageUid', () => {
   })
 
   it('releases a stale claim when configure replaced the uid', () => {
+    setWorkflow('workflows/replaced.json')
     const node: any = { id: 1 }
     const first = claimStageUid(node)
     node.properties.comfytv_stage_uid = 'configured-uid-a'
@@ -127,6 +136,7 @@ describe('claimStageUid / releaseStageUid', () => {
   })
 
   it('releasing a regenerated clone does not free the original uid', () => {
+    setWorkflow('workflows/release-clone.json')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const original: any = { id: 1 }
     const uid = claimStageUid(original)
@@ -137,6 +147,26 @@ describe('claimStageUid / releaseStageUid', () => {
     expect(claimStageUid(intruder)).not.toBe(uid)
     expect(cloneUid).not.toBe(uid)
     warn.mockRestore()
+  })
+
+  it('keeps identical stage uids isolated between workflow tabs', () => {
+    setWorkflow('workflows/a.json')
+    const first: any = { id: 7, properties: { comfytv_stage_uid: 'shared-uid' } }
+    expect(claimStageUid(first)).toBe('shared-uid')
+    const firstKey = stageInstanceKey(first)
+
+    setWorkflow('workflows/b.json')
+    const second: any = { id: 7, properties: { comfytv_stage_uid: 'shared-uid' } }
+    expect(claimStageUid(second)).toBe('shared-uid')
+    expect(stageInstanceKey(second)).not.toBe(firstKey)
+  })
+
+  it('allows a remounted node with the same workflow and node id to take over its uid', () => {
+    setWorkflow('workflows/remount.json')
+    const first: any = { id: 9, properties: { comfytv_stage_uid: 'remount-uid' } }
+    expect(claimStageUid(first)).toBe('remount-uid')
+    const remounted: any = { id: 9, properties: { comfytv_stage_uid: 'remount-uid' } }
+    expect(claimStageUid(remounted)).toBe('remount-uid')
   })
 })
 

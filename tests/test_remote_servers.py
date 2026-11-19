@@ -66,6 +66,33 @@ class TestRemoteJobStorage:
         assert storage.list_remote_jobs(status="running") == []
 
 
+class TestRemoteJobEvents:
+    def test_job_handle_and_progress_preserve_stage_uid(self, monkeypatch):
+        from ComfyTV.runners import remote_comfy
+        import server
+
+        sent = []
+        monkeypatch.setattr(
+            server.PromptServer.instance,
+            "send_sync",
+            lambda event, data, sid=None: sent.append((event, data, sid)),
+        )
+        handle = remote_comfy.RemoteJobHandle("job-1", "7", "stage-uid-7")
+        assert handle.stage_uid == "stage-uid-7"
+        remote_comfy.emit_remote_progress("7", 2, 5, "working", handle.stage_uid)
+        assert sent == [(
+            "comfytv-remote-progress",
+            {
+                "node": "7",
+                "value": 2,
+                "max": 5,
+                "text": "working",
+                "stage_uid": "stage-uid-7",
+            },
+            None,
+        )]
+
+
 def _fake_stage_cls():
     texts = SimpleNamespace(
         id="texts", template=SimpleNamespace(names=["text0", "text1", "text2"]))

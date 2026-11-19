@@ -6,8 +6,7 @@ import json
 import pytest
 
 
-def test_ignis_image_runners_are_registered_for_image_stage():
-    from ComfyTV.runners import RUNNER_REGISTRY
+def test_ignis_image_runner_catalog():
     from ComfyTV.runners.ignis_image import ignis_image_runners
 
     runners = ignis_image_runners()
@@ -23,10 +22,44 @@ def test_ignis_image_runners_are_registered_for_image_stage():
         "Ignis Ideogram 4.5",
     ]
     assert all(runner.kinds == frozenset({"image"}) for runner in runners)
-    assert all(
-        RUNNER_REGISTRY.by_label(runner.label, "image") is not None
-        for runner in runners
-    )
+
+
+def test_ignis_runners_are_hidden_until_token_is_configured(monkeypatch):
+    import ComfyTV.runners as runners
+
+    original = runners.has_ignis_token
+    try:
+        monkeypatch.setattr(runners, "has_ignis_token", lambda: False)
+        runners.refresh_registry()
+        assert not any(
+            label.startswith("Ignis ")
+            for label in runners.RUNNER_REGISTRY.labels_for_kind("image")
+        )
+        assert not any(
+            label.startswith("Ignis ")
+            for label in runners.RUNNER_REGISTRY.labels_for_kind("video")
+        )
+
+        monkeypatch.setattr(runners, "has_ignis_token", lambda: True)
+        runners.refresh_registry()
+        image_labels = runners.RUNNER_REGISTRY.labels_for_kind("image")
+        video_labels = runners.RUNNER_REGISTRY.labels_for_kind("video")
+        assert "Ignis Nano Banana 2.1" in image_labels
+        assert "Ignis Seedance 2.5" in video_labels
+    finally:
+        monkeypatch.setattr(runners, "has_ignis_token", original)
+        runners.refresh_registry()
+
+
+def test_legacy_nanobanana_label_resolves_to_renamed_workflow():
+    import ComfyTV.runners as runners
+    from ComfyTV.runners.base import Runner
+
+    registry = runners.RunnerRegistry()
+    renamed = Runner("image/NanoBanana 2.1", "NanoBanana 2.1", {"image"})
+    registry.register(renamed)
+
+    assert registry.by_label("NanoBanana2", "image") is renamed
 
 
 def test_virtual_config_exposes_ratio_background_and_count_but_not_resolution():
