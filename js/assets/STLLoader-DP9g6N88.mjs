@@ -1,4 +1,4 @@
-import { a1 as Loader, J as FileLoader, f as BufferGeometry, i as Color, au as SRGBColorSpace, e as BufferAttribute, aW as Vector3, K as Float32BufferAttribute } from "./main-CZmvkwTL.mjs";
+import { a1 as Loader, J as FileLoader, f as BufferGeometry, i as Color, au as SRGBColorSpace, e as BufferAttribute, aW as Vector3, K as Float32BufferAttribute } from "./main-aj5v1QOT.mjs";
 class STLLoader extends Loader {
   /**
    * Constructs a new STL loader.
@@ -208,4 +208,4 @@ class STLLoader extends Loader {
 export {
   STLLoader
 };
-//# sourceMappingURL=STLLoader-BoHfhmWf.mjs.map
+//# sourceMappingURL=STLLoader-DP9g6N88.mjs.map

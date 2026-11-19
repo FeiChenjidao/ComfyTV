@@ -60005,7 +60005,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-MDUgmspl.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-CTDhCD0c.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -90465,7 +90465,7 @@ const _sfc_main$4G = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-DUF9ZLs_.mjs"),
+      loader: () => import("./AgentPanelRoot-DCnfdObL.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -160845,7 +160845,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-DnofA3dN.mjs");
+    const { TGALoader } = await import("./TGALoader-D7G2SgLL.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -160858,7 +160858,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-CUgi_LOQ.mjs");
+      const { MTLLoader } = await import("./MTLLoader-kQsmfLE6.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -160867,7 +160867,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-BoHfhmWf.mjs");
+    const { STLLoader } = await import("./STLLoader-DP9g6N88.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -160875,7 +160875,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-D0wZr8QW.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-DCeMbLL1.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -247688,6 +247688,138 @@ function extractRunError(e, nodeId) {
   const stack2 = e instanceof Error ? e.stack : void 0;
   return { message: msg, traceback: stack2 };
 }
+function findHostPinia() {
+  var _a2, _b2, _c, _d, _e2, _f, _g;
+  const win = window;
+  if (win.__comfytv_host_pinia) return win.__comfytv_host_pinia;
+  for (const sel2 of ["#vue-app", "#app"]) {
+    const root = document.querySelector(sel2);
+    const vueApp = root == null ? void 0 : root.__vue_app__;
+    const pinia2 = ((_b2 = (_a2 = vueApp == null ? void 0 : vueApp.config) == null ? void 0 : _a2.globalProperties) == null ? void 0 : _b2.$pinia) ?? ((_e2 = (_d = (_c = vueApp == null ? void 0 : vueApp._context) == null ? void 0 : _c.config) == null ? void 0 : _d.globalProperties) == null ? void 0 : _e2.$pinia);
+    if (pinia2) return pinia2;
+  }
+  return ((_g = (_f = win.app) == null ? void 0 : _f.extensionManager) == null ? void 0 : _g._p) ?? null;
+}
+const AUTH_STORE_IDS = ["firebaseAuth", "auth", "comfyOrgAuth"];
+const API_KEY_STORE_IDS = ["apiKeyAuth", "apiKey"];
+function hostStore(id) {
+  var _a2, _b2, _c;
+  return (_c = (_b2 = (_a2 = findHostPinia()) == null ? void 0 : _a2._s) == null ? void 0 : _b2.get) == null ? void 0 : _c.call(_b2, id);
+}
+function hostStores() {
+  var _a2;
+  const map2 = (_a2 = findHostPinia()) == null ? void 0 : _a2._s;
+  if (!map2 || typeof map2.values !== "function") return [];
+  return [...map2.values()];
+}
+async function tokenFromStore(store2) {
+  var _a2, _b2;
+  if (!store2) return void 0;
+  try {
+    const t2 = await ((_a2 = store2.getWorkspaceAuthToken) == null ? void 0 : _a2.call(store2));
+    if (typeof t2 === "string" && t2) return t2;
+  } catch {
+  }
+  try {
+    const t2 = await ((_b2 = store2.getAuthToken) == null ? void 0 : _b2.call(store2));
+    if (typeof t2 === "string" && t2) return t2;
+  } catch {
+  }
+  const raw = store2.token ?? store2.idToken ?? store2.authToken;
+  const value = typeof raw === "string" ? raw : raw == null ? void 0 : raw.value;
+  return typeof value === "string" && value ? value : void 0;
+}
+function keyFromStore(store2) {
+  var _a2;
+  if (!store2) return void 0;
+  try {
+    const k2 = (_a2 = store2.getApiKey) == null ? void 0 : _a2.call(store2);
+    if (typeof k2 === "string" && k2) return k2;
+  } catch {
+  }
+  const raw = store2.apiKey;
+  const value = typeof raw === "string" ? raw : raw == null ? void 0 : raw.value;
+  return typeof value === "string" && value ? value : void 0;
+}
+async function resolveAuthToken(api2) {
+  var _a2;
+  try {
+    const store2 = await ((_a2 = api2.getAuthStore) == null ? void 0 : _a2.call(api2));
+    const t2 = await tokenFromStore(store2);
+    if (t2) return t2;
+  } catch {
+  }
+  try {
+    const t2 = await tokenFromStore(api2.authStoreComposable);
+    if (t2) return t2;
+  } catch {
+  }
+  for (const id of AUTH_STORE_IDS) {
+    const t2 = await tokenFromStore(hostStore(id));
+    if (t2) return t2;
+  }
+  for (const store2 of hostStores()) {
+    if (typeof (store2 == null ? void 0 : store2.getWorkspaceAuthToken) !== "function" && typeof (store2 == null ? void 0 : store2.getAuthToken) !== "function") continue;
+    const t2 = await tokenFromStore(store2);
+    if (t2) return t2;
+  }
+  return void 0;
+}
+function resolveApiKey(_api) {
+  for (const id of API_KEY_STORE_IDS) {
+    const k2 = keyFromStore(hostStore(id));
+    if (k2) return k2;
+  }
+  for (const store2 of hostStores()) {
+    if (typeof (store2 == null ? void 0 : store2.getApiKey) !== "function") continue;
+    const k2 = keyFromStore(store2);
+    if (k2) return k2;
+  }
+  return void 0;
+}
+async function attachComfyOrgAuth(api2) {
+  var _a2;
+  if (!api2 || typeof api2 !== "object") return;
+  const hadToken = typeof api2.authToken === "string" && !!api2.authToken;
+  const hadKey = typeof api2.apiKey === "string" && !!api2.apiKey;
+  if (hadToken && hadKey) return;
+  try {
+    await ((_a2 = api2.waitForAuthInitialization) == null ? void 0 : _a2.call(api2));
+  } catch {
+  }
+  if (!hadToken) {
+    const token = await resolveAuthToken(api2);
+    if (token) api2.authToken = token;
+  }
+  if (!hadKey) {
+    const key = resolveApiKey();
+    if (key) api2.apiKey = key;
+  }
+}
+async function readComfyOrgAuthSnapshot(api2) {
+  var _a2;
+  if (!api2 || typeof api2 !== "object") return {};
+  try {
+    await ((_a2 = api2.waitForAuthInitialization) == null ? void 0 : _a2.call(api2));
+  } catch {
+  }
+  const attachedToken = typeof api2.authToken === "string" && api2.authToken ? api2.authToken : void 0;
+  const attachedKey = typeof api2.apiKey === "string" && api2.apiKey ? api2.apiKey : void 0;
+  const token = attachedToken ?? await resolveAuthToken(api2);
+  const apiKey = attachedKey ?? resolveApiKey();
+  return {
+    ...token ? { token } : {},
+    ...apiKey ? { apiKey } : {}
+  };
+}
+async function comfyOrgExecutionExtraData(api2) {
+  const auth = await readComfyOrgAuthSnapshot(api2);
+  return {
+    comfy_usage_source: "comfyui-frontend",
+    ...auth.token ? { auth_token_comfy_org: auth.token } : {},
+    ...auth.apiKey ? { api_key_comfy_org: auth.apiKey } : {}
+  };
+}
 function createStageRun(opts) {
   const { node, state: state2, store: store2, kind, variant, refresh } = opts;
   const executionStore = useExecutionStore();
@@ -247710,7 +247842,7 @@ function createStageRun(opts) {
     };
   };
   const onRunRequest = async () => {
-    var _a2, _b2, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m2, _n2, _o, _p;
+    var _a2, _b2, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m2, _n2;
     if (state2.running) return;
     if (variant === "loader") return;
     const wfWidget = (_a2 = node.widgets) == null ? void 0 : _a2.find((w) => w.name === "workflow");
@@ -247794,18 +247926,12 @@ function createStageRun(opts) {
         runningPromptId = (queueResp == null ? void 0 : queueResp.prompt_id) ? String(queueResp.prompt_id) : null;
         return;
       }
-      const extraData = { comfy_usage_source: "comfyui-frontend" };
-      if (typeof ((_n2 = a2.api) == null ? void 0 : _n2.authToken) === "string" && a2.api.authToken) {
-        extraData.auth_token_comfy_org = a2.api.authToken;
-      }
-      if (typeof ((_o = a2.api) == null ? void 0 : _o.apiKey) === "string" && a2.api.apiKey) {
-        extraData.api_key_comfy_org = a2.api.apiKey;
-      }
+      const extraData = await comfyOrgExecutionExtraData(a2.api);
       const localRun = await startStageRun({
         prompt: pm.output,
         target_node_id: targetId,
         workflow: pm.workflow,
-        client_id: ((_p = a2.api) == null ? void 0 : _p.clientId) ? String(a2.api.clientId) : void 0,
+        client_id: ((_n2 = a2.api) == null ? void 0 : _n2.clientId) ? String(a2.api.clientId) : void 0,
         extra_data: extraData
       });
       runningStageRunId = localRun.job_id;
@@ -248383,128 +248509,6 @@ function _sfc_render(_ctx, _cache2) {
   ]);
 }
 const EntryManagerPanel = /* @__PURE__ */ _export_sfc(_sfc_main$w, [["render", _sfc_render]]);
-function findHostPinia() {
-  var _a2, _b2, _c, _d, _e2, _f, _g;
-  const win = window;
-  if (win.__comfytv_host_pinia) return win.__comfytv_host_pinia;
-  for (const sel2 of ["#vue-app", "#app"]) {
-    const root = document.querySelector(sel2);
-    const vueApp = root == null ? void 0 : root.__vue_app__;
-    const pinia2 = ((_b2 = (_a2 = vueApp == null ? void 0 : vueApp.config) == null ? void 0 : _a2.globalProperties) == null ? void 0 : _b2.$pinia) ?? ((_e2 = (_d = (_c = vueApp == null ? void 0 : vueApp._context) == null ? void 0 : _c.config) == null ? void 0 : _d.globalProperties) == null ? void 0 : _e2.$pinia);
-    if (pinia2) return pinia2;
-  }
-  return ((_g = (_f = win.app) == null ? void 0 : _f.extensionManager) == null ? void 0 : _g._p) ?? null;
-}
-const AUTH_STORE_IDS = ["firebaseAuth", "auth", "comfyOrgAuth"];
-const API_KEY_STORE_IDS = ["apiKeyAuth", "apiKey"];
-function hostStore(id) {
-  var _a2, _b2, _c;
-  return (_c = (_b2 = (_a2 = findHostPinia()) == null ? void 0 : _a2._s) == null ? void 0 : _b2.get) == null ? void 0 : _c.call(_b2, id);
-}
-function hostStores() {
-  var _a2;
-  const map2 = (_a2 = findHostPinia()) == null ? void 0 : _a2._s;
-  if (!map2 || typeof map2.values !== "function") return [];
-  return [...map2.values()];
-}
-async function tokenFromStore(store2) {
-  var _a2, _b2;
-  if (!store2) return void 0;
-  try {
-    const t2 = await ((_a2 = store2.getWorkspaceAuthToken) == null ? void 0 : _a2.call(store2));
-    if (typeof t2 === "string" && t2) return t2;
-  } catch {
-  }
-  try {
-    const t2 = await ((_b2 = store2.getAuthToken) == null ? void 0 : _b2.call(store2));
-    if (typeof t2 === "string" && t2) return t2;
-  } catch {
-  }
-  const raw = store2.token ?? store2.idToken ?? store2.authToken;
-  const value = typeof raw === "string" ? raw : raw == null ? void 0 : raw.value;
-  return typeof value === "string" && value ? value : void 0;
-}
-function keyFromStore(store2) {
-  var _a2;
-  if (!store2) return void 0;
-  try {
-    const k2 = (_a2 = store2.getApiKey) == null ? void 0 : _a2.call(store2);
-    if (typeof k2 === "string" && k2) return k2;
-  } catch {
-  }
-  const raw = store2.apiKey;
-  const value = typeof raw === "string" ? raw : raw == null ? void 0 : raw.value;
-  return typeof value === "string" && value ? value : void 0;
-}
-async function resolveAuthToken(api2) {
-  var _a2;
-  try {
-    const store2 = await ((_a2 = api2.getAuthStore) == null ? void 0 : _a2.call(api2));
-    const t2 = await tokenFromStore(store2);
-    if (t2) return t2;
-  } catch {
-  }
-  try {
-    const t2 = await tokenFromStore(api2.authStoreComposable);
-    if (t2) return t2;
-  } catch {
-  }
-  for (const id of AUTH_STORE_IDS) {
-    const t2 = await tokenFromStore(hostStore(id));
-    if (t2) return t2;
-  }
-  for (const store2 of hostStores()) {
-    if (typeof (store2 == null ? void 0 : store2.getWorkspaceAuthToken) !== "function" && typeof (store2 == null ? void 0 : store2.getAuthToken) !== "function") continue;
-    const t2 = await tokenFromStore(store2);
-    if (t2) return t2;
-  }
-  return void 0;
-}
-function resolveApiKey(_api) {
-  for (const id of API_KEY_STORE_IDS) {
-    const k2 = keyFromStore(hostStore(id));
-    if (k2) return k2;
-  }
-  for (const store2 of hostStores()) {
-    if (typeof (store2 == null ? void 0 : store2.getApiKey) !== "function") continue;
-    const k2 = keyFromStore(store2);
-    if (k2) return k2;
-  }
-  return void 0;
-}
-async function attachComfyOrgAuth(api2) {
-  var _a2;
-  if (!api2 || typeof api2 !== "object") return;
-  const hadToken = typeof api2.authToken === "string" && !!api2.authToken;
-  const hadKey = typeof api2.apiKey === "string" && !!api2.apiKey;
-  if (hadToken && hadKey) return;
-  try {
-    await ((_a2 = api2.waitForAuthInitialization) == null ? void 0 : _a2.call(api2));
-  } catch {
-  }
-  if (!hadToken) {
-    const token = await resolveAuthToken(api2);
-    if (token) api2.authToken = token;
-  }
-  if (!hadKey) {
-    const key = resolveApiKey();
-    if (key) api2.apiKey = key;
-  }
-}
-async function readComfyOrgAuthSnapshot(api2) {
-  var _a2;
-  if (!api2 || typeof api2 !== "object") return {};
-  try {
-    await ((_a2 = api2.waitForAuthInitialization) == null ? void 0 : _a2.call(api2));
-  } catch {
-  }
-  const token = await resolveAuthToken(api2);
-  const apiKey = resolveApiKey();
-  return {
-    ...token ? { token } : {},
-    ...apiKey ? { apiKey } : {}
-  };
-}
 const FIREBASE_PREFIX = "firebase:authUser:";
 const FIREBASE_DB = "firebaseLocalStorageDb";
 const FIREBASE_STORE = "firebaseLocalStorage";
@@ -269616,4 +269620,4 @@ export {
   DropdownMenuRadioItem_default as y,
   DropdownMenuRoot_default as z
 };
-//# sourceMappingURL=main-CZmvkwTL.mjs.map
+//# sourceMappingURL=main-aj5v1QOT.mjs.map

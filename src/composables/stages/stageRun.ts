@@ -19,6 +19,7 @@ import {
   useStageStore,
 } from '@/stores/stageStore'
 import { extractRunError } from '@/utils/runError'
+import { comfyOrgExecutionExtraData } from '@/utils/comfyOrgAuth'
 
 type Store = ReturnType<typeof useStageStore>
 
@@ -154,13 +155,7 @@ export function createStageRun(opts: {
         return
       }
 
-      const extraData: Record<string, string> = { comfy_usage_source: 'comfyui-frontend' }
-      if (typeof a.api?.authToken === 'string' && a.api.authToken) {
-        extraData.auth_token_comfy_org = a.api.authToken
-      }
-      if (typeof a.api?.apiKey === 'string' && a.api.apiKey) {
-        extraData.api_key_comfy_org = a.api.apiKey
-      }
+      const extraData = await comfyOrgExecutionExtraData(a.api)
       const localRun = await startStageRun({
         prompt: pm.output,
         target_node_id: targetId,

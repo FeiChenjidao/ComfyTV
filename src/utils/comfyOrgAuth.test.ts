@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { attachComfyOrgAuth } from './comfyOrgAuth'
+import {
+  attachComfyOrgAuth,
+  comfyOrgExecutionExtraData,
+  readComfyOrgAuthSnapshot,
+} from './comfyOrgAuth'
 
 describe('attachComfyOrgAuth', () => {
   afterEach(() => {
@@ -73,5 +77,36 @@ describe('attachComfyOrgAuth', () => {
     const api: any = {}
     await attachComfyOrgAuth(api)
     expect(api.authToken).toBe('workspace-jwt')
+  })
+
+  it('reads credentials already attached by the host', async () => {
+    const api: any = {
+      authToken: 'attached-jwt',
+      apiKey: 'attached-key',
+      getAuthStore: vi.fn(),
+    }
+    await expect(readComfyOrgAuthSnapshot(api)).resolves.toEqual({
+      token: 'attached-jwt',
+      apiKey: 'attached-key',
+    })
+    expect(api.getAuthStore).not.toHaveBeenCalled()
+  })
+
+  it('builds execution extra data from the host auth stores', async () => {
+    const pinia = {
+      _s: new Map([
+        ['auth', {
+          getWorkspaceAuthToken: vi.fn().mockResolvedValue('workspace-jwt'),
+        }],
+        ['apiKeyAuth', { getApiKey: vi.fn().mockReturnValue('comfyui-key') }],
+      ]),
+    }
+    ;(window as any).__comfytv_host_pinia = pinia
+
+    await expect(comfyOrgExecutionExtraData({})).resolves.toEqual({
+      comfy_usage_source: 'comfyui-frontend',
+      auth_token_comfy_org: 'workspace-jwt',
+      api_key_comfy_org: 'comfyui-key',
+    })
   })
 })

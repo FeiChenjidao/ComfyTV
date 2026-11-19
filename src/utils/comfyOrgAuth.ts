@@ -133,10 +133,25 @@ export async function readComfyOrgAuthSnapshot(api: any): Promise<{
   try {
     await api.waitForAuthInitialization?.()
   } catch { /* desktop / unauthenticated */ }
-  const token = await resolveAuthToken(api)
-  const apiKey = resolveApiKey(api)
+  const attachedToken = typeof api.authToken === 'string' && api.authToken
+    ? api.authToken
+    : undefined
+  const attachedKey = typeof api.apiKey === 'string' && api.apiKey
+    ? api.apiKey
+    : undefined
+  const token = attachedToken ?? await resolveAuthToken(api)
+  const apiKey = attachedKey ?? resolveApiKey(api)
   return {
     ...(token ? { token } : {}),
     ...(apiKey ? { apiKey } : {}),
+  }
+}
+
+export async function comfyOrgExecutionExtraData(api: any): Promise<Record<string, string>> {
+  const auth = await readComfyOrgAuthSnapshot(api)
+  return {
+    comfy_usage_source: 'comfyui-frontend',
+    ...(auth.token ? { auth_token_comfy_org: auth.token } : {}),
+    ...(auth.apiKey ? { api_key_comfy_org: auth.apiKey } : {}),
   }
 }
