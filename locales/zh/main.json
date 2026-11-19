@@ -180,6 +180,12 @@
     "apiCostHint": "估算工作流 API 费用",
     "ignisCredits": "Ignis 积分",
     "ignisCreditsHint": "本次生成由 Ignis 账户结算积分，实际扣费以 Ignis 服务端为准",
+    "ignisBackground": {
+      "title": "背景",
+      "auto": "自动",
+      "transparent": "透明",
+      "opaque": "不透明"
+    },
     "toolbar": { "generate": "生成" },
     "pickerHint": "连入上游批次，点选一张",
     "cropHint": "连入上游图片开始裁剪",

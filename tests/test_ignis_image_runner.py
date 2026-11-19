@@ -29,13 +29,13 @@ def test_ignis_image_runners_are_registered_for_image_stage():
     )
 
 
-def test_virtual_config_exposes_ratio_and_count_but_not_resolution():
+def test_virtual_config_exposes_ratio_background_and_count_but_not_resolution():
     from ComfyTV.runners.ignis_image import IgnisImageRunner
 
     config = IgnisImageRunner("seedream").workflow_config()
     widgets = {item["widget_name"]: item for item in config["exposed_widgets"]}
 
-    assert set(widgets) == {"aspect_ratio", "batch_size"}
+    assert set(widgets) == {"aspect_ratio", "batch_size", "background"}
     assert widgets["aspect_ratio"]["widget_props"]["values"] == [
         "auto", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16",
     ]
@@ -44,9 +44,14 @@ def test_virtual_config_exposes_ratio_and_count_but_not_resolution():
         "max": 8,
         "step": 1,
     }
+    assert widgets["background"]["widget_props"]["values"] == [
+        "auto", "transparent", "opaque",
+    ]
+    assert widgets["background"]["current_value"] == "auto"
     assert config["meta"]["remote_provider"] == "ignis"
     assert config["meta"]["billing"] == "ignis_credits"
     assert config["meta"]["bound_only_params"] is True
+    assert config["meta"]["background_control"] == "prompt_guided"
 
 
 def test_usage_hides_references_for_create_only_models():
@@ -62,6 +67,7 @@ def test_usage_hides_references_for_create_only_models():
     assert ideogram["uses_options"] == {
         "aspect_ratio": True,
         "batch_size": True,
+        "background": True,
     }
     assert ideogram["uses_mask"] is False
 
@@ -79,6 +85,51 @@ def test_batch_payload_repeats_complete_requests():
 
     assert payload == {"requests": [request, request, request]}
     assert payload["requests"][0] is not payload["requests"][1]
+
+
+@pytest.mark.parametrize(
+    ("background", "expected"),
+    [
+        ("auto", "paint a lighthouse"),
+        ("unknown", "paint a lighthouse"),
+    ],
+)
+def test_background_auto_or_unknown_keeps_prompt(background, expected):
+    from ComfyTV.runners.ignis_image import _build_request
+
+    request = _build_request(
+        model="gpt-image",
+        prompt="paint a lighthouse",
+        aspect_ratio="16:9",
+        background=background,
+        file_ids=[],
+    )
+
+    assert request["prompt"] == expected
+    assert "background" not in request
+
+
+@pytest.mark.parametrize(
+    ("background", "phrase"),
+    [
+        ("transparent", "fully transparent background"),
+        ("opaque", "fully opaque background"),
+    ],
+)
+def test_background_preference_is_added_to_prompt_not_api(background, phrase):
+    from ComfyTV.runners.ignis_image import _build_request
+
+    request = _build_request(
+        model="gpt-image",
+        prompt="paint a lighthouse",
+        aspect_ratio="16:9",
+        background=background,
+        file_ids=[],
+    )
+
+    assert request["prompt"].startswith("paint a lighthouse\n\n")
+    assert phrase in request["prompt"]
+    assert "background" not in request
 
 
 def test_create_only_model_rejects_reference_images():

@@ -31,6 +31,19 @@ COMMON_RATIOS = [
     "1:1", "4:5", "3:4", "2:3", "9:16",
 ]
 
+BACKGROUND_OPTIONS = ["auto", "transparent", "opaque"]
+
+BACKGROUND_PROMPTS = {
+    "transparent": (
+        "Render the subject on a fully transparent background with clean alpha "
+        "edges. Return a PNG with an alpha channel and do not add a solid background."
+    ),
+    "opaque": (
+        "Render with a fully opaque background. Do not use transparency or an "
+        "alpha channel."
+    ),
+}
+
 IGNIS_IMAGE_SPECS = {
     "nano-banana": {
         "label": "Ignis Nano Banana Pro",
@@ -131,6 +144,7 @@ def _build_request(
     model: str,
     prompt: str,
     aspect_ratio: str,
+    background: str = "auto",
     file_ids: list[str],
 ) -> dict:
     spec = IGNIS_IMAGE_SPECS[model]
@@ -146,6 +160,12 @@ def _build_request(
     ratio = str(aspect_ratio or spec["default_aspect_ratio"])
     if ratio not in spec["aspect_ratios"]:
         ratio = str(spec["default_aspect_ratio"])
+    background_mode = str(background or "auto").strip().lower()
+    if background_mode not in BACKGROUND_OPTIONS:
+        background_mode = "auto"
+    background_prompt = BACKGROUND_PROMPTS.get(background_mode)
+    if background_prompt:
+        prompt = f"{prompt.rstrip()}\n\n{background_prompt}"
     request = {
         "model": model,
         "prompt": prompt,
@@ -200,6 +220,12 @@ class IgnisImageRunner(Runner):
                 {"min": 1, "max": 8, "step": 1},
                 1,
             ),
+            _widget(
+                "background",
+                "COMBO",
+                {"values": list(BACKGROUND_OPTIONS)},
+                "auto",
+            ),
         ]
         return {
             "id": -100 - list(IGNIS_IMAGE_SPECS).index(self.model),
@@ -233,6 +259,7 @@ class IgnisImageRunner(Runner):
                 "billing": "ignis_credits",
                 "model": self.model,
                 "bound_only_params": True,
+                "background_control": "prompt_guided",
             },
         }
 
@@ -257,7 +284,11 @@ class IgnisImageRunner(Runner):
                 "model": 0,
             },
             "uses_computed": {"width": False, "height": False, "length": False},
-            "uses_options": {"aspect_ratio": True, "batch_size": True},
+            "uses_options": {
+                "aspect_ratio": True,
+                "batch_size": True,
+                "background": True,
+            },
             "uses_mask": False,
             "prompt_required": True,
         }
@@ -296,6 +327,7 @@ class IgnisImageRunner(Runner):
                 model=self.model,
                 prompt=prompt,
                 aspect_ratio=str(ctx.options.get("aspect_ratio") or ""),
+                background=str(ctx.options.get("background") or "auto"),
                 file_ids=file_ids,
             )
             payload = _build_payload(request, batch_size)

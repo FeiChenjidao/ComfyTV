@@ -180,6 +180,12 @@
     "apiCostHint": "Estimated workflow API cost",
     "ignisCredits": "Ignis credits",
     "ignisCreditsHint": "This generation is billed to the configured Ignis account; the Ignis service determines the final charge",
+    "ignisBackground": {
+      "title": "Background",
+      "auto": "Auto",
+      "transparent": "Transparent",
+      "opaque": "Opaque"
+    },
     "toolbar": { "generate": "Generate" },
     "pickerHint": "Connect an upstream batch, click to pick",
     "cropHint": "Connect an upstream image to start cropping",

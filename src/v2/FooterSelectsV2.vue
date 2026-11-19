@@ -50,6 +50,7 @@
     </div>
     <GptImageOptionsV2 v-if="gptImageOptions && imagePanelMode === 'gpt'" :get-node="props.getNode" />
     <SeedreamOptionsV2 v-if="gptImageOptions && imagePanelMode === 'seedream'" :get-node="props.getNode" />
+    <IgnisImageOptionsV2 v-if="gptImageOptions && remoteProvider === 'ignis'" :get-node="props.getNode" />
     <template v-for="x in extra ?? []" :key="x.name">
       <div v-if="has(x.name) && (x.type ?? 'combo') === 'combo'" class="v2-fsel__item">
         <ComfyTVSelect :model-value="sv(x.name)" :options="optionsOf(x.name)" :filterable="false" @update:model-value="v => writeVal(x.name, v)" />
@@ -93,6 +94,7 @@ import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import GenOptionsV2 from '@/v2/GenOptionsV2.vue'
 import GptImageOptionsV2 from '@/v2/GptImageOptionsV2.vue'
 import SeedreamOptionsV2 from '@/v2/SeedreamOptionsV2.vue'
+import IgnisImageOptionsV2 from '@/v2/IgnisImageOptionsV2.vue'
 import { openLinkWorkflow } from '@/composables/stages/openLinkWorkflow'
 import { useWorkflowApiCostBadge } from '@/composables/stages/useWorkflowApiCostBadge'
 import { comboOptionsVersion } from '@/composables/stages/workflowCombo'
