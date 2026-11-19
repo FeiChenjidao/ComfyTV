@@ -674,7 +674,13 @@
       "placeholder": "粘贴 Ignis Token（ignis_ct_…）",
       "save": "保存 Token",
       "saveOk": "已保存到本机",
-      "saveFailed": "保存失败"
+      "saveFailed": "保存失败",
+      "configDesc": "也可以粘贴管理员发来的完整安装说明、config 链接或 config JSON，ComfyTV 会自动解析并保存 Token。",
+      "configPlaceholder": "粘贴 config 链接或完整安装文本…",
+      "importConfig": "解析并保存配置",
+      "importing": "正在解析…",
+      "importOk": "已从配置链接保存到本机",
+      "importFailed": "配置解析失败"
     },
     "fields": {
       "enable-v2": {

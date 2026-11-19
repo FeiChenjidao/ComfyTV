@@ -17949,6 +17949,9 @@ function fetchIgnisToken() {
 function saveIgnisToken(token) {
   return apiSend("/comfytv/ignis/token", "PUT", IgnisTokenSchema, { token });
 }
+function saveIgnisConfigText(text) {
+  return apiSend("/comfytv/ignis/config", "PUT", IgnisTokenSchema, { text });
+}
 const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   AdoptAssetsSchema,
@@ -18133,6 +18136,7 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   rollbackPluginUpdate,
   runDbBackup,
   saveCustomIo,
+  saveIgnisConfigText,
   saveIgnisToken,
   saveNativeWorkflowGitToken,
   saveSettings,
@@ -60001,7 +60005,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-C0HD2DGZ.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-MDUgmspl.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -61325,9 +61329,9 @@ const _hoisted_28$l = {
   key: 1,
   class: "ctv:py-2 ctv:px-1.5 ctv:text-center ctv:italic ctv:text-muted-foreground/60 ctv:text-2xs"
 };
-const _hoisted_29$h = ["onClick"];
-const _hoisted_30$h = { class: "ctv:w-3 ctv:inline-flex ctv:text-primary-background" };
-const _hoisted_31$f = { class: "ctv:flex-1 ctv:truncate" };
+const _hoisted_29$i = ["onClick"];
+const _hoisted_30$i = { class: "ctv:w-3 ctv:inline-flex ctv:text-primary-background" };
+const _hoisted_31$g = { class: "ctv:flex-1 ctv:truncate" };
 const chipCountClass$2 = "ctv:py-0 ctv:px-1 ctv:rounded-lg ctv:text-3xs ctv:bg-base-foreground/10";
 const _sfc_main$4_ = /* @__PURE__ */ defineComponent({
   __name: "AssetsPanel",
@@ -61708,7 +61712,7 @@ const _sfc_main$4_ = /* @__PURE__ */ defineComponent({
                 class: "ctv:flex ctv:items-center ctv:gap-1.5 ctv:w-full ctv:px-1.5 ctv:py-1 ctv:rounded-sm ctv:cursor-pointer ctv:text-left ctv:text-2xs ctv:[font-family:inherit] ctv:bg-transparent ctv:border-none ctv:text-base-foreground ctv:hover:bg-secondary-background-hover",
                 onClick: ($event) => unref(toggleTag)(cat2.id)
               }, [
-                createBaseVNode("span", _hoisted_30$h, [
+                createBaseVNode("span", _hoisted_30$i, [
                   unref(editorTagState)(cat2.id) === "all" ? (openBlock(), createBlock(unref(IconCheck), {
                     key: 0,
                     class: "ctv:size-3"
@@ -61717,8 +61721,8 @@ const _sfc_main$4_ = /* @__PURE__ */ defineComponent({
                     class: "ctv:size-3"
                   })) : createCommentVNode("", true)
                 ]),
-                createBaseVNode("span", _hoisted_31$f, toDisplayString$1(cat2.name), 1)
-              ], 8, _hoisted_29$h);
+                createBaseVNode("span", _hoisted_31$g, toDisplayString$1(cat2.name), 1)
+              ], 8, _hoisted_29$i);
             }), 128))
           ], 4)
         ])) : createCommentVNode("", true)
@@ -62908,7 +62912,7 @@ const stage$1 = { "run": "Run", "rerun": "Re-run", "running": "Running…", "can
 const error$1 = { "dismiss": "Dismiss", "cancelled": "Cancelled", "upstreamNotReady": "Upstream not ready", "upstreamNotReadyDetail": "Upstream not ready: {list}. Run those stage(s) first so they produce a snapshot, then Run this stage again.", "droppedFromQueue": "Removed from the queue before it ran — the queue was cleared or the prompt was deleted.", "workerDied": "Backend stopped without sending a result. The prompt worker likely died (CUDA OOM during cleanup is the usual cause). Restart ComfyUI to recover." };
 const eagle$1 = { "title": "Eagle Library", "refresh": "Refresh", "search": "Search name or tags…", "loading": "Loading…", "empty": "No items", "loadMore": "Load more", "disabledHint": "Eagle integration is disabled. Turn on “Enable Eagle integration” in Settings and pin the ComfyTV .library path.", "pendingBanner": "{n} item(s) queued for Eagle (waiting for the pinned library to open)", "flushNow": "Send now", "flushing": "Sending…", "mode": { "api": "Online", "disk": "Read-only", "offline": "Offline", "disabled": "Disabled" }, "hint": { "disk": "Eagle is closed or has another library open: reading the library from disk (read-only). Sends are queued and flushed automatically once the pinned library opens.", "offline": "Eagle unreachable: the app is not running and the pinned library path does not exist. Check the library path in Settings." }, "folder": { "all": "All folders" }, "ai": { "label": "AI", "tooltip": "AI semantic search (needs Eagle's AI Search plugin): search by meaning, not by name" }, "similar": { "action": "Find similar", "banner": "Items similar to “{name}”", "clear": "Clear", "failed": "Similar search failed" }, "import": { "action": "Import into Assets", "done": "Imported “{name}”", "existed": "“{name}” is already in Assets", "failed": "Import failed" }, "send": { "action": "Send to Eagle", "sent": "Sent to Eagle: {name}", "queued": "Eagle not ready — queued ({n} pending)", "failed": "Send failed" }, "flush": { "done": "Flushed {n} item(s) to Eagle", "failed": "{n} item(s) failed to flush" } };
 const sidebar$1 = { "tab": { "workflow": "Workflow", "assets": "Assets", "eagle": "Eagle", "entries": "Entries", "params": "Stages", "presets": "Presets", "resources": "Resources", "servers": "Servers", "collab": "Collab", "settings": "Settings" } };
-const settings$1 = { "title": "Settings", "hint": "Defaults come from comfytv.properties in the ComfyTV directory. Values saved here are stored in the database and take precedence.", "loading": "Loading…", "save": "Save", "saving": "Saving…", "search": "Search settings…", "noMatch": "No settings match", "experimental": "Experimental", "reset": "Reset to default", "on": "On", "off": "Off", "status": { "checking": "Checking…", "online": "Connected", "offline": "Offline" }, "blender": { "section": "Blender bridge" }, "general": { "section": "General" }, "backup": { "section": "Database backup", "now": "Back up now", "running": "Backing up…", "ok": "Backup written to {path}", "failed": "Backup failed: {error}" }, "pluginUpdate": { "section": "ComfyTV updates", "desc": "Check the configured GitHub origin for a newer ComfyTV commit and install it without leaving ComfyUI.", "policy": "Updating force-overwrites tracked plugin files and shipped workflows. Local tracked changes are backed up, user workflows are preserved, and the previous version can be rolled back.", "current": "Current", "remote": "Remote", "check": "Check for updates", "checking": "Checking…", "recheck": "Check again", "upToDate": "ComfyTV is up to date.", "available": "An update is available. This checkout is behind by {n} commit(s).", "repairAvailable": "This checkout has local tracked changes or commits and can be restored to the configured remote version.", "repair": "Restore official version", "dirty": "Local tracked files have changes. Updating will overwrite them, including modified shipped workflows.", "rollbackAvailable": "Rollback is available to v{version}.", "rollback": "Rollback version", "rollingBack": "Rolling back…", "rollbackTitle": "Rollback ComfyTV", "rollbackConfirm": "Restore ComfyTV v{version}? Current tracked files will be overwritten and ComfyUI must be restarted.", "backupSaved": "Recovery backup: {path}", "collisionBackups": "{n} local file(s) conflicted with the update and were renamed to .local-backup.", "dependenciesChanged": "Dependency files changed: {files}. Restart ComfyUI and reinstall dependencies if the new version requests it.", "noGit": "Git is not available on this machine.", "notRepo": "This ComfyTV installation is not a Git checkout and cannot update automatically.", "error": "Update check failed: {error}" }, "teamGit": { "section": "Team workflows Git", "desc": "Used to sync cloud templates and push local workflows. Paste the PAT from your admin; it stays on this machine only — do not commit it to GitHub.", "configured": "Configured ({hint})", "missing": "No token configured", "placeholder": "Paste GitHub PAT (github_pat_… / ghp_…)", "save": "Save token", "saveOk": "Saved locally", "saveFailed": "Save failed" }, "ignis": { "section": "Ignis image and video generation", "desc": "Used for Ignis image models and Seedance, Kling, Sora, and PixVerse video generation. The token stays on this machine and is never written into workflows or Git.", "configured": "Configured ({hint})", "missing": "No token configured", "placeholder": "Paste Ignis token (ignis_ct_…)", "save": "Save token", "saveOk": "Saved locally", "saveFailed": "Save failed" }, "fields": { "enable-v2": { "label": "Enable ComfyTV V2 nodes", "desc": "EXPERIMENTAL — expect rough edges. Renders migrated stages with the new content-first V2 shells. Requires ComfyUI's own Node 2.0 (Vue nodes) setting to be enabled first. Refresh the page after changing." }, "v2-lod-scale": { "label": "Poster mode below zoom", "desc": "Below this canvas zoom, V2 cards collapse to a thumbnail with a play/open button; panels come back once you zoom in past it again.", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "Poster backdrop", "desc": "What fills the card around a letterboxed thumbnail: the checkerboard used by image previews, or a dimmed copy of the same picture stretched to fill.", "options": { "checker": "Checkerboard", "image": "Same picture, dimmed" } }, "auto-picker": { "label": "Auto-attach picker on run", "desc": "When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically." }, "auto-bridge": { "label": "Auto-insert Bridge on connect", "desc": "When connecting a native IMAGE/VIDEO/AUDIO/STRING/MASK socket to a ComfyTV socket (or the reverse), insert the matching Bridge node automatically. Into-bridges still need Run to snapshot." }, "v2-panel-on-select": { "label": "Show control panel only when selected", "desc": "On by default. Unselected V2 nodes show the preview only; select a node to reveal prompts, params, and the run bar (LibTV-style)." }, "enable-db-backup": { "label": "Automatic backup on startup", "desc": "Back up the ComfyTV data directory (database + workflows) every time the server starts, before any migration runs." }, "db-backup-max-count": { "label": "Max backups to keep", "desc": "When the number of snapshots exceeds this, the oldest ones are deleted." }, "db-backup-path": { "label": "Backup location", "desc": "Leave empty to use the db-backup folder inside the ComfyTV directory. Snapshots are timestamped folders like 20260805-093000/comfytv.", "placeholder": "e.g. D:\\backups\\comfytv" }, "enable-mcp": { "label": "Enable MCP server", "desc": "Expose the ComfyTV MCP endpoint (/comfytv/mcp) so agents can read and drive the canvas. Off by default." }, "enable-bot": { "label": "Enable ComfyTV Bot", "desc": "Show the embedded bot sidebar and its chat API. Requires the MCP server to be enabled." }, "bot-model-claude-code": { "label": "Claude Code model", "desc": "Model passed to claude --model for bot turns. Accepts an alias (sonnet, opus, haiku) or a full model id. Blank = the CLI's own default.", "placeholder": "CLI default" }, "bot-model-codex": { "label": "Codex model", "desc": "Model passed to codex -m for bot turns. Blank = the CLI's own default.", "placeholder": "CLI default" }, "bot-model-qwen-code": { "label": "Qwen Code model", "desc": "Model passed to qwen -m for bot turns. Blank = the model selected in qwen's own settings.", "placeholder": "CLI default" }, "bot-model-local-llm": { "label": "Local LLM model", "desc": "Model id on the local endpoint. Blank = the first model the endpoint reports.", "placeholder": "first available" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM model", "desc": "EXPERIMENTAL — a toy provider, not meant for real use; pick Local LLM or one of the CLI providers instead. Text-encoder checkpoint from models/text_encoders used for bot turns (Qwen3 or Gemma family). Blank = the first generation-capable checkpoint found. Runs inside ComfyUI itself — no external server needed.", "placeholder": "first available" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM thinking", "desc": "EXPERIMENTAL — only affects the toy ComfyUI LLM provider. Let Qwen3 models reason in a hidden <think> block before answering. Noticeably smarter tool use, at the cost of extra generation time per turn." }, "bot-local-llm-url": { "label": "Local LLM endpoint", "desc": "OpenAI-compatible base URL of a local model server (LM Studio, llama.cpp llama-server, vLLM, Ollama…). The Local LLM provider stays unavailable until this is set. Keyless local endpoints only — no API keys are ever stored.", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "Mount comfy-mcp", "desc": "Also mount the official comfy-mcp server (read-only tool set: node catalog, workflow validation, model/template search) in bot sessions. Claude Code and Qwen Code only — Codex and Local LLM stay comfytv-only." }, "bot-comfy-mcp-command": { "label": "comfy-mcp command", "desc": "Command that launches the comfy-mcp stdio server. Blank = find comfy-mcp on PATH.", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "Always allow bot runs", "desc": "Run stages immediately without an approval card (the default). Disable this to let chats switched to Ask mode pause for your approval before each run." }, "enable-skills": { "label": "Enable Agent Skills", "desc": "Serve installed skills to agents over MCP (skill tool + prompts) and to the embedded bot." }, "enable-collab": { "label": "Enable collaboration", "desc": "EXPERIMENTAL — do not rely on this in production. Real-time multi-user presence and co-editing over the local network. When off, no collaboration code runs at all (no session, no websocket, no UI). Reload open pages after changing this." }, "enable-eagle": { "label": "Enable Eagle integration", "desc": "Connect the local Eagle (eagle.cool) library to ComfyTV: an Eagle panel appears in the sidebar and assets can be sent to Eagle. Requires the Eagle desktop app." }, "eagle-api-url": { "label": "Eagle API URL", "desc": "Address of Eagle's local API, default port 41595. Local access only, no token needed.", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "Pinned library path", "desc": "The .library directory dedicated to ComfyTV. Sends only happen while Eagle has this library open (queued otherwise); browsing falls back to reading the directory from disk. Empty = follow whatever library Eagle has open (not recommended).", "placeholder": "e.g. Y:\\Eagle\\ComfyTV.library" }, "eagle-send-folder": { "label": "Send target folder", "desc": "Eagle folder that manually sent items are filed into; created automatically if missing. Empty = library root. Auto-archive uses per-project folders instead." }, "eagle-auto-send": { "label": "Auto-archive outputs to Eagle", "desc": "Automatically archive every stage output (image/video/audio) into Eagle: filed into a per-project folder, annotation carries the full generation params (prompt/model/…), tagged with the project name. Uses the queue — piles up while Eagle is closed, never blocks generation." }, "blender-bridge-url": { "label": "Blender bridge URL", "desc": "EXPERIMENTAL — expect rough edges. Address of the blender-web bridge that the Blender Scene / Camera / Animation stages talk to. Start it with blender-for-comfytv.bat; the stages stay unavailable until it responds. Default port 7684, local only.", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent & MCP" }, "eagle": { "section": "Eagle Integration" }, "collab": { "section": "Collaboration" } };
+const settings$1 = /* @__PURE__ */ JSON.parse(`{"title":"Settings","hint":"Defaults come from comfytv.properties in the ComfyTV directory. Values saved here are stored in the database and take precedence.","loading":"Loading…","save":"Save","saving":"Saving…","search":"Search settings…","noMatch":"No settings match","experimental":"Experimental","reset":"Reset to default","on":"On","off":"Off","status":{"checking":"Checking…","online":"Connected","offline":"Offline"},"blender":{"section":"Blender bridge"},"general":{"section":"General"},"backup":{"section":"Database backup","now":"Back up now","running":"Backing up…","ok":"Backup written to {path}","failed":"Backup failed: {error}"},"pluginUpdate":{"section":"ComfyTV updates","desc":"Check the configured GitHub origin for a newer ComfyTV commit and install it without leaving ComfyUI.","policy":"Updating force-overwrites tracked plugin files and shipped workflows. Local tracked changes are backed up, user workflows are preserved, and the previous version can be rolled back.","current":"Current","remote":"Remote","check":"Check for updates","checking":"Checking…","recheck":"Check again","upToDate":"ComfyTV is up to date.","available":"An update is available. This checkout is behind by {n} commit(s).","repairAvailable":"This checkout has local tracked changes or commits and can be restored to the configured remote version.","repair":"Restore official version","dirty":"Local tracked files have changes. Updating will overwrite them, including modified shipped workflows.","rollbackAvailable":"Rollback is available to v{version}.","rollback":"Rollback version","rollingBack":"Rolling back…","rollbackTitle":"Rollback ComfyTV","rollbackConfirm":"Restore ComfyTV v{version}? Current tracked files will be overwritten and ComfyUI must be restarted.","backupSaved":"Recovery backup: {path}","collisionBackups":"{n} local file(s) conflicted with the update and were renamed to .local-backup.","dependenciesChanged":"Dependency files changed: {files}. Restart ComfyUI and reinstall dependencies if the new version requests it.","noGit":"Git is not available on this machine.","notRepo":"This ComfyTV installation is not a Git checkout and cannot update automatically.","error":"Update check failed: {error}"},"teamGit":{"section":"Team workflows Git","desc":"Used to sync cloud templates and push local workflows. Paste the PAT from your admin; it stays on this machine only — do not commit it to GitHub.","configured":"Configured ({hint})","missing":"No token configured","placeholder":"Paste GitHub PAT (github_pat_… / ghp_…)","save":"Save token","saveOk":"Saved locally","saveFailed":"Save failed"},"ignis":{"section":"Ignis image and video generation","desc":"Used for Ignis image models and Seedance, Kling, Sora, and PixVerse video generation. The token stays on this machine and is never written into workflows or Git.","configured":"Configured ({hint})","missing":"No token configured","placeholder":"Paste Ignis token (ignis_ct_…)","save":"Save token","saveOk":"Saved locally","saveFailed":"Save failed","configDesc":"You can also paste the full setup instructions, a config link, or config JSON. ComfyTV extracts and saves the token automatically.","configPlaceholder":"Paste a config link or the full setup text…","importConfig":"Parse and save config","importing":"Parsing…","importOk":"Saved locally from the config link","importFailed":"Could not parse the config"},"fields":{"enable-v2":{"label":"Enable ComfyTV V2 nodes","desc":"EXPERIMENTAL — expect rough edges. Renders migrated stages with the new content-first V2 shells. Requires ComfyUI's own Node 2.0 (Vue nodes) setting to be enabled first. Refresh the page after changing."},"v2-lod-scale":{"label":"Poster mode below zoom","desc":"Below this canvas zoom, V2 cards collapse to a thumbnail with a play/open button; panels come back once you zoom in past it again.","options":{"30":"30%","42":"42%","50":"50%","60":"60%"}},"v2-lod-fill":{"label":"Poster backdrop","desc":"What fills the card around a letterboxed thumbnail: the checkerboard used by image previews, or a dimmed copy of the same picture stretched to fill.","options":{"checker":"Checkerboard","image":"Same picture, dimmed"}},"auto-picker":{"label":"Auto-attach picker on run","desc":"When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically."},"auto-bridge":{"label":"Auto-insert Bridge on connect","desc":"When connecting a native IMAGE/VIDEO/AUDIO/STRING/MASK socket to a ComfyTV socket (or the reverse), insert the matching Bridge node automatically. Into-bridges still need Run to snapshot."},"v2-panel-on-select":{"label":"Show control panel only when selected","desc":"On by default. Unselected V2 nodes show the preview only; select a node to reveal prompts, params, and the run bar (LibTV-style)."},"enable-db-backup":{"label":"Automatic backup on startup","desc":"Back up the ComfyTV data directory (database + workflows) every time the server starts, before any migration runs."},"db-backup-max-count":{"label":"Max backups to keep","desc":"When the number of snapshots exceeds this, the oldest ones are deleted."},"db-backup-path":{"label":"Backup location","desc":"Leave empty to use the db-backup folder inside the ComfyTV directory. Snapshots are timestamped folders like 20260805-093000/comfytv.","placeholder":"e.g. D:\\\\backups\\\\comfytv"},"enable-mcp":{"label":"Enable MCP server","desc":"Expose the ComfyTV MCP endpoint (/comfytv/mcp) so agents can read and drive the canvas. Off by default."},"enable-bot":{"label":"Enable ComfyTV Bot","desc":"Show the embedded bot sidebar and its chat API. Requires the MCP server to be enabled."},"bot-model-claude-code":{"label":"Claude Code model","desc":"Model passed to claude --model for bot turns. Accepts an alias (sonnet, opus, haiku) or a full model id. Blank = the CLI's own default.","placeholder":"CLI default"},"bot-model-codex":{"label":"Codex model","desc":"Model passed to codex -m for bot turns. Blank = the CLI's own default.","placeholder":"CLI default"},"bot-model-qwen-code":{"label":"Qwen Code model","desc":"Model passed to qwen -m for bot turns. Blank = the model selected in qwen's own settings.","placeholder":"CLI default"},"bot-model-local-llm":{"label":"Local LLM model","desc":"Model id on the local endpoint. Blank = the first model the endpoint reports.","placeholder":"first available"},"bot-model-comfyui-llm":{"label":"ComfyUI LLM model","desc":"EXPERIMENTAL — a toy provider, not meant for real use; pick Local LLM or one of the CLI providers instead. Text-encoder checkpoint from models/text_encoders used for bot turns (Qwen3 or Gemma family). Blank = the first generation-capable checkpoint found. Runs inside ComfyUI itself — no external server needed.","placeholder":"first available"},"bot-comfyui-llm-thinking":{"label":"ComfyUI LLM thinking","desc":"EXPERIMENTAL — only affects the toy ComfyUI LLM provider. Let Qwen3 models reason in a hidden <think> block before answering. Noticeably smarter tool use, at the cost of extra generation time per turn."},"bot-local-llm-url":{"label":"Local LLM endpoint","desc":"OpenAI-compatible base URL of a local model server (LM Studio, llama.cpp llama-server, vLLM, Ollama…). The Local LLM provider stays unavailable until this is set. Keyless local endpoints only — no API keys are ever stored.","placeholder":"http://127.0.0.1:1234/v1"},"bot-enable-comfy-mcp":{"label":"Mount comfy-mcp","desc":"Also mount the official comfy-mcp server (read-only tool set: node catalog, workflow validation, model/template search) in bot sessions. Claude Code and Qwen Code only — Codex and Local LLM stay comfytv-only."},"bot-comfy-mcp-command":{"label":"comfy-mcp command","desc":"Command that launches the comfy-mcp stdio server. Blank = find comfy-mcp on PATH.","placeholder":"comfy-mcp"},"bot-always-allow-runs":{"label":"Always allow bot runs","desc":"Run stages immediately without an approval card (the default). Disable this to let chats switched to Ask mode pause for your approval before each run."},"enable-skills":{"label":"Enable Agent Skills","desc":"Serve installed skills to agents over MCP (skill tool + prompts) and to the embedded bot."},"enable-collab":{"label":"Enable collaboration","desc":"EXPERIMENTAL — do not rely on this in production. Real-time multi-user presence and co-editing over the local network. When off, no collaboration code runs at all (no session, no websocket, no UI). Reload open pages after changing this."},"enable-eagle":{"label":"Enable Eagle integration","desc":"Connect the local Eagle (eagle.cool) library to ComfyTV: an Eagle panel appears in the sidebar and assets can be sent to Eagle. Requires the Eagle desktop app."},"eagle-api-url":{"label":"Eagle API URL","desc":"Address of Eagle's local API, default port 41595. Local access only, no token needed.","placeholder":"http://127.0.0.1:41595"},"eagle-library-path":{"label":"Pinned library path","desc":"The .library directory dedicated to ComfyTV. Sends only happen while Eagle has this library open (queued otherwise); browsing falls back to reading the directory from disk. Empty = follow whatever library Eagle has open (not recommended).","placeholder":"e.g. Y:\\\\Eagle\\\\ComfyTV.library"},"eagle-send-folder":{"label":"Send target folder","desc":"Eagle folder that manually sent items are filed into; created automatically if missing. Empty = library root. Auto-archive uses per-project folders instead."},"eagle-auto-send":{"label":"Auto-archive outputs to Eagle","desc":"Automatically archive every stage output (image/video/audio) into Eagle: filed into a per-project folder, annotation carries the full generation params (prompt/model/…), tagged with the project name. Uses the queue — piles up while Eagle is closed, never blocks generation."},"blender-bridge-url":{"label":"Blender bridge URL","desc":"EXPERIMENTAL — expect rough edges. Address of the blender-web bridge that the Blender Scene / Camera / Animation stages talk to. Start it with blender-for-comfytv.bat; the stages stay unavailable until it responds. Default port 7684, local only.","placeholder":"http://127.0.0.1:7684"}},"agent":{"section":"Agent & MCP"},"eagle":{"section":"Eagle Integration"},"collab":{"section":"Collaboration"}}`);
 const servers$1 = { "title": "ComfyUI Servers", "add": "Add", "addTooltip": "Register another ComfyUI instance on your network so stages can run on it", "empty": "No remote servers configured. Stages run on this machine. Add a server to unlock the per-stage server dropdown and run stages on several machines in parallel.", "edit": "Edit", "delete": "Delete", "deleteConfirm": 'Delete server "{label}"? Stages currently pointed at it will fall back to running locally.', "enable": "Enable", "disable": "Disable", "local": "Local (this machine)", "runOn": "Run on", "form": { "label": "Name", "labelPlaceholder": "e.g. GPU rig upstairs", "host": "Host / IP", "port": "Port", "create": "Add server", "save": "Save", "cancel": "Cancel", "saveFailed": "Save failed — is the name already in use?" }, "test": { "action": "Test connection", "testing": "Testing…", "ok": "Connected", "failed": "Connection failed" }, "job": { "started": "Running on {label}", "failed": "Remote run failed", "cancelled": "Remote run cancelled", "fallbackLocal": "Selected server is gone or disabled — this stage will run locally." }, "status": { "online": "Online", "offline": "Offline", "unknown": "Checking…", "idle": "Idle", "queueShort": "Q {n}", "queueDetail": "{running} running, {pending} pending", "fromComfyTV": "{n} from ComfyTV" }, "caps": { "badge": "ComfyTV v{version}", "comfyOnly": "ComfyUI only — ComfyTV not installed", "missingNodes": "{n} nodes missing", "missingTitle": "Nodes missing on this remote — upgrade its ComfyTV:" }, "preflight": { "blockedTitle": "Remote run blocked", "warnTitle": "Remote resource check", "runAnyway": "Run anyway", "noComfyTV": `Remote "{label}" doesn't have ComfyTV installed — install ComfyTV there or run locally.`, "missingNode": 'Remote "{label}" is missing node {node} — upgrade its ComfyTV.', "missingResource": 'Remote "{label}" is missing resource {file} — run anyway?', "resourceMismatch": 'Resource {file} has different content on remote "{label}" — run anyway?' } };
 const stageManager$1 = { "title": "Stage Manager", "refresh": "Refresh list", "import": "Import", "rescan": "Rescan", "rescanTooltip": "Scan the workflow library on disk (comfytv/workflows/ in the ComfyUI user directory) for new, changed, or removed files — no backend restart needed", "rescanFound": "Found {n} new workflow(s)", "rescanNone": "No new workflows found", "rescanNoneDetail": "Make sure the file is a .json inside comfytv/workflows/<kind>/ in the ComfyUI user directory (preset and .api.json sidecars don't count).", "rescanFailed": "Rescan failed", "setDefault": "Set as default", "unsetDefault": "Unset default", "defaultSet": "{label} is now the default workflow for this stage", "defaultCleared": "{label} is no longer the default — the first listed workflow is used", "defaultFailed": "Could not change the default workflow", "hide": "Hide from stage node", "unhide": "Show on stage node", "hiddenSet": "{label} is now hidden from the workflow dropdown on stage nodes", "hiddenCleared": "{label} is shown in the workflow dropdown again", "hiddenFailed": "Could not change workflow visibility", "section": { "workflows": "Workflows", "params": "Parameters" }, "emptyWorkflows": "No workflows registered for this stage yet — import one here, or drop a .json into comfytv/workflows/<kind>/ in the ComfyUI user directory and hit Rescan.", "hint": "Workflows listed here are picked from the workflow dropdown on the matching stage node on the canvas.", "badge": { "linked": "linked", "linkedHint": "Linked from ComfyUI's native workflow folder (not managed by ComfyTV)", "fileMissing": "file missing", "notGui": "not GUI format", "notGuiHint": "Missing a top-level nodes array — open it in ComfyUI and re-save normally, not with Save (API Format)", "noApi": "API not generated", "noApiHint": "The API prompt is generated automatically the first time this workflow runs — normal for a freshly imported workflow.", "new": "new", "newHint": "Discovered in the most recent scan (startup or rescan)", "builtin": "built-in", "builtinHint": "Ships with ComfyTV (tracked in git). Workflows without this badge were imported or dropped in by a user.", "default": "default", "defaultHint": "Newly added stage nodes of this kind start with this workflow selected. If it is deleted or unlinked, the first listed workflow is used instead.", "hidden": "hidden", "hiddenHint": "Not offered in the workflow dropdown on stage nodes. Nodes that already selected it keep working." } };
 const assets$1 = { "title": "Asset Library", "empty": "No assets yet — add images, video, or audio to reuse them across projects.", "emptyCategory": "No assets in this category yet.", "add": "Add media", "addTooltip": "Upload images, video, or audio into the library (or drag & drop them onto this panel)", "uploading": "Uploading {done}/{total}…", "uploadFailed": "Upload failed: {detail}", "dropHint": "Drop files to add them to the library", "search": "Search assets", "noResults": "No assets match your search.", "scanFolder": "Scan media folder", "scanFolderHint": "Drop large files into this folder — they are adopted on scan without uploading", "view": { "settings": "Display settings", "list": "List view", "grid": "Grid view" }, "media": { "all": "All types", "image": "Images", "video": "Video", "audio": "Audio", "model": "3D models", "text": "Text" }, "category": { "all": "All", "none": "Uncategorized", "new": "New category", "newPrompt": "New category name:", "rename": "Rename category", "renamePrompt": "Category name:", "delete": "Delete category", "deleteConfirm": "Delete this category? It is removed from all assets; the assets and files on disk stay." }, "card": { "rename": "Rename", "renamePrompt": "Asset name:", "delete": "Remove from library", "deleteConfirm": "Remove this asset from the library? The file on disk stays.", "tags": "Edit tags", "loadNode": "Add as node to canvas", "makeProxy": "Generate preview proxy", "more": "More options", "playPreview": "Play", "pausePreview": "Pause", "fileMissing": "File missing", "fileMissingHint": "The file on disk was deleted; the library entry remains — re-import it or remove the asset" }, "tagPopover": { "empty": "No categories yet.", "create": "New category" }, "select": { "enter": "Select assets (Ctrl+click also works)", "exit": "Exit selection", "all": "Select all shown", "missing": "Select only the shown assets whose file is missing ({count})", "count": "{count} selected", "tags": "Edit tags of selected", "loadNodes": "Add selected as nodes to canvas", "remove": "Remove selected from library", "removeConfirm": "Remove {count} assets from the library? The files on disk stay." } };
@@ -63116,7 +63120,7 @@ const stage = { "run": "运行", "rerun": "重新运行", "running": "运行中�
 const error = { "dismiss": "清除", "cancelled": "已取消", "upstreamNotReady": "上游未就绪", "upstreamNotReadyDetail": "上游未就绪:{list}。请先运行这些阶段生成快照,然后再运行此阶段。", "refMissing": "参考素材已失效", "refMissingDetail": "{list} 对应的资产已从资产库移除，或文件已丢失。从参考区移除后重新添加，再运行。", "droppedFromQueue": "尚未运行就被移出队列 — 队列被清空或该任务被删除。", "workerDied": "后端未返回结果就停止了。prompt worker 可能已崩溃(通常是清理阶段 CUDA OOM)。重启 ComfyUI 后恢复。" };
 const eagle = { "title": "Eagle 素材库", "refresh": "刷新", "search": "搜索名称或标签…", "loading": "加载中…", "empty": "没有条目", "loadMore": "加载更多", "disabledHint": "Eagle 集成未启用。到「设置」页打开「启用 Eagle 集成」,并钉死 ComfyTV 专用的 .library 路径。", "pendingBanner": "有 {n} 条待发送到 Eagle(等待打开钉死的库)", "flushNow": "立即补发", "flushing": "补发中…", "mode": { "api": "在线", "disk": "只读", "offline": "离线", "disabled": "未启用" }, "hint": { "disk": "Eagle 未运行或打开了别的库:正在直接读取磁盘上的库(只读)。发送会排队,等库打开后自动补发。", "offline": "找不到 Eagle:应用未运行,钉死的库路径也不可达。检查设置里的库路径。" }, "folder": { "all": "全部文件夹" }, "ai": { "label": "AI", "tooltip": "AI 语义搜索(需要 Eagle 的 AI Search 插件):按含义搜图而非按名称" }, "similar": { "action": "找相似", "banner": "与「{name}」相似的条目", "clear": "清除", "failed": "相似搜索失败" }, "import": { "action": "导入到资产库", "done": "已导入「{name}」", "existed": "「{name}」已在资产库", "failed": "导入失败" }, "send": { "action": "发送到 Eagle", "sent": "已发送到 Eagle:{name}", "queued": "Eagle 未就绪,已排队({n} 条待发)", "failed": "发送失败" }, "flush": { "done": "已补发 {n} 条到 Eagle", "failed": "{n} 条补发失败" } };
 const sidebar = { "tab": { "workflow": "工作流", "assets": "资产库", "eagle": "Eagle", "entries": "条目", "params": "阶段管理", "presets": "预设", "resources": "资源", "servers": "服务器", "collab": "协作", "settings": "设置" } };
-const settings = { "title": "设置", "hint": "默认值来自 ComfyTV 目录下的 comfytv.properties。此处保存的值写入数据库,并优先生效。", "modelRoutes": { "desktop-account": "桌面账号", "api-key": "API Key" }, "loading": "加载中…", "save": "保存", "saving": "保存中…", "search": "搜索设置…", "noMatch": "没有匹配的设置项", "experimental": "实验性", "reset": "恢复默认", "on": "开", "off": "关", "status": { "checking": "检测中…", "online": "已连接", "offline": "未连接" }, "blender": { "section": "Blender 桥接" }, "general": { "section": "通用" }, "backup": { "section": "数据库备份", "now": "立即备份", "running": "备份中…", "ok": "备份已写入 {path}", "failed": "备份失败:{error}" }, "pluginUpdate": { "section": "ComfyTV 更新", "desc": "检查已配置的 GitHub 远程仓库，并直接在 ComfyUI 中安装新的 ComfyTV 版本。", "policy": "更新会强制覆盖已跟踪的插件文件和内置工作流；本地改动会备份，用户工作流会保留，并支持回退到上一版本。", "current": "当前版本", "remote": "远程版本", "check": "检查更新", "checking": "正在检查…", "recheck": "重新检查", "upToDate": "ComfyTV 已是最新版本。", "available": "发现可用更新，当前版本落后 {n} 个提交。", "repairAvailable": "当前目录存在本地已跟踪改动或本地提交，可以恢复到配置的远程版本。", "repair": "恢复官方版本", "dirty": "本地已跟踪文件有改动；更新会覆盖这些改动，包括已修改的内置工作流。", "rollbackAvailable": "可以回退到 v{version}。", "rollback": "回退版本", "rollingBack": "正在回退…", "rollbackTitle": "回退 ComfyTV", "rollbackConfirm": "确定恢复到 ComfyTV v{version} 吗？当前已跟踪文件会被覆盖，完成后需要重启 ComfyUI。", "backupSaved": "恢复备份：{path}", "collisionBackups": "有 {n} 个本地文件与更新内容同名，已自动改名为 .local-backup。", "dependenciesChanged": "依赖文件发生变化：{files}。请重启 ComfyUI；如果新版本有要求，还需要重新安装依赖。", "noGit": "当前机器未安装 Git。", "notRepo": "当前 ComfyTV 目录不是 Git 仓库，无法自动更新。", "error": "检查更新失败：{error}" }, "teamGit": { "section": "团队工作流 Git", "desc": "用于同步云端模板与提交本地工作流。Token 只存本机，请向管理员索取后粘贴；不要提交到 GitHub。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 GitHub PAT（github_pat_… / ghp_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败" }, "ignis": { "section": "Ignis 图片和视频生成", "desc": "用于 Ignis 图片模型以及 Seedance、Kling、Sora 和 PixVerse 视频生成。Token 只保存在本机，不会写入工作流或提交到 Git。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 Ignis Token（ignis_ct_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败" }, "fields": { "enable-v2": { "label": "启用 ComfyTV V2 节点", "desc": "实验性功能，可能存在不稳定行为。已迁移的阶段节点以内容导向的 V2 外壳渲染。必须先在 ComfyUI 本体设置中开启 Nodes 2.0（Vue 节点模式）。修改后需刷新页面。" }, "v2-lod-scale": { "label": "海报图模式阈值", "desc": "画布缩放低于此值时，V2 卡片收起为缩略图并显示播放/放大按钮；放大越过阈值后面板恢复。", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "海报图底", "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。", "options": { "checker": "棋盘格", "image": "同图压暗铺满" } }, "auto-picker": { "label": "运行时自动接挑选节点", "desc": "图像阶段或视频阶段运行时，如果输出端还没有连线，自动在后面接一个图片 / 视频选择器。" }, "auto-bridge": { "label": "连线时自动插入桥接节点", "desc": "把原生 IMAGE / VIDEO / AUDIO / STRING / MASK 与 ComfyTV 类型互连时，自动插入对应的桥接节点。入桥仍需点运行才会写入快照。" }, "drop-files-as-loaders": { "label": "拖入媒体文件生成资产加载节点", "desc": "图片、视频、音频拖到画布空白处时，导入资产库并生成 ComfyTV 资产加载节点，而不是交给 ComfyUI 加载（PNG 里保存的工作流不会再被打开）。拖到节点上的和其他类型的文件仍由 ComfyUI 处理。" }, "v2-panel-on-select": { "label": "仅选中时显示控制面板", "desc": "默认开启。未选中时 V2 节点只保留预览区；选中后再展开下方参数、提示词与运行条（与 LibTV 画布一致）。" }, "enable-db-backup": { "label": "启动时自动备份", "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。" }, "db-backup-max-count": { "label": "最大备份数量", "desc": "快照数量超过该值时,自动删除最旧的备份。" }, "db-backup-path": { "label": "备份位置", "desc": "留空则使用 ComfyTV 目录下的 db-backup 文件夹。快照以时间戳命名,如 20260805-093000/comfytv。", "placeholder": "如 D:\\backups\\comfytv" }, "enable-mcp": { "label": "启用 MCP 服务", "desc": "开放 ComfyTV 的 MCP 端点(/comfytv/mcp),允许 agent 读取并操作画布。默认关闭。" }, "enable-bot": { "label": "启用 ComfyTV Bot", "desc": "显示内嵌 Bot 侧边栏及其聊天接口。前置条件:先启用 MCP 服务。" }, "bot-model-claude-code": { "label": "Claude Code 模型", "desc": "Bot 回合传给 claude --model 的模型,支持别名(sonnet、opus、haiku)或完整模型 id。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-codex": { "label": "Codex 模型", "desc": "Bot 回合传给 codex -m 的模型。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-qwen-code": { "label": "Qwen Code 模型", "desc": "Bot 回合传给 qwen -m 的模型。留空 = 用 qwen 自己设置里选的模型。", "placeholder": "CLI 默认" }, "bot-model-local-llm": { "label": "Local LLM 模型", "desc": "本地端点上的模型 id。留空 = 用端点报告的第一个模型。", "placeholder": "自动取第一个" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM 模型", "desc": "实验性 — 玩具性质的 provider,一般情况不要用,请改用 Local LLM 或 CLI 类 provider。Bot 回合使用的 models/text_encoders 里的文本编码器权重(Qwen3 或 Gemma 系)。留空 = 自动取第一个可生成的权重。推理跑在 ComfyUI 本体内 — 无需外部服务。", "placeholder": "自动取第一个" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM 思考模式", "desc": "实验性 — 只对玩具性质的 ComfyUI LLM provider 生效。让 Qwen3 系模型先在隐藏的 <think> 块里推理再回答。工具调用明显更聪明,代价是每轮多花一些生成时间。" }, "bot-local-llm-url": { "label": "Local LLM 端点", "desc": "本地模型服务的 OpenAI 兼容 base URL(LM Studio、llama.cpp 的 llama-server、vLLM、Ollama 等)。不填时 Local LLM provider 不可用。仅限免 key 的本地端点 — 永远不存 API key。", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "挂载 comfy-mcp", "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex、DeepSeek Harness、Local LLM 与 ComfyUI LLM 保持只挂 comfytv。" }, "bot-comfy-mcp-command": { "label": "comfy-mcp 命令", "desc": "启动 comfy-mcp stdio 服务的命令。留空 = 在 PATH 上找 comfy-mcp。", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "总是允许 bot 运行", "desc": "不弹运行审批卡,bot 直接执行(默认行为)。关闭后,切到询问模式的会话才会在每次运行前等你批准。" }, "bot-model-deepseek-harness": { "label": "DeepSeek Harness 模型", "desc": "模型同时决定计费方式：桌面账号或 API Key。留空 = 桌面账号下的第一个模型，不会自动改用 API Key。", "placeholder": "桌面账号默认" }, "enable-skills": { "label": "启用 Agent Skills", "desc": "把已安装的技能通过 MCP(skill 工具 + prompts)提供给外部 agent 和内嵌 bot。" }, "enable-collab": { "label": "启用多人协作", "desc": "实验性功能——请勿在生产环境依赖。局域网内的实时多人 presence 与共同编辑。关闭时协作代码完全不运行（无会话、无 WebSocket、无 UI）。修改后需刷新已打开的页面。" }, "enable-eagle": { "label": "启用 Eagle 集成", "desc": "把本机的 Eagle(eagle.cool)素材库接入 ComfyTV:侧边栏出现 Eagle 面板,资产可发送到 Eagle。需要 Eagle 桌面应用。" }, "eagle-api-url": { "label": "Eagle API 地址", "desc": "Eagle 本地 API 的地址,默认端口 41595。仅本机访问,不需要 token。", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "钉死的资源库路径", "desc": "ComfyTV 专用的 .library 目录。发送只在 Eagle 打开该库时进行(否则排队),浏览在 Eagle 关闭或切到别的库时直接读磁盘。留空 = 跟随 Eagle 当前打开的库(不推荐)。", "placeholder": "如 Y:\\Eagle资源库\\ComfyTV资源库.library" }, "eagle-send-folder": { "label": "发送目标文件夹", "desc": "手动发送到 Eagle 时归入的文件夹名,不存在会自动创建。留空 = 库根目录。自动沉淀按项目名分文件夹,不走此设置。" }, "eagle-auto-send": { "label": "产出自动沉淀到 Eagle", "desc": "每个阶段节点的产出(图片/视频/音频)自动归档进 Eagle:按项目名分文件夹,annotation 带完整生成参数(prompt/模型等),tag 带项目名。走排队机制,Eagle 没开时攒着,不阻塞生成。" }, "blender-bridge-url": { "label": "Blender 桥接地址", "desc": "实验性 — 会有毛边。Blender Scene / Camera / Animation 这几个阶段节点连接的 blender-web 桥接服务地址。用 blender-for-comfytv.bat 启动;桥接没响应时这些阶段节点不可用。默认端口 7684,仅限本机。", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent 与 MCP" }, "eagle": { "section": "Eagle 集成" }, "collab": { "section": "多人协作" } };
+const settings = { "title": "设置", "hint": "默认值来自 ComfyTV 目录下的 comfytv.properties。此处保存的值写入数据库,并优先生效。", "modelRoutes": { "desktop-account": "桌面账号", "api-key": "API Key" }, "loading": "加载中…", "save": "保存", "saving": "保存中…", "search": "搜索设置…", "noMatch": "没有匹配的设置项", "experimental": "实验性", "reset": "恢复默认", "on": "开", "off": "关", "status": { "checking": "检测中…", "online": "已连接", "offline": "未连接" }, "blender": { "section": "Blender 桥接" }, "general": { "section": "通用" }, "backup": { "section": "数据库备份", "now": "立即备份", "running": "备份中…", "ok": "备份已写入 {path}", "failed": "备份失败:{error}" }, "pluginUpdate": { "section": "ComfyTV 更新", "desc": "检查已配置的 GitHub 远程仓库，并直接在 ComfyUI 中安装新的 ComfyTV 版本。", "policy": "更新会强制覆盖已跟踪的插件文件和内置工作流；本地改动会备份，用户工作流会保留，并支持回退到上一版本。", "current": "当前版本", "remote": "远程版本", "check": "检查更新", "checking": "正在检查…", "recheck": "重新检查", "upToDate": "ComfyTV 已是最新版本。", "available": "发现可用更新，当前版本落后 {n} 个提交。", "repairAvailable": "当前目录存在本地已跟踪改动或本地提交，可以恢复到配置的远程版本。", "repair": "恢复官方版本", "dirty": "本地已跟踪文件有改动；更新会覆盖这些改动，包括已修改的内置工作流。", "rollbackAvailable": "可以回退到 v{version}。", "rollback": "回退版本", "rollingBack": "正在回退…", "rollbackTitle": "回退 ComfyTV", "rollbackConfirm": "确定恢复到 ComfyTV v{version} 吗？当前已跟踪文件会被覆盖，完成后需要重启 ComfyUI。", "backupSaved": "恢复备份：{path}", "collisionBackups": "有 {n} 个本地文件与更新内容同名，已自动改名为 .local-backup。", "dependenciesChanged": "依赖文件发生变化：{files}。请重启 ComfyUI；如果新版本有要求，还需要重新安装依赖。", "noGit": "当前机器未安装 Git。", "notRepo": "当前 ComfyTV 目录不是 Git 仓库，无法自动更新。", "error": "检查更新失败：{error}" }, "teamGit": { "section": "团队工作流 Git", "desc": "用于同步云端模板与提交本地工作流。Token 只存本机，请向管理员索取后粘贴；不要提交到 GitHub。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 GitHub PAT（github_pat_… / ghp_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败" }, "ignis": { "section": "Ignis 图片和视频生成", "desc": "用于 Ignis 图片模型以及 Seedance、Kling、Sora 和 PixVerse 视频生成。Token 只保存在本机，不会写入工作流或提交到 Git。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 Ignis Token（ignis_ct_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败", "configDesc": "也可以粘贴管理员发来的完整安装说明、config 链接或 config JSON，ComfyTV 会自动解析并保存 Token。", "configPlaceholder": "粘贴 config 链接或完整安装文本…", "importConfig": "解析并保存配置", "importing": "正在解析…", "importOk": "已从配置链接保存到本机", "importFailed": "配置解析失败" }, "fields": { "enable-v2": { "label": "启用 ComfyTV V2 节点", "desc": "实验性功能，可能存在不稳定行为。已迁移的阶段节点以内容导向的 V2 外壳渲染。必须先在 ComfyUI 本体设置中开启 Nodes 2.0（Vue 节点模式）。修改后需刷新页面。" }, "v2-lod-scale": { "label": "海报图模式阈值", "desc": "画布缩放低于此值时，V2 卡片收起为缩略图并显示播放/放大按钮；放大越过阈值后面板恢复。", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "海报图底", "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。", "options": { "checker": "棋盘格", "image": "同图压暗铺满" } }, "auto-picker": { "label": "运行时自动接挑选节点", "desc": "图像阶段或视频阶段运行时，如果输出端还没有连线，自动在后面接一个图片 / 视频选择器。" }, "auto-bridge": { "label": "连线时自动插入桥接节点", "desc": "把原生 IMAGE / VIDEO / AUDIO / STRING / MASK 与 ComfyTV 类型互连时，自动插入对应的桥接节点。入桥仍需点运行才会写入快照。" }, "drop-files-as-loaders": { "label": "拖入媒体文件生成资产加载节点", "desc": "图片、视频、音频拖到画布空白处时，导入资产库并生成 ComfyTV 资产加载节点，而不是交给 ComfyUI 加载（PNG 里保存的工作流不会再被打开）。拖到节点上的和其他类型的文件仍由 ComfyUI 处理。" }, "v2-panel-on-select": { "label": "仅选中时显示控制面板", "desc": "默认开启。未选中时 V2 节点只保留预览区；选中后再展开下方参数、提示词与运行条（与 LibTV 画布一致）。" }, "enable-db-backup": { "label": "启动时自动备份", "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。" }, "db-backup-max-count": { "label": "最大备份数量", "desc": "快照数量超过该值时,自动删除最旧的备份。" }, "db-backup-path": { "label": "备份位置", "desc": "留空则使用 ComfyTV 目录下的 db-backup 文件夹。快照以时间戳命名,如 20260805-093000/comfytv。", "placeholder": "如 D:\\backups\\comfytv" }, "enable-mcp": { "label": "启用 MCP 服务", "desc": "开放 ComfyTV 的 MCP 端点(/comfytv/mcp),允许 agent 读取并操作画布。默认关闭。" }, "enable-bot": { "label": "启用 ComfyTV Bot", "desc": "显示内嵌 Bot 侧边栏及其聊天接口。前置条件:先启用 MCP 服务。" }, "bot-model-claude-code": { "label": "Claude Code 模型", "desc": "Bot 回合传给 claude --model 的模型,支持别名(sonnet、opus、haiku)或完整模型 id。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-codex": { "label": "Codex 模型", "desc": "Bot 回合传给 codex -m 的模型。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-qwen-code": { "label": "Qwen Code 模型", "desc": "Bot 回合传给 qwen -m 的模型。留空 = 用 qwen 自己设置里选的模型。", "placeholder": "CLI 默认" }, "bot-model-local-llm": { "label": "Local LLM 模型", "desc": "本地端点上的模型 id。留空 = 用端点报告的第一个模型。", "placeholder": "自动取第一个" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM 模型", "desc": "实验性 — 玩具性质的 provider,一般情况不要用,请改用 Local LLM 或 CLI 类 provider。Bot 回合使用的 models/text_encoders 里的文本编码器权重(Qwen3 或 Gemma 系)。留空 = 自动取第一个可生成的权重。推理跑在 ComfyUI 本体内 — 无需外部服务。", "placeholder": "自动取第一个" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM 思考模式", "desc": "实验性 — 只对玩具性质的 ComfyUI LLM provider 生效。让 Qwen3 系模型先在隐藏的 <think> 块里推理再回答。工具调用明显更聪明,代价是每轮多花一些生成时间。" }, "bot-local-llm-url": { "label": "Local LLM 端点", "desc": "本地模型服务的 OpenAI 兼容 base URL(LM Studio、llama.cpp 的 llama-server、vLLM、Ollama 等)。不填时 Local LLM provider 不可用。仅限免 key 的本地端点 — 永远不存 API key。", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "挂载 comfy-mcp", "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex、DeepSeek Harness、Local LLM 与 ComfyUI LLM 保持只挂 comfytv。" }, "bot-comfy-mcp-command": { "label": "comfy-mcp 命令", "desc": "启动 comfy-mcp stdio 服务的命令。留空 = 在 PATH 上找 comfy-mcp。", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "总是允许 bot 运行", "desc": "不弹运行审批卡,bot 直接执行(默认行为)。关闭后,切到询问模式的会话才会在每次运行前等你批准。" }, "bot-model-deepseek-harness": { "label": "DeepSeek Harness 模型", "desc": "模型同时决定计费方式：桌面账号或 API Key。留空 = 桌面账号下的第一个模型，不会自动改用 API Key。", "placeholder": "桌面账号默认" }, "enable-skills": { "label": "启用 Agent Skills", "desc": "把已安装的技能通过 MCP(skill 工具 + prompts)提供给外部 agent 和内嵌 bot。" }, "enable-collab": { "label": "启用多人协作", "desc": "实验性功能——请勿在生产环境依赖。局域网内的实时多人 presence 与共同编辑。关闭时协作代码完全不运行（无会话、无 WebSocket、无 UI）。修改后需刷新已打开的页面。" }, "enable-eagle": { "label": "启用 Eagle 集成", "desc": "把本机的 Eagle(eagle.cool)素材库接入 ComfyTV:侧边栏出现 Eagle 面板,资产可发送到 Eagle。需要 Eagle 桌面应用。" }, "eagle-api-url": { "label": "Eagle API 地址", "desc": "Eagle 本地 API 的地址,默认端口 41595。仅本机访问,不需要 token。", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "钉死的资源库路径", "desc": "ComfyTV 专用的 .library 目录。发送只在 Eagle 打开该库时进行(否则排队),浏览在 Eagle 关闭或切到别的库时直接读磁盘。留空 = 跟随 Eagle 当前打开的库(不推荐)。", "placeholder": "如 Y:\\Eagle资源库\\ComfyTV资源库.library" }, "eagle-send-folder": { "label": "发送目标文件夹", "desc": "手动发送到 Eagle 时归入的文件夹名,不存在会自动创建。留空 = 库根目录。自动沉淀按项目名分文件夹,不走此设置。" }, "eagle-auto-send": { "label": "产出自动沉淀到 Eagle", "desc": "每个阶段节点的产出(图片/视频/音频)自动归档进 Eagle:按项目名分文件夹,annotation 带完整生成参数(prompt/模型等),tag 带项目名。走排队机制,Eagle 没开时攒着,不阻塞生成。" }, "blender-bridge-url": { "label": "Blender 桥接地址", "desc": "实验性 — 会有毛边。Blender Scene / Camera / Animation 这几个阶段节点连接的 blender-web 桥接服务地址。用 blender-for-comfytv.bat 启动;桥接没响应时这些阶段节点不可用。默认端口 7684,仅限本机。", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent 与 MCP" }, "eagle": { "section": "Eagle 集成" }, "collab": { "section": "多人协作" } };
 const servers = { "title": "ComfyUI 服务器", "add": "添加", "addTooltip": "登记局域网内的其他 ComfyUI 实例,让 stage 可以在它上面运行", "empty": "还没有配置远程服务器,所有 stage 都在本机运行。添加服务器后,每个 stage 会出现服务器下拉框,可多机并行运行。", "edit": "编辑", "delete": "删除", "deleteConfirm": "删除服务器「{label}」?指向它的 stage 会回退到本机运行。", "enable": "启用", "disable": "停用", "local": "本机 (Local)", "runOn": "运行于", "form": { "label": "名称", "labelPlaceholder": "例如:楼上那台 4090", "host": "主机 / IP", "port": "端口", "create": "添加服务器", "save": "保存", "cancel": "取消", "saveFailed": "保存失败——名称是不是重复了?" }, "test": { "action": "测试连接", "testing": "测试中…", "ok": "连接成功", "failed": "连接失败" }, "job": { "started": "正在 {label} 上运行", "failed": "远程运行失败", "cancelled": "远程运行已取消", "fallbackLocal": "所选服务器已删除或停用——这个 stage 将在本机运行。" }, "status": { "online": "在线", "offline": "离线", "unknown": "检测中…", "idle": "空闲", "queueShort": "队列 {n}", "queueDetail": "{running} 运行中,{pending} 排队", "fromComfyTV": "其中 {n} 来自 ComfyTV" }, "caps": { "badge": "ComfyTV v{version}", "comfyOnly": "仅 ComfyUI（未装 ComfyTV）", "missingNodes": "缺 {n} 个节点", "missingTitle": "远端缺少的节点——请升级远端 ComfyTV：" }, "preflight": { "blockedTitle": "远程运行被拦截", "warnTitle": "远端资源检查", "runAnyway": "仍要运行", "noComfyTV": "远端「{label}」未安装 ComfyTV——请先在远端安装，或改为本机运行。", "missingNode": "远端「{label}」缺少节点 {node}——请升级远端 ComfyTV。", "missingResource": "远端「{label}」缺少资源 {file}，仍要运行吗？", "resourceMismatch": "资源 {file} 在远端「{label}」上内容不一致，仍要运行吗？" } };
 const stageManager = { "title": "阶段管理", "refresh": "刷新列表", "import": "导入", "rescan": "重新扫描", "rescanTooltip": "扫描磁盘上的工作流库（ComfyUI user 目录下的 comfytv/workflows/），发现新增、变更或删除的文件 —— 无需重启后端", "rescanFound": "发现 {n} 个新工作流", "rescanNone": "没有发现新工作流", "rescanNoneDetail": "请确认文件是 .json 且放在 ComfyUI user 目录下的 comfytv/workflows/对应类别目录中（preset 和 .api.json 附属文件不算）。", "rescanFailed": "重新扫描失败", "setDefault": "设为默认", "unsetDefault": "取消默认", "defaultSet": "{label} 已设为该阶段的默认工作流", "defaultCleared": "{label} 已取消默认 —— 将使用列表中的第一个工作流", "defaultFailed": "修改默认工作流失败", "hide": "从阶段节点隐藏", "unhide": "在阶段节点显示", "hiddenSet": "{label} 已从阶段节点的 workflow 下拉框隐藏", "hiddenCleared": "{label} 已重新显示在 workflow 下拉框中", "hiddenFailed": "修改工作流可见性失败", "section": { "workflows": "工作流", "params": "参数" }, "emptyWorkflows": "该阶段下还没有已注册的工作流 —— 点「导入」上传，或把 .json 放入 ComfyUI user 目录下的 comfytv/workflows/对应类别目录后点「重新扫描」。", "hint": "这里列出的工作流，在画布上对应阶段节点的 workflow 下拉框中选用。", "badge": { "linked": "外链", "linkedHint": "链接自 ComfyUI 原生工作流目录（不由 ComfyTV 管理）", "fileMissing": "文件丢失", "notGui": "非 GUI 格式", "notGuiHint": "缺少顶层 nodes 数组 —— 在 ComfyUI 中打开后用普通「保存」重新导出，不要用「保存（API 格式）」", "noApi": "API 未生成", "noApiHint": "首次运行该工作流时会自动生成 API prompt，新导入的工作流出现此标记属于正常。", "new": "新", "newHint": "最近一次扫描（启动或重新扫描）新发现的工作流", "builtin": "内置", "builtinHint": "ComfyTV 自带的工作流（git 跟踪）。没有此标记的是用户导入或手动放入的。", "default": "默认", "defaultHint": "新添加的该类阶段节点会预选此工作流。若它被删除或取消链接，则回退到列表中的第一个。", "hidden": "已隐藏", "hiddenHint": "不出现在阶段节点的 workflow 下拉框中。已选中它的节点不受影响，仍可正常运行。" } };
 const assets = { "title": "资产库", "empty": "还没有资产 —— 添加图片、视频或音频后可跨项目复用。", "emptyCategory": "这个分类下还没有资产。", "add": "添加素材", "addTooltip": "上传图片、视频或音频到资产库（也可以直接拖拽文件到这个面板）", "uploading": "上传中 {done}/{total}…", "uploadFailed": "上传失败: {detail}", "dropHint": "松开把文件添加到资产库", "search": "搜索资产", "noResults": "没有匹配的资产。", "scanFolder": "扫描素材文件夹", "scanFolderHint": "大文件直接放进这个文件夹,扫描时自动收录,无需上传", "view": { "settings": "显示设置", "list": "列表视图", "grid": "网格视图" }, "media": { "all": "全部类型", "image": "图片", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本" }, "category": { "all": "全部", "none": "未分类", "new": "新建分类", "newPrompt": "新分类名称：", "rename": "重命名分类", "renamePrompt": "分类名称：", "delete": "删除分类", "deleteConfirm": "删除这个分类？它会从所有资产上移除；资产和磁盘上的文件保留。" }, "card": { "rename": "重命名", "renamePrompt": "资产名称：", "delete": "从资产库移除", "deleteConfirm": "把这个资产从资产库移除？磁盘上的文件保留。", "tags": "编辑标签", "loadNode": "作为节点添加到画布", "makeProxy": "生成预览代理", "more": "更多操作", "playPreview": "试听", "pausePreview": "暂停", "fileMissing": "文件缺失", "fileMissingHint": "本地文件已被删除，资产条目仍保留；可重新导入或从资产库移除" }, "tagPopover": { "empty": "还没有分类。", "create": "新建分类" }, "select": { "enter": "多选资产（Ctrl+点击也可以）", "exit": "退出多选", "all": "全选当前显示", "missing": "只勾选当前显示中文件缺失的（{count} 个）", "count": "已选 {count} 个", "tags": "编辑所选的标签", "loadNodes": "把所选作为节点添加到画布", "remove": "从资产库移除所选", "removeConfirm": "把这 {count} 个资产从资产库移除？磁盘上的文件保留。" } };
@@ -65289,9 +65293,9 @@ const _hoisted_27$o = {
   class: "ctv:flex ctv:w-full ctv:h-24 ctv:items-center ctv:justify-center ctv:bg-black/20"
 };
 const _hoisted_28$k = ["title", "onClick"];
-const _hoisted_29$g = ["src"];
-const _hoisted_30$g = { class: "ctv:absolute ctv:top-1 ctv:left-1 ctv:px-1 ctv:rounded ctv:text-3xs ctv:uppercase ctv:bg-black/50 ctv:text-white/80" };
-const _hoisted_31$e = {
+const _hoisted_29$h = ["src"];
+const _hoisted_30$h = { class: "ctv:absolute ctv:top-1 ctv:left-1 ctv:px-1 ctv:rounded ctv:text-3xs ctv:uppercase ctv:bg-black/50 ctv:text-white/80" };
+const _hoisted_31$f = {
   key: 3,
   class: "ctv:absolute ctv:bottom-6 ctv:left-1 ctv:flex ctv:items-center ctv:justify-center ctv:size-5 ctv:rounded ctv:bg-black/65 ctv:text-white/90 ctv:pointer-events-none"
 };
@@ -65554,9 +65558,9 @@ const _sfc_main$4Y = /* @__PURE__ */ defineComponent({
                   loading: "lazy",
                   class: "ctv:w-full ctv:h-24 ctv:object-cover ctv:bg-black/20",
                   onError: _cache2[6] || (_cache2[6] = ($event) => $event.target.style.opacity = "0.15")
-                }, null, 40, _hoisted_29$g)),
-                createBaseVNode("span", _hoisted_30$g, toDisplayString$1(item.eagleItem.ext), 1),
-                mediaKind(item.eagleItem) === "video" ? (openBlock(), createElementBlock("span", _hoisted_31$e, [
+                }, null, 40, _hoisted_29$h)),
+                createBaseVNode("span", _hoisted_30$h, toDisplayString$1(item.eagleItem.ext), 1),
+                mediaKind(item.eagleItem) === "video" ? (openBlock(), createElementBlock("span", _hoisted_31$f, [
                   createVNode(unref(IconPlay), { class: "ctv:size-3" })
                 ])) : createCommentVNode("", true),
                 createBaseVNode("div", _hoisted_32$c, toDisplayString$1(item.eagleItem.name), 1),
@@ -66531,8 +66535,8 @@ const _hoisted_25$q = {
 const _hoisted_26$o = { class: "ctv:text-2xs ctv:text-muted-foreground" };
 const _hoisted_27$n = ["onUpdate:modelValue", "placeholder"];
 const _hoisted_28$j = ["onUpdate:modelValue", "placeholder"];
-const _hoisted_29$f = { class: "ctv:flex ctv:justify-end ctv:gap-1.5" };
-const _hoisted_30$f = ["disabled"];
+const _hoisted_29$g = { class: "ctv:flex ctv:justify-end ctv:gap-1.5" };
+const _hoisted_30$g = ["disabled"];
 const cardClass = "ctv:flex ctv:flex-col ctv:gap-1.5 ctv:p-2 ctv:rounded ctv:border ctv:border-border-subtle ctv:bg-secondary-background/40";
 const FIELD_BASE = "ctv:w-full ctv:py-1 ctv:px-1.5 ctv:text-xs ctv:leading-snug ctv:rounded-sm ctv:outline-none ctv:box-border ctv:[font-family:inherit] ctv:bg-secondary-background ctv:text-base-foreground ctv:focus:border-primary-background";
 const BTN_BASE$2 = "ctv:rounded-sm ctv:text-[11px] ctv:cursor-pointer ctv:[font-family:inherit] ctv:bg-secondary-background ctv:text-base-foreground ctv:border ctv:border-border-default";
@@ -66806,13 +66810,13 @@ const _sfc_main$4X = /* @__PURE__ */ defineComponent({
                 ])
               ]);
             }), 128)),
-            createBaseVNode("div", _hoisted_29$f, [
+            createBaseVNode("div", _hoisted_29$g, [
               createBaseVNode("button", {
                 class: normalizeClass(btnClass2("save")),
                 disabled: !unref(canSaveNew),
                 onClick: _cache2[9] || (_cache2[9] = //@ts-ignore
                 (...args) => unref(saveNew) && unref(saveNew)(...args))
-              }, toDisplayString$1(_ctx.$t("entries.save")), 11, _hoisted_30$f),
+              }, toDisplayString$1(_ctx.$t("entries.save")), 11, _hoisted_30$g),
               createBaseVNode("button", {
                 class: normalizeClass(btnClass2("mini")),
                 onClick: _cache2[10] || (_cache2[10] = //@ts-ignore
@@ -68801,12 +68805,12 @@ const _hoisted_25$p = {
 const _hoisted_26$n = ["disabled", "title", "onClick"];
 const _hoisted_27$m = ["title", "onClick"];
 const _hoisted_28$i = ["title", "onClick"];
-const _hoisted_29$e = ["title", "onClick"];
-const _hoisted_30$e = {
+const _hoisted_29$f = ["title", "onClick"];
+const _hoisted_30$f = {
   key: 0,
   class: "ctv:flex ctv:items-center ctv:gap-1.5 ctv:flex-wrap"
 };
-const _hoisted_31$d = ["title", "onClick"];
+const _hoisted_31$e = ["title", "onClick"];
 const _hoisted_32$b = {
   key: 1,
   class: "ctv:rounded ctv:bg-base-background/40 ctv:p-1.5 ctv:text-2xs ctv:text-muted-foreground"
@@ -68990,9 +68994,9 @@ const _sfc_main$4T = /* @__PURE__ */ defineComponent({
                   onClick: ($event) => unref(onDelete)(server)
                 }, [
                   createVNode(unref(IconTrash), { class: "ctv:size-3.5" })
-                ], 10, _hoisted_29$e)
+                ], 10, _hoisted_29$f)
               ]),
-              unref(capsInfo)(server) ? (openBlock(), createElementBlock("div", _hoisted_30$e, [
+              unref(capsInfo)(server) ? (openBlock(), createElementBlock("div", _hoisted_30$f, [
                 createBaseVNode("span", {
                   class: normalizeClass(["ctv:inline-flex ctv:items-center ctv:rounded ctv:px-1.5 ctv:py-0.5 ctv:text-2xs", unref(capsInfo)(server).kind === "comfytv" ? "ctv:bg-emerald-500/10 ctv:text-emerald-400" : "ctv:bg-amber-400/10 ctv:text-amber-400"])
                 }, toDisplayString$1(unref(capsInfo)(server).label), 3),
@@ -69001,7 +69005,7 @@ const _sfc_main$4T = /* @__PURE__ */ defineComponent({
                   class: "ctv:inline-flex ctv:items-center ctv:cursor-pointer ctv:rounded ctv:border-none ctv:bg-amber-400/10 ctv:text-amber-400 ctv:px-1.5 ctv:py-0.5 ctv:text-2xs ctv:hover:brightness-110",
                   title: _ctx.$t("servers.caps.missingTitle") + "\n" + unref(capsInfo)(server).missing.join("\n"),
                   onClick: ($event) => unref(toggleCapsExpand)(server)
-                }, toDisplayString$1(_ctx.$t("servers.caps.missingNodes", { n: unref(capsInfo)(server).missing.length })), 9, _hoisted_31$d)) : createCommentVNode("", true)
+                }, toDisplayString$1(_ctx.$t("servers.caps.missingNodes", { n: unref(capsInfo)(server).missing.length })), 9, _hoisted_31$e)) : createCommentVNode("", true)
               ])) : createCommentVNode("", true),
               unref(expandedCapsId) === server.id && ((_a2 = unref(capsInfo)(server)) == null ? void 0 : _a2.missing.length) ? (openBlock(), createElementBlock("div", _hoisted_32$b, [
                 createBaseVNode("div", _hoisted_33$9, toDisplayString$1(_ctx.$t("servers.caps.missingTitle")), 1),
@@ -90461,7 +90465,7 @@ const _sfc_main$4G = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-DmmaWnmY.mjs"),
+      loader: () => import("./AgentPanelRoot-DUF9ZLs_.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -91492,24 +91496,27 @@ const _hoisted_19$K = {
   key: 1,
   class: "ctv:text-2xs ctv:text-emerald-400"
 };
-const _hoisted_20$E = { class: "ctv:flex ctv:flex-col ctv:gap-1.5 ctv:px-2 ctv:py-1.5" };
+const _hoisted_20$E = { class: "ctv:mt-1 ctv:border-t ctv:border-border-subtle ctv:pt-2 ctv:flex ctv:flex-col ctv:gap-1.5" };
 const _hoisted_21$x = { class: "ctv:text-2xs ctv:text-muted-foreground ctv:leading-relaxed" };
-const _hoisted_22$w = ["value", "placeholder"];
-const _hoisted_23$t = { class: "ctv:flex ctv:items-center ctv:gap-1.5" };
-const _hoisted_24$r = ["disabled"];
-const _hoisted_25$n = {
+const _hoisted_22$w = ["disabled"];
+const _hoisted_23$t = { class: "ctv:flex ctv:flex-col ctv:gap-1.5 ctv:px-2 ctv:py-1.5" };
+const _hoisted_24$r = { class: "ctv:text-2xs ctv:text-muted-foreground ctv:leading-relaxed" };
+const _hoisted_25$n = ["value", "placeholder"];
+const _hoisted_26$l = { class: "ctv:flex ctv:items-center ctv:gap-1.5" };
+const _hoisted_27$l = ["disabled"];
+const _hoisted_28$h = {
   key: 0,
   class: "ctv:text-2xs ctv:text-destructive-background"
 };
-const _hoisted_26$l = {
+const _hoisted_29$e = {
   key: 1,
   class: "ctv:text-2xs ctv:text-emerald-400"
 };
-const _hoisted_27$l = {
+const _hoisted_30$e = {
   key: 3,
   class: "ctv:py-5 ctv:px-1.5 ctv:text-center ctv:italic ctv:text-muted-foreground/60"
 };
-const _hoisted_28$h = { class: "ctv:mt-auto ctv:pt-2 ctv:px-1 ctv:text-2xs ctv:text-muted-foreground/70 ctv:leading-relaxed" };
+const _hoisted_31$d = { class: "ctv:mt-auto ctv:pt-2 ctv:px-1 ctv:text-2xs ctv:text-muted-foreground/70 ctv:leading-relaxed" };
 const primaryBtnClass = "ctv:shrink-0 ctv:inline-flex ctv:items-center ctv:gap-1 ctv:cursor-pointer ctv:[font-family:inherit] ctv:rounded-lg ctv:border-none ctv:px-2 ctv:py-1 ctv:text-xs ctv:bg-interface-menu-component-surface-hovered ctv:text-base-foreground ctv:hover:brightness-110 ctv:disabled:opacity-50 ctv:disabled:pointer-events-none";
 const chipBtnClass$2 = "ctv:inline-flex ctv:items-center ctv:cursor-pointer ctv:[font-family:inherit] ctv:rounded-lg ctv:border ctv:border-border-subtle ctv:bg-transparent ctv:px-2 ctv:py-1 ctv:text-xs ctv:text-base-foreground ctv:hover:bg-secondary-background-hover ctv:disabled:opacity-50 ctv:disabled:pointer-events-none";
 const _sfc_main$4C = /* @__PURE__ */ defineComponent({
@@ -91552,6 +91559,7 @@ const _sfc_main$4C = /* @__PURE__ */ defineComponent({
     const ignisConfigured = /* @__PURE__ */ ref(false);
     const ignisHint = /* @__PURE__ */ ref("");
     const ignisInput = /* @__PURE__ */ ref("");
+    const ignisConfigInput = /* @__PURE__ */ ref("");
     const ignisSaving = /* @__PURE__ */ ref(false);
     const ignisError = /* @__PURE__ */ ref("");
     const ignisFlash = /* @__PURE__ */ ref("");
@@ -91561,9 +91569,12 @@ const _sfc_main$4C = /* @__PURE__ */ defineComponent({
       return [
         t2("settings.ignis.section"),
         t2("settings.ignis.desc"),
+        t2("settings.ignis.configDesc"),
         t2("settings.ignis.save"),
+        t2("settings.ignis.importConfig"),
         "ignis",
-        "token"
+        "token",
+        "config"
       ].join(" ").toLowerCase().includes(q2);
     });
     const teamGitVisible = computed(() => {
@@ -91631,6 +91642,29 @@ const _sfc_main$4C = /* @__PURE__ */ defineComponent({
         ignisHint.value = res.hint || "";
         ignisInput.value = "";
         ignisFlash.value = t2("settings.ignis.saveOk");
+      } catch (e) {
+        ignisError.value = String((e == null ? void 0 : e.message) || e);
+      } finally {
+        ignisSaving.value = false;
+      }
+    }
+    async function saveIgnisConfigValue() {
+      const text = ignisConfigInput.value.trim();
+      if (!text) return;
+      ignisSaving.value = true;
+      ignisError.value = "";
+      ignisFlash.value = "";
+      try {
+        const res = await saveIgnisConfigText(text);
+        if (!res.ok) {
+          ignisError.value = res.error || t2("settings.ignis.importFailed");
+          return;
+        }
+        ignisConfigured.value = !!res.configured;
+        ignisHint.value = res.hint || "";
+        ignisConfigInput.value = "";
+        ignisInput.value = "";
+        ignisFlash.value = t2("settings.ignis.importOk");
       } catch (e) {
         ignisError.value = String((e == null ? void 0 : e.message) || e);
       } finally {
@@ -91770,7 +91804,7 @@ const _sfc_main$4C = /* @__PURE__ */ defineComponent({
                   title: _ctx.$t("settings.ignis.section"),
                   collapsed: unref(isCollapsed)("ignis"),
                   "master-on": false,
-                  onToggle: _cache2[6] || (_cache2[6] = ($event) => unref(toggleCollapsed)("ignis"))
+                  onToggle: _cache2[7] || (_cache2[7] = ($event) => unref(toggleCollapsed)("ignis"))
                 }, {
                   default: withCtx(() => [
                     createBaseVNode("div", _hoisted_13$1i, [
@@ -91793,6 +91827,24 @@ const _sfc_main$4C = /* @__PURE__ */ defineComponent({
                           onClick: saveIgnisTokenValue
                         }, toDisplayString$1(ignisSaving.value ? _ctx.$t("settings.saving") : _ctx.$t("settings.ignis.save")), 9, _hoisted_17$T),
                         ignisError.value ? (openBlock(), createElementBlock("span", _hoisted_18$N, toDisplayString$1(ignisError.value), 1)) : ignisFlash.value ? (openBlock(), createElementBlock("span", _hoisted_19$K, toDisplayString$1(ignisFlash.value), 1)) : createCommentVNode("", true)
+                      ]),
+                      createBaseVNode("div", _hoisted_20$E, [
+                        createBaseVNode("div", _hoisted_21$x, toDisplayString$1(_ctx.$t("settings.ignis.configDesc")), 1),
+                        createVNode(_sfc_main$4U, {
+                          "model-value": ignisConfigInput.value,
+                          placeholder: _ctx.$t("settings.ignis.configPlaceholder"),
+                          disabled: ignisSaving.value,
+                          multiline: "",
+                          rows: 3,
+                          "onUpdate:modelValue": _cache2[6] || (_cache2[6] = (v) => ignisConfigInput.value = v)
+                        }, null, 8, ["model-value", "placeholder", "disabled"]),
+                        createBaseVNode("div", null, [
+                          createBaseVNode("button", {
+                            class: normalizeClass(chipBtnClass$2),
+                            disabled: ignisSaving.value || !ignisConfigInput.value.trim(),
+                            onClick: saveIgnisConfigValue
+                          }, toDisplayString$1(ignisSaving.value ? _ctx.$t("settings.ignis.importing") : _ctx.$t("settings.ignis.importConfig")), 9, _hoisted_22$w)
+                        ])
                       ])
                     ])
                   ]),
@@ -91804,11 +91856,11 @@ const _sfc_main$4C = /* @__PURE__ */ defineComponent({
                   title: _ctx.$t("settings.teamGit.section"),
                   collapsed: unref(isCollapsed)("teamGit"),
                   "master-on": false,
-                  onToggle: _cache2[8] || (_cache2[8] = ($event) => unref(toggleCollapsed)("teamGit"))
+                  onToggle: _cache2[9] || (_cache2[9] = ($event) => unref(toggleCollapsed)("teamGit"))
                 }, {
                   default: withCtx(() => [
-                    createBaseVNode("div", _hoisted_20$E, [
-                      createBaseVNode("div", _hoisted_21$x, toDisplayString$1(_ctx.$t("settings.teamGit.desc")), 1),
+                    createBaseVNode("div", _hoisted_23$t, [
+                      createBaseVNode("div", _hoisted_24$r, toDisplayString$1(_ctx.$t("settings.teamGit.desc")), 1),
                       createBaseVNode("div", {
                         class: normalizeClass(["ctv:text-2xs", teamGitConfigured.value ? "ctv:text-emerald-400" : "ctv:text-amber-400"])
                       }, toDisplayString$1(teamGitConfigured.value ? _ctx.$t("settings.teamGit.configured", { hint: teamGitHint.value || "••••" }) : _ctx.$t("settings.teamGit.missing")), 3),
@@ -91818,23 +91870,23 @@ const _sfc_main$4C = /* @__PURE__ */ defineComponent({
                         autocomplete: "off",
                         value: teamGitInput.value,
                         placeholder: _ctx.$t("settings.teamGit.placeholder"),
-                        onInput: _cache2[7] || (_cache2[7] = ($event) => teamGitInput.value = $event.target.value)
-                      }, null, 40, _hoisted_22$w),
-                      createBaseVNode("div", _hoisted_23$t, [
+                        onInput: _cache2[8] || (_cache2[8] = ($event) => teamGitInput.value = $event.target.value)
+                      }, null, 40, _hoisted_25$n),
+                      createBaseVNode("div", _hoisted_26$l, [
                         createBaseVNode("button", {
                           class: normalizeClass(chipBtnClass$2),
                           disabled: teamGitSaving.value || !teamGitInput.value.trim(),
                           onClick: saveTeamGitToken
-                        }, toDisplayString$1(teamGitSaving.value ? _ctx.$t("settings.saving") : _ctx.$t("settings.teamGit.save")), 9, _hoisted_24$r),
-                        teamGitError.value ? (openBlock(), createElementBlock("span", _hoisted_25$n, toDisplayString$1(teamGitError.value), 1)) : teamGitFlash.value ? (openBlock(), createElementBlock("span", _hoisted_26$l, toDisplayString$1(teamGitFlash.value), 1)) : createCommentVNode("", true)
+                        }, toDisplayString$1(teamGitSaving.value ? _ctx.$t("settings.saving") : _ctx.$t("settings.teamGit.save")), 9, _hoisted_27$l),
+                        teamGitError.value ? (openBlock(), createElementBlock("span", _hoisted_28$h, toDisplayString$1(teamGitError.value), 1)) : teamGitFlash.value ? (openBlock(), createElementBlock("span", _hoisted_29$e, toDisplayString$1(teamGitFlash.value), 1)) : createCommentVNode("", true)
                       ])
                     ])
                   ]),
                   _: 1
                 }, 8, ["title", "collapsed"])) : createCommentVNode("", true),
-                !unref(sections).length && !teamGitVisible.value && !ignisVisible.value && !pluginUpdateVisible.value ? (openBlock(), createElementBlock("div", _hoisted_27$l, toDisplayString$1(_ctx.$t("settings.noMatch")), 1)) : createCommentVNode("", true)
+                !unref(sections).length && !teamGitVisible.value && !ignisVisible.value && !pluginUpdateVisible.value ? (openBlock(), createElementBlock("div", _hoisted_30$e, toDisplayString$1(_ctx.$t("settings.noMatch")), 1)) : createCommentVNode("", true)
               ], 64)),
-              createBaseVNode("div", _hoisted_28$h, toDisplayString$1(_ctx.$t("settings.hint")), 1)
+              createBaseVNode("div", _hoisted_31$d, toDisplayString$1(_ctx.$t("settings.hint")), 1)
             ])
           ])
         ]),
@@ -160793,7 +160845,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-0T3OO6gu.mjs");
+    const { TGALoader } = await import("./TGALoader-DnofA3dN.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -160806,7 +160858,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-paTvdKcB.mjs");
+      const { MTLLoader } = await import("./MTLLoader-CUgi_LOQ.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -160815,7 +160867,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-BXA2EAgt.mjs");
+    const { STLLoader } = await import("./STLLoader-BoHfhmWf.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -160823,7 +160875,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-CjxhZoRw.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-D0wZr8QW.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -269564,4 +269616,4 @@ export {
   DropdownMenuRadioItem_default as y,
   DropdownMenuRoot_default as z
 };
-//# sourceMappingURL=main-DkgnNfGN.mjs.map
+//# sourceMappingURL=main-CZmvkwTL.mjs.map

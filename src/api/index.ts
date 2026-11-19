@@ -581,4 +581,8 @@ export function saveIgnisToken(token: string): Promise<IgnisToken> {
   return apiSend('/comfytv/ignis/token', 'PUT', IgnisTokenSchema, { token })
 }
 
+export function saveIgnisConfigText(text: string): Promise<IgnisToken> {
+  return apiSend('/comfytv/ignis/config', 'PUT', IgnisTokenSchema, { text })
+}
+
 export * from './schemas'

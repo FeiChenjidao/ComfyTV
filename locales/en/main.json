@@ -667,7 +667,13 @@
       "placeholder": "Paste Ignis token (ignis_ct_…)",
       "save": "Save token",
       "saveOk": "Saved locally",
-      "saveFailed": "Save failed"
+      "saveFailed": "Save failed",
+      "configDesc": "You can also paste the full setup instructions, a config link, or config JSON. ComfyTV extracts and saves the token automatically.",
+      "configPlaceholder": "Paste a config link or the full setup text…",
+      "importConfig": "Parse and save config",
+      "importing": "Parsing…",
+      "importOk": "Saved locally from the config link",
+      "importFailed": "Could not parse the config"
     },
     "fields": {
       "enable-v2": {

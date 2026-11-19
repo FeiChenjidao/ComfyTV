@@ -133,6 +133,28 @@
               <span v-if="ignisError" class="ctv:text-2xs ctv:text-destructive-background">{{ ignisError }}</span>
               <span v-else-if="ignisFlash" class="ctv:text-2xs ctv:text-emerald-400">{{ ignisFlash }}</span>
             </div>
+            <div class="ctv:mt-1 ctv:border-t ctv:border-border-subtle ctv:pt-2 ctv:flex ctv:flex-col ctv:gap-1.5">
+              <div class="ctv:text-2xs ctv:text-muted-foreground ctv:leading-relaxed">
+                {{ $t('settings.ignis.configDesc') }}
+              </div>
+              <ComfyTVText
+                :model-value="ignisConfigInput"
+                :placeholder="$t('settings.ignis.configPlaceholder')"
+                :disabled="ignisSaving"
+                multiline
+                :rows="3"
+                @update:model-value="(v: string) => ignisConfigInput = v"
+              />
+              <div>
+                <button
+                  :class="chipBtnClass"
+                  :disabled="ignisSaving || !ignisConfigInput.trim()"
+                  @click="saveIgnisConfigValue"
+                >
+                  {{ ignisSaving ? $t('settings.ignis.importing') : $t('settings.ignis.importConfig') }}
+                </button>
+              </div>
+            </div>
           </div>
         </SettingsSection>
 
@@ -199,6 +221,7 @@ import { useI18n } from 'vue-i18n'
 import {
   fetchIgnisToken,
   fetchNativeWorkflowGitToken,
+  saveIgnisConfigText,
   saveIgnisToken,
   saveNativeWorkflowGitToken,
 } from '@/api'
@@ -249,6 +272,7 @@ const teamGitFlash = ref('')
 const ignisConfigured = ref(false)
 const ignisHint = ref('')
 const ignisInput = ref('')
+const ignisConfigInput = ref('')
 const ignisSaving = ref(false)
 const ignisError = ref('')
 const ignisFlash = ref('')
@@ -259,9 +283,12 @@ const ignisVisible = computed(() => {
   return [
     t('settings.ignis.section'),
     t('settings.ignis.desc'),
+    t('settings.ignis.configDesc'),
     t('settings.ignis.save'),
+    t('settings.ignis.importConfig'),
     'ignis',
     'token',
+    'config',
   ].join(' ').toLowerCase().includes(q)
 })
 
@@ -337,6 +364,30 @@ async function saveIgnisTokenValue() {
     ignisHint.value = res.hint || ''
     ignisInput.value = ''
     ignisFlash.value = t('settings.ignis.saveOk')
+  } catch (e: any) {
+    ignisError.value = String(e?.message || e)
+  } finally {
+    ignisSaving.value = false
+  }
+}
+
+async function saveIgnisConfigValue() {
+  const text = ignisConfigInput.value.trim()
+  if (!text) return
+  ignisSaving.value = true
+  ignisError.value = ''
+  ignisFlash.value = ''
+  try {
+    const res = await saveIgnisConfigText(text)
+    if (!res.ok) {
+      ignisError.value = res.error || t('settings.ignis.importFailed')
+      return
+    }
+    ignisConfigured.value = !!res.configured
+    ignisHint.value = res.hint || ''
+    ignisConfigInput.value = ''
+    ignisInput.value = ''
+    ignisFlash.value = t('settings.ignis.importOk')
   } catch (e: any) {
     ignisError.value = String(e?.message || e)
   } finally {
