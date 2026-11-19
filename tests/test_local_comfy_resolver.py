@@ -38,6 +38,13 @@ class TestResolver:
                                        "resolution": "1024", "duration_s": 4}))
         assert r.resolve("x.y", {"from": "option:seed", "cast": "int"}) == 7
 
+    @pytest.mark.parametrize("seed", [1084953029599669, -1])
+    def test_option_seed_is_normalized_to_int31(self, seed):
+        r = self._r(self._ctx(options={"seed": seed}))
+        value = r.resolve("x.y", {"from": "option:seed", "cast": "int"})
+        assert value == seed % (2**31)
+        assert 0 <= value <= 2**31 - 1
+
     def test_option_missing_falls_to_default(self):
         r = self._r(self._ctx())
         v = r.resolve("x.y", {"from": "option:missing", "default": "abc"})

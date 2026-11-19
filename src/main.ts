@@ -53,6 +53,7 @@ import { execTopbarBadge, installExecBadge } from '@/composables/execBadge'
 import { installMcpCommandBus } from '@/composables/stages/useMcpCommandBus'
 import { installPhotoshopBridge } from '@/composables/stages/photoshopBridge'
 import { installClipboardImagePaste } from '@/composables/stages/clipboardImagePaste'
+import { installClipboardImageCopy } from '@/composables/stages/clipboardImageCopy'
 import { installAppModeHint } from '@/composables/appModeHint'
 import { installPluginUpdateCheck } from '@/composables/pluginUpdateCheck'
 import { guardGhostPlacement } from '@/composables/ghostPlacementInert'
@@ -281,6 +282,19 @@ const extension: ComfyExtension = {
 
     installPhotoshopBridge(a)
     installClipboardImagePaste(a)
+    installClipboardImageCopy(a, {
+      resolveStageState: node => useStageStore(pinia).getStage(node),
+      resolveUrl: url => a.api.apiURL(url.replace(/^\/api/, '')),
+      toast: (severity, summary, detail) => a.extensionManager?.toast?.add?.({
+        severity,
+        summary,
+        detail: detail || '',
+        life: 5000,
+      }),
+      successMessage: i18n.global.t('stage.action.copyImageDone'),
+      failureMessage: i18n.global.t('stage.action.copyImageFailed'),
+      unavailableMessage: i18n.global.t('stage.action.copyImageUnavailable'),
+    })
 
     installCollabPresence(a, {
       resolveProjectId: () => useProjectStore(pinia).currentProjectId,

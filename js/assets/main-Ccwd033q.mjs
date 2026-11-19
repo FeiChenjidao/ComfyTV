@@ -60005,7 +60005,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-CTDhCD0c.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-V4Tod41h.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -60504,10 +60504,10 @@ function handleFileDrop(e) {
     }
   })();
 }
-let installed$3 = false;
+let installed$4 = false;
 function installAssetCanvasDrop(pinia2) {
-  if (installed$3) return;
-  installed$3 = true;
+  if (installed$4) return;
+  installed$4 = true;
   const resolveAsset2 = (id) => useAssetStore(pinia2).byId(id) ?? null;
   let tries = 0;
   const tryInstall = () => {
@@ -62908,7 +62908,7 @@ const dialog$1 = { "confirm": "OK", "cancel": "Cancel", "close": "Close" };
 const pluginUpdate$1 = { "title": "ComfyTV update available", "repairTitle": "Restore ComfyTV", "message": "A newer ComfyTV is on the remote.\n\nCurrent: v{local}\nLatest: v{remote}\nBehind by {n} commit(s).\n\nThe current commit is kept for rollback. Update now, then restart ComfyUI.", "messageDirty": "A newer ComfyTV is on the remote (v{local} → v{remote}, {n} commit(s)).\n\nUpdate now force-overwrites every tracked file, including shipped workflows. Tracked local changes are saved as a patch, and untracked or ignored user workflows are preserved. Restart ComfyUI after updating.", "messageRepair": "ComfyTV v{local} has tracked local changes or local commits. Restore the configured remote version now. Local tracked changes are saved as a patch before they are overwritten.", "updateNow": "Update now", "updating": "Updating…", "later": "Remind later", "dismiss": "Skip this version", "failed": "Update failed", "restartTitle": "Restart ComfyUI", "restartDetail": "ComfyTV files were updated. Restart ComfyUI (or reload custom nodes) for the new version to load." };
 const v2$1 = /* @__PURE__ */ JSON.parse(`{"meta":{"fps":"{n} fps","silent":"no audio","mono":"mono","stereo":"stereo","channels":"{n} ch","frames":"{n} frames","genTime":"Generated in {t}"},"genopt":{"resolution":"Resolution","ratio":"Aspect ratio","count":"Count"},"seedream":{"model":"Model","sizePreset":"Size preset","width":"Width","height":"Height","background":"Background","seed":"Seed","randomSeed":"Random seed"},"panelCollapse":"Collapse the panel — keeps a one-line summary and Run","panelExpand":"Expand the panel","imageStageTitle":"Image · ImageStage","pickerTitle":"Pick · Image Picker","cropTitle":"Crop · Edit","ed":{"rotate":"Rotate · Edit","mirror":"Mirror · Edit","grade":"Color Grade · Edit","compare":"Compare · Edit","gridSplit":"Grid Split · Edit","customSplit":"Custom Split · Edit","psdLayerTree":"PSD Layer Tree · Edit","layerSeparation":"Layer Separation · Edit","imagesSplit":"Split Images · Edit","imageMerge":"Merge Images · Edit","compareHint":"Wire two images into A and B to compare","wired":"wired","empty":"empty"},"bottomBar":{"add":"Add node","assets":"Assets","workflows":"Workflows","search":"Search","searchPlaceholder":"Search ComfyTV nodes…","categories":"Categories","searchEmpty":"No matching nodes","cat":{"all":"All","generate":"Generate","input":"Input","image":"Image","edit":"Edit","video":"Video","audio":"Audio","text":"Text","model3d":"3D","bridge":"Bridge","utils":"Utils","other":"Other"},"createImage":"Image","createVideo":"Video","createAudio":"Audio","createText":"Text","createModel":"3D Model","workflowEmpty":"Nothing here yet. Templates (left) come from the team repo; workflows (right) are local-only.","workflowLoading":"Loading…","workflowOpenFailed":"Failed to open workflow","templates":"Templates","localWorkflows":"Workflows","templatesEmpty":"No cloud templates yet. Click Connect or Update templates to pull.","localWorkflowsEmpty":"No local workflows. Save a graph into this user’s workflows folder to see it here.","gitNoRepo":"This account has no team workflows Git yet. Click Connect to clone into this user’s workflows folder (each multi-user account is separate).","gitNoGit":"git was not found on this machine — install it and add it to PATH.","gitSynced":"In sync with remote","gitBehind":"{n} cloud template commit(s) ready to overwrite","gitDirty":"Uncommitted changes. Commit workflows includes edited templates","gitUpdate":"Update templates","gitCommit":"Commit workflows","gitConnect":"Connect team repo","gitConnecting":"Connecting team repo…","gitConnectOk":"Connected to team workflows repo","gitCommitPick":"Select workflows to commit. Edited templates are listed here too","gitCommitConfirm":"Confirm commit","gitCommitCancel":"Cancel","gitMessagePlaceholder":"Commit message (optional)","gitChecking":"Checking remote status…","gitUpdating":"Overwriting local templates from cloud…","gitPushing":"Committing & pushing…","gitPullOk":"Cloud templates overwritten locally","gitPushOk":"Committed & pushed","gitError":"Sync failed","gitDuplicate":"Cannot commit: remote already has a workflow with the same name","gitNothingSelected":"Select at least one workflow to commit","gitNeedUpdate":"Remote has new commits. Click Update templates first, then Commit workflows again.","gitNeedUpdateAfterCommit":"Saved locally, but remote moved ahead. Click Update templates, then Commit workflows once more to finish the push.","gitPullConflict":"Update failed (possible conflict). Close the panel and retry, or check uncommitted local edits.","gitPullLocalBackup":"Local untracked file(s) collided with remote; renamed to *.local-backup: {names}","gitNothingToCommit":"No changes to commit for the selected workflows","gitAssetsPacked":"Packed {n} media asset(s)","gitAssetsRestored":"Restored {n} media asset(s) locally","gitAssetsWarn":"Some assets were skipped","gitStateNew":"Uncommitted","gitStateModified":"Modified","gitStateOutdated":"Update available","gitStateDiverged":"Diverged","gitLegend":"Edited templates commit the same way as workflows on the right. Update templates overwrites those local edits.","gitTokenTitle":"Configure team Git token","gitTokenHint":"Paste the GitHub PAT from your admin. Stored only on this machine under workflows — never committed to the plugin repo.","gitTokenPlaceholder":"github_pat_… or ghp_…","gitTokenSave":"Save & continue","gitTokenSaving":"Saving…","gitTokenRequired":"Token is required","gitTokenSaveFailed":"Failed to save token","gitAuthFailed":"This ComfyUI user’s GitHub token is invalid or expired. Paste a valid PAT (Contents: Read and write on the team repo). Each multi-user account stores its own token."},"stageHint":"Connect references, press ↑ to generate","apiCostHint":"Estimated workflow API cost","ignisCredits":"Ignis credits","ignisCreditsHint":"This generation is billed to the configured Ignis account; the Ignis service determines the final charge","ignisBackground":{"title":"Background","auto":"Auto","transparent":"Transparent","opaque":"Opaque"},"toolbar":{"hd":"HD","expand":"Expand","angles":"Angles","relight":"Relight","redraw":"Redraw","erase":"Erase","cutout":"Cutout","grid":"Grid split","panorama":"Panorama","crop":"Crop","download":"Download","generate":"Generate"},"pickerHint":"Connect an upstream batch, click to pick","cropHint":"Connect an upstream image to start cropping","batchCount":"{n}","batchPos":"{i}/{n}","refsCount":"{n} refs","poolCount":"{n} in pool","clear":"Clear","linkWorkflow":"Link workflow","videoColorTitle":"Color · Video FX","videoCurvesTitle":"Curves · Video FX","fxChainTitle":"FX Chain · Render","renderChain":"Render chain","outputLabel":"Output","livePreview":"Live","fxChainHint":"Connect an upstream video to preview the chain","scene3dTitle":"3D Scene · Editor","relightTitle":"Relight · Light ball","applying":"Applying…","appliedLive":"Applied · live downstream","dragToApply":"Drag the box to apply","loaderHint":"Drop a file here, or click to upload","loaderEmpty":"Nothing loaded","assetLoaderHint":"Click to pick from the asset library","assetLoaderEmpty":"No asset selected","params":"Params","generatorHint":"Press ↑ to generate","change":"Change","upload":"Upload","renameHint":"Double-click to rename","removeItem":"Remove","moreActions":"More","fx":{"lut":"LUT · Grade","selectiveColor":"Selective Color · Grade","cdl":"CDL · Grade","histogramEq":"Histogram EQ · Grade","awb":"Auto White Balance · Grade","pseudocolor":"Pseudocolor · Grade","hueCorrect":"Hue Correct · Grade","select0r":"Select0r · Grade","keyer":"Keyer · Key","pik":"PIK · Key","despill":"Despill · Key","colorSuppress":"Color Suppress · Key","matteMorph":"Matte Morph · Key","shapeMask":"Shape Mask · Key","lensDistort":"Lens Distort · Optics","chromaticAberration":"Chromatic Aberration · Optics","lensFlare":"Lens Flare · Optics","glow":"Glow · Optics","godRays":"God Rays · Optics","blurSharpen":"Blur & Sharpen · Restore","denoise":"Denoise · Restore","deinterlace":"Deinterlace · Restore","posterize":"Posterize · Look","oldFilm":"Old Film · Look","artFx":"Art FX · Look","glitch":"Glitch · Look","kaleidoscope":"Kaleidoscope · Look","waveWarp":"Wave Warp · Look","strobe":"Strobe · Look","feedback":"Feedback · Look","regrain":"Regrain · Look","stylize":"Quick Looks · Look","chromaShift":"Chroma Shift · Look","transform":"Transform · Geo","video360":"360 Video · Geo","card3d":"Card 3D · Geo","particles":"Particles · FX","water":"Water · FX","lightGraffiti":"Light Graffiti · FX","trim":"Trim · Cut","vcrop":"Crop · Cut","vsplit":"Split · Cut","concat":"Concat · Cut","speed":"Speed · Cut","rotate":"Rotate & Flip · Cut","volume":"Volume · Cut","muxAudio":"Mux Audio · Cut","resize":"Resize · Cut","frames":"Frames · Cut","videoToFrames":"Video to Frames · Cut","timeRemap":"Time Remap · Cut","sequence":"Sequence · Cut","sceneDetect":"Scene Detect · Cut","chromaKey":"Chroma Key · Comp","composite":"Composite · Comp","cornerPin":"Corner Pin · Comp","rotoMask":"Roto Mask · Comp","keyMix":"Key Mix · Comp","matteMonitor":"Matte Monitor · Comp","maskPropagate":"Mask Propagate · Comp","paintStroke":"Paint Stroke · Comp","stmap":"STMap · Comp","stmapGen":"STMap Gen · Comp","zDefocus":"Z Defocus · Comp","frameBlend":"Frame Blend · Comp","transition":"Transition · Blend","lumaWipe":"Luma Wipe · Blend","stabilize":"Stabilize · Restore","stabilizePro":"Stabilize Pro · Restore","stabilize360":"360 Stabilize · Restore","interpolate":"Interpolate · Restore","faceBlur":"Face Blur · Restore","spotRemover":"Spot Remover · Restore","scopes":"Scopes · Monitor","contactSheet":"Contact Sheet · Monitor","audioMeter":"Audio Meter · Monitor","title":"Title · Text","subtitle":"Subtitle · Text","annotate":"Annotate · Text","kenBurns":"Ken Burns · FX","slitScan":"Slit Scan · FX"},"rich":{"score":"Score · Music","scoreEditor":"Score Editor · Music","midiEditor":"MIDI Editor · Music","expression":"Expression · Anim","motionTrack":"Motion Track · Anim","pattern":"Pattern · Gen","panorama":"Panorama · 360","panoView":"Current View · 360","panoMulti":"Multi View · 360","storyboard":"Storyboard · Story","storyboardEditor":"Storyboard Studio · Story","layerEditor":"Layer Editor · Image","material":"Material · 3D","modelLoader":"Load Model · 3D","meshPrimitive":"Primitive · 3D","meshOp":"Mesh Ops · 3D","meshBake":"Bake Maps · 3D","meshBoolean":"Boolean · 3D","lineArt":"Line Art · Image","poster":"Poster · Image","splitPart":"Split Parts · Image","erase":"Erase · Paint","inpaint":"Inpaint · Paint","outpaint":"Outpaint · Paint","multiangle":"Multi-angle · Image","director":"Director · Cut"},"afx":{"dynamics":"Compressor · Dyn","loudness":"Loudness · Dyn","duck":"Ducking · Dyn","eq":"EQ · Tone","saturate":"Saturate · Tone","modulation":"Modulation · Tone","echo":"Echo · Tone","stereo":"Stereo Field · Tone","timePitch":"Time & Pitch · Tone","denoise":"Denoise · Restore","noiseReduction":"Spectral Gate · Restore","repair":"Repair · Restore","convolve":"Convolve IR · Space","deconvolve":"Deconvolve · Space","museReverb":"Reverb · Space","mix":"Mixer · Mix","crossfade":"Crossfade · Mix","stemSplit":"Stem Split · Mix","demuxAudio":"Audio Track · Mix","demuxVideo":"Silent Video · Mix","clip":"Trim · Cut","split":"Split · Cut","analyze":"Analyze · Meter","mir":"Music Info · Meter","visualize":"Visualize · Meter","segmentExport":"Segments · Meter","reactive":"Reactive Keys · Meter","sweep":"Sweep · Synth","sf2":"SoundFont · Synth","clickTrack":"Click Track · Synth","chordAccomp":"Chords · Synth","scoreToMidi":"Score Player · Synth","demuxAudioHint":"Extract the audio track from the video","demuxVideoHint":"Strip the audio, keep the picture"},"customParams":{"title":"Workflow params","add":"Add","addHint":"Attach a parameter exposed by the bound workflow","remove":"Remove parameter"},"custom":{"title":"Custom Stage","expose":"Expose I/O","hint":"Pick a workflow, then choose which of its inputs and outputs this card exposes","noWorkflow":"Pick a workflow first","inputs":"Inputs","outputs":"Outputs","exposed":"Exposed","search":"Search nodes…","noCandidates":"This workflow has no exposable {what}","linked":"Wired","unlinked":"Not wired","required":"Required","optional":"Optional","label":"Label","batch":"Batch","save":"Save","cancel":"Cancel","saving":"Saving…","saved":"Saved","loadFailed":"Could not load workflow: {detail}","saveFailed":"Save failed: {detail}","needsOutput":"Pick at least one output","kinds":{"image":"image","images":"image batch","video":"video","audio":"audio","model":"3D model","text":"text","param":"param"},"summary":"{inputs} inputs · {outputs} outputs","moveUp":"Move up","asPrompt":"Feed from the card's main prompt ({'@'} references work there)","viaRef":"From asset reference","saveAs":"Save as…","saveAsHint":"Save these choices as a separate configuration of the same workflow","saveAsPrompt":"Name of the new configuration","asRandom":"Draw a fresh random value on every run (seed)","randomEachRun":"random on every run","moveDown":"Move down"},"ctl":{"mode":"Mode","duration":"Duration (s)","generateAudio":"Generate audio","lyrics":"Lyrics","bpm":"BPM","timeSignature":"Time signature","keyScale":"Key","language":"Language","voice":"Voice","speed":"Speed","referenceText":"Reference transcript","variantCount":"Variant count"}}`);
 const workflow$1 = { "uploadButton": "⬆ Upload workflow", "imported": 'Imported "{label}"', "importFailed": "Workflow import failed", "notJson": "That file isn't valid JSON", "linkButton": "🔗 Link workflow" };
-const stage$1 = { "run": "Run", "rerun": "Re-run", "running": "Running…", "cancel": "Cancel", "preparingWorkflow": "Preparing workflow…", "noWorkflowShort": "No workflow installed — use Upload / Link", "noWorkflowInstalled": "No {kind} workflow is installed — import one with the card's Upload / Link buttons, or under ComfyTV → Stages in the sidebar.", "outputDurationHint": "Generation time", "section": { "context": "Context", "pool": "Pool", "output": "Output ({type})", "actions": "Actions" }, "pool": { "clear": "Clear", "clearHint": "Empty the picker pool and reset the selection", "confirmClear": "Clear pool?", "confirm": "Yes", "cancel": "No", "modeAppend": "Mode: Append", "modeReplace": "Mode: Replace", "modeHint": "How new run results enter the pool (click to switch). Append: keep existing items and add new ones on top. Replace: keep only the latest result. Duplicate URLs are kept once." }, "empty": { "no_output": "no output yet", "generating": "generating…", "pending_upstream": "upstream pending", "unsupported_type": "unsupported type {type}" }, "source": { "upstream": "← upstream", "pending": "… waiting" }, "disconnect": "Disconnect", "modelInput": { "front": "Front", "left": "Left", "back": "Back", "right": "Right", "extra": "Extra", "reference": "Reference {n}", "image": "Image {n}" }, "starting": "starting…", "runByKind": { "text": "Generate Text", "image": "Generate Image", "image-batch": "Generate Images", "video": "Generate Video", "audio": "Generate Audio", "panorama": "Generate Panorama", "storyboard": "Generate Storyboard", "model": "Generate 3D Model", "material": "Generate Material" }, "action": { "viewFull": "View full size", "download": "Download", "exportObjZip": "Export OBJ + textures (ZIP)", "exportObjZipBusy": "Exporting OBJ zip…", "exportObjZipDone": "OBJ zip downloaded", "exportObjZipFailed": "OBJ export failed", "exportModel": "Export model", "exportModelBusy": "Exporting {format}…", "exportModelDone": "{format} downloaded", "exportModelFailed": "{format} export failed", "copyText": "Copy text", "saveTextAsset": "Save to asset library", "renderMarkdown": "Render as Markdown", "showRawText": "Show raw text", "addTag": "Save to library / tag", "removeFromPicker": "Remove from picker", "close": "Close", "loadAsset": "Load as asset node", "prev": "Previous", "next": "Next", "pick": "Select this track" }, "preparingWorkflowDetail": "Hang on — converting workflow to api JSON. Try Run again in a moment." };
+const stage$1 = { "run": "Run", "rerun": "Re-run", "running": "Running…", "cancel": "Cancel", "preparingWorkflow": "Preparing workflow…", "noWorkflowShort": "No workflow installed — use Upload / Link", "noWorkflowInstalled": "No {kind} workflow is installed — import one with the card's Upload / Link buttons, or under ComfyTV → Stages in the sidebar.", "outputDurationHint": "Generation time", "section": { "context": "Context", "pool": "Pool", "output": "Output ({type})", "actions": "Actions" }, "pool": { "clear": "Clear", "clearHint": "Empty the picker pool and reset the selection", "confirmClear": "Clear pool?", "confirm": "Yes", "cancel": "No", "modeAppend": "Mode: Append", "modeReplace": "Mode: Replace", "modeHint": "How new run results enter the pool (click to switch). Append: keep existing items and add new ones on top. Replace: keep only the latest result. Duplicate URLs are kept once." }, "empty": { "no_output": "no output yet", "generating": "generating…", "pending_upstream": "upstream pending", "unsupported_type": "unsupported type {type}" }, "source": { "upstream": "← upstream", "pending": "… waiting" }, "disconnect": "Disconnect", "modelInput": { "front": "Front", "left": "Left", "back": "Back", "right": "Right", "extra": "Extra", "reference": "Reference {n}", "image": "Image {n}" }, "starting": "starting…", "runByKind": { "text": "Generate Text", "image": "Generate Image", "image-batch": "Generate Images", "video": "Generate Video", "audio": "Generate Audio", "panorama": "Generate Panorama", "storyboard": "Generate Storyboard", "model": "Generate 3D Model", "material": "Generate Material" }, "action": { "viewFull": "View full size", "download": "Download", "exportObjZip": "Export OBJ + textures (ZIP)", "exportObjZipBusy": "Exporting OBJ zip…", "exportObjZipDone": "OBJ zip downloaded", "exportObjZipFailed": "OBJ export failed", "exportModel": "Export model", "exportModelBusy": "Exporting {format}…", "exportModelDone": "{format} downloaded", "exportModelFailed": "{format} export failed", "copyText": "Copy text", "copyImageDone": "Image copied and ready to paste", "copyImageFailed": "Failed to copy image", "copyImageUnavailable": "Image clipboard access requires localhost or HTTPS and browser clipboard permission.", "saveTextAsset": "Save to asset library", "renderMarkdown": "Render as Markdown", "showRawText": "Show raw text", "addTag": "Save to library / tag", "removeFromPicker": "Remove from picker", "close": "Close", "loadAsset": "Load as asset node", "prev": "Previous", "next": "Next", "pick": "Select this track" }, "preparingWorkflowDetail": "Hang on — converting workflow to api JSON. Try Run again in a moment." };
 const error$1 = { "dismiss": "Dismiss", "cancelled": "Cancelled", "upstreamNotReady": "Upstream not ready", "upstreamNotReadyDetail": "Upstream not ready: {list}. Run those stage(s) first so they produce a snapshot, then Run this stage again.", "droppedFromQueue": "Removed from the queue before it ran — the queue was cleared or the prompt was deleted.", "workerDied": "Backend stopped without sending a result. The prompt worker likely died (CUDA OOM during cleanup is the usual cause). Restart ComfyUI to recover." };
 const eagle$1 = { "title": "Eagle Library", "refresh": "Refresh", "search": "Search name or tags…", "loading": "Loading…", "empty": "No items", "loadMore": "Load more", "disabledHint": "Eagle integration is disabled. Turn on “Enable Eagle integration” in Settings and pin the ComfyTV .library path.", "pendingBanner": "{n} item(s) queued for Eagle (waiting for the pinned library to open)", "flushNow": "Send now", "flushing": "Sending…", "mode": { "api": "Online", "disk": "Read-only", "offline": "Offline", "disabled": "Disabled" }, "hint": { "disk": "Eagle is closed or has another library open: reading the library from disk (read-only). Sends are queued and flushed automatically once the pinned library opens.", "offline": "Eagle unreachable: the app is not running and the pinned library path does not exist. Check the library path in Settings." }, "folder": { "all": "All folders" }, "ai": { "label": "AI", "tooltip": "AI semantic search (needs Eagle's AI Search plugin): search by meaning, not by name" }, "similar": { "action": "Find similar", "banner": "Items similar to “{name}”", "clear": "Clear", "failed": "Similar search failed" }, "import": { "action": "Import into Assets", "done": "Imported “{name}”", "existed": "“{name}” is already in Assets", "failed": "Import failed" }, "send": { "action": "Send to Eagle", "sent": "Sent to Eagle: {name}", "queued": "Eagle not ready — queued ({n} pending)", "failed": "Send failed" }, "flush": { "done": "Flushed {n} item(s) to Eagle", "failed": "{n} item(s) failed to flush" } };
 const sidebar$1 = { "tab": { "workflow": "Workflow", "assets": "Assets", "eagle": "Eagle", "entries": "Entries", "params": "Stages", "presets": "Presets", "resources": "Resources", "servers": "Servers", "collab": "Collab", "settings": "Settings" } };
@@ -63116,7 +63116,7 @@ const dialog = { "confirm": "确定", "cancel": "取消", "close": "关闭" };
 const pluginUpdate = { "title": "ComfyTV 有可用更新", "repairTitle": "恢复 ComfyTV", "message": "检测到远程有新的 ComfyTV 版本。\n\n当前：v{local}\n最新：v{remote}\n落后 {n} 个提交。\n\n当前提交会保留用于回退。请立即更新，然后重启 ComfyUI。", "messageDirty": "远程有新版本（v{local} → v{remote}，落后 {n} 个提交）。\n\n更新会强制覆盖所有已跟踪文件，包括内置工作流。本地已跟踪改动会保存为补丁，未跟踪或已忽略的用户自建工作流会保留。更新后请重启 ComfyUI。", "messageRepair": "ComfyTV v{local} 存在本地已跟踪改动或本地提交。可以恢复到当前配置的远程版本；覆盖前会先把本地已跟踪改动保存为补丁。", "updateNow": "立即更新", "updating": "正在更新…", "later": "稍后提醒", "dismiss": "忽略此版本", "failed": "更新失败", "restartTitle": "请重启 ComfyUI", "restartDetail": "ComfyTV 文件已更新。请重启 ComfyUI（或重新加载自定义节点）后才会生效。" };
 const v2 = { "meta": { "fps": "{n} fps", "silent": "无音轨", "mono": "单声道", "stereo": "立体声", "channels": "{n} 声道", "frames": "{n} 帧", "genTime": "生成耗时 {t}" }, "genopt": { "resolution": "清晰度", "ratio": "比例", "count": "生成数量" }, "seedream": { "model": "模型", "sizePreset": "尺寸预设", "width": "宽度", "height": "高度", "background": "背景", "seed": "种子", "randomSeed": "随机种子" }, "panelCollapse": "收起面板——只保留一行信息和运行按钮", "panelExpand": "展开面板", "imageStageTitle": "图像阶段 · 生成", "pickerTitle": "图片选择器 · 挑选", "cropTitle": "裁剪 · 编辑", "ed": { "rotate": "旋转 · 编辑", "mirror": "镜像 · 编辑", "grade": "调色 · 编辑", "compare": "对比 · 编辑", "gridSplit": "宫格切分 · 编辑", "customSplit": "自定义切分 · 编辑", "psdLayerTree": "PSD 图层树 · 编辑", "layerSeparation": "图层分离 · 编辑", "imagesSplit": "图像组分离 · 编辑", "imageMerge": "图片合并 · 编辑", "compareHint": "接入 A、B 两张图开始对比", "wired": "已接入", "empty": "未接入" }, "bottomBar": { "add": "添加节点", "assets": "素材库", "workflows": "工作流", "search": "搜索", "searchPlaceholder": "搜索 ComfyTV 节点…", "categories": "节点分类", "searchEmpty": "没有匹配的节点", "cat": { "all": "全部", "generate": "生成", "input": "输入", "image": "图片", "edit": "编辑", "video": "视频", "audio": "音频", "text": "文本", "model3d": "3D", "bridge": "桥接", "utils": "工具", "other": "其他" }, "createImage": "图片", "createVideo": "视频", "createAudio": "音频", "createText": "文本", "createModel": "模型", "workflowEmpty": "暂无内容。左侧模板来自团队仓；右侧工作流是本机新建。", "workflowLoading": "加载中…", "workflowOpenFailed": "打开工作流失败", "templates": "模板", "localWorkflows": "工作流", "templatesEmpty": "暂无云端模板。点「连接团队仓」或「更新模板」拉取。", "localWorkflowsEmpty": "暂无本地工作流。在 ComfyUI 保存到本账号 workflows 即可出现在这里。", "gitNoRepo": "当前账号尚未连接团队工作流仓。点「连接团队仓」会克隆到本账号的 workflows 目录（多用户互不影响）。", "gitNoGit": "本机未找到 git，请先安装并加入 PATH。", "gitSynced": "已与远程同步", "gitBehind": "云端模板有 {n} 个提交可覆盖更新", "gitDirty": "有未提交改动。模板改动也点「提交工作流」", "gitUpdate": "更新模板", "gitCommit": "提交工作流", "gitConnect": "连接团队仓", "gitConnecting": "正在连接团队仓…", "gitConnectOk": "已连接团队工作流仓", "gitCommitPick": "选择要提交的工作流。带「已改动」的模板也会列在这里", "gitCommitConfirm": "确认提交", "gitCommitCancel": "取消", "gitMessagePlaceholder": "提交说明（可空）", "gitChecking": "正在校验远程状态…", "gitUpdating": "正在覆盖更新云端模板…", "gitPushing": "正在提交并推送…", "gitPullOk": "云端模板已覆盖到本机", "gitPushOk": "已提交并推送", "gitError": "同步失败", "gitDuplicate": "无法提交：远程已有同名工作流", "gitNothingSelected": "请先勾选要提交的工作流", "gitNeedUpdate": "远程有新版本。请先点「更新模板」，再重新点「提交工作流」。", "gitNeedUpdateAfterCommit": "本地已保存提交，但远程有更新。请先点「更新模板」，再点一次「提交工作流」完成推送。", "gitPullConflict": "更新失败（可能有冲突）。请关掉面板后再试，或检查本机未保存的改动。", "gitPullLocalBackup": "本地未入库文件与远程同名，已改名为 *.local-backup：{names}", "gitNothingToCommit": "所选工作流没有可提交的改动", "gitAssetsPacked": "已打包 {n} 个媒体资产", "gitAssetsRestored": "已同步 {n} 个媒体资产到本机", "gitAssetsWarn": "部分资产未打包/未覆盖", "gitStateNew": "未提交", "gitStateModified": "已改动", "gitStateOutdated": "可更新", "gitStateDiverged": "冲突", "gitLegend": "模板有「已改动」时，和右侧工作流一样点「提交工作流」。点「更新模板」会用云端覆盖这些改动。", "gitTokenTitle": "配置团队 Git Token", "gitTokenHint": "粘贴管理员发给你的 GitHub PAT。只保存在本机 workflows 目录，不会上传到插件仓库。", "gitTokenPlaceholder": "github_pat_… 或 ghp_…", "gitTokenSave": "保存并继续", "gitTokenSaving": "保存中…", "gitTokenRequired": "请先填写 Token", "gitTokenSaveFailed": "Token 保存失败", "gitAuthFailed": "当前账号的 GitHub Token 无效或已过期。请重新粘贴有效的 PAT（团队仓 Contents 读写权限）。每个 ComfyUI 多用户账号各自存一份 Token。" }, "stageHint": "连入参考，点 ↑ 生成", "apiCostHint": "估算工作流 API 费用", "ignisCredits": "Ignis 积分", "ignisCreditsHint": "本次生成由 Ignis 账户结算积分，实际扣费以 Ignis 服务端为准", "ignisBackground": { "title": "背景", "auto": "自动", "transparent": "透明", "opaque": "不透明" }, "toolbar": { "hd": "高清", "expand": "扩图", "angles": "多角度", "relight": "打光", "redraw": "重绘", "erase": "擦除", "cutout": "抠图", "grid": "宫格切分", "panorama": "全景", "crop": "裁剪", "download": "下载", "generate": "生成" }, "pickerHint": "连入上游批次，点选一张", "cropHint": "连入上游图片开始裁剪", "batchCount": "{n}张", "batchPos": "{i}/{n}张", "refsCount": "{n} 个引用", "poolCount": "池内 {n} 张", "clear": "清空", "linkWorkflow": "关联工作流", "videoColorTitle": "调色 · Video FX", "videoCurvesTitle": "曲线 · Video FX", "fxChainTitle": "FX 链 · 出片", "renderChain": "渲染整链", "outputLabel": "成片", "livePreview": "实时", "fxChainHint": "连入上游视频即可预览整链", "scene3dTitle": "3D 场景 · 编辑台", "relightTitle": "打光 · 光球", "applying": "应用中…", "appliedLive": "已应用 · 下游实时", "dragToApply": "拖框即应用", "loaderHint": "拖入文件，或点击上传", "loaderEmpty": "未加载内容", "assetLoaderHint": "点击从资产库选择", "assetLoaderEmpty": "未选择资产", "params": "参数", "generatorHint": "点 ↑ 生成", "change": "更换", "upload": "上传", "renameHint": "双击重命名", "removeItem": "移除", "moreActions": "更多", "fx": { "lut": "LUT · 调色", "selectiveColor": "选择性色彩 · 调色", "cdl": "CDL · 调色", "histogramEq": "直方图均衡 · 调色", "awb": "自动白平衡 · 调色", "pseudocolor": "伪彩色 · 调色", "hueCorrect": "色相修正 · 调色", "select0r": "二级校色 · 调色", "keyer": "键控 · 抠像", "pik": "IBK 键控 · 抠像", "despill": "去溢色 · 抠像", "colorSuppress": "色彩抑制 · 抠像", "matteMorph": "遮罩形态 · 抠像", "shapeMask": "形状遮罩 · 抠像", "lensDistort": "镜头畸变 · 光学", "chromaticAberration": "镜头色差 · 光学", "lensFlare": "镜头光晕 · 光学", "glow": "辉光 · 光学", "godRays": "体积光 · 光学", "blurSharpen": "模糊与锐化 · 修复", "denoise": "降噪 · 修复", "deinterlace": "去隔行 · 修复", "posterize": "色调分离 · 风格", "oldFilm": "老电影 · 风格", "artFx": "艺术画风 · 风格", "glitch": "故障艺术 · 风格", "kaleidoscope": "万花筒 · 风格", "waveWarp": "波纹扭曲 · 风格", "strobe": "频闪 · 风格", "feedback": "拖影反馈 · 风格", "regrain": "胶片颗粒 · 风格", "stylize": "快速滤镜 · 风格", "chromaShift": "通道错位 · 风格", "transform": "变换 · 几何", "video360": "360 全景 · 几何", "card3d": "3D 卡片 · 几何", "particles": "粒子 · 特效", "water": "水面 · 特效", "lightGraffiti": "光绘 · 特效", "trim": "修剪 · 剪辑", "vcrop": "画面裁切 · 剪辑", "vsplit": "分割 · 剪辑", "concat": "拼接 · 剪辑", "speed": "变速 · 剪辑", "rotate": "旋转翻转 · 剪辑", "volume": "音量 · 剪辑", "muxAudio": "合成音轨 · 剪辑", "resize": "缩放 · 剪辑", "frames": "逐帧抽取 · 剪辑", "videoToFrames": "视频拆帧 · 剪辑", "timeRemap": "时间重映射 · 剪辑", "sequence": "片段序列 · 剪辑", "sceneDetect": "场景检测 · 剪辑", "chromaKey": "色度抠像 · 合成", "composite": "叠加合成 · 合成", "cornerPin": "四角定位 · 合成", "rotoMask": "手绘遮罩 · 合成", "keyMix": "键混合 · 合成", "matteMonitor": "遮罩监视 · 合成", "maskPropagate": "遮罩追踪 · 合成", "paintStroke": "笔迹绘制 · 合成", "stmap": "UV 重映射 · 合成", "stmapGen": "STMap 生成 · 合成", "zDefocus": "深度散景 · 合成", "frameBlend": "帧混合 · 合成", "transition": "交叉转场 · 转场", "lumaWipe": "亮度擦除 · 转场", "stabilize": "视频稳定 · 修复", "stabilizePro": "专业稳定 · 修复", "stabilize360": "360 稳定 · 修复", "interpolate": "补帧 · 修复", "faceBlur": "人脸打码 · 修复", "spotRemover": "污点移除 · 修复", "scopes": "示波器 · 监看", "contactSheet": "审片宫格 · 监看", "audioMeter": "电平表 · 监看", "title": "标题 · 图文", "subtitle": "字幕 · 图文", "annotate": "标注 · 图文", "kenBurns": "静照运镜 · 特效", "slitScan": "狭缝扫描 · 特效" }, "rich": { "score": "乐谱 · 音乐", "scoreEditor": "打谱器 · 音乐", "midiEditor": "MIDI 编辑 · 音乐", "expression": "表达式 · 动画", "motionTrack": "运动跟踪 · 动画", "pattern": "图案发生 · 生成", "panorama": "全景 · 360", "panoView": "当前视角 · 360", "panoMulti": "多视角 · 360", "storyboard": "故事板 · 叙事", "storyboardEditor": "故事板工作台 · 叙事", "layerEditor": "图层编辑器 · 图像", "material": "材质球 · 3D", "modelLoader": "加载模型 · 3D", "meshPrimitive": "基元 · 3D", "meshOp": "网格加工 · 3D", "meshBake": "烘焙贴图 · 3D", "meshBoolean": "布尔 · 3D", "lineArt": "线稿 · 图像", "poster": "排版 · 图像", "splitPart": "部件分割 · 图像", "erase": "擦除 · 涂抹", "inpaint": "局部重绘 · 涂抹", "outpaint": "扩图 · 涂抹", "multiangle": "多角度 · 图像", "director": "导演台 · 剪辑" }, "afx": { "dynamics": "压缩器 · 动态", "loudness": "响度 · 动态", "duck": "闪避 · 动态", "eq": "均衡器 · 音色", "saturate": "饱和 · 音色", "modulation": "调制 · 音色", "echo": "回声 · 音色", "stereo": "声场 · 音色", "timePitch": "变速变调 · 音色", "denoise": "降噪 · 修复", "noiseReduction": "谱门控 · 修复", "repair": "修复工具 · 修复", "convolve": "卷积混响 · 空间", "deconvolve": "逆卷积 · 空间", "museReverb": "算法混响 · 空间", "mix": "调音台 · 混音", "crossfade": "交叉淡化 · 混音", "stemSplit": "分轨 · 混音", "demuxAudio": "抽出音轨 · 混音", "demuxVideo": "抽出画面 · 混音", "clip": "修剪 · 剪辑", "split": "分割 · 剪辑", "analyze": "分析 · 监测", "mir": "乐理探测 · 监测", "visualize": "频谱图 · 监测", "segmentExport": "分段导出 · 监测", "reactive": "节奏打点 · 监测", "sweep": "扫频 · 合成", "sf2": "音源渲染 · 合成", "clickTrack": "节拍轨 · 合成", "chordAccomp": "和弦伴奏 · 合成", "scoreToMidi": "乐谱演奏 · 合成", "demuxAudioHint": "从视频中抽出音轨", "demuxVideoHint": "去掉声音，只留画面" }, "customParams": { "title": "工作流参数", "add": "添加", "addHint": "挂载绑定工作流暴露的自定义参数", "remove": "移除参数" }, "custom": { "title": "自定义节点", "expose": "暴露输入输出", "hint": "先选工作流，再选择这张卡片要暴露的输入和输出", "noWorkflow": "请先选择工作流", "inputs": "输入", "outputs": "输出", "exposed": "已暴露", "search": "搜索节点…", "noCandidates": "这个工作流没有可暴露的{what}", "linked": "已连接", "unlinked": "未连接", "required": "必填", "optional": "可选", "label": "名称", "batch": "批量", "save": "保存", "cancel": "取消", "saving": "保存中…", "saved": "已保存", "loadFailed": "工作流加载失败：{detail}", "saveFailed": "保存失败：{detail}", "needsOutput": "至少选择一个输出", "kinds": { "image": "图像", "images": "图像批次", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本", "param": "参数" }, "summary": "{inputs} 个输入 · {outputs} 个输出", "moveUp": "上移", "asPrompt": "由卡片主提示词驱动（支持 {'@'} 引用）", "viaRef": "来自资产引用", "saveAs": "另存为…", "saveAsHint": "把这组选择另存为同一工作流的一份新配置", "saveAsPrompt": "新配置名称", "asRandom": "每次运行随机取值（用于 seed）", "randomEachRun": "每次运行随机", "moveDown": "下移" }, "ctl": { "mode": "模式", "duration": "时长（秒）", "generateAudio": "生成伴音", "lyrics": "歌词", "bpm": "BPM", "timeSignature": "拍号", "keyScale": "调式", "language": "语言", "voice": "音色", "speed": "语速", "referenceText": "参考文本", "variantCount": "变体数量" } };
 const workflow = { "uploadButton": "⬆ 上传工作流", "imported": "已导入「{label}」", "importFailed": "工作流导入失败", "notJson": "该文件不是合法 JSON", "linkButton": "🔗 链接工作流" };
-const stage = { "run": "运行", "rerun": "重新运行", "running": "运行中…", "cancel": "取消", "preparingWorkflow": "准备工作流中…", "noWorkflowShort": "没有可用工作流 — 请上传 / 链接", "noWorkflowInstalled": "没有可用的 {kind} 工作流 — 用卡片上的「关联工作流」按钮导入一个，或到侧栏 ComfyTV → 阶段管理里添加。", "promptNotBound": "「{label}」没有绑定阶段提示词，卡片上的提示词不会生效。到侧栏 ComfyTV → 工作流，把提示词节点的 text 绑定到「阶段提示词」。", "outputDurationHint": "生成耗时", "section": { "context": "上游输入", "pool": "图片池", "output": "输出 ({type})", "actions": "动作" }, "pool": { "clear": "清除", "clearHint": "清空图片池并重置选择", "confirmClear": "确认清空？", "confirm": "是", "cancel": "否", "modeAppend": "模式:追加", "modeReplace": "模式:覆盖", "modeHint": "新结果如何进入池（点击切换）。追加：保留已有并把新结果放到最上。覆盖：每次运行只保留最新结果。相同 URL 只保留一份。" }, "empty": { "no_output": "暂无输出", "generating": "生成中…", "pending_upstream": "上游待运行", "unsupported_type": "不支持的类型 {type}" }, "source": { "upstream": "← 上游", "pending": "… 等待中" }, "disconnect": "断开此连接", "modelInput": { "front": "正", "left": "左", "back": "背", "right": "右", "extra": "辅", "reference": "参考图 {n}", "image": "图片 {n}" }, "starting": "启动中…", "runByKind": { "text": "生成文本", "image": "生成图片", "image-batch": "生成图片", "video": "生成视频", "audio": "生成音频", "panorama": "生成全景图", "storyboard": "生成分镜", "model": "生成3D模型", "material": "生成材质" }, "action": { "viewFull": "查看大图", "download": "下载", "exportObjZip": "导出 OBJ + 纹理（ZIP）", "exportObjZipBusy": "正在导出 OBJ 压缩包…", "exportObjZipDone": "OBJ 压缩包已下载", "exportObjZipFailed": "OBJ 导出失败", "exportModel": "导出模型", "exportModelBusy": "正在导出 {format}…", "exportModelDone": "{format} 已下载", "exportModelFailed": "{format} 导出失败", "copyText": "复制文本", "saveTextAsset": "存入资产库", "renderMarkdown": "渲染 Markdown", "showRawText": "显示原文", "addTag": "存入资产库 / 打标签", "removeFromPicker": "从选择器移除", "close": "关闭", "loadAsset": "作为资产节点加载", "prev": "上一张", "next": "下一张", "pick": "选用这条" }, "preparingWorkflowDetail": "稍等 — 正在把工作流转换成 api JSON。稍后再点运行。" };
+const stage = { "run": "运行", "rerun": "重新运行", "running": "运行中…", "cancel": "取消", "preparingWorkflow": "准备工作流中…", "noWorkflowShort": "没有可用工作流 — 请上传 / 链接", "noWorkflowInstalled": "没有可用的 {kind} 工作流 — 用卡片上的「关联工作流」按钮导入一个，或到侧栏 ComfyTV → 阶段管理里添加。", "promptNotBound": "「{label}」没有绑定阶段提示词，卡片上的提示词不会生效。到侧栏 ComfyTV → 工作流，把提示词节点的 text 绑定到「阶段提示词」。", "outputDurationHint": "生成耗时", "section": { "context": "上游输入", "pool": "图片池", "output": "输出 ({type})", "actions": "动作" }, "pool": { "clear": "清除", "clearHint": "清空图片池并重置选择", "confirmClear": "确认清空？", "confirm": "是", "cancel": "否", "modeAppend": "模式:追加", "modeReplace": "模式:覆盖", "modeHint": "新结果如何进入池（点击切换）。追加：保留已有并把新结果放到最上。覆盖：每次运行只保留最新结果。相同 URL 只保留一份。" }, "empty": { "no_output": "暂无输出", "generating": "生成中…", "pending_upstream": "上游待运行", "unsupported_type": "不支持的类型 {type}" }, "source": { "upstream": "← 上游", "pending": "… 等待中" }, "disconnect": "断开此连接", "modelInput": { "front": "正", "left": "左", "back": "背", "right": "右", "extra": "辅", "reference": "参考图 {n}", "image": "图片 {n}" }, "starting": "启动中…", "runByKind": { "text": "生成文本", "image": "生成图片", "image-batch": "生成图片", "video": "生成视频", "audio": "生成音频", "panorama": "生成全景图", "storyboard": "生成分镜", "model": "生成3D模型", "material": "生成材质" }, "action": { "viewFull": "查看大图", "download": "下载", "exportObjZip": "导出 OBJ + 纹理（ZIP）", "exportObjZipBusy": "正在导出 OBJ 压缩包…", "exportObjZipDone": "OBJ 压缩包已下载", "exportObjZipFailed": "OBJ 导出失败", "exportModel": "导出模型", "exportModelBusy": "正在导出 {format}…", "exportModelDone": "{format} 已下载", "exportModelFailed": "{format} 导出失败", "copyText": "复制文本", "copyImageDone": "图片已复制，可粘贴到外部应用", "copyImageFailed": "复制图片失败", "copyImageUnavailable": "图片剪贴板需要使用 localhost 或 HTTPS，并由浏览器支持剪贴板权限。", "saveTextAsset": "存入资产库", "renderMarkdown": "渲染 Markdown", "showRawText": "显示原文", "addTag": "存入资产库 / 打标签", "removeFromPicker": "从选择器移除", "close": "关闭", "loadAsset": "作为资产节点加载", "prev": "上一张", "next": "下一张", "pick": "选用这条" }, "preparingWorkflowDetail": "稍等 — 正在把工作流转换成 api JSON。稍后再点运行。" };
 const error = { "dismiss": "清除", "cancelled": "已取消", "upstreamNotReady": "上游未就绪", "upstreamNotReadyDetail": "上游未就绪:{list}。请先运行这些阶段生成快照,然后再运行此阶段。", "refMissing": "参考素材已失效", "refMissingDetail": "{list} 对应的资产已从资产库移除，或文件已丢失。从参考区移除后重新添加，再运行。", "droppedFromQueue": "尚未运行就被移出队列 — 队列被清空或该任务被删除。", "workerDied": "后端未返回结果就停止了。prompt worker 可能已崩溃(通常是清理阶段 CUDA OOM)。重启 ComfyUI 后恢复。" };
 const eagle = { "title": "Eagle 素材库", "refresh": "刷新", "search": "搜索名称或标签…", "loading": "加载中…", "empty": "没有条目", "loadMore": "加载更多", "disabledHint": "Eagle 集成未启用。到「设置」页打开「启用 Eagle 集成」,并钉死 ComfyTV 专用的 .library 路径。", "pendingBanner": "有 {n} 条待发送到 Eagle(等待打开钉死的库)", "flushNow": "立即补发", "flushing": "补发中…", "mode": { "api": "在线", "disk": "只读", "offline": "离线", "disabled": "未启用" }, "hint": { "disk": "Eagle 未运行或打开了别的库:正在直接读取磁盘上的库(只读)。发送会排队,等库打开后自动补发。", "offline": "找不到 Eagle:应用未运行,钉死的库路径也不可达。检查设置里的库路径。" }, "folder": { "all": "全部文件夹" }, "ai": { "label": "AI", "tooltip": "AI 语义搜索(需要 Eagle 的 AI Search 插件):按含义搜图而非按名称" }, "similar": { "action": "找相似", "banner": "与「{name}」相似的条目", "clear": "清除", "failed": "相似搜索失败" }, "import": { "action": "导入到资产库", "done": "已导入「{name}」", "existed": "「{name}」已在资产库", "failed": "导入失败" }, "send": { "action": "发送到 Eagle", "sent": "已发送到 Eagle:{name}", "queued": "Eagle 未就绪,已排队({n} 条待发)", "failed": "发送失败" }, "flush": { "done": "已补发 {n} 条到 Eagle", "failed": "{n} 条补发失败" } };
 const sidebar = { "tab": { "workflow": "工作流", "assets": "资产库", "eagle": "Eagle", "entries": "条目", "params": "阶段管理", "presets": "预设", "resources": "资源", "servers": "服务器", "collab": "协作", "settings": "设置" } };
@@ -84052,13 +84052,13 @@ function bindPanelOnSelectSize(node, card, scope2) {
 }
 const hosts = /* @__PURE__ */ new Set();
 let placing = false;
-let installed$2 = false;
+let installed$3 = false;
 function apply$1(el2) {
   el2.toggleAttribute("inert", placing);
 }
 function install(app2) {
-  if (installed$2) return;
-  installed$2 = true;
+  if (installed$3) return;
+  installed$3 = true;
   const scope2 = effectScope(true);
   scope2.run(() => {
     const target = /* @__PURE__ */ shallowRef(null);
@@ -90465,7 +90465,7 @@ const _sfc_main$4G = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-DCnfdObL.mjs"),
+      loader: () => import("./AgentPanelRoot-xRqY5XLR.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -96847,7 +96847,7 @@ const _sfc_main$4u = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4u, [["__scopeId", "data-v-f42c362c"]]);
+const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4u, [["__scopeId", "data-v-24cb4b3c"]]);
 const HOST_ID = "comfytv-bottom-bar";
 const MAX_FRAMES = 600;
 let pinia$1 = null;
@@ -155393,7 +155393,7 @@ const _sfc_main$3M = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const VideoToFramesStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$3M, [["__scopeId", "data-v-24559916"]]);
+const VideoToFramesStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$3M, [["__scopeId", "data-v-74be56b2"]]);
 function evenDim(n) {
   return Math.max(2, Math.round(n / 2) * 2);
 }
@@ -160845,7 +160845,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-D7G2SgLL.mjs");
+    const { TGALoader } = await import("./TGALoader-Ce9CgNeI.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -160858,7 +160858,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-kQsmfLE6.mjs");
+      const { MTLLoader } = await import("./MTLLoader-CYkJpddP.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -160867,7 +160867,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-DP9g6N88.mjs");
+    const { STLLoader } = await import("./STLLoader-BG7JA5dq.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -160875,7 +160875,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-DCeMbLL1.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-Bdceyagu.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -166046,6 +166046,15 @@ function outputImageItems(state2) {
     items.push({ url, label: String((im == null ? void 0 : im.label) ?? (im == null ? void 0 : im.index) ?? "") });
   }
   return items;
+}
+function outputImageUrl(state2) {
+  var _a2;
+  const items = outputImageItems(state2);
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0].url;
+  const idx = Number(state2.pickedIndex);
+  const i = Number.isFinite(idx) && idx >= 1 ? Math.min(idx, items.length) : 1;
+  return ((_a2 = items[i - 1]) == null ? void 0 : _a2.url) ?? items[0].url;
 }
 function resolveDownloadHref(url) {
   return app$1.api.apiURL(url.replace(/^\/api/, ""));
@@ -209616,7 +209625,7 @@ function useLayerEditorCanvas(editor, viewportEl) {
     setSpaceDown
   };
 }
-function isTextEditingTarget$1(target) {
+function isTextEditingTarget$2(target) {
   const el2 = target;
   const tag = el2 == null ? void 0 : el2.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || Boolean(el2 == null ? void 0 : el2.isContentEditable);
@@ -209624,7 +209633,7 @@ function isTextEditingTarget$1(target) {
 function useLayerEditorHotkeys(editor, opts) {
   function onKeyDown2(e) {
     e.stopPropagation();
-    if (editor.floating.value && !isTextEditingTarget$1(e.target)) {
+    if (editor.floating.value && !isTextEditingTarget$2(e.target)) {
       if (e.key === "Enter") {
         e.preventDefault();
         editor.anchorFloating();
@@ -209636,7 +209645,7 @@ function useLayerEditorHotkeys(editor, opts) {
         return;
       }
     }
-    if (editor.tool.value === "pen" && !isTextEditingTarget$1(e.target)) {
+    if (editor.tool.value === "pen" && !isTextEditingTarget$2(e.target)) {
       if (e.key === "Enter" && editor.penDrafting()) {
         e.preventDefault();
         editor.penCommit();
@@ -209647,7 +209656,7 @@ function useLayerEditorHotkeys(editor, opts) {
         return;
       }
     }
-    if (editor.tool.value === "crop" && !isTextEditingTarget$1(e.target)) {
+    if (editor.tool.value === "crop" && !isTextEditingTarget$2(e.target)) {
       if (e.key === "Enter" && editor.cropPending.value) {
         e.preventDefault();
         editor.applyCrop();
@@ -209660,7 +209669,7 @@ function useLayerEditorHotkeys(editor, opts) {
         return;
       }
     }
-    if (editor.tool.value === "transform" && !isTextEditingTarget$1(e.target)) {
+    if (editor.tool.value === "transform" && !isTextEditingTarget$2(e.target)) {
       if (e.key === "Enter") {
         e.preventDefault();
         editor.transformApply();
@@ -209678,7 +209687,7 @@ function useLayerEditorHotkeys(editor, opts) {
       opts.exitFullscreen();
       return;
     }
-    if (isTextEditingTarget$1(e.target)) return;
+    if (isTextEditingTarget$2(e.target)) return;
     if (e.code === "Space") {
       opts.setSpaceDown(true);
       e.preventDefault();
@@ -218807,7 +218816,7 @@ function useStoryboardHotkeys(sb, next) {
     if (target) sb.selectBoard(target.uid);
   }
   function onKeyDown2(e) {
-    if (!isTextEditingTarget$1(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (!isTextEditingTarget$2(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
       const uid2 = sb.currentBoard.value.uid;
       switch (e.code) {
         case "Comma":
@@ -250183,7 +250192,7 @@ function installMcpCommandBus(app2, deps) {
 }
 const PHOTOSHOP_LAYER_EVENT = "comfytv-photoshop-layer";
 const IMAGE_LOADER_CLASS = "ComfyTV.ImageLoaderStage";
-function selectedNodes(canvas) {
+function selectedNodes$1(canvas) {
   const selected = canvas == null ? void 0 : canvas.selected_nodes;
   if (!selected) return [];
   if (typeof selected[Symbol.iterator] === "function") return Array.from(selected);
@@ -250193,7 +250202,7 @@ function isImageLoader(node) {
   return String((node == null ? void 0 : node.comfyClass) ?? "") === IMAGE_LOADER_CLASS;
 }
 function selectedTarget(host2) {
-  const selected = selectedNodes(host2 == null ? void 0 : host2.canvas);
+  const selected = selectedNodes$1(host2 == null ? void 0 : host2.canvas);
   if (selected.length === 1 && isImageLoader(selected[0])) return selected[0];
   return null;
 }
@@ -250232,11 +250241,11 @@ function applyPhotoshopLayer(host2, payload) {
   (_g = (_f = host2 == null ? void 0 : host2.canvas) == null ? void 0 : _f.centerOnNode) == null ? void 0 : _g.call(_f, node);
   return node;
 }
-let installed$1 = false;
+let installed$2 = false;
 function installPhotoshopBridge(host2 = app$1) {
   var _a2, _b2;
-  if (installed$1) return;
-  installed$1 = true;
+  if (installed$2) return;
+  installed$2 = true;
   (_b2 = (_a2 = host2 == null ? void 0 : host2.api) == null ? void 0 : _a2.addEventListener) == null ? void 0 : _b2.call(_a2, PHOTOSHOP_LAYER_EVENT, (event) => {
     var _a3, _b3, _c;
     const payload = (event == null ? void 0 : event.detail) ?? event;
@@ -250253,7 +250262,7 @@ const UPLOAD_SUBFOLDER = "comfytv/uploads";
 function imageFiles(data) {
   return Array.from((data == null ? void 0 : data.items) ?? []).filter((item) => item.kind === "file" && item.type.startsWith("image/")).map((item) => item.getAsFile()).filter((file) => file !== null);
 }
-function isTextEditingTarget(target) {
+function isTextEditingTarget$1(target) {
   if (!(target instanceof Element)) return false;
   return target.closest('input, textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"]') !== null;
 }
@@ -250305,7 +250314,7 @@ async function pasteClipboardImages(host2, files) {
   return created;
 }
 function handleClipboardImagePaste(host2, event) {
-  if (event.defaultPrevented || isTextEditingTarget(event.target)) return false;
+  if (event.defaultPrevented || isTextEditingTarget$1(event.target)) return false;
   const files = imageFiles(event.clipboardData);
   if (!files.length) return false;
   event.preventDefault();
@@ -250317,11 +250326,99 @@ function handleClipboardImagePaste(host2, event) {
   });
   return true;
 }
-let installed = false;
+let installed$1 = false;
 function installClipboardImagePaste(host2 = app$1) {
+  if (installed$1) return;
+  installed$1 = true;
+  document.addEventListener("paste", (event) => handleClipboardImagePaste(host2, event), true);
+}
+function isTextEditingTarget(target) {
+  if (!(target instanceof Element)) return false;
+  return target.closest('input, textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"]') !== null;
+}
+function selectedNodes(host2) {
+  var _a2;
+  const selected = (_a2 = host2 == null ? void 0 : host2.canvas) == null ? void 0 : _a2.selected_nodes;
+  if (!selected) return [];
+  if (selected instanceof Map) return Array.from(selected.values());
+  if (typeof selected[Symbol.iterator] === "function") return Array.from(selected);
+  return Object.values(selected);
+}
+function hasSelectedText() {
+  var _a2;
+  const selection = (_a2 = window.getSelection) == null ? void 0 : _a2.call(window);
+  return !!selection && !selection.isCollapsed && !!selection.toString();
+}
+function imageOutputUrl(state2) {
+  if (!state2) return "";
+  if (!["COMFYTV_IMAGE", "COMFYTV_IMAGES", "COMFYTV_PANORAMA"].includes(state2.outputType)) return "";
+  return outputImageUrl(state2);
+}
+async function blobAsPng(blob) {
+  if (blob.type === "image/png") return blob;
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context2 = canvas.getContext("2d");
+    if (!context2) throw new Error("Canvas 2D is unavailable");
+    context2.drawImage(bitmap, 0, 0);
+    return await new Promise((resolve2, reject) => {
+      canvas.toBlob(
+        (png) => png ? resolve2(png) : reject(new Error("PNG conversion failed")),
+        "image/png"
+      );
+    });
+  } finally {
+    bitmap.close();
+  }
+}
+async function copyImageUrlToClipboard(url, resolveUrl) {
+  var _a2;
+  const ClipboardItemCtor = globalThis.ClipboardItem;
+  if (!((_a2 = navigator.clipboard) == null ? void 0 : _a2.write) || !ClipboardItemCtor || !window.isSecureContext) {
+    throw new Error("IMAGE_CLIPBOARD_UNAVAILABLE");
+  }
+  const png = fetch(resolveUrl(url)).then(async (response) => {
+    if (!response.ok) throw new Error(`Image fetch failed (${response.status})`);
+    return blobAsPng(await response.blob());
+  });
+  await navigator.clipboard.write([new ClipboardItemCtor({ "image/png": png })]);
+}
+function handleClipboardImageCopy(host2, event, options) {
+  if (event.defaultPrevented || event.isComposing) return false;
+  if (!(event.ctrlKey || event.metaKey) || !event.shiftKey || event.altKey || event.key.toLowerCase() !== "c") return false;
+  if (isTextEditingTarget(event.target) || isTextEditingTarget(document.activeElement)) return false;
+  if (hasSelectedText()) return false;
+  const nodes = selectedNodes(host2);
+  if (nodes.length !== 1) return false;
+  const url = imageOutputUrl(options.resolveStageState(nodes[0]));
+  if (!url) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  void copyImageUrlToClipboard(url, options.resolveUrl).then(() => {
+    var _a2;
+    (_a2 = options.toast) == null ? void 0 : _a2.call(options, "success", options.successMessage ?? "Image copied");
+  }).catch((error2) => {
+    var _a2;
+    console.error("[ComfyTV/clipboard] image copy failed", error2);
+    const unavailable = error2 instanceof Error && error2.message === "IMAGE_CLIPBOARD_UNAVAILABLE";
+    (_a2 = options.toast) == null ? void 0 : _a2.call(
+      options,
+      "error",
+      options.failureMessage ?? "Image copy failed",
+      unavailable ? options.unavailableMessage : String(error2 instanceof Error ? error2.message : error2)
+    );
+  });
+  return true;
+}
+let installed = false;
+function installClipboardImageCopy(host2, options) {
   if (installed) return;
   installed = true;
-  document.addEventListener("paste", (event) => handleClipboardImagePaste(host2, event), true);
+  window.addEventListener("keydown", (event) => handleClipboardImageCopy(host2, event, options), true);
 }
 const ID = "comfytv-app-mode-hint";
 function hasStages(graph) {
@@ -251292,7 +251389,7 @@ const _sfc_main$t = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const GptImageOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$t, [["__scopeId", "data-v-c4ddb1a2"]]);
+const GptImageOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$t, [["__scopeId", "data-v-94b6e92c"]]);
 const _hoisted_1$r = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -251592,7 +251689,7 @@ const _sfc_main$s = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SeedreamOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$s, [["__scopeId", "data-v-dfc58aa0"]]);
+const SeedreamOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$s, [["__scopeId", "data-v-a45d272c"]]);
 const _hoisted_1$p = ["aria-expanded"];
 const _hoisted_2$o = { class: "v2-ignisopt__value" };
 const _hoisted_3$n = { class: "v2-ignisopt__title" };
@@ -262223,7 +262320,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const GradeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-7897210e"]]);
+const GradeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-e55d3f0b"]]);
 const _hoisted_1$f = { class: "v2-ed__fit" };
 const _hoisted_2$e = ["src"];
 const _hoisted_3$d = {
@@ -266177,7 +266274,7 @@ const _sfc_main$5 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const PsdLayerTreeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-61dc2db8"]]);
+const PsdLayerTreeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-c354bcbe"]]);
 const LOADER_CSS = `
 .v2-loader-preview { cursor: pointer; }
 .v2-loader-preview[data-drag="1"] {
@@ -269176,6 +269273,22 @@ const extension = {
     });
     installPhotoshopBridge(a2);
     installClipboardImagePaste(a2);
+    installClipboardImageCopy(a2, {
+      resolveStageState: (node) => useStageStore(pinia).getStage(node),
+      resolveUrl: (url) => a2.api.apiURL(url.replace(/^\/api/, "")),
+      toast: (severity, summary, detail) => {
+        var _a3, _b3, _c3;
+        return (_c3 = (_b3 = (_a3 = a2.extensionManager) == null ? void 0 : _a3.toast) == null ? void 0 : _b3.add) == null ? void 0 : _c3.call(_b3, {
+          severity,
+          summary,
+          detail: detail || "",
+          life: 5e3
+        });
+      },
+      successMessage: i18n.global.t("stage.action.copyImageDone"),
+      failureMessage: i18n.global.t("stage.action.copyImageFailed"),
+      unavailableMessage: i18n.global.t("stage.action.copyImageUnavailable")
+    });
     installCollabPresence(a2, {
       resolveProjectId: () => useProjectStore(pinia).currentProjectId,
       resolveApp: () => a2,
@@ -269620,4 +269733,4 @@ export {
   DropdownMenuRadioItem_default as y,
   DropdownMenuRoot_default as z
 };
-//# sourceMappingURL=main-aj5v1QOT.mjs.map
+//# sourceMappingURL=main-Ccwd033q.mjs.map

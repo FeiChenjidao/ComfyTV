@@ -261,7 +261,10 @@ class _Resolver:
             value = (str(prefix) if prefix else "") + value + (str(suffix) if suffix else "")
 
         try:
-            return _cast(value, cast)
+            resolved = _cast(value, cast)
+            if src == "option:seed" and cast == "int":
+                return resolved % (2**31)
+            return resolved
         except (ValueError, TypeError) as e:
             raise RuntimeError(
                 f"{where}: cannot cast {value!r} (from {src}) to {cast}: {e}"
