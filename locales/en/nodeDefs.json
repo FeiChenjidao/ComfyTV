@@ -2109,6 +2109,25 @@
       }
     }
   },
+  "ComfyTV_CanvasStage": {
+    "display_name": "Canvas",
+    "inputs": {
+      "image": {
+        "name": "Image",
+        "tooltip": "Optional — use an upstream image as the initial canvas content."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Image",
+        "tooltip": "Composite of all visible canvas layers."
+      },
+      "1": {
+        "name": "Images",
+        "tooltip": "Per-layer renders from the latest capture."
+      }
+    }
+  },
   "ComfyTV_LayerEditorStage": {
     "display_name": "Layer Editor",
     "outputs": {

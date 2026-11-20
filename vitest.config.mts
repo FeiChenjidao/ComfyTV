@@ -1,20 +1,23 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import Icons from 'unplugin-icons/vite'
-import { resolve } from 'path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const configDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [vue(), Icons({ compiler: 'vue3', autoInstall: false })],
   resolve: {
     alias: [
-      { find: '@jtydhr88/pentrado', replacement: resolve(__dirname, './packages/pentrado/src') },
-      { find: /^@agent\//, replacement: resolve(__dirname, './src/agent/host') + '/' },
-      { find: '@comfyorg/tailwind-utils', replacement: resolve(__dirname, './src/agent/host/tailwind-utils.ts') },
-      { find: '@comfyorg/ingest-types/zod', replacement: resolve(__dirname, './src/agent/host/ingest-types/zod.gen.ts') },
-      { find: '@comfyorg/ingest-types', replacement: resolve(__dirname, './src/agent/host/ingest-types/index.ts') },
-      { find: '@comfyorg/shared-frontend-utils/formatUtil', replacement: resolve(__dirname, './src/agent/host/utils/formatUtil.ts') },
-      { find: /^shiki$/, replacement: resolve(__dirname, './src/agent/host/shiki.ts') },
-      { find: /^@\//, replacement: resolve(__dirname, './src') + '/' }
+      { find: '@jtydhr88/pentrado', replacement: resolve(configDir, './packages/pentrado/src') },
+      { find: /^@agent\//, replacement: resolve(configDir, './src/agent/host') + '/' },
+      { find: '@comfyorg/tailwind-utils', replacement: resolve(configDir, './src/agent/host/tailwind-utils.ts') },
+      { find: '@comfyorg/ingest-types/zod', replacement: resolve(configDir, './src/agent/host/ingest-types/zod.gen.ts') },
+      { find: '@comfyorg/ingest-types', replacement: resolve(configDir, './src/agent/host/ingest-types/index.ts') },
+      { find: '@comfyorg/shared-frontend-utils/formatUtil', replacement: resolve(configDir, './src/agent/host/utils/formatUtil.ts') },
+      { find: /^shiki$/, replacement: resolve(configDir, './src/agent/host/shiki.ts') },
+      { find: /^@\//, replacement: resolve(configDir, './src') + '/' }
     ]
   },
   define: {

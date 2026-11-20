@@ -60028,7 +60028,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-CSdjmKEZ.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-B8sZX8mq.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -67194,6 +67194,7 @@ const ComfyTV_VideoUpscaleStage$1 = { "display_name": "Video Upscale", "inputs":
 const ComfyTV_AudioPickerStage$1 = { "display_name": "Audio Picker", "inputs": { "append_results": { "name": "Append results" }, "batch": { "name": "Batch" }, "pool": { "name": "Pool" }, "selected_index": { "name": "Selected index" } }, "outputs": { "0": { "name": "Audio" } } };
 const ComfyTV_VideoPickerStage$1 = { "display_name": "Video Picker", "inputs": { "append_results": { "name": "Append results" }, "batch": { "name": "Batch" }, "pool": { "name": "Pool" }, "selected_index": { "name": "Selected index" } }, "outputs": { "0": { "name": "Video" } } };
 const ComfyTV_Scene3DStage$1 = { "display_name": "3D Scene", "outputs": { "0": { "name": "Image", "tooltip": "Last captured frame (selected channel)." }, "1": { "name": "Video", "tooltip": "Last recorded clip (selected channel, webm)." }, "2": { "name": "Images", "tooltip": "All captures from the last Capture — one per scene camera." } } };
+const ComfyTV_CanvasStage$1 = { "display_name": "Canvas", "inputs": { "image": { "name": "Image", "tooltip": "Optional — use an upstream image as the initial canvas content." } }, "outputs": { "0": { "name": "Image", "tooltip": "Composite of all visible canvas layers." }, "1": { "name": "Images", "tooltip": "Per-layer renders from the latest capture." } } };
 const ComfyTV_LayerEditorStage$1 = { "display_name": "Layer Editor", "outputs": { "0": { "name": "Image", "tooltip": "Composited document (all visible layers)." }, "1": { "name": "Images", "tooltip": "Per-layer renders from the last Capture - one per visible layer." } } };
 const ComfyTV_PosterStage$1 = { "display_name": "Poster", "inputs": { "images": { "name": "Images", "tooltip": "Connected images fill the poster's image slots; double-click an image box on the card to re-pin its source." } }, "outputs": { "0": { "name": "Image", "tooltip": "The rendered poster." } } };
 const ComfyTV_StoryboardEditorStage$1 = { "display_name": "Storyboard Editor", "inputs": { "storyboard": { "name": "storyboard", "tooltip": "Optional - connect a Storyboard node to import its shots as boards." }, "images": { "name": "images", "tooltip": "Optional - connect an images batch to seed one board per image." } }, "outputs": { "0": { "name": "Image", "tooltip": "Composite of the cover board." }, "1": { "name": "Images", "tooltip": "One composite per board, in shot order." }, "2": { "name": "Video", "tooltip": "The last exported animatic video (boards timed back-to-back)." } } };
@@ -67376,6 +67377,7 @@ const enNodeDefs = {
   ComfyTV_AudioPickerStage: ComfyTV_AudioPickerStage$1,
   ComfyTV_VideoPickerStage: ComfyTV_VideoPickerStage$1,
   ComfyTV_Scene3DStage: ComfyTV_Scene3DStage$1,
+  ComfyTV_CanvasStage: ComfyTV_CanvasStage$1,
   ComfyTV_LayerEditorStage: ComfyTV_LayerEditorStage$1,
   ComfyTV_PosterStage: ComfyTV_PosterStage$1,
   ComfyTV_StoryboardEditorStage: ComfyTV_StoryboardEditorStage$1,
@@ -67558,6 +67560,7 @@ const ComfyTV_VideoUpscaleStage = { "display_name": "视频高清", "inputs": { 
 const ComfyTV_AudioPickerStage = { "display_name": "音频选择器", "inputs": { "append_results": { "name": "追加结果" }, "batch": { "name": "批次" }, "pool": { "name": "池" }, "selected_index": { "name": "选中索引" } }, "outputs": { "0": { "name": "音频" } } };
 const ComfyTV_VideoPickerStage = { "display_name": "视频选择器", "inputs": { "append_results": { "name": "追加结果" }, "batch": { "name": "批次" }, "pool": { "name": "池" }, "selected_index": { "name": "选中索引" } }, "outputs": { "0": { "name": "视频" } } };
 const ComfyTV_Scene3DStage = { "display_name": "3D 场景", "outputs": { "0": { "name": "图像", "tooltip": "最近一次截取的画面（所选通道）。" }, "1": { "name": "视频", "tooltip": "最近一次录制的片段（所选通道，webm）。" }, "2": { "name": "图像组", "tooltip": "最近一次截取的全部画面——每个场景相机一张。" } } };
+const ComfyTV_CanvasStage = { "display_name": "画板", "inputs": { "image": { "name": "图像", "tooltip": "可选 — 将上游图像作为画板的初始内容。" } }, "outputs": { "0": { "name": "图像", "tooltip": "画板中所有可见图层的合成图。" }, "1": { "name": "图像组", "tooltip": "最近一次截取的逐层画面。" } } };
 const ComfyTV_LayerEditorStage = { "display_name": "图层编辑器", "outputs": { "0": { "name": "图像", "tooltip": "合成后的画面（所有可见图层）。" }, "1": { "name": "图像组", "tooltip": "最近一次截取的逐层画面——每个可见图层一张。" } } };
 const ComfyTV_PosterStage = { "display_name": "排版海报", "inputs": { "images": { "name": "图组", "tooltip": "接入的图片按槽位供海报元素取用；在卡片上双击图片框可改选图源。" } }, "outputs": { "0": { "name": "图像", "tooltip": "渲染完成的海报。" } } };
 const ComfyTV_StoryboardEditorStage = { "display_name": "故事板工作台", "inputs": { "storyboard": { "name": "分镜", "tooltip": "可选 — 连接 Storyboard 节点后可一键导入分镜为画板。" }, "images": { "name": "图组", "tooltip": "可选 — 连接图组后可一键铺板（每张图一块板）。" } }, "outputs": { "0": { "name": "图像", "tooltip": "封面画板的合成图。" }, "1": { "name": "图像组", "tooltip": "每块画板一张合成图，按镜头顺序排列。" }, "2": { "name": "视频", "tooltip": "最近一次导出的动画稿视频（按板时长串片）。" } } };
@@ -67740,6 +67743,7 @@ const zhNodeDefs = {
   ComfyTV_AudioPickerStage,
   ComfyTV_VideoPickerStage,
   ComfyTV_Scene3DStage,
+  ComfyTV_CanvasStage,
   ComfyTV_LayerEditorStage,
   ComfyTV_PosterStage,
   ComfyTV_StoryboardEditorStage,
@@ -90541,7 +90545,7 @@ const _sfc_main$4G = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-D_VFk9iz.mjs"),
+      loader: () => import("./AgentPanelRoot-D7LUo6JO.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -160988,7 +160992,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-CPUTrMDJ.mjs");
+    const { TGALoader } = await import("./TGALoader-DrO4-BMY.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -161001,7 +161005,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-Ct10jSy3.mjs");
+      const { MTLLoader } = await import("./MTLLoader-ISq3hkTi.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -161010,7 +161014,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-DlBVhIl0.mjs");
+    const { STLLoader } = await import("./STLLoader-DulpRS_j.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -161018,7 +161022,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-CAlbinK9.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-C7dqDzW1.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -270074,4 +270078,4 @@ export {
   DropdownMenuRadioItem_default as y,
   DropdownMenuRoot_default as z
 };
-//# sourceMappingURL=main-BHQFv1zM.mjs.map
+//# sourceMappingURL=main-CHEf0ixJ.mjs.map

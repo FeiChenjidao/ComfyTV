@@ -69,8 +69,10 @@ beforeEach(() => {
 describe('stageDisplayName', () => {
   it('resolves the locale display name from nodeDefs', () => {
     expect(stageDisplayName('ComfyTV.VideoColorStage')).toBe('Video Color')
+    expect(stageDisplayName('ComfyTV.CanvasStage')).toBe('Canvas')
     localeMock.value = 'zh'
     expect(stageDisplayName('ComfyTV.VideoColorStage')).toBe('视频调色')
+    expect(stageDisplayName('ComfyTV.CanvasStage')).toBe('画板')
   })
 
   it('falls back to the node_id suffix for unknown kinds', () => {

@@ -2125,6 +2125,25 @@
       }
     }
   },
+  "ComfyTV_CanvasStage": {
+    "display_name": "画板",
+    "inputs": {
+      "image": {
+        "name": "图像",
+        "tooltip": "可选 — 将上游图像作为画板的初始内容。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像",
+        "tooltip": "画板中所有可见图层的合成图。"
+      },
+      "1": {
+        "name": "图像组",
+        "tooltip": "最近一次截取的逐层画面。"
+      }
+    }
+  },
   "ComfyTV_LayerEditorStage": {
     "display_name": "图层编辑器",
     "outputs": {
