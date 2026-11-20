@@ -20,4 +20,5 @@ To add your own workflow see [docs/custom-workflows.md](../../docs/custom-workfl
 
 ## What's here today
 
-Nothing — current Qwen / Flux storyboard options are hand-coded stubs in `runners/__init__.py`. Drop a workflow + config here to replace them.
+- **Online GPT Storyboard** (`online-gpt-storyboard.json` + `.api.json` + `_preset.json`) — default. Produces the 16-field shot list online without loading a local LLM.
+- **Local Qwen3 Storyboard** (`local-qwen3-storyboard.json` + `_preset.json`) — local fallback.

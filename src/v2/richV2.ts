@@ -106,6 +106,10 @@ const CONFIGS: Record<string, FxShellConfig> = {
     titleKey: 'v2.rich.layerEditor', icon: ICON_LAYERED,
     card: markRaw(LayerEditorStageCard), hasRun: false, plain: true, minW: 520, minH: 620,
   },
+  'ComfyTV.CanvasStage': {
+    titleKey: 'v2.rich.canvas', icon: ICON_LAYERED,
+    card: markRaw(LayerEditorStageCard), hasRun: false, plain: true, minW: 520, minH: 620,
+  },
   'ComfyTV.MaterialStage': {
     titleKey: 'v2.rich.material', icon: ICON_MATERIAL,
     card: markRaw(MaterialStageCard), hasRun: true, plain: true, hostClass: 'v2-fx-seg',

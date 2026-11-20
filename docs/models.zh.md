@@ -14,6 +14,7 @@ ComfyUI 通常会在首次启动时自动建好所有子目录;缺哪个手动�
 
 | 工作流 | 文件 | 目录 |
 |---|---|---|
+| **Online GPT Text / Storyboard** | *(API — 无本地模型)* | — |
 | **Local Qwen3 4B** | `qwen_3_4b.safetensors` | `text_encoders/` |
 
 下载:<https://huggingface.co/Comfy-Org/flux2-klein/tree/main/split_files/text_encoders>
@@ -72,6 +73,7 @@ Run 前在 ComfyUI / 节点设置里配好对应 API 凭证。
 
 | 工作流 | 文件 | 目录 |
 |---|---|---|
+| **Online Sonilo Music 1.5** | *(API — 无本地模型)* | — |
 | **ACE-Step v1 Song** | `ace_step_v1_3.5b.safetensors` | `checkpoints/` |
 | **MiniMax Music 3** | `minimax_music3_dit_fp16.safetensors`、`minimax_music3_text_encoder_pruned_int8_convrot.safetensors`、`minimax_music3_dav.safetensors` | `diffusion_models/`、`text_encoders/`、`vae/` |
 
@@ -99,24 +101,23 @@ Run 前在 ComfyUI 里配好 Comfy Org / Tripo / Rodin / Meshy API。
 
 | 工作流 | 文件 | 目录 |
 |---|---|---|
+| **Online Qwen Image 3 Edit**(image-edit) | *(API — 无本地模型)* | — |
+| **Online GPT Material Estimate**(material) | *(API — 无本地模型)* | — |
+| **Online GPT Erase**(erase) | *(API — 无本地模型)* | — |
+| **Online Bria Cutout**(cutout) | *(API — 无本地模型)* | — |
+| **WaveSpeed / Magnific**(upscale) | *(API — 无本地模型)* | — |
 | **Flux Canny Edit**(image-edit) | `flux1-canny-dev.safetensors`、`t5xxl_fp16.safetensors` *(或 `t5xxl_fp8_e4m3fn_scaled.safetensors`)*、`clip_l.safetensors`、`ae.safetensors` | `diffusion_models/`、`text_encoders/`、`text_encoders/`、`vae/` |
 | **Qwen Image 2.1 Edit**(image-edit) | `qwen_image_2.1_int8_convrot.safetensors`、`qwen3vl_8b_int8_convrot.safetensors`、`qwen_image_2.1_vae_bf16.safetensors`,和图像 stage 的 Qwen Image 2.1 工作流共用 | `diffusion_models/`、`text_encoders/`、`vae/` |
 | **Flux Fill Inpaint**(inpaint) | `flux1-fill-dev.safetensors`、t5 + clip\_l + ae(同上) | `diffusion_models/`、`text_encoders/`、`text_encoders/`、`vae/` |
 | **Fooocus SDXL Inpaint**(inpaint) | `juggernautXL_version6Rundiffusion.safetensors`、`fooocus_inpaint_head.pth` | `checkpoints/`、`inpaint/` |
 | **Flux Fill Outpaint**(outpaint) | 同 Flux Fill Inpaint | 同 |
 | **Fooocus SDXL Outpaint**(outpaint) | 同 Fooocus SDXL Inpaint | 同 |
-| **LaMa Erase**(erase) | `big-lama.pt` | `inpaint/` |
-| **BiRefNet Cutout**(cutout) | `birefnet.safetensors` | `background_removal/` |
-| **Qwen Image 2.1 Cutout**(cutout,生成式) | `qwen_image_2.1_int8_convrot.safetensors`、`qwen3vl_8b_int8_convrot.safetensors`、`qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`、`text_encoders/`、`vae/` |
-| **Ultrasharp 4x**(upscale) | `4x-UltraSharp.pth` | `upscale_models/` |
 
 下载:
 - Flux dev:<https://huggingface.co/Comfy-Org/flux1-dev>
 - t5xxl / clip_l:<https://huggingface.co/comfyanonymous/flux_text_encoders>
 - VAE(ae.safetensors):<https://huggingface.co/Comfy-Org/Lumina_Image_2.0_Repackaged>
-- LaMa Erase:需要安装 [`Acly/comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes) 来提供 `INPAINT_LoadInpaintModel` 节点 + 仓库里的 `big-lama.pt`。
 - Fooocus inpaint head:Fooocus inpaint patch 自带(`fooocus_inpaint_head.pth`)。
-- BiRefNet:ComfyUI 核心原生支持(`LoadBackgroundRemovalModel` + `RemoveBackground`);<https://huggingface.co/Comfy-Org/BiRefNet>
 
 ---
 
@@ -148,7 +149,6 @@ Run 前在 ComfyUI 里配好 Comfy Org / Tripo / Rodin / Meshy API。
 
 少数工作流依赖第三方 ComfyUI custom node:
 
-- **LaMa Erase** → [`Acly/comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes)
 - **Fooocus SDXL Inpaint / Outpaint** → 用的 `INPAINT_*` 节点也由`comfyui-inpaint-nodes` 提供。
 - **Audio Stem Split** 分轨(人声/鼓/贝斯/……)是**内置能力**——不需要第三方节点,也不需要下载模型。
 

@@ -13,17 +13,17 @@ Legend: ✅ done · ⏳ pending.
 | Feature | Notes |
 |---------|-------|
 | **Image · NanoBanana 2.1 / GPT Image 2.6 / Seedream 5.5** | API-backed image generation (Gemini / OpenAI / ByteDance); optional reference images. |
-| **Image Edit · Flux Canny Edit** | Prompt-driven image editing. |
+| **Image Edit · Online Qwen Image 3 Edit / Flux Canny Edit** | Online editing by default; local Flux fallback. |
 | **Inpaint · Flux Fill Inpaint** + **Fooocus SDXL Inpaint** | Mask-driven regeneration (mask painter produces the mask). |
-| **Erase · LaMa Erase** | Promptless object removal. Requires `Acly/comfyui-inpaint-nodes` + `big-lama.pt`. |
+| **Erase · Online GPT Erase** | Online promptless object removal with no local model. |
 | **Relight · light-ball + Image Stage** | A pure-frontend 3D light-ball node renders the lighting reference in the browser; pair it with any Image Stage workflow that accepts a second reference. |
-| **Cutout · BiRefNet Cutout** | Background removal via ComfyUI core's BiRefNet. Outputs PNG with real alpha. |
+| **Cutout · Online Bria Cutout** | Online background removal with real-alpha PNG output. |
 | **Outpaint · Flux Fill Outpaint** + **Fooocus SDXL Outpaint** | Canvas extension. |
-| **Upscale · Ultrasharp 4x** | 4x-UltraSharp GAN upscale. |
+| **Upscale · WaveSpeed / Magnific** | Online super-resolution and creative upscale. |
 | **Multiangle · Qwen Edit 2511 Multiangle** | Qwen Image-Edit + Multiangle LoRA, driven by the 3D camera. |
 | **Video · Local LTX 2.3** (T2V + I2V + FLF2V + IA2V) | Fast; recommended default. T2V from text only; I2V needs an image; FLF2V interpolates between two keyframes; IA2V follows an audio track. |
 | **Video · Local MiniMax H3** (T2V + FLF2V + R2V) | Video **with sound** in one pass. R2V takes multiple image/audio references for identity-locked shots. Lightning LoRAs wired in (~half the render time). |
-| **Audio · MiniMax Music 3** | Higher-quality text-to-music alongside ACE-Step. |
+| **Audio · Online Sonilo Music 1.5 / MiniMax Music 3** | Online text-to-music by default; local MiniMax fallback. |
 | **3D Model · Tripo / Tripo P2 / Rodin Gen25 / Meshy Multi** | Multiview / multi-image → mesh via Tripo, Rodin Gen-2.5, or Meshy API, as builtin `model` workflows. |
 | **Director + master timeline** | Shot-by-shot production console: generated clips, per-clip transitions, shared reference cast, content-addressed re-renders, ruler + playhead + unified film preview. |
 | **MCP server + ComfyTV Bot** | 45-tool agent endpoint (stages + native graph) and the embedded sidebar agent with four providers (Claude Code / Codex / Qwen Code / Local LLM), attachments and per-provider models. |
@@ -32,8 +32,8 @@ Legend: ✅ done · ⏳ pending.
 | **Keyboard-first editing** | ←/→ frame stepping (±1) + Home/End on video track widgets; numeric sliders accept typed values with clamping. |
 | **Video editing · Clip / Crop / Resize / Extract Frame / Demux** | Real edits on the source clip — trim to range, crop a region, resize, pull a still, split audio from video. No GPU or model needed. |
 | **Extend a video** (↪ action) | One-click chain: extract the source's last frame → spawn a new Video Stage with that frame as the I2V starting image, fill prompt and Run. |
-| **Text · Qwen3 4B** | Local LLM text generation. |
-| **Audio Stage · ACE-Step v1 Music** | Text-to-music via ACE-Step v1 3.5B (native to ComfyUI core). Free-form tags + optional lyrics for vocal tracks + per-stage duration slider. |
+| **Text / Storyboard · Online GPT** | Online text and shot-list generation by default; local Qwen3 4B fallback. |
+| **Audio Stage · ACE-Step v1 Music** | Local text-to-music fallback with free-form tags, optional lyrics, and a per-stage duration slider. |
 | **Crop / Rotate / Mirror** | Browser-side, instant, no GPU. |
 | **Grid Split** | Slice image → set, browser-side. |
 | **Panorama viewer + Current/Multi-View capture** | Runs in the browser. |

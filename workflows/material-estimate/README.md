@@ -12,9 +12,10 @@ Contract for custom workflows linked to this stage:
   clearcoatRoughness, ior, emissive, emissiveIntensity`
   (result type `graph_output_first` on the text-producing node).
 
-Default `qwen3vl-estimate` is core-only: `CLIPLoader(qwen3vl_8b) →
-TextGenerate → PreviewAny`. Model: `qwen3vl_8b_fp8_scaled.safetensors`
-(Comfy-Org) in `models/clip/` or `models/text_encoders/`.
+Default **Online GPT Material Estimate** uses `LoadImage → OpenAIChatNode →
+PreviewAny` and needs no local VLM download. `qwen3vl-estimate` remains as a
+local fallback: `CLIPLoader(qwen3vl_8b) → TextGenerate → PreviewAny`, using
+`qwen3vl_8b_fp8_scaled.safetensors` in `models/clip/` or `models/text_encoders/`.
 
 gemma4_e4b was evaluated as an alternative and rejected: through both the
 default template and the LTX2-style `<image_soft_token>` template it returned

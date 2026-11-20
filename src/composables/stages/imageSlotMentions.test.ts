@@ -133,12 +133,19 @@ describe('mention style', () => {
     expect(normalizeMentionStyle('bogus')).toBe('natural')
     expect(normalizeMentionStyle('minimax_tags')).toBe('minimax_tags')
     expect(normalizeMentionStyle('qwen_tags')).toBe('qwen_tags')
+    expect(normalizeMentionStyle('qwen_api_tags')).toBe('qwen_api_tags')
   })
 
   it('qwen_tags emits <imageN> for images and falls back to locale text otherwise', () => {
     expect(mentionOrdinalText('qwen_tags', zh)(1)).toBe('<image1>')
     expect(mentionOrdinalText('qwen_tags', zh, 'image')(4)).toBe('<image4>')
     expect(mentionOrdinalText('qwen_tags', zh, 'video')(2)).toBe('图2')
+  })
+
+  it('qwen_api_tags emits @ImageN for partner API nodes', () => {
+    expect(mentionOrdinalText('qwen_api_tags', zh)(1)).toBe('@Image1')
+    expect(mentionOrdinalText('qwen_api_tags', zh, 'image')(3)).toBe('@Image3')
+    expect(mentionOrdinalText('qwen_api_tags', zh, 'video')(2)).toBe('图2')
   })
 
   it('natural style keeps the locale text', () => {

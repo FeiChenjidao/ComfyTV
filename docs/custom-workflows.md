@@ -25,7 +25,7 @@ Next to the link button, **⬆ Upload workflow** imports a `.json` file from dis
 
 ## Team sync via a public Git repo (LAN · full canvases)
 
-To share **your own full graphs** (bottom-bar **Workflows**, not stage dropdowns): clone a dedicated public Git repo as `user/default/workflows`, then push/pull with the scripts in that repo. Starter kit: [`team-workflows/README.md`](../team-workflows/README.md) (Chinese: [team-workflow-git.zh.md](team-workflow-git.zh.md)).
+To share **your own full graphs**, publish them from the bottom bar into the dedicated `custom_nodes/ComfyTV/example_workflows` template repo. Never clone the template repo into `user/<id>/workflows`. Starter kit: [`team-workflows/README.md`](../team-workflows/README.md) (Chinese: [team-workflow-git.zh.md](team-workflow-git.zh.md)).
 
 Stage node dropdowns still use `user/comfytv/workflows/<kind>/` below — a separate library.
 

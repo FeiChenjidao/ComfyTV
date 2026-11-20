@@ -469,6 +469,14 @@ describe('spawnFollowUpStage image handlers', () => {
       .toHaveBeenCalledWith('ComfyTV.MaterialStage')
   })
 
+  it('canvas action spawns a CanvasStage and wires the image input', () => {
+    const src = makeNode()
+    spawnFollowUpStage(src, 'image', 'canvas')
+    expect((window as any).LiteGraph.createNode)
+      .toHaveBeenCalledWith('ComfyTV.CanvasStage')
+    expect(src.connect).toHaveBeenCalledWith(0, created[0], 0)
+  })
+
   it('image-batch handlers use source slot 1', () => {
     const src = makeNode()
     spawnFollowUpStage(src, 'image-batch', 'panorama')

@@ -4,6 +4,10 @@
     "captureHint": "Composite the layers and send to the node output",
     "saveToLibraryHint": "Export as PSD to the asset library"
   },
+  "canvas": {
+    "openHint": "Double-click to open the canvas",
+    "emptyHint": "Double-click to start drawing"
+  },
   "customSplit": {
     "connectImage": "Connect an input image",
     "splitting": "Splitting into {n} regions",
@@ -129,10 +133,11 @@
       "workflowLoading": "Loading…",
       "workflowOpenFailed": "Failed to open workflow",
       "templates": "Templates",
+      "templateOpenHint": "Creates and opens an independent local copy; saving never modifies the template.",
       "localWorkflows": "Workflows",
       "templatesEmpty": "No cloud templates yet. Click Connect or Update templates to pull.",
       "localWorkflowsEmpty": "No local workflows. Save a graph into this user’s workflows folder to see it here.",
-      "gitNoRepo": "This account has no team workflows Git yet. Click Connect to clone into this user’s workflows folder (each multi-user account is separate).",
+      "gitNoRepo": "The team template repo is not connected. Click Connect to clone it into ComfyTV’s dedicated template directory, outside user workflows.",
       "gitNoGit": "git was not found on this machine — install it and add it to PATH.",
       "gitSynced": "In sync with remote",
       "gitBehind": "{n} cloud template commit(s) ready to overwrite",
@@ -168,13 +173,13 @@
       "gitStateDiverged": "Diverged",
       "gitLegend": "Edited templates commit the same way as workflows on the right. Update templates overwrites those local edits.",
       "gitTokenTitle": "Configure team Git token",
-      "gitTokenHint": "Paste the GitHub PAT from your admin. Stored only on this machine under workflows — never committed to the plugin repo.",
+      "gitTokenHint": "Paste the GitHub PAT from your admin. It stays in ComfyTV’s dedicated template directory, outside user workflows.",
       "gitTokenPlaceholder": "github_pat_… or ghp_…",
       "gitTokenSave": "Save & continue",
       "gitTokenSaving": "Saving…",
       "gitTokenRequired": "Token is required",
       "gitTokenSaveFailed": "Failed to save token",
-      "gitAuthFailed": "This ComfyUI user’s GitHub token is invalid or expired. Paste a valid PAT (Contents: Read and write on the team repo). Each multi-user account stores its own token."
+      "gitAuthFailed": "The team template repo token is invalid or expired. Paste a valid PAT with Contents read/write access."
     },
     "stageHint": "Connect references, press ↑ to generate",
     "apiCostHint": "Estimated workflow API cost",
@@ -314,6 +319,7 @@
       "storyboard": "Storyboard · Story",
       "storyboardEditor": "Storyboard Studio · Story",
       "layerEditor": "Layer Editor · Image",
+      "canvas": "Canvas · Image",
       "material": "Material · 3D",
       "modelLoader": "Load Model · 3D",
       "meshPrimitive": "Primitive · 3D",
@@ -428,6 +434,7 @@
       "redraw": "Redraw",
       "erase": "Erase",
       "cutout": "Cutout",
+      "canvas": "Canvas",
       "grid": "Grid split",
       "panorama": "Panorama",
       "crop": "Crop",
@@ -1216,6 +1223,10 @@
       "material": {
         "label": "Material",
         "tooltip": "Spawn a Material node wired to this image — Run estimates PBR parameters (color, roughness, transparency…) from the picture via a local VLM"
+      },
+      "canvas": {
+        "label": "Canvas",
+        "tooltip": "Open this image in a standalone layered canvas"
       },
       "preset": {
         "label": "Presets",

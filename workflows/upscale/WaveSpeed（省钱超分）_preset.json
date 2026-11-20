@@ -1,10 +1,19 @@
 {
   "_comment": "Exported preset for the 'WaveSpeed（省钱超分）' workflow (kind=upscale). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
   "label": "WaveSpeed（省钱超分）",
+  "order": 1,
+  "is_default": true,
   "meta": {
     "prompt_required": false
   },
   "inputs": {
+    "9": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true,
+        "error": "Upscale needs an upstream image — wire one into this stage's image input."
+      }
+    },
     "18": {
       "target_resolution": {
         "from": "option:scale"

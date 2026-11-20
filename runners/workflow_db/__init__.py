@@ -13,9 +13,11 @@ from .importer import import_workflow, create_workflow
 from .labels import _is_gui_format, _label_from_stem, _safe_stem
 from .presets import _read_preset, _apply_preset_to_new_row
 from .link import (
+    instantiate_native_workflow_template,
     link_workflow,
     unlink_workflow,
     list_native_workflows,
+    list_template_workflows,
 )
 from .pull import (
     import_pulled_workflow,
@@ -56,9 +58,11 @@ __all__ = [
     "reset_workflow_to_preset",
     "import_workflow",
     "create_workflow",
+    "instantiate_native_workflow_template",
     "link_workflow",
     "unlink_workflow",
     "list_native_workflows",
+    "list_template_workflows",
     "import_pulled_workflow",
     "pulled_workflows",
     "build_preset",

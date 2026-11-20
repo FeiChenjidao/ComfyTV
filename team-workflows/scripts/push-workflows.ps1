@@ -7,7 +7,7 @@
   Commit message. Default: "chore: sync team workflows"
 
 .PARAMETER RepoRoot
-  Git repo root (usually ComfyUI\user\comfytv\workflows). Default: parent of scripts/.
+  Git repo root (usually custom_nodes\ComfyTV\example_workflows). Default: parent of scripts/.
 
 .EXAMPLE
   .\scripts\push-workflows.ps1

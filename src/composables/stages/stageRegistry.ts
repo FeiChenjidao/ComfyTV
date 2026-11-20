@@ -196,6 +196,7 @@ export const RICH_STAGE_CARDS: Record<string, any> = {
   'ComfyTV.MultiangleStage': MultiangleStageCard,
   'ComfyTV.RelightStage':    RelightStageCard,
   'ComfyTV.InpaintStage':    PainterStageCard,
+  'ComfyTV.CanvasStage':       LayerEditorStageCard,
   'ComfyTV.EraseStage':      PainterStageCard,
   'ComfyTV.CropStage':       CropStageCard,
   'ComfyTV.VideoClipStage':  VideoClipStageCard,
@@ -319,6 +320,7 @@ export const RICH_STAGE_CARDS: Record<string, any> = {
 
 export const FLEX_FILL_STAGES = new Set([
   'ComfyTV.LayerEditorStage',
+  'ComfyTV.CanvasStage',
   'ComfyTV.ScoreEditorStage',
   'ComfyTV.MidiEditorStage',
   'ComfyTV.ScoreStage',
@@ -355,6 +357,7 @@ export const RICH_STAGE_MIN_HEIGHTS: Record<string, number> = {
   'ComfyTV.MultiangleStage': 640,
   'ComfyTV.RelightStage':    640,
   'ComfyTV.InpaintStage':    640,
+  'ComfyTV.CanvasStage':         680,
   'ComfyTV.EraseStage':      640,
   'ComfyTV.CropStage':       620,
   'ComfyTV.VideoClipStage':  680,
@@ -516,6 +519,7 @@ export const RICH_STAGE_MIN_WIDTHS: Record<string, number> = {
   'ComfyTV.Scene3DStage': 960,
   'ComfyTV.BlenderSceneStage': 960,
   'ComfyTV.LayerEditorStage': 960,
+  'ComfyTV.CanvasStage': 960,
   'ComfyTV.LayerSeparationStage': 960,
   'ComfyTV.StoryboardEditorStage': 1080,
 }

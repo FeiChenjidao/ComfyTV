@@ -97,6 +97,104 @@ def test_shipped_preset_node_references_exist():
             )
 
 
+def test_shipped_api_sidecars_match_gui_workflow_nodes():
+    shipped = set(_shipped_json_paths())
+    for api_path in shipped:
+        if not api_path.name.endswith(".api.json"):
+            continue
+        workflow_path = api_path.with_name(api_path.name.removesuffix(".api.json") + ".json")
+        assert workflow_path in shipped
+        api = json.loads(api_path.read_text(encoding="utf-8"))
+        workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+        assert set(api) <= _node_ids(workflow)
+        gui_types = {str(node["id"]): node["type"] for node in workflow["nodes"]}
+        for node_id, node in api.items():
+            assert node["class_type"] == gui_types[node_id]
+
+
+def test_online_phase_one_and_two_workflows_use_partner_nodes():
+    expected = {
+        "text/online-gpt-text.json": "OpenAIChatNode",
+        "storyboard/online-gpt-storyboard.json": "OpenAIChatNode",
+        "material-estimate/online-gpt-material.json": "OpenAIChatNode",
+        "shot-images/online-qwen-image-3.json": "QwenImageTextToImageApi",
+        "audio/online-sonilo-music.json": "SoniloMusic15",
+        "image-edit/online-qwen-image-3-edit.json": "QwenImageEditApi",
+        "cutout/birefnet-cutout.json": "BriaRemoveImageBackground",
+        "erase/lama-erase.json": "OpenAIGPTImageNodeV3",
+    }
+    local_loaders = {
+        "CheckpointLoaderSimple", "UNETLoader", "CLIPLoader", "VAELoader",
+        "UpscaleModelLoader", "LoadBackgroundRemovalModel", "INPAINT_LoadInpaintModel",
+    }
+
+    for relative, partner_node in expected.items():
+        workflow = json.loads((WORKFLOWS_DIR / relative).read_text(encoding="utf-8"))
+        node_types = {node["type"] for node in workflow["nodes"]}
+        assert partner_node in node_types
+        assert not node_types & local_loaders
+
+
+def test_online_replacements_are_defaults_and_removed_workflows_stay_removed():
+    defaults = [
+        "text/online-gpt-text_preset.json",
+        "storyboard/online-gpt-storyboard_preset.json",
+        "material-estimate/online-gpt-material_preset.json",
+        "shot-images/online-qwen-image-3_preset.json",
+        "audio/online-sonilo-music_preset.json",
+        "image-edit/online-qwen-image-3-edit_preset.json",
+        "cutout/birefnet-cutout_preset.json",
+        "erase/lama-erase_preset.json",
+        "upscale/WaveSpeed（省钱超分）_preset.json",
+    ]
+    for relative in defaults:
+        preset = json.loads((WORKFLOWS_DIR / relative).read_text(encoding="utf-8"))
+        assert preset.get("is_default") is True
+
+    wavespeed = json.loads(
+        (WORKFLOWS_DIR / "upscale/WaveSpeed（省钱超分）_preset.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert wavespeed["inputs"]["9"]["image"]["from"] == "upstream_image:annotated[0]"
+
+    removed = [
+        "cutout/qwen-image-2.1-cutout.json",
+        "cutout/qwen-image-2.1-cutout_preset.json",
+        "upscale/ultrasharp-4x.json",
+        "upscale/ultrasharp-4x_preset.json",
+    ]
+    shipped = set(_shipped_json_paths())
+    for relative in removed:
+        path = WORKFLOWS_DIR / relative
+        assert not path.exists()
+        assert path not in shipped
+
+
+def test_online_phase_two_dynamic_input_contracts():
+    audio = json.loads(
+        (WORKFLOWS_DIR / "audio/online-sonilo-music.api.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert audio["2"]["inputs"]["duration"] == "custom"
+    assert audio["2"]["inputs"]["duration.seconds"] == 120
+    assert audio["3"]["inputs"]["format.quality"] == "V0"
+
+    erase = json.loads(
+        (WORKFLOWS_DIR / "erase/lama-erase.api.json").read_text(encoding="utf-8")
+    )
+    assert erase["9"]["inputs"]["model.markup"] == ["10", 0]
+    assert erase["9"]["inputs"]["model.markup_alpha"] == ["11", 0]
+
+    qwen_edit = json.loads(
+        (WORKFLOWS_DIR / "image-edit/online-qwen-image-3-edit_preset.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert qwen_edit["meta"]["mention_style"] == "qwen_api_tags"
+
+
 def test_shipped_model_image_slot_roles_match_bindings():
     expected = {
         "meshy-multi_preset.json": ["front", "left", "back", "right"],

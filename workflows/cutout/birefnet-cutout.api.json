@@ -1,0 +1,1 @@
+{"17":{"class_type":"LoadImage","inputs":{"image":"the_lily_veil.png"}},"22":{"class_type":"BriaRemoveImageBackground","inputs":{"image":["17",0],"moderation":"false","seed":0}},"18":{"class_type":"SaveImage","inputs":{"images":["22",0],"filename_prefix":"ComfyUI"}}}

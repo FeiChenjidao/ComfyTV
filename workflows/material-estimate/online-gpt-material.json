@@ -1,0 +1,75 @@
+{
+  "id": "comfytv-online-gpt-material",
+  "revision": 0,
+  "last_node_id": 3,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [40, 80],
+      "size": [320, 330],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": [1] },
+        { "name": "MASK", "type": "MASK", "links": null }
+      ],
+      "properties": { "cnr_id": "comfy-core", "Node name for S&R": "LoadImage" },
+      "widgets_values": ["example.png", "image"],
+      "widgets_values_named": { "image": "example.png", "upload": "image" }
+    },
+    {
+      "id": 2,
+      "type": "OpenAIChatNode",
+      "pos": [420, 80],
+      "size": [440, 440],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        { "name": "prompt", "type": "STRING", "widget": { "name": "prompt" }, "link": null },
+        { "name": "persist_context", "type": "BOOLEAN", "widget": { "name": "persist_context" }, "link": null },
+        { "name": "model", "type": "COMBO", "widget": { "name": "model" }, "link": null },
+        { "name": "images", "shape": 7, "type": "IMAGE", "link": 1 },
+        { "name": "files", "shape": 7, "type": "OPENAI_INPUT_FILES", "link": null },
+        { "name": "advanced_options", "shape": 7, "type": "OPENAI_CHAT_CONFIG", "link": null }
+      ],
+      "outputs": [{ "name": "STRING", "type": "STRING", "links": [2] }],
+      "properties": { "cnr_id": "comfy-core", "Node name for S&R": "OpenAIChatNode" },
+      "widgets_values": [
+        "You are a 3D material artist. Look at this close-up patch of a product photo and estimate physically-based rendering parameters for the surface material. Respond with ONLY a raw JSON object (no markdown, no explanation) with keys: color (hex sRGB), metalness (0-1), roughness (0-1), transmission (0-1), opacity (0-1), clearcoat (0-1), clearcoatRoughness (0-1), ior (1.0-2.333), emissive (hex sRGB), emissiveIntensity (0 or greater). If anything shows through the surface or it looks like glass or translucent plastic, transmission must be high. Polished metal means metalness near 1. Only use transmission 0 for fully opaque surfaces.",
+        false,
+        "gpt-5.6-terra"
+      ],
+      "widgets_values_named": {
+        "prompt": "You are a 3D material artist. Look at this close-up patch of a product photo and estimate physically-based rendering parameters for the surface material. Respond with ONLY a raw JSON object (no markdown, no explanation) with keys: color (hex sRGB), metalness (0-1), roughness (0-1), transmission (0-1), opacity (0-1), clearcoat (0-1), clearcoatRoughness (0-1), ior (1.0-2.333), emissive (hex sRGB), emissiveIntensity (0 or greater). If anything shows through the surface or it looks like glass or translucent plastic, transmission must be high. Polished metal means metalness near 1. Only use transmission 0 for fully opaque surfaces.",
+        "persist_context": false,
+        "model": "gpt-5.6-terra"
+      }
+    },
+    {
+      "id": 3,
+      "type": "PreviewAny",
+      "pos": [920, 80],
+      "size": [440, 320],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [{ "name": "source", "type": "*", "link": 2 }],
+      "outputs": [],
+      "properties": { "cnr_id": "comfy-core", "Node name for S&R": "PreviewAny" },
+      "widgets_values": [null, null, null]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 3, "IMAGE"],
+    [2, 2, 0, 3, 0, "STRING"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

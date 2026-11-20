@@ -58,7 +58,7 @@
 - **① 标号**,点击盖一个自动编号的标记。
 - **颜色** 应用于画笔 + 形状 + 标号;**Clear** 清空画布。
 
-**Inpaint** 根据提示词重绘蒙版区域,内置 `Flux Fill Inpaint`、`Fooocus SDXL Inpaint`。**Erase** 抹掉蒙版区域、用周围上下文填补,无提示词。内置 `LaMa Erase`(需要装 [`comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes) + `big-lama.pt`)。
+**Inpaint** 根据提示词重绘蒙版区域,内置 `Flux Fill Inpaint`、`Fooocus SDXL Inpaint`。**Erase** 抹掉蒙版区域、用周围上下文填补,无提示词。默认 `Online GPT Erase`,无需本地模型。
 
 ## 扩图(Outpaint)
 
@@ -66,7 +66,7 @@
 
 ## 高清(Upscale)
 
-提高分辨率。内置 `Ultrasharp 4x`(基于 4x-UltraSharp GAN)。
+提高分辨率。内置在线 `WaveSpeed` 和 `Magnific` 精确/创意放大。
 
 ## 多角度(Multiangle)
 
@@ -80,7 +80,7 @@
 
 ## 抠图(Cutout)
 
-去背景。接图、点运行,输出 PNG 带真实 alpha 透明通道。内置 `BiRefNet Cutout`,需要 `birefnet.safetensors` 放到 `models/background_removal/`(见 [models.zh.md](models.zh.md))。
+去背景。接图、点运行,输出 PNG 带真实 alpha 透明通道。默认 `Online Bria Cutout`,无需本地模型。
 
 
 ---

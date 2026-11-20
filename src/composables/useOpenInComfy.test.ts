@@ -6,6 +6,10 @@ const getUserData = vi.fn()
 const toastAdd = vi.fn()
 const getWorkflowByPath = vi.fn()
 const isActive = vi.fn()
+const createNewTemporary = vi.fn((path: string, graph: unknown) => ({
+  path,
+  load: vi.fn(async () => ({ activeState: graph })),
+}))
 
 vi.mock('@/lib/comfyApp', () => ({
   app: {
@@ -18,6 +22,8 @@ vi.mock('@/lib/comfyApp', () => ({
       workflow: {
         getWorkflowByPath: (...a: any[]) => getWorkflowByPath(...a),
         isActive: (...a: any[]) => isActive(...a),
+        createNewTemporary: (path: string, graph: unknown) =>
+          createNewTemporary(path, graph),
       },
       toast: { add: (...a: any[]) => toastAdd(...a) },
     },
@@ -32,6 +38,7 @@ import { LINK_TYPE_MANAGED, LINK_TYPE_NATIVE } from '@/api'
 
 import {
   nativeWorkflowRelPath,
+  openNewNativeWorkflowInComfy,
   openWorkflowInComfy,
   tryOpenNativeWorkflowInComfy,
   tryOpenWorkflowInComfy,
@@ -109,6 +116,31 @@ describe('openWorkflowInComfy (native link)', () => {
     await openWorkflowInComfy({ ...target, file_path: '/elsewhere/wf.json' })
     expect(fetchApi).toHaveBeenCalledWith('/comfytv/workflows/file?kind=image&label=WF')
     expect(loadGraphData).toHaveBeenCalledWith({ nodes: [] }, true, true, 'comfytv/image/WF')
+  })
+})
+
+describe('openNewNativeWorkflowInComfy', () => {
+  it('creates a real temporary workflow instead of pre-creating its file', async () => {
+    const graph = { id: 'new-id', nodes: [] }
+
+    await openNewNativeWorkflowInComfy('_local/template.json', graph)
+
+    expect(createNewTemporary).toHaveBeenCalledWith('_local/template.json', graph)
+    const workflow = createNewTemporary.mock.results[0]!.value
+    expect(loadGraphData).toHaveBeenCalledWith(graph, true, true, workflow)
+  })
+
+  it('increments the draft name when the same temporary tab already exists', async () => {
+    getWorkflowByPath.mockImplementation((path: string) => (
+      path === 'workflows/_local/template.json' ? { path } : null
+    ))
+
+    await openNewNativeWorkflowInComfy('_local/template.json', { nodes: [] })
+
+    expect(createNewTemporary).toHaveBeenCalledWith(
+      '_local/template 2.json',
+      { nodes: [] },
+    )
   })
 })
 

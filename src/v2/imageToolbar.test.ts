@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { StageState } from '@/stores/stageStore'
 import {
+  buildToolbar,
   downloadOutputImages,
   filenameFromUrl,
   outputImageItems,
@@ -53,6 +54,17 @@ describe('outputImageItems', () => {
   it('drops images without a url', () => {
     expect(outputImageItems(state(JSON.stringify({ images: [{ label: 'x' }, { url: '/a.png' }] }))))
       .toEqual([{ url: '/a.png', label: '' }])
+  })
+})
+
+describe('image toolbar', () => {
+  it('dispatches the canvas action from the top toolbar', () => {
+    const dispatch = vi.fn()
+    const bar = buildToolbar(dispatch)
+    const button = bar.querySelector<HTMLElement>('[data-action-id="canvas"]')
+    expect(button).toBeTruthy()
+    button!.click()
+    expect(dispatch).toHaveBeenCalledWith('canvas')
   })
 })
 

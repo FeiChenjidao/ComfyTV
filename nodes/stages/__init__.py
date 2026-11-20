@@ -114,7 +114,7 @@ from .geometry import (
 )
 from .scene3d import Scene3DStage
 from .blender import BlenderSceneStage, BlenderCameraStage, BlenderAnimationStage
-from .layer_editor import LayerEditorStage
+from .layer_editor import CanvasStage, LayerEditorStage
 from .poster import PosterStage
 from .storyboard_editor import StoryboardEditorStage
 from .material import MaterialStage
@@ -190,7 +190,7 @@ def stage_classes() -> list:
         LineArtStage,
         Scene3DStage,
         BlenderSceneStage, BlenderCameraStage, BlenderAnimationStage,
-        LayerEditorStage,
+        LayerEditorStage, CanvasStage,
         PosterStage,
         StoryboardEditorStage,
         MaterialStage,

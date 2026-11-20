@@ -37,7 +37,7 @@ To add your own workflow see [docs/custom-workflows.md](../../docs/custom-workfl
 
 ## Optional: Fooocus SDXL variant
 
-The Fooocus variant uses Acly's [`comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes) plugin (same plugin as LaMa Erase / Fooocus Inpaint). Before selecting "Fooocus SDXL Outpaint":
+The Fooocus variant uses Acly's [`comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes) plugin (the same plugin as Fooocus Inpaint). Before selecting "Fooocus SDXL Outpaint":
 
 1. **Install the plugin** (skip if already done for Erase / Inpaint):
    ```bash

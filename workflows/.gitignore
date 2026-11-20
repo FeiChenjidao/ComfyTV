@@ -4,17 +4,19 @@
 # this list in sync when you add new shipped workflows.
 
 *.json
-!测试专用工作流.json
 
 !audio/ace-step-v1-song.json
 !audio/ace-step-v1-song_preset.json
 !audio/minimax-music3.json
 !audio/minimax-music3_preset.json
+!audio/online-sonilo-music.json
+!audio/online-sonilo-music.api.json
+!audio/online-sonilo-music_preset.json
 !cutout/birefnet-cutout.json
+!cutout/birefnet-cutout.api.json
 !cutout/birefnet-cutout_preset.json
-!cutout/qwen-image-2.1-cutout.json
-!cutout/qwen-image-2.1-cutout_preset.json
 !erase/lama-erase.json
+!erase/lama-erase.api.json
 !erase/lama-erase_preset.json
 !image-edit/flux-canny-edit.json
 !image-edit/flux-canny-edit_preset.json
@@ -22,6 +24,9 @@
 !image-edit/qwen-edit-2511_preset.json
 !image-edit/qwen-image-2.1-edit.json
 !image-edit/qwen-image-2.1-edit_preset.json
+!image-edit/online-qwen-image-3-edit.json
+!image-edit/online-qwen-image-3-edit.api.json
+!image-edit/online-qwen-image-3-edit_preset.json
 !image/GPT_Image_2.6.json
 !image/GPT_Image_2.6_preset.json
 !image/NanoBanana 2.1.json
@@ -38,6 +43,9 @@
 !layer-separation/Seedream5.0Pro 图层分离_preset.json
 !material-estimate/qwen3vl-estimate.json
 !material-estimate/qwen3vl-estimate_preset.json
+!material-estimate/online-gpt-material.json
+!material-estimate/online-gpt-material.api.json
+!material-estimate/online-gpt-material_preset.json
 !model/tripo.json
 !model/tripo_preset.json
 !model/tripo-p2.json
@@ -59,16 +67,23 @@
 !shot-images/flux-schnell_preset.json
 !shot-images/local-z-image-turbo.json
 !shot-images/local-z-image-turbo_preset.json
+!shot-images/online-qwen-image-3.json
+!shot-images/online-qwen-image-3.api.json
+!shot-images/online-qwen-image-3_preset.json
 !split-part/sam3-prompt.json
 !split-part/sam3-prompt_preset.json
 !split-part/sam3-text.json
 !split-part/sam3-text_preset.json
 !storyboard/local-qwen3-storyboard.json
 !storyboard/local-qwen3-storyboard_preset.json
+!storyboard/online-gpt-storyboard.json
+!storyboard/online-gpt-storyboard.api.json
+!storyboard/online-gpt-storyboard_preset.json
 !text/local-qwen3-4b.json
 !text/local-qwen3-4b_preset.json
-!upscale/ultrasharp-4x.json
-!upscale/ultrasharp-4x_preset.json
+!text/online-gpt-text.json
+!text/online-gpt-text.api.json
+!text/online-gpt-text_preset.json
 !upscale/Magnific图像放大（创意）.json
 !upscale/Magnific图像放大（创意）_preset.json
 !upscale/magnific-v2.json

@@ -11,6 +11,7 @@ import {
   ApiSidecarResultSchema,
   CapabilitiesSchema,
   CapsPayloadSchema,
+  InstantiateNativeWorkflowResultSchema,
   FxClipPreviewSchema,
   ExpressionEvalSchema,
   ImportWorkflowResultSchema,
@@ -78,6 +79,7 @@ import type {
   MidiEnsureResult,
   MidiEventsResult,
   NativeWorkflow,
+  NativeWorkflowDraft,
   ProxyEnsureResult,
   PullWorkflowResult,
   RemoteNativeWorkflow,
@@ -172,6 +174,21 @@ export async function listNativeWorkflows(kind?: string): Promise<NativeWorkflow
   const q = kind ? `?kind=${encodeURIComponent(kind)}` : ''
   const res = await apiFetch(`/comfytv/workflows/native${q}`, ListNativeWorkflowsSchema)
   return res.workflows
+}
+
+export async function listTemplateWorkflows(): Promise<NativeWorkflow[]> {
+  const res = await apiFetch('/comfytv/workflows/templates', ListNativeWorkflowsSchema)
+  return res.workflows
+}
+
+export async function instantiateNativeWorkflowTemplate(path: string): Promise<NativeWorkflowDraft> {
+  const res = await apiSend(
+    '/comfytv/workflows/native/instantiate',
+    'POST',
+    InstantiateNativeWorkflowResultSchema,
+    { path },
+  )
+  return res.draft
 }
 
 export async function listServerNativeWorkflows(

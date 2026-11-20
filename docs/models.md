@@ -14,6 +14,7 @@ ComfyUI normally auto-creates these subfolders on first run; if one is missing, 
 
 | Workflow | Files | Folder |
 |---|---|---|
+| **Online GPT Text / Storyboard** | *(API — no local model)* | — |
 | **Local Qwen3 4B** | `qwen_3_4b.safetensors` | `text_encoders/` |
 
 Download: <https://huggingface.co/Comfy-Org/flux2-klein/tree/main/split_files/text_encoders>
@@ -72,6 +73,7 @@ Download:
 
 | Workflow | Files | Folder |
 |---|---|---|
+| **Online Sonilo Music 1.5** | *(API — no local model)* | — |
 | **ACE-Step v1 Song** | `ace_step_v1_3.5b.safetensors` | `checkpoints/` |
 | **MiniMax Music 3** | `minimax_music3_dit_fp16.safetensors`, `minimax_music3_text_encoder_pruned_int8_convrot.safetensors`, `minimax_music3_dav.safetensors` | `diffusion_models/`, `text_encoders/`, `vae/` |
 
@@ -99,24 +101,23 @@ Configure Comfy Org / Tripo / Rodin / Meshy API access in ComfyUI before Run.
 
 | Workflow | Files | Folder |
 |---|---|---|
+| **Online Qwen Image 3 Edit** (image-edit) | *(API — no local model)* | — |
+| **Online GPT Material Estimate** (material) | *(API — no local model)* | — |
+| **Online GPT Erase** (erase) | *(API — no local model)* | — |
+| **Online Bria Cutout** (cutout) | *(API — no local model)* | — |
+| **WaveSpeed / Magnific** (upscale) | *(API — no local model)* | — |
 | **Flux Canny Edit** (image-edit) | `flux1-canny-dev.safetensors`, `t5xxl_fp16.safetensors` *(or `t5xxl_fp8_e4m3fn_scaled.safetensors`)*, `clip_l.safetensors`, `ae.safetensors` | `diffusion_models/`, `text_encoders/`, `text_encoders/`, `vae/` |
 | **Qwen Image 2.1 Edit** (image-edit) | `qwen_image_2.1_int8_convrot.safetensors`, `qwen3vl_8b_int8_convrot.safetensors`, `qwen_image_2.1_vae_bf16.safetensors` — same set as the Image-stage Qwen Image 2.1 workflows | `diffusion_models/`, `text_encoders/`, `vae/` |
 | **Flux Fill Inpaint** (inpaint) | `flux1-fill-dev.safetensors`, t5 + clip\_l + ae (same as above) | `diffusion_models/`, `text_encoders/`, `text_encoders/`, `vae/` |
 | **Fooocus SDXL Inpaint** (inpaint) | `juggernautXL_version6Rundiffusion.safetensors`, `fooocus_inpaint_head.pth` | `checkpoints/`, `inpaint/` |
 | **Flux Fill Outpaint** (outpaint) | same as Flux Fill Inpaint | same |
 | **Fooocus SDXL Outpaint** (outpaint) | same as Fooocus SDXL Inpaint | same |
-| **LaMa Erase** (erase) | `big-lama.pt` | `inpaint/` |
-| **BiRefNet Cutout** (cutout) | `birefnet.safetensors` | `background_removal/` |
-| **Qwen Image 2.1 Cutout** (cutout, generative) | `qwen_image_2.1_int8_convrot.safetensors`, `qwen3vl_8b_int8_convrot.safetensors`, `qwen_image_2.1_vae_bf16.safetensors` | `diffusion_models/`, `text_encoders/`, `vae/` |
-| **Ultrasharp 4x** (upscale) | `4x-UltraSharp.pth` | `upscale_models/` |
 
 Download:
 - Flux dev: <https://huggingface.co/Comfy-Org/flux1-dev>
 - t5xxl / clip_l: <https://huggingface.co/comfyanonymous/flux_text_encoders>
 - VAE (ae.safetensors): <https://huggingface.co/Comfy-Org/Lumina_Image_2.0_Repackaged>
-- LaMa Erase: install [`Acly/comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes) for the `INPAINT_LoadInpaintModel` node + `big-lama.pt` from its repo.
 - Fooocus inpaint head: bundled with the Fooocus inpaint patch (`fooocus_inpaint_head.pth`).
-- BiRefNet: native to ComfyUI core (`LoadBackgroundRemovalModel` + `RemoveBackground`); <https://huggingface.co/Comfy-Org/BiRefNet>
 
 ---
 
@@ -148,7 +149,6 @@ Download:
 
 A few workflows rely on a third-party ComfyUI custom node:
 
-- **LaMa Erase** → [`Acly/comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes)
 - **Fooocus SDXL Inpaint / Outpaint** → uses the same `comfyui-inpaint-nodes` plugin for its `INPAINT_*` nodes.
 - **Audio Stem Split** (vocals / drums / bass / …) is **built in** — no third-party node or model download needed.
 

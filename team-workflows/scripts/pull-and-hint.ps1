@@ -4,11 +4,11 @@
   Pull the latest shared native workflows, then remind you to refresh the bottom bar.
 
 .DESCRIPTION
-  Repo root should be ComfyUI\user\default\workflows (not user\comfytv\workflows).
+  Repo root should be custom_nodes\ComfyTV\example_workflows.
 
 .EXAMPLE
   .\scripts\pull-and-hint.ps1
-  .\scripts\pull-and-hint.ps1 -RepoRoot "D:\ComfyUI\ComfyUI\user\default\workflows"
+  .\scripts\pull-and-hint.ps1 -RepoRoot "D:\ComfyUI\ComfyUI\custom_nodes\ComfyTV\example_workflows"
 #>
 param(
   [string]$RepoRoot = ""
@@ -21,7 +21,7 @@ if (-not $RepoRoot) {
 }
 
 if (-not (Test-Path (Join-Path $RepoRoot ".git"))) {
-  Write-Error "Not a git repo: $RepoRoot`nClone the team workflows repo into ComfyUI\user\default\workflows first."
+  Write-Error "Not a git repo: $RepoRoot`nConnect the team template repo from the ComfyTV bottom bar first."
 }
 
 Push-Location $RepoRoot

@@ -31,8 +31,7 @@ def _storyboard_llm_prompt(
 ) -> str:
     user_premise = (premise or '').strip() or '一段短片'
     chars = (characters or '').strip() or '- (无指定角色)'
-    return f"""<|im_start|>system
-你是专业的视频分镜脚本师。给定故事大纲和已知角色信息,你必须将其严格拆分为用户指定数量的分镜(不多不少)。每个分镜按以下 16 个字段严格输出。除字段内容外不输出任何解释、标题、Markdown。
+    return f"""你是专业的视频分镜脚本师。给定故事大纲和已知角色信息,你必须将其严格拆分为用户指定数量的分镜(不多不少)。每个分镜按以下 16 个字段严格输出。除字段内容外不输出任何解释、标题、Markdown。
 
 【输出格式】每个分镜按以下顺序,每个字段单独一行:
 
@@ -94,16 +93,14 @@ def _storyboard_llm_prompt(
 - 角色一致性:同一角色在不同镜头出现时,描述必须完全一致
 - 不输出任何前言、总结、Markdown 符号、代码块
 - 第一行直接是"镜号: 1"
-<|im_end|>
-<|im_start|>user
+
+【任务】
 故事大纲:{user_premise}
 总时长:{int(total_duration_s)}秒
 分镜数:{int(shot_count)}
 
 已知角色:
 {chars}
-<|im_end|>
-<|im_start|>assistant
 """
 
 
@@ -140,8 +137,7 @@ def _storyboard_regenerate_shot_prompt(
         blocks.append(f"{_shot_to_block(s)}{('  ' + marker) if marker else ''}")
     existing_blocks = "\n\n".join(blocks) if blocks else "(无)"
     hint_line = (user_hint or '').strip()
-    return f"""<|im_start|>system
-你是专业的视频分镜脚本师。用户已有完整分镜,现在要求你**只重写其中一个镜头**(标记为"需要重写的镜头"的那一个)。
+    return f"""你是专业的视频分镜脚本师。用户已有完整分镜,现在要求你**只重写其中一个镜头**(标记为"需要重写的镜头"的那一个)。
 
 输出规则:
 - **只输出一个镜头**,严格按 16 字段格式。
@@ -150,8 +146,8 @@ def _storyboard_regenerate_shot_prompt(
 - 时长保持不变,除非用户明确要求改长度。
 - 与上下文中相邻镜头的叙事连贯,角色描述保持一致。
 - 除字段内容外不输出任何解释。第一行直接是 "镜号: {target_idx}"。
-<|im_end|>
-<|im_start|>user
+
+【任务】
 故事大纲:{user_premise}
 
 已知角色:
@@ -162,8 +158,6 @@ def _storyboard_regenerate_shot_prompt(
 {existing_blocks}
 
 {('修改方向:' + hint_line) if hint_line else '请重写指定镜头,在保持叙事连贯的前提下给出新的画面 / 表演 / 镜头语言。'}
-<|im_end|>
-<|im_start|>assistant
 """
 
 

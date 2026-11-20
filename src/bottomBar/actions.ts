@@ -1,9 +1,18 @@
-import { listNativeWorkflows, type NativeWorkflow } from '@/api'
+import {
+  instantiateNativeWorkflowTemplate,
+  listNativeWorkflows,
+  listTemplateWorkflows,
+  type NativeWorkflow,
+  type NativeWorkflowDraft,
+} from '@/api'
 import { stageDisplayName } from '@/composables/sidebar/usePresetsPanel'
 import { canvasCenter, selectOnCanvas } from '@/composables/stages/assetLoaderNode'
 import { createNodeAt } from '@/composables/stages/spawnFollowUp'
 import { loadStageMeta } from '@/composables/stages/stageMeta'
-import { tryOpenNativeWorkflowInComfy } from '@/composables/useOpenInComfy'
+import {
+  tryOpenNativeWorkflowInComfy,
+  tryOpenNewNativeWorkflowInComfy,
+} from '@/composables/useOpenInComfy'
 
 import { openComfyTVSidebar } from './sidebarTabBridge'
 
@@ -227,6 +236,31 @@ export async function listBottomBarWorkflows(): Promise<NativeWorkflow[]> {
   })
 }
 
+export async function listBottomBarTemplates(): Promise<NativeWorkflow[]> {
+  const rows = await listTemplateWorkflows()
+  return [...rows].sort((a, b) => (
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    || b.mtime - a.mtime
+  ))
+}
+
 export async function openWorkflowRow(row: NativeWorkflow): Promise<boolean> {
   return tryOpenNativeWorkflowInComfy(row.path)
+}
+
+export interface OpenWorkflowTemplateDeps {
+  instantiate: (path: string) => Promise<NativeWorkflowDraft>
+  open: (path: string, graph: unknown) => Promise<boolean>
+}
+
+/** Open a read-only template as a new unsaved local workflow. */
+export async function openWorkflowTemplateRow(
+  row: NativeWorkflow,
+  deps: OpenWorkflowTemplateDeps = {
+    instantiate: instantiateNativeWorkflowTemplate,
+    open: tryOpenNewNativeWorkflowInComfy,
+  },
+): Promise<boolean> {
+  const draft = await deps.instantiate(row.path)
+  return deps.open(draft.path, draft.graph)
 }

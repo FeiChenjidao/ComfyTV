@@ -19,7 +19,52 @@ def native_dir(tmp_path, monkeypatch):
     d = tmp_path / "native" / "workflows"
     d.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(wdb.link, "_native_workflows_dir", lambda *_a, **_k: d)
+    monkeypatch.setattr(wdb.link, "_template_workflows_dir", lambda: d)
     return d
+
+
+class TestInstantiateNativeWorkflowTemplate:
+    def test_prepares_distinct_unsaved_local_workflow(self, native_dir):
+        source_data = {
+            "id": "template-id",
+            "revision": 12,
+            "nodes": [{"id": 1, "type": "X"}],
+            "groups": [],
+        }
+        source = native_dir / "embroidery.json"
+        source.write_text(json.dumps(source_data), encoding="utf-8")
+
+        result = wdb.instantiate_native_workflow_template("embroidery.json")
+
+        assert result["path"] == "_local/embroidery.json"
+        assert not (native_dir / result["path"]).exists()
+        assert result["graph"]["id"] != source_data["id"]
+        assert result["graph"]["revision"] == 0
+        assert result["graph"]["nodes"] == source_data["nodes"]
+        assert json.loads(source.read_text(encoding="utf-8")) == source_data
+
+    def test_uses_incrementing_name_without_creating_file(self, native_dir):
+        (native_dir / "a.json").write_text(GUI, encoding="utf-8")
+        local = native_dir / "_local"
+        local.mkdir()
+        existing = local / "a.json"
+        existing.write_text(GUI, encoding="utf-8")
+
+        result = wdb.instantiate_native_workflow_template("a.json")
+
+        assert result["path"] == "_local/a 2.json"
+        assert not (native_dir / result["path"]).exists()
+        assert existing.read_text(encoding="utf-8") == GUI
+
+    def test_rejects_non_gui_workflow(self, native_dir):
+        (native_dir / "api.json").write_text(API, encoding="utf-8")
+        with pytest.raises(ValueError, match="GUI-format"):
+            wdb.instantiate_native_workflow_template("api.json")
+
+    def test_rejects_path_traversal(self, native_dir, tmp_path):
+        (tmp_path / "outside.json").write_text(GUI, encoding="utf-8")
+        with pytest.raises(ValueError, match="outside"):
+            wdb.instantiate_native_workflow_template("../../outside.json")
 
 
 class TestLinkWorkflow:

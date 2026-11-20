@@ -25,6 +25,7 @@ def _load_mod():
 
     link = sys.modules["ComfyTV.runners.workflow_db.link"]
     link._native_workflows_dir = lambda *_a, **_k: None
+    link._template_workflows_dir = lambda: None
     link.resolve_request_user_id = lambda *_a, **_k: "default"
 
     common = types.ModuleType("ComfyTV.api._common")
@@ -94,6 +95,27 @@ def _init_repo(tmp: Path) -> Path:
 
 
 class TestNativeWorkflowGit:
+    def test_default_root_is_dedicated_template_library(self, tmp_path, monkeypatch):
+        mod = _load_mod()
+        templates = tmp_path / "example_workflows"
+        monkeypatch.setattr(mod, "_template_workflows_dir", lambda: templates)
+        assert mod._workflows_root() == templates
+
+    def test_archives_legacy_templates_but_preserves_local_files(self, tmp_path):
+        mod = _load_mod()
+        legacy = _init_repo(tmp_path)
+        local = legacy / "local-only.json"
+        local.write_text('{"nodes":[1]}', encoding="utf-8")
+
+        moved = mod._archive_legacy_template_repo(legacy)
+
+        assert moved == ["a.json"]
+        assert not (legacy / "a.json").exists()
+        assert (legacy / ".comfytv-template-backup" / "a.json").is_file()
+        assert local.is_file()
+        assert not (legacy / ".git").exists()
+        assert any(legacy.glob(".git.local-backup*"))
+
     def test_ignores_parent_comfyui_repo(self, tmp_path):
         """Subfolder of another git repo must NOT count as workflows library."""
         mod = _load_mod()
@@ -165,6 +187,29 @@ class TestNativeWorkflowGit:
         assert out2["ok"] is True
         assert out2.get("pushed") is True
         assert out2.get("paths") == ["b.json"]
+
+    def test_push_imports_user_workflow_into_template_repo(self, tmp_path, monkeypatch):
+        mod = _load_mod()
+        templates = _init_repo(tmp_path)
+        remote = tmp_path / "remote.git"
+        _git(tmp_path, "init", "--bare", str(remote))
+        _git(templates, "remote", "add", "origin", str(remote))
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=str(templates), capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        _git(templates, "push", "-u", "origin", branch)
+
+        user_workflows = tmp_path / "user-workflows"
+        (user_workflows / "_local").mkdir(parents=True)
+        source = user_workflows / "_local" / "local-new.json"
+        source.write_text('{"nodes":[2]}', encoding="utf-8")
+        monkeypatch.setattr(mod, "_native_workflows_dir", lambda *_a, **_k: user_workflows)
+
+        out = mod.push_paths(["_local/local-new.json"], "feat: publish", root=templates)
+
+        assert out["ok"] is True
+        assert (templates / "local-new.json").read_text(encoding="utf-8") == '{"nodes":[2]}'
 
     def test_setup_repo_clones_into_existing_dir(self, tmp_path):
         mod = _load_mod()

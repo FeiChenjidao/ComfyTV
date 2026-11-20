@@ -193,6 +193,7 @@ STAGE_META: dict[str, dict] = {
     'AssetTextLoaderStage':         {'kind': 'text',        'variant': 'loader'},
     'Scene3DStage':                 {'kind': 'image',       'variant': 'loader'},
     'LayerEditorStage':             {'kind': 'image',       'variant': 'loader'},
+    'CanvasStage':                  {'kind': 'image'},
     'PsdLayerTreeStage':            {'kind': 'image',       'variant': 'loader'},
     'StoryboardEditorStage':        {'kind': 'image',       'variant': 'loader'},
     'MaterialStage':                {'kind': 'material',     'workflow_kind': 'material-estimate'},

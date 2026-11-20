@@ -20,4 +20,5 @@
 
 ## 当前内置
 
-无 , 当前的 Qwen / Flux storyboard 选项是 `runners/__init__.py` 里手写的占位 stub。把工作流 + config 放进这个文件夹可以替代它们。
+- **Online GPT Storyboard**(`online-gpt-storyboard.json` + `.api.json` + `_preset.json`) , 默认。在线生成 16 字段镜头表,无需本地 LLM。
+- **Local Qwen3 Storyboard**(`local-qwen3-storyboard.json` + `_preset.json`) , 本地回退。

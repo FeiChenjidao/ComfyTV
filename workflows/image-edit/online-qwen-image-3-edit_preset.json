@@ -1,0 +1,40 @@
+{
+  "label": "Online Qwen Image 3 Edit",
+  "order": 1,
+  "is_default": true,
+  "description": "Online instruction editing with Qwen Image 3. The first image is the edit target and up to two additional images can be used as references; no local diffusion or vision model is loaded.",
+  "result": { "type": "ui_save_url", "node": "5" },
+  "meta": { "mention_style": "qwen_api_tags" },
+  "inputs": {
+    "1": {
+      "image": {
+        "from": "upstream_image:annotated[0]",
+        "required": true,
+        "error": "Image edit needs an edit target — add a reference image or wire one into the stage."
+      }
+    },
+    "2": { "image": { "from": "upstream_image:annotated[1]" } },
+    "3": { "image": { "from": "upstream_image:annotated[2]" } },
+    "4": {
+      "model.prompt": {
+        "from": "main_prompt",
+        "required": true,
+        "error": "Describe the edit, for example: change @image_1's background and keep the subject unchanged."
+      },
+      "model.negative_prompt": { "from": "option:negative_prompt", "default": "" },
+      "size": { "from": "literal:match input" },
+      "n": { "from": "literal:1", "cast": "int" },
+      "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" }
+    }
+  },
+  "prune_when_missing": [
+    {
+      "when": "upstream_image:value[1]",
+      "drop_upstream_of": [{ "node": "4", "input": "model.images.image_2" }]
+    },
+    {
+      "when": "upstream_image:value[2]",
+      "drop_upstream_of": [{ "node": "4", "input": "model.images.image_3" }]
+    }
+  ]
+}

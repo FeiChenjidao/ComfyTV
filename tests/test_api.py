@@ -207,6 +207,37 @@ class TestProjectRoutes:
         assert resp.status == 400
 
 
+class TestNativeWorkflowRoutes:
+    async def test_instantiate_template_prepares_unsaved_workflow(
+        self, client, tmp_path, monkeypatch
+    ):
+        from ComfyTV.runners import workflow_db as wdb
+
+        root = tmp_path / "workflows"
+        root.mkdir()
+        monkeypatch.setattr(wdb.link, "_native_workflows_dir", lambda *_a, **_k: root)
+        source = root / "template.json"
+        source.write_text(
+            json.dumps({"id": "template", "revision": 3, "nodes": []}),
+            encoding="utf-8",
+        )
+
+        resp = await client.post(
+            "/comfytv/workflows/native/instantiate", json={"path": "template.json"}
+        )
+
+        assert resp.status == 200
+        data = await resp.json()
+        assert data["draft"]["path"] == "_local/template.json"
+        assert not (root / data["draft"]["path"]).exists()
+        assert data["draft"]["graph"]["id"] != "template"
+        assert data["draft"]["graph"]["revision"] == 0
+
+    async def test_instantiate_template_rejects_missing_path(self, client):
+        resp = await client.post("/comfytv/workflows/native/instantiate", json={})
+        assert resp.status == 400
+
+
 class TestOutputsRoutes:
     async def test_list_outputs(self, client):
         from ComfyTV import storage

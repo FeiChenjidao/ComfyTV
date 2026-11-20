@@ -1,6 +1,7 @@
 {
   "_comment": "Exported preset for the 'Magnific图像放大（创意）' workflow (kind=upscale). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
   "label": "Magnific图像放大（创意）",
+  "order": 20,
   "inputs": {
     "2": {
       "image": {

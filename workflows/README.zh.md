@@ -17,20 +17,21 @@ workflows/
 
 | 文件夹 | 对应 Stage | 已测试的内置 | per-kind 文档 |
 |---|---|---|---|
-| `audio/`       | Audio Stage             | ACE-Step v1 Song | [README](audio/README.zh.md) |
+| `audio/`       | Audio Stage             | Online Sonilo Music 1.5；ACE-Step / MiniMax 本地回退 | [README](audio/README.zh.md) |
 | `image/`       | Image Stage              | NanoBanana 2.1、GPT Image 2.6、Seedream 5.5 | [README](image/README.zh.md) |
-| `image-edit/`  | Image Edit              | Flux Canny Edit | [README](image-edit/README.zh.md) |
+| `image-edit/`  | Image Edit              | Online Qwen Image 3 Edit；本地回退 | [README](image-edit/README.zh.md) |
 | `inpaint/`     | Inpaint                 | Flux Fill Inpaint（子图）；Fooocus SDXL Inpaint *（需装插件）* | [README](inpaint/README.zh.md) |
 | `outpaint/`    | Outpaint                | Flux Fill Outpaint；Fooocus SDXL Outpaint *（需装插件）* | [README](outpaint/README.zh.md) |
-| `upscale/`     | Upscale                 | Ultrasharp 4x (GAN) | [README](upscale/README.zh.md) |
-| `cutout/`      | Cutout                  | BiRefNet（子图） | [README](cutout/README.zh.md) |
-| `erase/`       | Erase                   | LaMa Erase（Acly inpaint-nodes 插件 + big-lama.pt） | [README](erase/README.zh.md) |
+| `upscale/`     | Upscale                 | WaveSpeed、Magnific（在线） | [README](upscale/README.zh.md) |
+| `cutout/`      | Cutout                  | Online Bria Cutout | [README](cutout/README.zh.md) |
+| `erase/`       | Erase                   | Online GPT Erase | [README](erase/README.zh.md) |
 | `multiangle/`  | Multiangle              | Qwen Edit 2511 Multiangle（fal Multiple-Angles LoRA） | [README](multiangle/README.zh.md) |
 | `panorama/`    | Panorama                | Qwen-Image 2512 + 360 LoRA、Qwen-Image-Edit 2511 Image-to-Panorama | [README](panorama/README.zh.md) |
-| `text/`        | Text Stage              | Local Qwen3 4B | [README](text/README.zh.md) |
+| `text/`        | Text Stage              | Online GPT Text；Local Qwen3 回退 | [README](text/README.zh.md) |
 | `video/`       | Video Stage             | LTX 2.3 T2V / I2V / FLF2V / IA2V | [README](video/README.zh.md) |
-| `storyboard/`  | Storyboard              | Local Qwen3 Storyboard | [README](storyboard/README.zh.md) |
-| `shot-images/` | Shot Images             | Flux Schnell、Local Z-Image Turbo | [README](shot-images/README.zh.md) |
+| `storyboard/`  | Storyboard              | Online GPT Storyboard；Local Qwen3 回退 | [README](storyboard/README.zh.md) |
+| `shot-images/` | Shot Images             | Online Qwen Image 3；Flux / Z-Image 回退 | [README](shot-images/README.zh.md) |
+| `material-estimate/` | Material | Online GPT Material Estimate；Qwen3-VL 回退 | [README](material-estimate/README.zh.md) |
 | `audio-vocal/` `audio-bg/` `timeline/` | 各种 | *暂无内置* | — |
 
 ## 加载一个新的工作流

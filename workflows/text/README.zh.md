@@ -14,7 +14,7 @@
 
 - 一个文本生成节点,**第 0 个输出**就是字符串。
 - 提示词输入接 stage 的提示词。
-- LLM / CLIP loader。
+- 一个在线 LLM 节点,或本地 LLM / CLIP loader。
 
 文本输出不走 `SaveImage`。结果类型是 `graph_output_first`,ComfyTV 读对应节点的第 0 个缓存输出。**必须在 config 里显式声明这一项** , 自动检测只找 save 类节点,文本工作流通常没有。
 
@@ -22,7 +22,8 @@
 
 ## 当前内置
 
-- **Local Qwen3 4B**(`local-qwen3-4b.json` + `_preset.json`) , Qwen3 4B chat LLM,走 `TextGenerate`(`clip_type=lumina2` 把文件按 chat 模型路由)。
+- **Online GPT Text**(`online-gpt-text.json` + `.api.json` + `_preset.json`) , 默认。走 ComfyUI 的 `OpenAIChatNode`,不下载模型、不占本地显存,会消耗 Comfy API credits。
+- **Local Qwen3 4B**(`local-qwen3-4b.json` + `_preset.json`) , 本地回退。Qwen3 4B chat LLM,走 `TextGenerate`。
 
 ## 需要的模型
 

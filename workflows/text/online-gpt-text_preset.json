@@ -1,0 +1,12 @@
+{
+  "label": "Online GPT Text",
+  "order": 1,
+  "is_default": true,
+  "description": "Online text generation through ComfyUI's OpenAI Chat partner node. No local model download or VRAM use; consumes Comfy API credits.",
+  "result": { "type": "graph_output_first", "node": "1" },
+  "inputs": {
+    "1": {
+      "prompt": { "from": "main_prompt", "default": "Hello." }
+    }
+  }
+}

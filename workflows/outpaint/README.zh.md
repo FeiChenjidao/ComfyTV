@@ -37,7 +37,7 @@
 
 ## 可选：Fooocus SDXL 变种
 
-Fooocus 变种走 Acly 的 [`comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes) 插件（同 LaMa Erase / Fooocus Inpaint 是同一个插件）。下拉框选「Fooocus SDXL Outpaint」前：
+Fooocus 变种走 Acly 的 [`comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes) 插件（和 Fooocus Inpaint 是同一个插件）。下拉框选「Fooocus SDXL Outpaint」前：
 
 1. **安装插件**（如果 Erase / Inpaint 已经装过就跳过）：
    ```bash

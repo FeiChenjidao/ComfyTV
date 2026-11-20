@@ -65,8 +65,8 @@
 
 文生音乐，自带两个工作流：
 
-- **ACE-Step v1 Song** —— 轻量默认。
-- **MiniMax Music 3** —— 更高质量的完整歌曲。
+- **Online Sonilo Music 1.5** —— 在线默认,不下载模型。
+- **ACE-Step v1 Song** / **MiniMax Music 3** —— 本地回退。
 
 共同参数：
 

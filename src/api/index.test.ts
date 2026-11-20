@@ -110,6 +110,33 @@ describe('workflow link api', () => {
     expect(fetchApi.mock.calls[0]![0]).toBe('/comfytv/workflows/native')
   })
 
+  it('listTemplateWorkflows uses the dedicated template endpoint', async () => {
+    const fetchApi = vi.fn(async () => json({
+      workflows: [{
+        path: 'a.json', name: 'a', mtime: 1, size: 2,
+        is_linked: false, linked_id: null,
+      }],
+    }))
+    const { listTemplateWorkflows } = await loadWithFetch(fetchApi)
+
+    await expect(listTemplateWorkflows()).resolves.toHaveLength(1)
+    expect(fetchApi).toHaveBeenCalledWith('/comfytv/workflows/templates', undefined)
+  })
+
+  it('instantiateNativeWorkflowTemplate prepares an unsaved local draft', async () => {
+    const draft = { path: '_local/a.json', graph: { id: 'new', nodes: [] } }
+    const fetchApi = vi.fn(async (_url: string, _init?: any) => json({
+      ok: true, draft,
+    }))
+    const { instantiateNativeWorkflowTemplate } = await loadWithFetch(fetchApi)
+
+    await expect(instantiateNativeWorkflowTemplate('templates/a.json')).resolves.toEqual(draft)
+    const [url, init] = fetchApi.mock.calls[0]!
+    expect(url).toBe('/comfytv/workflows/native/instantiate')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({ path: 'templates/a.json' })
+  })
+
   it('listServerNativeWorkflows hits the server proxy route with the kind', async () => {
     const fetchApi = vi.fn(async (_url: string, _init?: any) => json({
       workflows: [{

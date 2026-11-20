@@ -4,7 +4,7 @@
 
 Workflows in this folder appear in the **Erase** dropdown. The user paints over an object they want **removed**, clicks Run, and the object disappears — the painted region is filled from surrounding context with no prompt input. Distinct from **Inpaint**, where the user *describes what should appear* in the masked region.
 
-The shipped workflow uses LaMa via Acly's `comfyui-inpaint-nodes` plugin.
+The shipped workflow uses online GPT Image and no longer depends on LaMa or a third-party inpaint plugin.
 
 ## Stage inputs
 
@@ -18,29 +18,14 @@ The shipped workflow uses LaMa via Acly's `comfyui-inpaint-nodes` plugin.
 - A `LoadImage` for the source image, plus the mask via **either** of:
   - a separate `LoadImageMask` node (`channel = "alpha"`) — bind it to **Stage mask (painter output)**; or
   - the `LoadImage`'s own **MASK output** — bind the `LoadImage`'s `image` input to **Upstream image + painted mask (alpha)**; ComfyTV bakes the painted mask into the image's alpha channel at run time.
-- LaMa (or equivalent) inference: `INPAINT_LoadInpaintModel` + `INPAINT_InpaintWithModel` from the Acly plugin.
+- An online image-edit node that accepts an image + mask, or an equivalent local inpaint chain.
 
 To add your own workflow see [docs/custom-workflows.md](../../docs/custom-workflows.md); to configure per-node bindings, select the stage on the canvas and open the left **ComfyTV** sidebar — see [docs/sidebar-config-editor.md](../../docs/sidebar-config-editor.md).
 
 ## What's here today
 
-- **LaMa Erase** (`lama-erase.json` + `_preset.json`) — 5-node workflow: `LoadImage` + `LoadImageMask` → `INPAINT_LoadInpaintModel` + `INPAINT_InpaintWithModel` → `SaveImage`.
+- **Online GPT Erase** (`lama-erase.json` + `_preset.json`) — default. `LoadImage` + `LoadImageMask` → `OpenAIGPTImageNodeV3` → `SaveImage`. No local model or third-party plugin; consumes Comfy API credits.
 
-## Required plugin + model
+## Plugin + model
 
-**Plugin:** [Acly/comfyui-inpaint-nodes](https://github.com/Acly/comfyui-inpaint-nodes)
-
-```bash
-cd I:/ComfyUI/custom_nodes
-git clone https://github.com/Acly/comfyui-inpaint-nodes.git
-pip install opencv-python   # if not already installed
-```
-
-**Model:** [big-lama.pt (196 MB)](https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt) → `models/inpaint/`
-
-```bash
-cd I:/ComfyUI/models/inpaint
-curl -L -O https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt
-```
-
-Restart ComfyUI after both are in place.
+None. The filename is retained for compatibility with existing configs; the workflow itself is no longer LaMa.

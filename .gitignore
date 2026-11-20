@@ -21,6 +21,17 @@ runners/config.json
 
 workflows_backup/
 
+# Runtime team template repo; ComfyUI exposes its top-level JSON as ComfyTV templates.
+/example_workflows/
+
+# Local design/debug workspace and machine-specific service configuration.
+/.oil-ui/
+secrets/ignis-base-url
+
+# Superseded one-off node-guide helpers; keep local copies out of releases.
+/scripts/_check_catalog.py
+/scripts/_extract_catalog2.py
+
 .coverage
 coverage/
 .pytest_cache/

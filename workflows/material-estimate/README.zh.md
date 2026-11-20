@@ -11,9 +11,10 @@ JSON 块，合并进材质编辑器，用户在此基础上手调。
   clearcoatRoughness, ior, emissive, emissiveIntensity`
   （result 类型 `graph_output_first`，指向产出文本的节点）。
 
-默认 `qwen3vl-estimate` 纯核心节点：`CLIPLoader(qwen3vl_8b) → TextGenerate →
-PreviewAny`。模型 `qwen3vl_8b_fp8_scaled.safetensors`（Comfy-Org），放
-`models/clip/` 或 `models/text_encoders/`。
+默认 **Online GPT Material Estimate** 使用 `LoadImage → OpenAIChatNode →
+PreviewAny`,无需下载本地 VLM。`qwen3vl-estimate` 保留为本地回退：
+`CLIPLoader(qwen3vl_8b) → TextGenerate → PreviewAny`；模型
+`qwen3vl_8b_fp8_scaled.safetensors` 放 `models/clip/` 或 `models/text_encoders/`。
 
 gemma4_e4b 评估过但被否了：默认模板和 LTX2 式 `<image_soft_token>` 模板下，
 对明显不同的 patch 都返回一模一样的灰色估计——图片根本没影响输出。

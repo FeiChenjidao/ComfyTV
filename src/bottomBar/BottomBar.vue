@@ -26,10 +26,12 @@ import {
   SEARCH_CATEGORY_IDS,
   filterNodes,
   groupNodesByCategory,
+  listBottomBarTemplates,
   listBottomBarWorkflows,
   listComfyTVNodes,
   nativeWorkflowFolder,
   openWorkflowRow,
+  openWorkflowTemplateRow,
   spawnStageAtCenter,
   type NodeCatalogEntry,
   type SearchCategoryId,
@@ -48,6 +50,7 @@ const searchInput = ref<HTMLInputElement | null>(null)
 const catalog = ref<NodeCatalogEntry[]>([])
 const catalogLoading = ref(false)
 const workflows = ref<NativeWorkflow[]>([])
+const templates = ref<NativeWorkflow[]>([])
 const workflowsLoading = ref(false)
 const workflowError = ref('')
 const openingPath = ref<string | null>(null)
@@ -189,7 +192,7 @@ function workflowLocallyChanged(path: string): boolean {
   return gitBadgesFor(path).some((b) => b.key === 'new' || b.key === 'modified')
 }
 
-/** Cloud templates = paths present on remote tip; everything else is local-only. */
+/** Cloud template paths from the dedicated ComfyTV template repository. */
 const remoteTemplateSet = computed(() => {
   const fromStatus = gitStatus.value?.remote_workflows
   if (fromStatus?.length) return new Set(fromStatus)
@@ -202,13 +205,9 @@ const remoteTemplateSet = computed(() => {
 
 const templateWorkflows = computed(() => {
   const remote = remoteTemplateSet.value
-  if (!remote.size) {
-    // No remote catalog yet — show nothing on the left until connected/fetched
-    return [] as NativeWorkflow[]
-  }
-  const byPath = new Map(workflows.value.map((w) => [w.path, w]))
+  const byPath = new Map(templates.value.map((w) => [w.path, w]))
   const rows: NativeWorkflow[] = []
-  for (const path of remote) {
+  for (const path of new Set([...byPath.keys(), ...remote])) {
     const existing = byPath.get(path)
     if (existing) {
       rows.push(existing)
@@ -228,8 +227,7 @@ const templateWorkflows = computed(() => {
 })
 
 const localWorkflows = computed(() => {
-  const remote = remoteTemplateSet.value
-  return workflows.value.filter((w) => !remote.has(w.path))
+  return workflows.value
 })
 
 const dirtyTemplates = computed(() =>
@@ -301,7 +299,6 @@ async function refreshGitStatusInBackground() {
     if (
       local?.has_git
       && !local.is_repo
-      && workflows.value.length === 0
       && !gitBusy.value
     ) {
       gitBusy.value = 'setup'
@@ -310,7 +307,10 @@ async function refreshGitStatusInBackground() {
         gitStatus.value = setup
         if (setup.ok && setup.is_repo) {
           gitFlash.value = t('v2.bottomBar.gitConnectOk')
-          workflows.value = await listBottomBarWorkflows()
+          ;[templates.value, workflows.value] = await Promise.all([
+            listBottomBarTemplates(),
+            listBottomBarWorkflows(),
+          ])
         }
       } catch {
         /* keep Connect button available */
@@ -347,7 +347,10 @@ async function refreshWorkflowsPanel() {
   workflowError.value = ''
   try {
     // Show the local library immediately; do not wait on git fetch.
-    workflows.value = await listBottomBarWorkflows()
+    ;[templates.value, workflows.value] = await Promise.all([
+      listBottomBarTemplates(),
+      listBottomBarWorkflows(),
+    ])
   } catch (e: any) {
     workflowError.value = String(e?.message || e)
     workflows.value = []
@@ -374,7 +377,10 @@ async function onGitSetup() {
     }
     gitFlash.value = t('v2.bottomBar.gitConnectOk')
     toast('success', t('v2.bottomBar.gitConnectOk'))
-    workflows.value = await listBottomBarWorkflows()
+    ;[templates.value, workflows.value] = await Promise.all([
+      listBottomBarTemplates(),
+      listBottomBarWorkflows(),
+    ])
   } catch (e: any) {
     toast('error', t('v2.bottomBar.gitError'), String(e?.message || e))
   } finally {
@@ -432,7 +438,10 @@ async function onGitUpdate() {
     if (res.assets_warnings?.length) {
       toast('warn', t('v2.bottomBar.gitAssetsWarn'), res.assets_warnings.slice(0, 3).join(' · '))
     }
-    workflows.value = await listBottomBarWorkflows()
+    ;[templates.value, workflows.value] = await Promise.all([
+      listBottomBarTemplates(),
+      listBottomBarWorkflows(),
+    ])
   } catch (e: any) {
     toast('error', t('v2.bottomBar.gitError'), String(e?.message || e))
   } finally {
@@ -485,7 +494,10 @@ async function onGitCommitConfirm() {
     if (res.assets_warnings?.length) {
       toast('warn', t('v2.bottomBar.gitAssetsWarn'), res.assets_warnings.slice(0, 3).join(' · '))
     }
-    workflows.value = await listBottomBarWorkflows()
+    ;[templates.value, workflows.value] = await Promise.all([
+      listBottomBarTemplates(),
+      listBottomBarWorkflows(),
+    ])
   } catch (e: any) {
     toast('error', t('v2.bottomBar.gitError'), String(e?.message || e))
   } finally {
@@ -502,11 +514,15 @@ function onCreate(classType: string) {
   panel.value = null
 }
 
-async function onOpenWorkflow(row: NativeWorkflow) {
+async function onOpenWorkflow(row: NativeWorkflow, fromTemplate = false) {
   openingPath.value = row.path
   try {
-    const ok = await openWorkflowRow(row)
+    const ok = fromTemplate
+      ? await openWorkflowTemplateRow(row)
+      : await openWorkflowRow(row)
     if (ok) panel.value = null
+  } catch (e: any) {
+    toast('error', t('v2.bottomBar.workflowOpenFailed'), String(e?.message || e))
   } finally {
     openingPath.value = null
   }
@@ -695,8 +711,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
                 'ctv-bbar__row--git-modified': gitBadgesFor(row.path).some((b) => b.key === 'modified'),
               }"
               :disabled="openingPath === row.path || row.mtime === 0"
-              :title="row.path"
-              @click="onOpenWorkflow(row)"
+              :title="`${t('v2.bottomBar.templateOpenHint')}\n${row.path}`"
+              @click="onOpenWorkflow(row, true)"
             >
               <span class="ctv-bbar__row-main">{{ row.name }}</span>
               <span

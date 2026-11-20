@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   categoryFromMenuPath,
@@ -6,6 +6,7 @@ import {
   groupNodesByCategory,
   inferSearchCategory,
   nativeWorkflowFolder,
+  openWorkflowTemplateRow,
   QUICK_CREATE,
 } from './actions'
 
@@ -52,5 +53,19 @@ describe('bottomBar actions', () => {
     const groups = groupNodesByCategory(nodes)
     expect(groups.map((g) => g.id)).toEqual(['image', 'video'])
     expect(groups[1].nodes.map((n) => n.label)).toEqual(['A', 'B'])
+  })
+
+  it('copies a template and opens only its local path', async () => {
+    const row = {
+      path: 'templates/a.json', name: 'a', mtime: 1, size: 2,
+      is_linked: false, linked_id: null,
+    }
+    const graph = { id: 'new', nodes: [] }
+    const instantiate = vi.fn(async () => ({ path: '_local/a.json', graph }))
+    const open = vi.fn(async () => true)
+
+    await expect(openWorkflowTemplateRow(row, { instantiate, open })).resolves.toBe(true)
+    expect(instantiate).toHaveBeenCalledWith('templates/a.json')
+    expect(open).toHaveBeenCalledWith('_local/a.json', graph)
   })
 })

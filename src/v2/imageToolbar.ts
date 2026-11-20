@@ -12,6 +12,7 @@ const ICON_LIGHT = I(`<path d="M12 2.5v3M4.9 4.9l2.1 2.1M2.5 12h3M19.1 4.9L17 7M
 const ICON_REDRAW = I(`<path d="M4 20h4.5L20 8.5a2.1 2.1 0 00-3-3L5.5 17z"/><path d="M13.5 6.5l3 3"/>`)
 const ICON_ERASE = I(`<path d="M7.5 20l-4-4a1.5 1.5 0 010-2.1l8.6-8.6a1.5 1.5 0 012.1 0l5.3 5.3a1.5 1.5 0 010 2.1L12.4 20z"/><path d="M7.5 20H20M6.2 10.6l7.2 7.2"/>`)
 const ICON_CUTOUT = I(`<circle cx="6.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="17.5" r="2.5"/><path d="M8.6 8.3L20 19M8.6 15.7L20 5M13.3 12.1l2.2 2"/>`)
+const ICON_CANVAS = I(`<path d="M12 3.5L20.5 8 12 12.5 3.5 8z"/><path d="M3.5 12L12 16.5 20.5 12" opacity=".65"/><path d="M14.5 18.5l4-4 2 2-4 4-2.8.7z"/>`)
 const ICON_GRID = I(`<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16M14.6 4v16"/>`)
 const ICON_PANORAMA = I(`<circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a13.5 13.5 0 000 18M12 3a13.5 13.5 0 010 18"/>`)
 const ICON_CROP = I(`<path d="M6 2.5V16a2 2 0 002 2h13.5M2.5 6H16a2 2 0 012 2v13.5"/>`)
@@ -125,6 +126,7 @@ export function buildToolbar(dispatch: (actionId: string) => void) {
     [ICON_REDRAW, t('v2.toolbar.redraw'), 'edit:inpaint'],
     [ICON_ERASE, t('v2.toolbar.erase'), 'edit:erase'],
     [ICON_CUTOUT, t('v2.toolbar.cutout'), 'edit:cutout'],
+    [ICON_CANVAS, t('v2.toolbar.canvas'), 'canvas'],
     null,
     [ICON_GRID, '', 'edit:grid'],
     [ICON_PANORAMA, '', 'panorama'],
@@ -145,6 +147,7 @@ export function buildToolbar(dispatch: (actionId: string) => void) {
     const [icon, text, actionId] = item
     const btn = el('div', text ? 'v2-toolbar__btn' : 'v2-toolbar__btn v2-toolbar__btn--icononly',
       text ? `${icon}<span>${text}</span>` : icon)
+    btn.dataset.actionId = actionId
     if (!text && titleKeyOf[actionId]) btn.title = t(titleKeyOf[actionId])
     btn.addEventListener('pointerdown', (e) => e.stopPropagation())
     btn.addEventListener('click', (e) => {

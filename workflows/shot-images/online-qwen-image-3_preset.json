@@ -1,0 +1,18 @@
+{
+  "label": "Online Qwen Image 3 (per-shot)",
+  "order": 1,
+  "is_default": true,
+  "description": "Online Qwen Image 3 text-to-image, called once per storyboard shot. Requires no local checkpoint and returns one image for each shot.",
+  "result": { "type": "ui_save_batch", "node": "2" },
+  "inputs": {
+    "1": {
+      "model.prompt": { "from": "main_prompt", "default": "a cinematic storyboard frame" },
+      "model.negative_prompt": { "from": "option:negative_prompt", "default": "" },
+      "model.width": { "from": "computed:width", "cast": "int" },
+      "model.height": { "from": "computed:height", "cast": "int" },
+      "n": { "from": "literal:1", "cast": "int" },
+      "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" }
+    }
+  },
+  "sizing": { "type": "image", "base": 1024, "snap": 16 }
+}

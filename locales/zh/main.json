@@ -4,6 +4,10 @@
     "captureHint": "合成图层并输出到节点",
     "saveToLibraryHint": "导出 PSD 到资产库"
   },
+  "canvas": {
+    "openHint": "双击打开画板",
+    "emptyHint": "双击开始绘制"
+  },
   "customSplit": {
     "connectImage": "请连接输入图片",
     "splitting": "正在切分为 {n} 个区域",
@@ -129,10 +133,11 @@
       "workflowLoading": "加载中…",
       "workflowOpenFailed": "打开工作流失败",
       "templates": "模板",
+      "templateOpenHint": "点击会新建并打开一个独立的本地副本；保存不会修改模板。",
       "localWorkflows": "工作流",
       "templatesEmpty": "暂无云端模板。点「连接团队仓」或「更新模板」拉取。",
       "localWorkflowsEmpty": "暂无本地工作流。在 ComfyUI 保存到本账号 workflows 即可出现在这里。",
-      "gitNoRepo": "当前账号尚未连接团队工作流仓。点「连接团队仓」会克隆到本账号的 workflows 目录（多用户互不影响）。",
+      "gitNoRepo": "尚未连接团队模板仓。点「连接团队仓」会克隆到 ComfyTV 专属模板目录，不会占用用户 workflows。",
       "gitNoGit": "本机未找到 git，请先安装并加入 PATH。",
       "gitSynced": "已与远程同步",
       "gitBehind": "云端模板有 {n} 个提交可覆盖更新",
@@ -168,13 +173,13 @@
       "gitStateDiverged": "冲突",
       "gitLegend": "模板有「已改动」时，和右侧工作流一样点「提交工作流」。点「更新模板」会用云端覆盖这些改动。",
       "gitTokenTitle": "配置团队 Git Token",
-      "gitTokenHint": "粘贴管理员发给你的 GitHub PAT。只保存在本机 workflows 目录，不会上传到插件仓库。",
+      "gitTokenHint": "粘贴管理员发给你的 GitHub PAT。只保存在 ComfyTV 专属模板目录，不会进入用户 workflows。",
       "gitTokenPlaceholder": "github_pat_… 或 ghp_…",
       "gitTokenSave": "保存并继续",
       "gitTokenSaving": "保存中…",
       "gitTokenRequired": "请先填写 Token",
       "gitTokenSaveFailed": "Token 保存失败",
-      "gitAuthFailed": "当前账号的 GitHub Token 无效或已过期。请重新粘贴有效的 PAT（团队仓 Contents 读写权限）。每个 ComfyUI 多用户账号各自存一份 Token。"
+      "gitAuthFailed": "团队模板仓的 GitHub Token 无效或已过期。请重新粘贴有效的 PAT（团队仓 Contents 读写权限）。"
     },
     "stageHint": "连入参考，点 ↑ 生成",
     "apiCostHint": "估算工作流 API 费用",
@@ -314,6 +319,7 @@
       "storyboard": "故事板 · 叙事",
       "storyboardEditor": "故事板工作台 · 叙事",
       "layerEditor": "图层编辑器 · 图像",
+      "canvas": "画板 · 图像",
       "material": "材质球 · 3D",
       "modelLoader": "加载模型 · 3D",
       "meshPrimitive": "基元 · 3D",
@@ -428,6 +434,7 @@
       "redraw": "重绘",
       "erase": "擦除",
       "cutout": "抠图",
+      "canvas": "画板",
       "grid": "宫格切分",
       "panorama": "全景",
       "crop": "裁剪",
@@ -1284,6 +1291,10 @@
       "material": {
         "label": "提取材质",
         "tooltip": "生成一个接好线的材质球节点 —— Run 时用本地视觉模型从图片估计 PBR 参数（颜色/粗糙度/透明度…）"
+      },
+      "canvas": {
+        "label": "画板",
+        "tooltip": "把当前图片送入独立分层画板"
       },
       "preset": {
         "label": "预设",

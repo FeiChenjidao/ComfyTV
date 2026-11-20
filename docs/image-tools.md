@@ -58,7 +58,7 @@ A mask painter overlaid on the source image. Tools:
 - **① Label** — click to stamp an auto-numbered marker.
 - **Color** applies to brush + shapes + labels; **Clear** wipes the canvas.
 
-**Inpaint** regenerates the masked region from your prompt — ships with `Flux Fill Inpaint` and `Fooocus SDXL Inpaint`. **Erase** removes the masked region and fills from surrounding context, no prompt — ships with `LaMa Erase` (requires installing [`comfyui-inpaint-nodes`](https://github.com/Acly/comfyui-inpaint-nodes) + `big-lama.pt`).
+**Inpaint** regenerates the masked region from your prompt — ships with `Flux Fill Inpaint` and `Fooocus SDXL Inpaint`. **Erase** removes the masked region and fills from surrounding context, no prompt — defaults to `Online GPT Erase` with no local model.
 
 ## Outpaint
 
@@ -66,7 +66,7 @@ Extend the canvas outward — pick the side(s) and pixels to extend, describe th
 
 ## Upscale
 
-Increase resolution. Ships with `Ultrasharp 4x` (4x-UltraSharp GAN).
+Increase resolution with online `WaveSpeed` and Magnific precise/creative upscalers.
 
 ## Multiangle
 
@@ -80,7 +80,7 @@ Clicking the **Relight** action spawns a pair: a pure-frontend **Relight** light
 
 ## Cutout
 
-Background removal. Wire an image, click Run, get a PNG with a real alpha channel. Ships with `BiRefNet Cutout` — requires `birefnet.safetensors` in `models/background_removal/` (see [models.md](models.md)).
+Background removal. Wire an image, click Run, get a PNG with a real alpha channel. Defaults to `Online Bria Cutout` with no local model.
 
 
 ---

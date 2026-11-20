@@ -65,8 +65,8 @@ Local LLM text generation (built-in **Qwen3 4B**). Use it to expand a prompt, wr
 
 Text-to-music. Two workflows ship:
 
-- **ACE-Step v1 Song** — the lightweight default.
-- **MiniMax Music 3** — higher-quality full songs.
+- **Online Sonilo Music 1.5** — online default with no model download.
+- **ACE-Step v1 Song** / **MiniMax Music 3** — local fallbacks.
 
 Shared parameters:
 

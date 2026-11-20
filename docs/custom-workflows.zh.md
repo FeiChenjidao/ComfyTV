@@ -25,7 +25,7 @@ Link 按钮旁边的 **⬆ Upload workflow** 从磁盘导入一个 `.json`。工
 
 ## 团队公开 Git 同步（局域网 · 完整画布）
 
-若希望多人共享 **自己的完整工作流**（底部栏「工作流」、非 Stage 下拉）：把独立公开 Git 仓 clone 为 `user/default/workflows`，用仓内脚本 push / pull。模板与步骤见 [team-workflow-git.zh.md](team-workflow-git.zh.md) 与 [`team-workflows/README.md`](../team-workflows/README.md)。
+若希望多人共享 **自己的完整工作流**：底部栏会把用户工作流发布到 `custom_nodes/ComfyTV/example_workflows` 团队模板仓；不要把模板仓放进 `user/<账号>/workflows`。步骤见 [team-workflow-git.zh.md](team-workflow-git.zh.md) 与 [`team-workflows/README.md`](../team-workflows/README.md)。
 
 Stage 节点下拉仍用下面的 `user/comfytv/workflows/<kind>/`，与上述原生库分开。
 

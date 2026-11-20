@@ -17,20 +17,21 @@ The folder name **is** the runner kind — each stage scans only its own folder 
 
 | Folder | Stage(s) | Tested baseline | Per-kind doc |
 |---|---|---|---|
-| `audio/`       | Audio Stage              | ACE-Step v1 Song | [README](audio/README.md) |
+| `audio/`       | Audio Stage              | Online Sonilo Music 1.5; ACE-Step / MiniMax local fallbacks | [README](audio/README.md) |
 | `image/`       | Image Stage              | NanoBanana 2.1, GPT Image 2.6, Seedream 5.5 | [README](image/README.md) |
-| `image-edit/`  | Image Edit               | Flux Canny Edit | [README](image-edit/README.md) |
+| `image-edit/`  | Image Edit               | Online Qwen Image 3 Edit; local fallbacks | [README](image-edit/README.md) |
 | `inpaint/`     | Inpaint                  | Flux Fill Inpaint (subgraph); Fooocus SDXL Inpaint *(opt-in plugin)* | [README](inpaint/README.md) |
 | `outpaint/`    | Outpaint                 | Flux Fill Outpaint; Fooocus SDXL Outpaint *(opt-in plugin)* | [README](outpaint/README.md) |
-| `upscale/`     | Upscale                  | Ultrasharp 4x (GAN) | [README](upscale/README.md) |
-| `cutout/`      | Cutout                   | BiRefNet (subgraph) | [README](cutout/README.md) |
-| `erase/`       | Erase                    | LaMa Erase (Acly inpaint-nodes plugin + big-lama.pt) | [README](erase/README.md) |
+| `upscale/`     | Upscale                  | WaveSpeed, Magnific (online) | [README](upscale/README.md) |
+| `cutout/`      | Cutout                   | Online Bria Cutout | [README](cutout/README.md) |
+| `erase/`       | Erase                    | Online GPT Erase | [README](erase/README.md) |
 | `multiangle/`  | Multiangle               | Qwen Edit 2511 Multiangle (fal Multiple-Angles LoRA) | [README](multiangle/README.md) |
 | `panorama/`    | Panorama                 | Qwen-Image 2512 + 360 LoRA, Qwen-Image-Edit 2511 Image-to-Panorama | [README](panorama/README.md) |
-| `text/`        | Text Stage               | Local Qwen3 4B | [README](text/README.md) |
+| `text/`        | Text Stage               | Online GPT Text; Local Qwen3 fallback | [README](text/README.md) |
 | `video/`       | Video Stage              | LTX 2.3 T2V / I2V / FLF2V / IA2V | [README](video/README.md) |
-| `storyboard/`  | Storyboard               | Local Qwen3 Storyboard | [README](storyboard/README.md) |
-| `shot-images/` | Shot Images              | Flux Schnell, Local Z-Image Turbo | [README](shot-images/README.md) |
+| `storyboard/`  | Storyboard               | Online GPT Storyboard; Local Qwen3 fallback | [README](storyboard/README.md) |
+| `shot-images/` | Shot Images              | Online Qwen Image 3; Flux / Z-Image fallbacks | [README](shot-images/README.md) |
+| `material-estimate/` | Material | Online GPT Material Estimate; Qwen3-VL fallback | [README](material-estimate/README.md) |
 | `audio-vocal/` `audio-bg/` `timeline/` | various | *not shipped yet* | — |
 
 ## Adding a workflow in 30 seconds

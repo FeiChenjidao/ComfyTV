@@ -70,3 +70,50 @@ class LayerEditorStage(io.ComfyNode):
                     parent_output_id=parent_output_id,
                 )
         return io.NodeOutput(captured_image or "", captured_images or "", ui=ui)
+
+
+class CanvasStage(LayerEditorStage):
+    """Standalone layered canvas that can optionally start from an upstream image."""
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="ComfyTV.CanvasStage",
+            display_name="Canvas",
+            category="ComfyTV/Image",
+            inputs=[
+                _project_id_input(),
+                _parent_output_id_input(),
+                io.String.Input("layer_state", default="{}",
+                                socketless=True, extra_dict={"hidden": True}),
+                io.Int.Input("width", default=1024, min=64, max=4096, step=8,
+                             socketless=True, extra_dict={"hidden": True}),
+                io.Int.Input("height", default=1024, min=64, max=4096, step=8,
+                             socketless=True, extra_dict={"hidden": True}),
+                io.String.Input("captured_image", default="",
+                                socketless=True, extra_dict={"hidden": True}),
+                io.String.Input("captured_images", default="",
+                                socketless=True, extra_dict={"hidden": True}),
+                COMFYTV_IMAGE.Input("image", optional=True),
+            ],
+            outputs=[
+                COMFYTV_IMAGE.Output("image"),
+                COMFYTV_IMAGES.Output("images"),
+            ],
+            is_output_node=True,
+            hidden=[io.Hidden.unique_id],
+        )
+
+    @classmethod
+    def execute(cls, project_id="", parent_output_id=0, layer_state="{}",
+                width=1024, height=1024, captured_image="", captured_images="",
+                image=""):
+        return super().execute(
+            project_id=project_id,
+            parent_output_id=parent_output_id,
+            layer_state=layer_state,
+            width=width,
+            height=height,
+            captured_image=captured_image or image or "",
+            captured_images=captured_images,
+        )

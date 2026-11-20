@@ -1,0 +1,1 @@
+{"1":{"class_type":"QwenImageTextToImageApi","inputs":{"model":"qwen-image-3.0","model.prompt":"a cinematic storyboard frame","model.negative_prompt":"","model.width":1024,"model.height":1024,"n":1,"seed":42,"prompt_extend":true,"watermark":false}},"2":{"class_type":"SaveImage","inputs":{"images":["1",0],"filename_prefix":"comfytv/qwen-image-3-shot"}}}

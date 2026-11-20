@@ -1,4 +1,4 @@
-"""Per-file Git sync for ComfyUI native workflows (user/default/workflows)."""
+"""Git sync for ComfyTV templates stored outside every user's workflows."""
 from __future__ import annotations
 
 import asyncio
@@ -15,13 +15,18 @@ from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 from aiohttp import web
 
-from ..runners.workflow_db.link import _native_workflows_dir, resolve_request_user_id
+from ..runners.workflow_db.link import (
+    _native_workflows_dir,
+    _template_workflows_dir,
+    resolve_request_user_id,
+)
 from . import native_workflow_assets
 from ._common import routes
 
 
 def _workflows_root(root: Optional[Path] = None, user_id: Optional[str] = None) -> Optional[Path]:
-    return root or _native_workflows_dir(user_id)
+    # Team templates are a custom-node library, never a user's workflow library.
+    return root or _template_workflows_dir()
 
 _log = logging.getLogger(__name__)
 _GIT_TIMEOUT_S = 120
@@ -84,6 +89,32 @@ def _read_text_file(path: Path) -> str:
         return ""
 
 
+def _adopt_legacy_credentials(root: Path, user_id: Optional[str]) -> Optional[Path]:
+    """Copy credentials from the old user/workflows repo into the template repo."""
+    legacy = _native_workflows_dir(user_id)
+    if legacy is None or not (legacy / ".git").exists():
+        return legacy
+    root.mkdir(parents=True, exist_ok=True)
+    for name in (_TOKEN_NAME, _REMOTE_NAME):
+        source = legacy / name
+        target = root / name
+        if not target.exists() and source.is_file():
+            try:
+                shutil.copy2(source, target)
+            except OSError:
+                pass
+    remote_file = root / _REMOTE_NAME
+    if not remote_file.exists():
+        try:
+            result = _run_git(legacy, "remote", "get-url", "origin")
+            remote = _strip_auth((result.stdout or "").strip())
+            if result.returncode == 0 and remote:
+                remote_file.write_text(remote + "\n", encoding="utf-8")
+        except (OSError, RuntimeError):
+            pass
+    return legacy
+
+
 def _read_token(root: Path) -> str:
     return _read_text_file(root / _TOKEN_NAME)
 
@@ -122,6 +153,7 @@ def token_status(
         payload["ok"] = False
         payload["error"] = "native workflows directory unavailable"
         return payload
+    _adopt_legacy_credentials(root, user_id)
     _ensure_workflow_credentials(root)
     tok = _read_token(root)
     payload["configured"] = bool(tok)
@@ -618,6 +650,7 @@ def collect_status(
         payload["ok"] = False
         payload["error"] = "git not found on PATH"
         return payload
+    _adopt_legacy_credentials(root, user_id)
     _ensure_workflow_credentials(root)
     payload["token_configured"] = bool(_read_token(root))
 
@@ -771,7 +804,7 @@ def pull_file(
     if not status.get("is_repo"):
         status["ok"] = False
         status["error"] = status.get("error") or (
-            "not a git repository — clone your team repo into user/default/workflows"
+            "team template repository is not connected"
         )
         return status
     assert root is not None
@@ -824,7 +857,7 @@ def push_file(
     if not status.get("is_repo"):
         status["ok"] = False
         status["error"] = status.get("error") or (
-            "not a git repository — clone your team repo into user/default/workflows"
+            "team template repository is not connected"
         )
         return status
     assert root is not None
@@ -938,6 +971,42 @@ def _unique_backup_path(path: Path) -> Path:
         if not cand.exists():
             return cand
     return Path(str(path) + f".local-backup-{os.getpid()}")
+
+
+def _archive_legacy_template_repo(legacy_root: Optional[Path]) -> list[str]:
+    """Move old tracked templates out of user/workflows without deleting data."""
+    if legacy_root is None or not (legacy_root / ".git").exists():
+        return []
+    tracked = _run_git(
+        legacy_root, "-c", "core.quotepath=false", "ls-files", "*.json"
+    )
+    if tracked.returncode != 0:
+        return []
+    backup_root = legacy_root / ".comfytv-template-backup"
+    moved: list[str] = []
+    for line in (tracked.stdout or "").splitlines():
+        rel = line.strip().replace("\\", "/")
+        if not _is_workflow_rel(rel):
+            continue
+        source = _safe_rel_path(legacy_root, rel)
+        if source is None or not source.is_file():
+            continue
+        destination = backup_root / rel
+        if destination.exists():
+            destination = _unique_backup_path(destination)
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            source.rename(destination)
+            moved.append(rel)
+        except OSError as e:
+            _log.warning("could not archive legacy template %s: %s", rel, e)
+
+    git_dir = legacy_root / ".git"
+    try:
+        git_dir.rename(_unique_backup_path(git_dir))
+    except OSError as e:
+        _log.warning("could not detach legacy workflow git repo: %s", e)
+    return moved
 
 
 def quarantine_untracked_collisions(
@@ -1130,11 +1199,7 @@ def setup_repo(
     root: Optional[Path] = None,
     user_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    """One-click connect: clone team repo into the current user's workflows dir.
-
-    Multi-user: each account gets ``user/<id>/workflows`` with its own .git.
-    Preserves existing local JSON; fills missing files from the team remote.
-    """
+    """Clone the team repo into ComfyTV's ``example_workflows`` directory."""
     root = _workflows_root(root, user_id)
     if root is None:
         return {
@@ -1158,9 +1223,11 @@ def setup_repo(
         status["ok"] = False
         status["error"] = "git not found on PATH"
         return status
+    legacy_root = _adopt_legacy_credentials(root, user_id)
     _ensure_workflow_credentials(root)
 
     if _is_git_repo(root):
+        _archive_legacy_template_repo(legacy_root)
         status = collect_status(root, fetch_remote=True)
         status["setup"] = True
         return status
@@ -1221,6 +1288,7 @@ def setup_repo(
         status["assets_restored"] = restored.restored
         status["assets_skipped"] = restored.skipped
         status["assets_warnings"] = restored.warnings[:40]
+        status["legacy_templates_archived"] = _archive_legacy_template_repo(legacy_root)
         if not status["ok"]:
             status["error"] = status.get("error") or "setup finished but repo check failed"
         return status
@@ -1241,26 +1309,44 @@ def push_paths(
     root: Optional[Path] = None,
     user_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Commit+push selected local workflows. Refuse if remote already has same path/name."""
+    """Publish selected user workflows into the dedicated template repository."""
     root = _workflows_root(root, user_id)
     status = collect_status(root, fetch_remote=True, user_id=user_id)
     if not status.get("is_repo"):
         status["ok"] = False
         status["error"] = status.get("error") or (
-            "not a git repository — init a dedicated repo in user/default/workflows"
+            "template repository is not connected"
         )
         return status
     assert root is not None
 
+    native_root = _native_workflows_dir(user_id)
     cleaned: list[str] = []
+    imports: list[tuple[Path, Path]] = []
     for raw in rel_paths or []:
         target = _safe_rel_path(root, str(raw))
-        if target is None or not target.is_file():
+        if target is None:
+            status["ok"] = False
+            status["error"] = f"invalid workflow path: {raw}"
+            status["duplicates"] = []
+            return status
+        if target.is_file():
+            cleaned.append(target.relative_to(root.resolve()).as_posix())
+            continue
+        source = (
+            _safe_rel_path(native_root, str(raw))
+            if native_root is not None else None
+        )
+        if source is None or not source.is_file():
             status["ok"] = False
             status["error"] = f"workflow file not found: {raw}"
             status["duplicates"] = []
             return status
-        cleaned.append(target.relative_to(root.resolve()).as_posix())
+        # ComfyUI's custom-node template gallery scans only top-level JSON.
+        rel = source.name
+        target = root.resolve() / rel
+        cleaned.append(rel)
+        imports.append((source, target))
 
     if not cleaned:
         status["ok"] = False
@@ -1308,6 +1394,10 @@ def push_paths(
         status["error"] = "remote has new commits — click Update first, then Commit again"
         status["duplicates"] = []
         return status
+
+    for source, target in imports:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
 
     msg = (message or "").strip() or (
         f"chore: add workflow {Path(cleaned[0]).stem}"

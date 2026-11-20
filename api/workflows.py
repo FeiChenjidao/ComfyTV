@@ -210,6 +210,15 @@ async def workflow_list_native(request: web.Request) -> web.Response:
     return web.json_response({"workflows": items, "user_id": user_id})
 
 
+@routes.get("/comfytv/workflows/templates")
+async def workflow_list_templates(request: web.Request) -> web.Response:
+    try:
+        items = workflow_db.list_template_workflows()
+    except Exception as e:  # pragma: no cover
+        return web.json_response({"error": str(e)}, status=500)
+    return web.json_response({"workflows": items})
+
+
 @routes.get("/comfytv/workflows/native/file")
 async def workflow_native_file(request: web.Request) -> web.Response:
     """Serve a native library JSON by relative path for the current Comfy user."""
@@ -228,6 +237,29 @@ async def workflow_native_file(request: web.Request) -> web.Response:
     except json.JSONDecodeError as e:
         return web.json_response({"error": f"invalid workflow json: {e}"}, status=400)
     return web.json_response(data)
+
+
+@routes.post("/comfytv/workflows/native/instantiate")
+async def workflow_instantiate_native_template(request: web.Request) -> web.Response:
+    """Prepare a team template as a new unsaved workflow for this user."""
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "json body required"}, status=400)
+    rel = str(body.get("path") or "").strip().replace("\\", "/")
+    if not rel:
+        return web.json_response({"error": "path required"}, status=400)
+
+    user_id = workflow_db.link.resolve_request_user_id(request)
+    try:
+        draft = workflow_db.instantiate_native_workflow_template(rel, user_id=user_id)
+    except ValueError as e:
+        return web.json_response({"error": str(e)}, status=400)
+    except OSError as e:
+        return web.json_response(
+            {"error": f"could not prepare local workflow: {e}"}, status=500
+        )
+    return web.json_response({"ok": True, "draft": draft})
 
 
 @routes.post("/comfytv/workflows/link")

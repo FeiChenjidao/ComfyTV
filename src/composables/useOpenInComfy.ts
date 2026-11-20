@@ -21,6 +21,7 @@ interface WorkflowTabHandle {
 interface WorkflowTabStore {
   getWorkflowByPath?: (path: string) => WorkflowTabHandle | null
   isActive?: (workflow: WorkflowTabHandle) => boolean
+  createNewTemporary?: (path: string, workflowData: unknown) => WorkflowTabHandle
 }
 
 interface ComfyAppWithTabs {
@@ -88,6 +89,39 @@ export async function openNativeWorkflowInComfy(relPath: string): Promise<void> 
   await comfy().loadGraphData(json, true, true, stripJsonExt(relPath))
 }
 
+function availableTemporaryPath(relPath: string): string {
+  const store = comfy().extensionManager?.workflow
+  if (!store?.getWorkflowByPath) return relPath
+  const normalized = relPath.replace(/\\/g, '/')
+  const withoutExt = normalized.replace(/\.json$/i, '')
+  const numbered = /^(.*?)(?: (\d+))?$/.exec(withoutExt)
+  const base = numbered?.[1] || withoutExt
+  let suffix = Number(numbered?.[2] || 1)
+  let candidate = normalized
+  while (store.getWorkflowByPath(WORKFLOWS_BASE + candidate)) {
+    suffix += 1
+    candidate = `${base} ${suffix}.json`
+  }
+  return candidate
+}
+
+/** Open template data as a genuinely unsaved ComfyUI workflow. */
+export async function openNewNativeWorkflowInComfy(
+  suggestedRelPath: string,
+  graph: unknown,
+): Promise<void> {
+  const relPath = availableTemporaryPath(suggestedRelPath)
+  const store = comfy().extensionManager?.workflow
+  if (store?.createNewTemporary) {
+    const workflow = store.createNewTemporary(relPath, graph)
+    const loaded = await workflow.load()
+    await comfy().loadGraphData(loaded.activeState, true, true, workflow)
+    return
+  }
+  // Compatibility fallback for older ComfyUI frontends.
+  await comfy().loadGraphData(graph, true, true, stripJsonExt(relPath))
+}
+
 export async function openManagedWorkflowInComfy(
   kind: string, label: string,
 ): Promise<void> {
@@ -141,6 +175,19 @@ export async function tryOpenWorkflowInComfy(target: OpenInComfyTarget): Promise
 export async function tryOpenNativeWorkflowInComfy(relPath: string): Promise<boolean> {
   try {
     await openNativeWorkflowInComfy(relPath)
+    return true
+  } catch (e) {
+    toastOpenFailed(e)
+    return false
+  }
+}
+
+export async function tryOpenNewNativeWorkflowInComfy(
+  suggestedRelPath: string,
+  graph: unknown,
+): Promise<boolean> {
+  try {
+    await openNewNativeWorkflowInComfy(suggestedRelPath, graph)
     return true
   } catch (e) {
     toastOpenFailed(e)

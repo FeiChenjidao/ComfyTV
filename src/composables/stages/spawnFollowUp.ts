@@ -477,6 +477,7 @@ function makeImageActionHandlers(srcSlot: number): Record<string, SpawnHandler> 
     'multiangle': src => spawnConsumingNode(src, 'ComfyTV.MultiangleStage', 'image', outputSlot(src)),
     'relight':    src => spawnRelightPair(src, outputSlot(src)),
     'material':   src => spawnConsumingNode(src, 'ComfyTV.MaterialStage',   'image', outputSlot(src)),
+    'canvas':     src => spawnConsumingNode(src, 'ComfyTV.CanvasStage',     'image', outputSlot(src)),
     ...Object.fromEntries(
       IMAGE_VARIANT_PRESETS.map(p => [
         `preset:${p.id}`,

@@ -29,6 +29,14 @@ export const ListNativeWorkflowsSchema = z.object({
   workflows: z.array(NativeWorkflowSchema),
   user_id: z.string().optional(),
 })
+export const InstantiateNativeWorkflowResultSchema = z.object({
+  ok: z.boolean(),
+  draft: z.object({
+    path: z.string(),
+    graph: z.record(z.string(), z.unknown()),
+  }),
+})
+export type NativeWorkflowDraft = z.infer<typeof InstantiateNativeWorkflowResultSchema>['draft']
 export const RemoteNativeWorkflowSchema = NativeWorkflowSchema.extend({
   pulled: z.boolean().optional(),
   pulled_label: z.string().nullable().optional(),

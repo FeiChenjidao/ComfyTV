@@ -13,17 +13,17 @@ ComfyTV 还是 pre-release 状态。
 | 能力 | 备注 |
 |---------|-------|
 | **Image · NanoBanana 2.1 / GPT Image 2.6 / Seedream 5.5** | API 生图(Gemini / OpenAI / ByteDance);可选参考图。 |
-| **Image Edit · Flux Canny Edit** | 提示词驱动的图像编辑。 |
+| **Image Edit · Online Qwen Image 3 Edit / Flux Canny Edit** | 默认在线编辑；本地 Flux 作为回退。 |
 | **Inpaint · Flux Fill Inpaint** + **Fooocus SDXL Inpaint** | 蒙版驱动的重绘(蒙版画笔产出 mask)。 |
-| **Erase · LaMa Erase** | 无提示词抹除目标。需要装 `Acly/comfyui-inpaint-nodes` + `big-lama.pt`。 |
+| **Erase · Online GPT Erase** | 在线无提示词抹除目标,无需本地模型。 |
 | **Relight · 灯光球 + Image Stage** | 纯前端 3D 灯光球节点在浏览器里渲染光照参考;搭配任意能吃第二张参考图的 Image Stage 工作流。 |
-| **Cutout · BiRefNet Cutout** | 用 ComfyUI 内置 BiRefNet 抠图,输出带 alpha 的 PNG。 |
+| **Cutout · Online Bria Cutout** | 在线抠图,输出带 alpha 的 PNG。 |
 | **Outpaint · Flux Fill Outpaint** + **Fooocus SDXL Outpaint** | 画布外扩。 |
-| **Upscale · Ultrasharp 4x** | 基于 4x-UltraSharp GAN 的放大。 |
+| **Upscale · WaveSpeed / Magnific** | 在线超分与创意放大。 |
 | **Multiangle · Qwen Edit 2511 Multiangle** | Qwen Image-Edit + Multiangle LoRA,由 3D 相机驱动。 |
 | **Video · Local LTX 2.3**(T2V + I2V + FLF2V + IA2V) | 快;推荐默认。T2V 纯文本;I2V 要一张图;FLF2V 在两张关键帧之间插值;IA2V 跟随音轨节拍(对口型/MV/音效对齐镜头)。 |
 | **Video · Local MiniMax H3**(T2V + FLF2V + R2V) | 一趟直出**带声音**的视频。R2V 吃多张图/音频参考,跨镜锁身份。内置 Lightning LoRA(渲染耗时约减半)。 |
-| **Audio · MiniMax Music 3** | ACE-Step 之外更高质量的文生音乐。 |
+| **Audio · Online Sonilo Music 1.5 / MiniMax Music 3** | 默认在线文生音乐；MiniMax 为本地回退。 |
 | **3D Model · Tripo / Tripo P2 / Rodin Gen25 / Meshy Multi** | 多视图 / 多图 → 网格,走 Tripo、Rodin Gen-2.5 或 Meshy API,为内置 `model` 工作流。 |
 | **导演台 + 总时间轴** | 逐镜生产控制台:生成式 clip、逐段转场、共享参考演员表、内容寻址只重渲改过的段,刻度尺 + 播放头 + 成片统一预览。 |
 | **MCP 服务 + ComfyTV Bot** | 45 工具的 agent 端点(stage 层 + 原生图层)与内嵌侧边栏 agent,四个 provider(Claude Code / Codex / Qwen Code / Local LLM)、附件、按 provider 选模型。 |
@@ -32,8 +32,8 @@ ComfyTV 还是 pre-release 状态。
 | **键盘优先编辑** | 视频轨 widget ←/→ 逐帧 ±1 + Home/End;数字滑块可直接键入数值并自动夹取。 |
 | **Video 编辑 · 剪辑 / 裁剪 / 缩放 / 抽帧 / 音视频分离** | 对原片的真实编辑 , 起止剪、裁剪区域、改尺寸、抽一帧、把视频拆成音轨 + 静音视频。不占 GPU、不需要模型。 |
 | **视频续接(↪ 动作)** | 一键链:抽源片末帧 → 生成一个新的 Video Stage,把那帧接为 I2V 起始图,后面填提示词点运行即可。 |
-| **Text · Qwen3 4B** | 本地 LLM 文本生成。 |
-| **Audio Stage · ACE-Step v1 Music** | 文生音乐,走 ACE-Step v1 3.5B(ComfyUI 原生支持)。自由 tags + 可选歌词触发人声 + 每 stage 时长滑块。 |
+| **Text / Storyboard · Online GPT** | 默认在线文本和镜头表生成；Qwen3 4B 保留为本地回退。 |
+| **Audio Stage · ACE-Step v1 Music** | 本地文生音乐回退。自由 tags + 可选歌词触发人声 + 每 stage 时长滑块。 |
 | **Crop / Rotate / Mirror** | 浏览器端,瞬时,不占 GPU。 |
 | **Grid Split** | 切图 → 批量,浏览器端。 |
 | **Panorama 查看器 + 当前/多视角截图** | 浏览器里跑。 |

@@ -19,4 +19,5 @@
 
 ## 当前内置
 
-无。当前 Shot Images 下拉里的选项都来自 `image/` 里声明了多 kind 的工作流。
+- **Online Qwen Image 3 (per-shot)**(`online-qwen-image-3.json` + `.api.json` + `_preset.json`) , 默认。逐镜调用在线 Qwen Image 3,无需本地 checkpoint。
+- **Flux Schnell**、**Local Z-Image Turbo** , 本地回退。

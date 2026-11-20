@@ -1,5 +1,5 @@
 {
-  "_comment": "Shipped preset for the Qwen3 4B local LLM as Storyboard Stage's backend. Same template as text/local-qwen3-4b but tuned for the 16-field-per-shot shotlist: use_default_template=false (StoryboardStage already wraps the user premise in a ChatML system+user prompt so the LLM shouldn't re-template), max_length bumped to 6144 (15+ shots can easily blow past 2048 tokens). Read ONCE on first DB row creation.",
+  "_comment": "Shipped preset for the Qwen3 4B local LLM as Storyboard Stage's backend. The stage now emits a provider-neutral instruction, so the local model applies its normal chat template. max_length is bumped to 6144 because long shot lists can exceed 2048 tokens.",
 
   "label":       "Local Qwen3 4B Storyboard",
   "order":       10,
@@ -11,7 +11,7 @@
     "7": {
       "prompt":               { "from": "main_prompt", "default": "Hello." },
       "max_length":           { "from": "option:max_length", "default": "6144", "cast": "int" },
-      "use_default_template": { "from": "literal:false", "cast": "bool" }
+      "use_default_template": { "from": "literal:true", "cast": "bool" }
     }
   }
 }

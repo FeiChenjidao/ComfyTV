@@ -1,0 +1,12 @@
+{
+  "label": "Online GPT Storyboard",
+  "order": 1,
+  "is_default": true,
+  "description": "Online storyboard generation through OpenAI Chat. Produces the same 16-field Chinese shot-list format consumed by StoryboardStage without loading a local Qwen model.",
+  "result": { "type": "graph_output_first", "node": "1" },
+  "inputs": {
+    "1": {
+      "prompt": { "from": "main_prompt", "default": "Create the requested shot list." }
+    }
+  }
+}

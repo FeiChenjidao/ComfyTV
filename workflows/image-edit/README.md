@@ -22,11 +22,12 @@ To add your own workflow see [docs/custom-workflows.md](../../docs/custom-workfl
 
 ## What's here today
 
+- **Online Qwen Image 3 Edit** (`online-qwen-image-3-edit.json` + `.api.json` + `_preset.json`) — default. The first image is the edit target and up to two more are references; `@image_N` is expanded to the API's `@ImageN` syntax. No local model.
 - **Flux Canny Edit** (`flux-canny-edit.json` + `_preset.json`) — uses the upstream image as a Canny edge map and repaints per the prompt. Only the silhouette survives; colors come from the prompt. Tested working.
 - **Qwen Edit 2511** (`qwen-edit-2511.json` + `_preset.json`) — instruction editing via Qwen-Image-Edit 2511 + Lightning 4-step. Preserves the subject's colors and materials while the instruction changes background/lighting or adds elements — describe the change, not the whole scene. The 3D-model-stage **Product Shot** action spawns this workflow with a seeded render-to-product-photo instruction. Tested working.
 - **Qwen Image 2.1 Edit** (`qwen-image-2.1-edit.json` + `_preset.json`) — the official Qwen Image 2.1 edit graph with up to 10 images: the stage's first image is the edit target (output follows its size), the rest are references. `LoadImage` ×10 → `TextEncodeQwenImage21` (Qwen3-VL-8B encoder), whose `latent` output already matches the target size, so there is no `VAEEncode`; unused slots are pruned, so 1–10 images all run. Refer to images with the stage's `@image_1`..`@image_10` mentions (type `@` in the prompt, or drop assets onto the media strip); the preset sets `mention_style: qwen_tags`, so they reach the model as `<image1>`..`<image10>` ("put the jacket from `@image_2` on the person in `@image_1`"). 25 steps, cfg 1, `QwenImage21Cache` on auto. Tested working (~20–27 s at 1K on a 5090).
 
-## Models referenced
+## Models for the local fallbacks
 
 - `flux1-canny-dev_fp8.safetensors` → `models/diffusion_models/`
 - `clip_l.safetensors` + `t5xxl_fp16.safetensors` → `models/clip/`

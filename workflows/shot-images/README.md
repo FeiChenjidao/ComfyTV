@@ -19,4 +19,5 @@ To add your own workflow see [docs/custom-workflows.md](../../docs/custom-workfl
 
 ## What's here today
 
-Nothing. Current Shot Images dropdown entries come from `image/`-folder workflows whose config declares the extra kind.
+- **Online Qwen Image 3 (per-shot)** (`online-qwen-image-3.json` + `.api.json` + `_preset.json`) — default. Calls Qwen Image 3 online for each shot with no local checkpoint.
+- **Flux Schnell** and **Local Z-Image Turbo** — local fallbacks.

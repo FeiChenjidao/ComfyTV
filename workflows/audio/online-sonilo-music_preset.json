@@ -1,0 +1,26 @@
+{
+  "label": "Online Sonilo Music 1.5",
+  "order": 1,
+  "is_default": true,
+  "description": "Online text-to-song generation through Sonilo Music 1.5. Uses the stage prompt for style and arrangement, appends the optional lyrics block, and requires no local audio model.",
+  "result": { "type": "ui_save_url", "node": "3" },
+  "inputs": {
+    "1": {
+      "string_a": {
+        "from": "main_prompt",
+        "default": "Lo-fi hip-hop, dreamy, warm Rhodes piano, soft vocals."
+      },
+      "string_b": {
+        "from": "option:lyrics",
+        "default": "",
+        "prefix": "Lyrics:\n"
+      },
+      "delimiter": { "from": "literal:\n\n" }
+    },
+    "2": {
+      "duration": { "from": "literal:custom" },
+      "duration.seconds": { "from": "option:duration_s", "default": "120", "cast": "int" },
+      "seed": { "from": "option:seed", "default": "random_int31", "cast": "int" }
+    }
+  }
+}
