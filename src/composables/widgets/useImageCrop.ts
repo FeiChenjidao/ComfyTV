@@ -53,7 +53,6 @@ export function useImageCrop(options: UseImageCropOptions) {
 
   const naturalWidth = ref(0)
   const naturalHeight = ref(0)
-  const lastInitializedUrl = ref<string | null>(null)
   const displayedWidth = ref(0)
   const displayedHeight = ref(0)
   const scaleFactor = ref(1)
@@ -253,12 +252,12 @@ export function useImageCrop(options: UseImageCropOptions) {
     if (naturalWidth.value <= 0 || naturalHeight.value <= 0) return
 
     const noValidBounds = modelValue.value.width <= 0 || modelValue.value.height <= 0
-    const switchedImage =
-      lastInitializedUrl.value !== null && lastInitializedUrl.value !== imageUrl.value
-    if (noValidBounds || switchedImage) {
+    // Keep the user's crop rectangle when the upstream image is refreshed.
+    // URL changes are common for regenerated outputs and must not reset the
+    // selected box back to the centered default.
+    if (noValidBounds) {
       modelValue.value = defaultBounds()
     }
-    lastInitializedUrl.value = imageUrl.value
   }
 
   function handleImageError() {
