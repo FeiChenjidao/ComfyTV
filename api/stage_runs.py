@@ -223,11 +223,16 @@ async def start_stage_run(request: web.Request) -> web.Response:
         stage_uid=str(stage_uid) if stage_uid else None,
     )
     ACTIVE_STAGE_RUNS[run.id] = run
+    extra_data = _safe_extra_data(body)
+    # The page always sends the user's Comfy.org credentials; keep the newest
+    # pair so queue/agent runs that cannot carry them still reach API nodes.
+    from ..runners.auth_extra import remember_credentials
+    remember_credentials(extra_data)
     run.task = asyncio.create_task(_execute_stage_run(
         run,
         prompt,
         [str(node_id) for node_id in valid[2]],
-        _safe_extra_data(body),
+        extra_data,
     ))
     return web.json_response({"job_id": run.id})
 

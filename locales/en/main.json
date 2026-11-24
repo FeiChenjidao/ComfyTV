@@ -138,7 +138,14 @@
       "templatesEmpty": "No cloud templates yet. Click Connect or Update templates to pull.",
       "localWorkflowsEmpty": "No local workflows. Save a graph into this user’s workflows folder to see it here.",
       "gitNoRepo": "The team template repo is not connected. Click Connect to clone it into ComfyTV’s dedicated template directory, outside user workflows.",
-      "gitNoGit": "git was not found on this machine — install it and add it to PATH.",
+      "gitNoGit": "Git not found. Already installed? Set its path manually and add it to PATH.",
+      "gitPathManual": "Set Git path",
+      "gitPathHint": "Enter the full git.exe path or Git installation folder on the computer running ComfyUI. It takes effect immediately and is loaded after restart. On Windows it also updates your user PATH without administrator access.",
+      "gitPathApply": "Verify and add to PATH",
+      "gitPathSaving": "Verifying…",
+      "gitPathSaved": "Git path saved and ready to use",
+      "gitPathFailed": "Could not configure Git",
+      "gitPathUserWarning": "Git is ready in ComfyUI, but updating Windows user PATH failed",
       "gitSynced": "In sync with remote",
       "gitBehind": "{n} cloud template commit(s) ready to overwrite",
       "gitDirty": "Uncommitted changes. Commit workflows includes edited templates",
@@ -724,6 +731,10 @@
         "label": "Backup location",
         "desc": "Leave empty to use the db-backup folder inside the ComfyTV directory. Snapshots are timestamped folders like 20260805-093000/comfytv.",
         "placeholder": "e.g. D:\\backups\\comfytv"
+      },
+      "share-comfy-auth": {
+        "label": "Reuse Comfy login",
+        "desc": "Callers outside the browser (the comfy CLI, scripts, an agent posting to /prompt) never carry Comfy.org credentials, so bound paid API nodes 401. When on, the plugin lends the newest credentials it saw from a browser run to those runs. Kept in memory only, dropped on restart. Turn it off to make such runs fail with a missing-credentials error instead."
       },
       "enable-mcp": {
         "label": "Enable MCP server",

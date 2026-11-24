@@ -130,6 +130,7 @@ accordingly.
 ## See also
 
 - [ComfyTV Bot](bot.md) — the embedded chat agent built on these same tools
+- [Queue / external-agent compatibility](agent-compat.md) — running stages from a CLI or script that only knows `/prompt`, and the credential fallback
 - [Agent Skills](skills.md) — instruction packs served through the `skill` tool and MCP prompts
 - [Custom workflows](custom-workflows.md) — what bindings are, hand-edited
 - [Sidebar](sidebar.md) — the Settings panel with the MCP switch

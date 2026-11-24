@@ -1,5 +1,6 @@
 import { cancelRemoteJob, cancelStageRun, remoteRun, startStageRun } from '@/api'
 import { isAutoPickerEnabled } from '@/composables/stages/autoPicker'
+import { shouldApplyExternalRun } from '@/composables/stages/externalStageRun'
 import { outputHasLinks, spawnConsumingNode } from '@/composables/stages/spawnFollowUp'
 import { stageInstanceKey } from '@/composables/stages/stageIdentity'
 import { mergeModelOutputIntoPool } from '@/composables/stages/modelPool'
@@ -10,6 +11,7 @@ import { getStageMeta } from '@/composables/stages/stageMeta'
 import { t } from '@/i18n'
 import { app } from '@/lib/comfyApp'
 import { useExecutionStore } from '@/stores/executionStore'
+import { useProjectStore } from '@/stores/projectStore'
 import { useServerStore } from '@/stores/serverStore'
 import {
   isPoolPickerKind,
@@ -304,8 +306,42 @@ export function createStageRun(opts: {
     }
   }
 
+  /**
+   * A run that reached the plugin through ComfyUI's queue (the comfy CLI, a
+   * script, an agent posting /prompt). The page never started it, so there is
+   * no runStageRunId to match and the normal path would drop the event. Apply
+   * it only while this card is idle, and skip the echo of a prompt this page
+   * submitted itself (bridge runs).
+   */
+  const onExternalStageRun = (d: any) => {
+    const currentProject = useProjectStore().currentProjectId || ''
+    if (!shouldApplyExternalRun(d, {
+      nodeId: node.id,
+      projectId: currentProject,
+      runPromptId: state.runPromptId ?? null,
+      running: state.running,
+      runStageRunId: state.runStageRunId ?? null,
+    })) return
+    if (d.status === 'done') {
+      store.applyExecutedPayload(state, d.ui || {})
+      if (kind === 'model' && state.variant === 'generator') {
+        mergeModelOutputIntoPool(node, state, store, state.output)
+      }
+    } else {
+      store.applyExecutionError(state, {
+        message: String(d.error || 'execution failed'),
+        type: String(d.error_type || 'ExecutionError'),
+        traceback: Array.isArray(d.traceback) ? d.traceback.join('') : d.traceback,
+      })
+    }
+  }
+
   const onStageRun = (d: any) => {
     if (!d) return
+    if (d.external) {
+      onExternalStageRun(d)
+      return
+    }
     if (!state.runStageRunId && state.running && d.job_id) {
       state.runStageRunId = String(d.job_id)
     }

@@ -52,6 +52,7 @@ import {
   PromptBeautifyResultSchema,
   NativeWorkflowGitStatusSchema,
   NativeWorkflowGitTokenSchema,
+  GitExecutableResultSchema,
   PluginUpdateStatusSchema,
   IgnisTokenSchema,
 } from './schemas'
@@ -62,6 +63,7 @@ import type {
   PromptBeautifyResult,
   NativeWorkflowGitStatus,
   NativeWorkflowGitToken,
+  GitExecutableResult,
   PluginUpdateStatus,
   IgnisToken,
   AdoptAssetsResult,
@@ -570,6 +572,10 @@ export function pushNativeWorkflowGit(
 
 export function fetchNativeWorkflowGitToken(): Promise<NativeWorkflowGitToken> {
   return apiFetch('/comfytv/workflows/native/git/token', NativeWorkflowGitTokenSchema)
+}
+
+export function saveGitExecutable(path: string): Promise<GitExecutableResult> {
+  return apiSend('/comfytv/workflows/native/git/executable', 'PUT', GitExecutableResultSchema, { path })
 }
 
 export function saveNativeWorkflowGitToken(token: string): Promise<NativeWorkflowGitToken> {

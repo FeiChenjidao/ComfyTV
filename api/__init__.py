@@ -4,6 +4,7 @@ from . import assets     # noqa: F401
 from . import outputs    # noqa: F401
 from . import stages     # noqa: F401
 from . import stage_runs  # noqa: F401
+from . import agent_runs  # noqa: F401
 from . import stage_params  # noqa: F401
 from . import workflows  # noqa: F401
 from . import storyboard # noqa: F401

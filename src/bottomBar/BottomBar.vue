@@ -9,6 +9,7 @@ import {
   pullNativeWorkflowGit,
   pushNativeWorkflowGit,
   saveNativeWorkflowGitToken,
+  saveGitExecutable,
   setupNativeWorkflowGit,
   type NativeWorkflow,
   type NativeWorkflowGitStatus,
@@ -60,6 +61,10 @@ const gitBusy = ref<'pull' | 'push' | 'setup' | null>(null)
 const gitChecking = ref(false)
 const gitMessage = ref('')
 const gitFlash = ref('')
+const gitPathOpen = ref(false)
+const gitPathInput = ref('')
+const gitPathSaving = ref(false)
+const gitPathError = ref('')
 const commitPickOpen = ref(false)
 const commitSelected = ref<Record<string, boolean>>({})
 const tokenDialogOpen = ref(false)
@@ -360,6 +365,28 @@ async function refreshWorkflowsPanel() {
   void refreshGitStatusInBackground()
 }
 
+async function onGitPathSave() {
+  if (gitPathSaving.value || !gitPathInput.value.trim()) return
+  gitPathSaving.value = true
+  gitPathError.value = ''
+  try {
+    const result = await saveGitExecutable(gitPathInput.value.trim())
+    if (!result.ok) {
+      gitPathError.value = result.error || t('v2.bottomBar.gitPathFailed')
+      return
+    }
+    gitPathOpen.value = false
+    gitFlash.value = t('v2.bottomBar.gitPathSaved')
+    toast('success', t('v2.bottomBar.gitPathSaved'), `${result.version} · ${result.path}`)
+    if (result.warning) toast('warn', t('v2.bottomBar.gitPathUserWarning'), result.warning)
+    await refreshGitStatusInBackground()
+  } catch (e: any) {
+    gitPathError.value = String(e?.message || e)
+  } finally {
+    gitPathSaving.value = false
+  }
+}
+
 async function onGitSetup() {
   if (!canGitSetup.value) return
   const tokOk = await ensureGitTokenConfigured()
@@ -578,6 +605,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
                 : gitChecking && !gitFlash ? (gitHint || t('v2.bottomBar.gitChecking'))
                   : (gitFlash || gitHint) }}
         </div>
+        <button
+          v-if="gitStatus && !gitStatus.has_git"
+          type="button"
+          class="ctv-bbar__git-btn"
+          :disabled="gitPathSaving"
+          :aria-expanded="gitPathOpen"
+          @click="gitPathOpen = !gitPathOpen"
+        >{{ t('v2.bottomBar.gitPathManual') }}</button>
         <div class="ctv-bbar__git-actions">
           <button
             v-if="canGitSetup || (gitStatus && !gitStatus.is_repo)"
@@ -601,6 +636,30 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
         </div>
         <div v-if="gitStatus?.is_repo" class="ctv-bbar__git-legend">{{ t('v2.bottomBar.gitLegend') }}</div>
       </div>
+
+      <form v-if="gitPathOpen" class="ctv-bbar__commit" @submit.prevent="onGitPathSave">
+        <label for="ctv-git-path" class="ctv-bbar__commit-head">{{ t('v2.bottomBar.gitPathManual') }}</label>
+        <div id="ctv-git-path-hint" class="ctv-bbar__git-legend">{{ t('v2.bottomBar.gitPathHint') }}</div>
+        <input
+          id="ctv-git-path"
+          v-model="gitPathInput"
+          type="text"
+          class="ctv-bbar__git-input"
+          autocomplete="off"
+          spellcheck="false"
+          aria-describedby="ctv-git-path-hint"
+          :placeholder="'C:\\Program Files\\Git\\cmd\\git.exe'"
+          :disabled="gitPathSaving"
+          @keydown.stop
+        >
+        <div v-if="gitPathError" class="ctv-bbar__git-hint ctv-bbar__git-hint--warn" role="alert">{{ gitPathError }}</div>
+        <div class="ctv-bbar__git-actions">
+          <button type="button" class="ctv-bbar__git-btn" :disabled="gitPathSaving" @click="gitPathOpen = false">{{ t('v2.bottomBar.gitCommitCancel') }}</button>
+          <button type="submit" class="ctv-bbar__git-btn ctv-bbar__git-btn--primary" :disabled="gitPathSaving || !gitPathInput.trim()">
+            {{ gitPathSaving ? t('v2.bottomBar.gitPathSaving') : t('v2.bottomBar.gitPathApply') }}
+          </button>
+        </div>
+      </form>
 
       <div v-if="tokenDialogOpen" class="ctv-bbar__commit">
         <div class="ctv-bbar__commit-head">{{ t('v2.bottomBar.gitTokenTitle') }}</div>

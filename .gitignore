@@ -17,6 +17,8 @@ temp/
 runners/config.json
 
 /comfytv.properties
+/comfytv.git-path
+/comfytv.git-path.tmp
 /db-backup/
 
 workflows_backup/

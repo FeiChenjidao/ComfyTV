@@ -13,6 +13,92 @@ from .timing import consume_invoke_duration
 
 _JSON_PAYLOAD_TYPES = {'storyboard', 'images', 'timeline', 'material'}
 
+# Output type -> the standard ComfyUI output key a consumer (the /api/jobs
+# preview, an agent reading history) already knows how to render.
+_STANDARD_OUTPUT_KEYS = {
+    'image':  'images',
+    'images': 'images',
+    'video':  'videos',
+    'audio':  'audio',
+}
+
+
+def _view_ref(url) -> dict | None:
+    """Turn a ``/view?...`` URL into the ``{filename, subfolder, type}`` ref."""
+    if not isinstance(url, str) or not url.startswith('/view?'):
+        return None
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+    filename = (query.get('filename') or [''])[0]
+    if not filename:
+        return None
+    return {
+        'filename': filename,
+        'subfolder': (query.get('subfolder') or [''])[0],
+        'type': (query.get('type') or ['output'])[0],
+        'url': url,
+    }
+
+
+def _standard_output_refs(output_type: str, payload_str, picked=None) -> dict:
+    """Standard file refs for the output, so non-ComfyTV clients can find files.
+
+    The stage's own payload stays in ``output`` (JSON or a URL); these keys are
+    additive and mirror what a SaveImage/SaveVideo node would report, which is
+    what ComfyUI's job preview and external agents read.
+    """
+    key = _STANDARD_OUTPUT_KEYS.get(output_type)
+    if key is None or not isinstance(payload_str, str):
+        return {}
+    candidates: list[str] = [payload_str]
+    try:
+        data = json.loads(payload_str)
+    except (ValueError, TypeError):
+        data = None
+    if isinstance(data, dict):
+        candidates = [
+            str(item.get('image_url') or item.get('url') or '')
+            for item in data.get('images') or []
+            if isinstance(item, dict)
+        ]
+        multi = data.get('multi')
+        if isinstance(multi, dict):
+            candidates.extend(str(value or '') for value in multi.values())
+    if picked:
+        candidates.insert(0, str(picked))
+    refs: list[dict] = []
+    seen: set[str] = set()
+    for url in candidates:
+        ref = _view_ref(url)
+        if ref is None or ref['url'] in seen:
+            continue
+        seen.add(ref['url'])
+        refs.append(ref)
+    return {key: refs} if refs else {}
+
+
+def _publish_external_run(cls, *, ui_data: dict, project_id: str,
+                          duration_ms=None) -> None:
+    """Broadcast a queue-triggered stage result to every open page."""
+    try:
+        from ....runners._nested_exec import in_plugin_stage_run
+        if in_plugin_stage_run():
+            return
+        from ....runners import stage_events
+        from ....runners._nested_exec import executing_prompt_id
+        node_id = getattr(getattr(cls, "hidden", None), "unique_id", None)
+        stage_events.broadcast_stage_run(
+            node_id=node_id,
+            status='done',
+            ui=ui_data,
+            project_id=project_id or '',
+            stage_uid=stage_events.stage_uid_from_hidden(cls, node_id)
+                      or _mirror_uid(project_id or '', node_id, _stage_name(cls)),
+            prompt_id=executing_prompt_id(),
+            duration_ms=duration_ms,
+        )
+    except Exception:
+        logging.debug("[ComfyTV/stage] external run publish skipped", exc_info=True)
+
 
 def _stage_name(cls) -> str:
     name = getattr(cls, '__name__', '') or ''
@@ -169,8 +255,12 @@ def _stage_emit(
             ui_data["output_id"] = [row_id]
         if duration_ms is not None:
             ui_data["duration_ms"] = [int(duration_ms)]
+        ui_data.update(_standard_output_refs(
+            output_type, payload_str, picked_payload if has_pick else None))
         if extra_ui:
             ui_data.update(extra_ui)
+        _publish_external_run(cls, ui_data=ui_data, project_id=project_id,
+                              duration_ms=duration_ms)
         if has_pick:
             return io.NodeOutput(payload_str, picked_payload, *extras, ui=ui_data)
         return io.NodeOutput(payload_str, *extras, ui=ui_data)

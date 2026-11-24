@@ -17,6 +17,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp import web
 
+from ..git_runtime import git_bin
 from ._common import routes
 from .capabilities import VERSION
 
@@ -59,7 +60,7 @@ def _rescan_workflows_after_update() -> dict[str, Any]:
 
 
 def _git_bin() -> Optional[str]:
-    return shutil.which("git")
+    return git_bin()
 
 
 def _run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:

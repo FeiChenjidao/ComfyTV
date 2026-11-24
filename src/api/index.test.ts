@@ -66,6 +66,19 @@ describe('apiFetch', () => {
 describe('apiSend', () => {
   beforeEach(() => vi.resetModules())
 
+  it('sends the manual Git executable path and preserves the user PATH warning', async () => {
+    const result = {
+      ok: true, path: 'C:\\Git\\cmd\\git.exe', version: 'git version 2.47.0',
+      user_path_added: false, error: '', warning: 'registry denied',
+    }
+    const fetchApi = vi.fn(async () => json(result))
+    const { saveGitExecutable } = await loadWithFetch(fetchApi)
+    expect(await saveGitExecutable(result.path)).toEqual(result)
+    expect(fetchApi).toHaveBeenCalledWith('/comfytv/workflows/native/git/executable', expect.objectContaining({
+      method: 'PUT', body: JSON.stringify({ path: result.path }),
+    }))
+  })
+
   it('serializes body as JSON', async () => {
     const fetchApi = vi.fn(async (_url: string, _init?: any) => json({ ok: true }))
     const { apiSend } = await loadWithFetch(fetchApi)

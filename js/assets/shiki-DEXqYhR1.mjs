@@ -149,6 +149,7 @@ function escapeRegExpCharacters(value) {
 }
 var CachedFn = class {
   constructor(fn) {
+    __publicField(this, "fn");
     __publicField(this, "cache", /* @__PURE__ */ new Map());
     this.fn = fn;
   }
@@ -163,6 +164,9 @@ var CachedFn = class {
 };
 var Theme = class {
   constructor(_colorMap, _defaults, _root) {
+    __publicField(this, "_colorMap");
+    __publicField(this, "_defaults");
+    __publicField(this, "_root");
     __publicField(this, "_cachedMatchRoot", new CachedFn(
       (scopeName) => this._root.match(scopeName)
     ));
@@ -203,6 +207,8 @@ var Theme = class {
 };
 var ScopeStack = class _ScopeStack {
   constructor(parent, scopeName) {
+    __publicField(this, "parent");
+    __publicField(this, "scopeName");
     this.parent = parent;
     this.scopeName = scopeName;
   }
@@ -289,6 +295,9 @@ function _matchesScope(scopeName, scopePattern) {
 }
 var StyleAttributes = class {
   constructor(fontStyle, foregroundId, backgroundId) {
+    __publicField(this, "fontStyle");
+    __publicField(this, "foregroundId");
+    __publicField(this, "backgroundId");
     this.fontStyle = fontStyle;
     this.foregroundId = foregroundId;
     this.backgroundId = backgroundId;
@@ -372,6 +381,12 @@ function parseTheme(source) {
 }
 var ParsedThemeRule = class {
   constructor(scope, parentScopes, index, fontStyle, foreground, background) {
+    __publicField(this, "scope");
+    __publicField(this, "parentScopes");
+    __publicField(this, "index");
+    __publicField(this, "fontStyle");
+    __publicField(this, "foreground");
+    __publicField(this, "background");
     this.scope = scope;
     this.parentScopes = parentScopes;
     this.index = index;
@@ -508,6 +523,8 @@ var ThemeTrieElementRule = class _ThemeTrieElementRule {
 };
 var ThemeTrieElement = class _ThemeTrieElement {
   constructor(_mainRule, rulesWithParentScopes = [], _children = {}) {
+    __publicField(this, "_mainRule");
+    __publicField(this, "_children");
     __publicField(this, "_rulesWithParentScopes");
     this._mainRule = _mainRule;
     this._children = _children;
@@ -781,6 +798,7 @@ function disposeOnigString(str) {
 }
 var TopLevelRuleReference = class {
   constructor(scopeName) {
+    __publicField(this, "scopeName");
     this.scopeName = scopeName;
   }
   toKey() {
@@ -789,6 +807,8 @@ var TopLevelRuleReference = class {
 };
 var TopLevelRepositoryRuleReference = class {
   constructor(scopeName, ruleName) {
+    __publicField(this, "scopeName");
+    __publicField(this, "ruleName");
     this.scopeName = scopeName;
     this.ruleName = ruleName;
   }
@@ -816,6 +836,8 @@ var ExternalReferenceCollector = class {
 };
 var ScopeDependencyProcessor = class {
   constructor(repo, initialScopeName) {
+    __publicField(this, "repo");
+    __publicField(this, "initialScopeName");
     __publicField(this, "seenFullScopeRequests", /* @__PURE__ */ new Set());
     __publicField(this, "seenPartialScopeRequests", /* @__PURE__ */ new Set());
     __publicField(this, "Q");
@@ -956,18 +978,22 @@ var SelfReference = class {
 };
 var RelativeReference = class {
   constructor(ruleName) {
+    __publicField(this, "ruleName");
     __publicField(this, "kind", 2);
     this.ruleName = ruleName;
   }
 };
 var TopLevelReference = class {
   constructor(scopeName) {
+    __publicField(this, "scopeName");
     __publicField(this, "kind", 3);
     this.scopeName = scopeName;
   }
 };
 var TopLevelRepositoryReference = class {
   constructor(scopeName, ruleName) {
+    __publicField(this, "scopeName");
+    __publicField(this, "ruleName");
     __publicField(this, "kind", 4);
     this.scopeName = scopeName;
     this.ruleName = ruleName;
@@ -1664,6 +1690,8 @@ var RegExpSourceList = class {
 };
 var CompiledRule = class {
   constructor(onigLib, regExps, rules) {
+    __publicField(this, "regExps");
+    __publicField(this, "rules");
     __publicField(this, "scanner");
     this.regExps = regExps;
     this.rules = rules;
@@ -1694,6 +1722,8 @@ var CompiledRule = class {
 };
 var BasicScopeAttributes = class {
   constructor(languageId, tokenType) {
+    __publicField(this, "languageId");
+    __publicField(this, "tokenType");
     this.languageId = languageId;
     this.tokenType = tokenType;
   }
@@ -1784,6 +1814,8 @@ var ScopeMatcher = class {
 });
 var TokenizeStringResult = class {
   constructor(stack, stoppedEarly) {
+    __publicField(this, "stack");
+    __publicField(this, "stoppedEarly");
     this.stack = stack;
     this.stoppedEarly = stoppedEarly;
   }
@@ -2220,6 +2252,9 @@ function scopesAreMatching(thisScopeName, scopeName) {
 }
 var Grammar = class {
   constructor(_rootScopeName, grammar, initialLanguage, embeddedLanguages, tokenTypes, balancedBracketSelectors, grammarRepository, _onigLib) {
+    __publicField(this, "_rootScopeName");
+    __publicField(this, "balancedBracketSelectors");
+    __publicField(this, "_onigLib");
     __publicField(this, "_rootId");
     __publicField(this, "_lastRuleId");
     __publicField(this, "_ruleId2desc");
@@ -2474,6 +2509,9 @@ var AttributedScopeStack = class _AttributedScopeStack {
    * ```
    */
   constructor(parent, scopePath, tokenAttributes) {
+    __publicField(this, "parent");
+    __publicField(this, "scopePath");
+    __publicField(this, "tokenAttributes");
     this.parent = parent;
     this.scopePath = scopePath;
     this.tokenAttributes = tokenAttributes;
@@ -2602,6 +2640,12 @@ var StateStackImpl = (_b = class {
    * ```
    */
   constructor(parent, ruleId, enterPos, anchorPos, beginRuleCapturedEOL, endRule, nameScopesList, contentNameScopesList) {
+    __publicField(this, "parent");
+    __publicField(this, "ruleId");
+    __publicField(this, "beginRuleCapturedEOL");
+    __publicField(this, "endRule");
+    __publicField(this, "nameScopesList");
+    __publicField(this, "contentNameScopesList");
     __publicField(this, "_stackElementBrand");
     /**
      * The position on the current line where this state was pushed.
@@ -2835,6 +2879,7 @@ var BalancedBracketSelectors = class {
 };
 var LineTokens = class {
   constructor(emitBinaryTokens, lineText, tokenTypeOverrides, balancedBracketSelectors) {
+    __publicField(this, "balancedBracketSelectors");
     __publicField(this, "_emitBinaryTokens");
     /**
      * defined only if `false`.
@@ -2952,6 +2997,7 @@ var LineTokens = class {
 };
 var SyncRegistry = class {
   constructor(theme, _onigLib) {
+    __publicField(this, "_onigLib");
     __publicField(this, "_grammars", /* @__PURE__ */ new Map());
     __publicField(this, "_rawGrammars", /* @__PURE__ */ new Map());
     __publicField(this, "_injectionGrammars", /* @__PURE__ */ new Map());
@@ -3329,11 +3375,10 @@ var Registry2 = class extends Registry$1 {
     return this._resolvedGrammars.get(name);
   }
   loadLanguage(lang) {
-    var _a2, _b2, _c2, _d;
     if (this.getGrammar(lang.name)) return;
     const embeddedLazilyBy = new Set([...this._langMap.values()].filter((i2) => {
-      var _a3;
-      return (_a3 = i2.embeddedLangsLazy) == null ? void 0 : _a3.includes(lang.name);
+      var _a2;
+      return (_a2 = i2.embeddedLangsLazy) == null ? void 0 : _a2.includes(lang.name);
     }));
     this._resolver.addLanguage(lang);
     const grammarConfig = {
@@ -3348,13 +3393,26 @@ var Registry2 = class extends Registry$1 {
       this._alias[alias] = lang.name;
     });
     this._loadedLanguagesCache = null;
-    if (embeddedLazilyBy.size) for (const e of embeddedLazilyBy) {
-      this._resolvedGrammars.delete(e.name);
-      this._loadedLanguagesCache = null;
-      (_b2 = (_a2 = this._syncRegistry) == null ? void 0 : _a2._injectionGrammars) == null ? void 0 : _b2.delete(e.scopeName);
-      (_d = (_c2 = this._syncRegistry) == null ? void 0 : _c2._grammars) == null ? void 0 : _d.delete(e.scopeName);
-      this.loadLanguage(this._langMap.get(e.name));
+    for (const e of embeddedLazilyBy) this.reloadLanguage(e);
+    if (lang.injectTo) {
+      const targets = [...this._langMap.values()].filter((i2) => i2 !== lang && this._resolvedGrammars.has(i2.name) && lang.injectTo.some((scope) => i2.scopeName === scope || i2.scopeName.startsWith(`${scope}.`)) && !this.hasCurrentInjections(i2.scopeName));
+      for (const target of targets) this.reloadLanguage(target);
     }
+  }
+  hasCurrentInjections(scopeName) {
+    var _a2, _b2;
+    const loaded = ((_b2 = (_a2 = this._syncRegistry) == null ? void 0 : _a2._injectionGrammars) == null ? void 0 : _b2.get(scopeName)) || [];
+    const current = this._resolver.getInjections(scopeName) || [];
+    return loaded.length === current.length && loaded.every((s2, i2) => s2 === current[i2]);
+  }
+  reloadLanguage(lang) {
+    var _a2, _b2, _c2, _d, _e, _f, _g;
+    (_c2 = (_b2 = (_a2 = this._syncRegistry) == null ? void 0 : _a2._grammars) == null ? void 0 : _b2.get(lang.scopeName)) == null ? void 0 : _c2.dispose();
+    this._resolvedGrammars.delete(lang.name);
+    this._loadedLanguagesCache = null;
+    (_e = (_d = this._syncRegistry) == null ? void 0 : _d._grammars) == null ? void 0 : _e.delete(lang.scopeName);
+    (_g = (_f = this._syncRegistry) == null ? void 0 : _f._injectionGrammars) == null ? void 0 : _g.set(lang.scopeName, this._resolver.getInjections(lang.scopeName) || []);
+    this.loadLanguage(this._langMap.get(lang.name) || lang);
   }
   dispose() {
     super.dispose();
@@ -3419,7 +3477,7 @@ var Resolver = class {
     this._scopeToLang.set(l2.scopeName, l2);
     if (l2.injectTo) l2.injectTo.forEach((i2) => {
       if (!this._injections.get(i2)) this._injections.set(i2, []);
-      this._injections.get(i2).push(l2.scopeName);
+      if (!this._injections.get(i2).includes(l2.scopeName)) this._injections.get(i2).push(l2.scopeName);
     });
   }
   getInjections(scopeName) {
@@ -5086,7 +5144,7 @@ function zwitch(key2, options) {
 const defaultSubsetRegex = /["&'<>`]/g;
 const surrogatePairsRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
 const controlCharactersRegex = (
-  // eslint-disable-next-line no-control-regex, unicorn/no-hex-escape
+  // eslint-disable-next-line no-control-regex, regexp/hexadecimal-escape, regexp/no-control-character, regexp/no-obscure-range -- matching control characters is the point.
   /[\x01-\t\v\f\x0E-\x1F\x7F\x81\x8D\x8F\x90\x9D\xA0-\uFFFF]/g
 );
 const regexEscapeRegex = /[|\\{}()[\]^$+*?.]/g;
@@ -5535,18 +5593,14 @@ function toNamed(code, next, omit, attribute) {
   return "";
 }
 function formatSmart(code, next, options) {
-  let numeric = toHexadecimal(code, next, options.omitOptionalSemicolons);
+  const omit = options.omitOptionalSemicolons && next !== 59;
+  let numeric = toHexadecimal(code, next, omit);
   let named;
   if (options.useNamedReferences || options.useShortestReferences) {
-    named = toNamed(
-      code,
-      next,
-      options.omitOptionalSemicolons,
-      options.attribute
-    );
+    named = toNamed(code, next, omit, options.attribute);
   }
   if ((options.useShortestReferences || !named) && options.useShortestReferences) {
-    const decimal = toDecimal(code, next, options.omitOptionalSemicolons);
+    const decimal = toDecimal(code, next, omit);
     if (decimal.length < numeric.length) {
       numeric = decimal;
     }
@@ -5669,7 +5723,8 @@ function body$1(_2, index, parent) {
 function p(_2, index, parent) {
   const next = siblingAfter(parent, index);
   return next ? next.type === "element" && (next.tagName === "address" || next.tagName === "article" || next.tagName === "aside" || next.tagName === "blockquote" || next.tagName === "details" || next.tagName === "div" || next.tagName === "dl" || next.tagName === "fieldset" || next.tagName === "figcaption" || next.tagName === "figure" || next.tagName === "footer" || next.tagName === "form" || next.tagName === "h1" || next.tagName === "h2" || next.tagName === "h3" || next.tagName === "h4" || next.tagName === "h5" || next.tagName === "h6" || next.tagName === "header" || next.tagName === "hgroup" || next.tagName === "hr" || next.tagName === "main" || next.tagName === "menu" || next.tagName === "nav" || next.tagName === "ol" || next.tagName === "p" || next.tagName === "pre" || next.tagName === "section" || next.tagName === "table" || next.tagName === "ul") : !parent || // Confusing parent.
-  !(parent.type === "element" && (parent.tagName === "a" || parent.tagName === "audio" || parent.tagName === "del" || parent.tagName === "ins" || parent.tagName === "map" || parent.tagName === "noscript" || parent.tagName === "video"));
+  !(parent.type === "element" && (parent.tagName === "a" || parent.tagName === "audio" || parent.tagName === "del" || parent.tagName === "ins" || parent.tagName === "map" || parent.tagName === "noscript" || parent.tagName === "video" || // Custom element.
+  parent.tagName.includes("-")));
 }
 function li(_2, index, parent) {
   const next = siblingAfter(parent, index);
@@ -5746,18 +5801,18 @@ function body(node) {
 }
 function colgroup(node, index, parent) {
   const previous = siblingBefore(parent, index);
-  const head2 = siblingAfter(node, -1, true);
   if (parent && previous && previous.type === "element" && previous.tagName === "colgroup" && closing(previous, parent.children.indexOf(previous), parent)) {
     return false;
   }
+  const head2 = siblingAfter(node, -1, true);
   return Boolean(head2 && head2.type === "element" && head2.tagName === "col");
 }
 function tbody(node, index, parent) {
   const previous = siblingBefore(parent, index);
-  const head2 = siblingAfter(node, -1);
   if (parent && previous && previous.type === "element" && (previous.tagName === "thead" || previous.tagName === "tbody") && closing(previous, parent.children.indexOf(previous), parent)) {
     return false;
   }
+  const head2 = siblingAfter(node, -1);
   return Boolean(head2 && head2.type === "element" && head2.tagName === "tr");
 }
 const constants = {
@@ -5783,16 +5838,19 @@ const constants = {
     ['\0"&'.split(""), "\0\"&'`".split("")]
   ]
 };
+const htmlIntegrationPoints = /* @__PURE__ */ new Set(["desc", "foreignObject", "title"]);
 function element(node, index, parent, state) {
-  const schema = state.schema;
+  const { schema } = state;
   const omit = schema.space === "svg" ? false : state.settings.omitOptionalTags;
   let selfClosing = schema.space === "svg" ? state.settings.closeEmptyElements : state.settings.voids.includes(node.tagName.toLowerCase());
   const parts = [];
-  let last;
   if (schema.space === "html" && node.tagName === "svg") {
     state.schema = svg;
   }
   const attributes = serializeAttributes(state, node.properties);
+  if (state.schema.space === "svg" && htmlIntegrationPoints.has(node.tagName)) {
+    state.schema = html$2;
+  }
   const content = state.all(
     schema.space === "html" && node.tagName === "template" ? node.content : node
   );
@@ -5801,7 +5859,7 @@ function element(node, index, parent, state) {
   if (attributes || !omit || !opening(node, index, parent)) {
     parts.push("<", node.tagName, attributes ? " " + attributes : "");
     if (selfClosing && (schema.space === "svg" || state.settings.closeSelfClosing)) {
-      last = attributes.charAt(attributes.length - 1);
+      const last = attributes.charAt(attributes.length - 1);
       if (!state.settings.tightSelfClosing || last === "/" || last && last !== '"' && last !== "'") {
         parts.push(" ");
       }
@@ -5839,8 +5897,6 @@ function serializeAttribute(state, key2, value) {
   const info = find(state.schema, key2);
   const x2 = state.settings.allowParseErrors && state.schema.space === "html" ? 0 : 1;
   const y2 = state.settings.allowDangerousCharacters ? 0 : 1;
-  let quote = state.quote;
-  let result;
   if (info.overloadedBoolean && (value === info.attribute || value === "")) {
     value = true;
   } else if ((info.boolean || info.overloadedBoolean) && (typeof value !== "string" || value === info.attribute || value === "")) {
@@ -5861,6 +5917,7 @@ function serializeAttribute(state, key2, value) {
     padLeft: !state.settings.tightCommaSeparatedLists
   }) : String(value);
   if (state.settings.collapseEmptyAttributes && !value) return name;
+  let result;
   if (state.settings.preferUnquoted) {
     result = stringifyEntities(
       value,
@@ -5871,6 +5928,7 @@ function serializeAttribute(state, key2, value) {
     );
   }
   if (result !== value) {
+    let { quote } = state;
     if (state.settings.quoteSmart && ccount(value, quote) > ccount(value, state.alternative)) {
       quote = state.alternative;
     }
@@ -5886,8 +5944,17 @@ function serializeAttribute(state, key2, value) {
   return name + (result ? "=" + result : result);
 }
 const textEntitySubset = ["<", "&"];
+const raw$1 = /* @__PURE__ */ new Set([
+  "iframe",
+  "noembed",
+  "noframes",
+  "plaintext",
+  "script",
+  "style",
+  "xmp"
+]);
 function text(node, _2, parent, state) {
-  return parent && parent.type === "element" && (parent.tagName === "script" || parent.tagName === "style") ? node.value : stringifyEntities(
+  return parent && parent.type === "element" && state.schema.space === "html" && raw$1.has(parent.tagName) ? node.value : stringifyEntities(
     node.value,
     Object.assign({}, state.settings.characterReferences, {
       subset: textEntitySubset
@@ -5921,10 +5988,10 @@ const emptyChildren = [];
 function toHtml(tree, options) {
   const options_ = options || emptyOptions;
   const quote = options_.quote || '"';
-  const alternative = quote === '"' ? "'" : '"';
   if (quote !== '"' && quote !== "'") {
     throw new Error("Invalid quote `" + quote + "`, expected `'` or `\"`");
   }
+  const alternative = quote === '"' ? "'" : '"';
   const state = {
     one,
     all,
@@ -5982,29 +6049,28 @@ function addClassToHast(node, className) {
   return node;
 }
 function createPositionConverter(code) {
-  const lines = splitLines(code, true).map(([line]) => line);
+  const split = splitLines(code, true);
+  const lines = split.map(([line]) => line);
+  const offsets = split.map(([, offset]) => offset);
   function indexToPos(index) {
     if (index === code.length) return {
       line: lines.length - 1,
       character: lines.at(-1).length
     };
-    let character = index;
-    let line = 0;
-    for (const lineText of lines) {
-      if (character < lineText.length) break;
-      character -= lineText.length;
-      line++;
+    let low = 0;
+    let high = lines.length - 1;
+    while (low < high) {
+      const mid = low + high + 1 >>> 1;
+      if (offsets[mid] <= index) low = mid;
+      else high = mid - 1;
     }
     return {
-      line,
-      character
+      line: low,
+      character: index - offsets[low]
     };
   }
   function posToIndex(line, character) {
-    let index = 0;
-    for (let i2 = 0; i2 < line; i2++) index += lines[i2].length;
-    index += character;
-    return index;
+    return offsets[line] + character;
   }
   return {
     lines,
@@ -6073,16 +6139,17 @@ function flatTokenVariants(merged, variantsOrder, cssVariablePrefix, defaultColo
   styles.forEach((cur, idx) => {
     for (const key2 of styleKeys) {
       const value = cur[key2] || "inherit";
-      if (idx === 0 && defaultColor && COLOR_KEYS.includes(key2)) if (defaultColor === "light-dark()" && styles.length > 1) {
-        const lightIndex = variantsOrder.findIndex((t) => t === "light");
-        const darkIndex = variantsOrder.findIndex((t) => t === "dark");
-        if (lightIndex === -1 || darkIndex === -1) throw new ShikiError('When using `defaultColor: "light-dark()"`, you must provide both `light` and `dark` themes');
-        const lightValue = styles[lightIndex][key2] || "inherit";
-        const darkValue = styles[darkIndex][key2] || "inherit";
-        mergedStyles[key2] = `light-dark(${lightValue}, ${darkValue})`;
-        if (colorsRendering === "css-vars") mergedStyles[varKey(idx, key2)] = value;
-      } else mergedStyles[key2] = value;
-      else if (colorsRendering === "css-vars") mergedStyles[varKey(idx, key2)] = value;
+      if (idx === 0 && defaultColor && COLOR_KEYS.includes(key2)) {
+        if (defaultColor === "light-dark()" && styles.length > 1) {
+          const lightIndex = variantsOrder.findIndex((t) => t === "light");
+          const darkIndex = variantsOrder.findIndex((t) => t === "dark");
+          if (lightIndex === -1 || darkIndex === -1) throw new ShikiError('When using `defaultColor: "light-dark()"`, you must provide both `light` and `dark` themes');
+          const lightValue = styles[lightIndex][key2] || "inherit";
+          const darkValue = styles[darkIndex][key2] || "inherit";
+          mergedStyles[key2] = `light-dark(${lightValue}, ${darkValue})`;
+          if (colorsRendering === "css-vars") mergedStyles[varKey(idx, key2)] = value;
+        } else mergedStyles[key2] = value;
+      } else if (colorsRendering === "css-vars") mergedStyles[varKey(idx, key2)] = value;
     }
   });
   token2.htmlStyle = mergedStyles;
@@ -6211,15 +6278,16 @@ function transformerDecorations() {
         if (start.line === end.line) applyLineSection(start.line, start.character, end.character, decoration);
         else if (start.line < end.line) {
           applyLineSection(start.line, start.character, Number.POSITIVE_INFINITY, decoration);
-          for (let i2 = start.line + 1; i2 < end.line; i2++) lineApplies.unshift(() => applyLine(i2, decoration));
+          for (let i2 = start.line + 1; i2 < end.line; i2++) lineApplies.push(() => applyLine(i2, decoration));
           applyLineSection(end.line, 0, end.character, decoration);
         }
       }
-      lineApplies.forEach((i2) => i2());
+      for (let i2 = lineApplies.length - 1; i2 >= 0; i2--) lineApplies[i2]();
     }
   };
 }
 function verifyIntersections(items) {
+  if (areDecorationsNested(items)) return;
   for (let i2 = 0; i2 < items.length; i2++) {
     const foo = items[i2];
     if (foo.start.offset > foo.end.offset) throw new ShikiError(`Invalid decoration range: ${JSON.stringify(foo.start)} - ${JSON.stringify(foo.end)}`);
@@ -6238,6 +6306,31 @@ function verifyIntersections(items) {
       }
     }
   }
+}
+function areDecorationsNested(items) {
+  const ranges = [];
+  const firstStart = /* @__PURE__ */ new Map();
+  const lastEnd = /* @__PURE__ */ new Map();
+  for (let i2 = 0; i2 < items.length; i2++) {
+    const { start, end } = items[i2];
+    if (start.offset > end.offset) return false;
+    if (start.offset === end.offset) continue;
+    ranges.push(items[i2]);
+    if (!firstStart.has(start.offset)) firstStart.set(start.offset, i2);
+    lastEnd.set(end.offset, i2);
+  }
+  for (let i2 = 0; i2 < items.length; i2++) {
+    const { start, end } = items[i2];
+    if (start.offset === end.offset && ((firstStart.get(start.offset) ?? i2) < i2 || (lastEnd.get(start.offset) ?? i2) > i2)) return false;
+  }
+  ranges.sort((a, b2) => a.start.offset - b2.start.offset || b2.end.offset - a.end.offset);
+  const ends = [];
+  for (const { start, end } of ranges) {
+    while (ends.length && ends.at(-1) <= start.offset) ends.pop();
+    if (ends.length && end.offset > ends.at(-1)) return false;
+    ends.push(end.offset);
+  }
+  return true;
 }
 function stringify(el) {
   if (el.type === "text") return el.value;
@@ -6702,8 +6795,10 @@ function tokensToHast(tokens, options, transformerContext, grammarState = getLas
   };
   const { structure = "classic", tabindex = "0" } = options;
   const properties = { class: `shiki ${options.themeName || ""}` };
-  if (options.rootStyle !== false) if (options.rootStyle != null) properties.style = options.rootStyle;
-  else properties.style = `background-color:${options.bg};color:${options.fg}`;
+  if (options.rootStyle !== false) {
+    if (options.rootStyle != null) properties.style = options.rootStyle;
+    else properties.style = `background-color:${options.bg};color:${options.fg}`;
+  }
   if (tabindex !== false && tabindex != null) properties.tabindex = tabindex.toString();
   for (const [key2, value] of Object.entries(options.meta || {})) if (!key2.startsWith("_")) properties[key2] = value;
   let preNode = {
@@ -6937,11 +7032,37 @@ async function createHighlighterCore(options) {
   };
 }
 const MAX = 4294967295;
+function isSearchCacheable(regexp) {
+  var _a2;
+  return !regexp.sticky && !((_a2 = regexp.rawOptions) == null ? void 0 : _a2.strategy);
+}
+function toResult(index, indices) {
+  return {
+    index,
+    captureIndices: indices.map((indice) => {
+      if (indice == null) return {
+        start: MAX,
+        end: MAX,
+        length: 0
+      };
+      return {
+        start: indice[0],
+        end: indice[1],
+        length: indice[1] - indice[0]
+      };
+    })
+  };
+}
 var JavaScriptScanner = class {
   constructor(patterns, options = {}) {
     __publicField(this, "patterns");
     __publicField(this, "options");
     __publicField(this, "regexps");
+    /**
+    * Last search of each regexp on the current string, reused the way `vscode-oniguruma` does.
+    * `null` for regexps whose searches can't be reused.
+    */
+    __publicField(this, "lastSearches");
     this.patterns = patterns;
     this.options = options;
     const { forgiving = false, cache, regexConstructor } = options;
@@ -6964,52 +7085,63 @@ var JavaScriptScanner = class {
         throw e;
       }
     });
+    this.lastSearches = this.regexps.map((regexp) => regexp && isSearchCacheable(regexp) ? {
+      strId: 0,
+      searchedFrom: 0,
+      matchIndex: -1,
+      indices: null
+    } : null);
   }
   findNextMatchSync(string, startPosition, _options) {
     const str = typeof string === "string" ? string : string.content;
-    const pending = [];
-    function toResult(index, match, offset = 0) {
-      return {
-        index,
-        captureIndices: match.indices.map((indice) => {
-          if (indice == null) return {
-            start: MAX,
-            end: MAX,
-            length: 0
-          };
-          return {
-            start: indice[0] + offset,
-            end: indice[1] + offset,
-            length: indice[1] - indice[0]
-          };
-        })
-      };
-    }
+    const strId = typeof string === "string" ? 0 : string.id || 0;
+    let bestIndex = -1;
+    let bestMatchIndex = 0;
+    let bestIndices = null;
     for (let i2 = 0; i2 < this.regexps.length; i2++) {
       const regexp = this.regexps[i2];
       if (!regexp) continue;
       try {
-        regexp.lastIndex = startPosition;
-        const match = regexp.exec(str);
-        if (!match) continue;
-        if (match.index === startPosition) return toResult(i2, match, 0);
-        pending.push([
-          i2,
-          match,
-          0
-        ]);
+        const last = strId ? this.lastSearches[i2] : null;
+        let matchIndex;
+        let indices;
+        if (last && last.strId === strId && last.searchedFrom <= startPosition && (last.matchIndex === -1 || last.matchIndex >= startPosition)) {
+          matchIndex = last.matchIndex;
+          indices = last.indices;
+        } else {
+          regexp.lastIndex = startPosition;
+          const match = regexp.exec(str);
+          matchIndex = match ? match.index : -1;
+          indices = match ? match.indices : null;
+          if (last) {
+            last.strId = strId;
+            last.searchedFrom = startPosition;
+            last.matchIndex = matchIndex;
+            last.indices = indices;
+          }
+        }
+        if (matchIndex === -1) continue;
+        if (matchIndex === startPosition) return toResult(i2, indices);
+        if (bestIndex === -1 || matchIndex < bestMatchIndex) {
+          bestIndex = i2;
+          bestMatchIndex = matchIndex;
+          bestIndices = indices;
+        }
       } catch (e) {
         if (this.options.forgiving) continue;
         throw e;
       }
     }
-    if (pending.length) {
-      const minIndex = Math.min(...pending.map((m2) => m2[1].index));
-      for (const [i2, match, offset] of pending) if (match.index === minIndex) return toResult(i2, match, offset);
-    }
-    return null;
+    return bestIndex === -1 ? null : toResult(bestIndex, bestIndices);
   }
 };
+let lastStringId = 0;
+function createJavaScriptEngineString(content) {
+  return {
+    content,
+    id: ++lastStringId
+  };
+}
 function r$2(e) {
   if ([...e].length !== 1) throw new Error(`Expected "${e}" to be a single code point`);
   return e.codePointAt(0);
@@ -10123,9 +10255,7 @@ function createJavaScriptRegexEngine(options = {}) {
     createScanner(patterns) {
       return new JavaScriptScanner(patterns, _options);
     },
-    createString(s2) {
-      return { content: s2 };
-    }
+    createString: createJavaScriptEngineString
   };
 }
 const LANGS = {
@@ -10177,4 +10307,4 @@ async function codeToHtml(code, options) {
 export {
   codeToHtml
 };
-//# sourceMappingURL=shiki-Do5VLs4k.mjs.map
+//# sourceMappingURL=shiki-DEXqYhR1.mjs.map

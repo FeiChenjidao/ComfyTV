@@ -49,6 +49,28 @@ def install_exec_error_recorder(cls, kind: str) -> None:
             project_id=project_id if isinstance(project_id, str) and project_id
             else None,
         )
+        _broadcast_external_error(cls_, error, kwargs)
+
+    def _broadcast_external_error(cls_, error, kwargs):
+        """Queue-triggered runs have no page to reply to -- tell every page."""
+        try:
+            from ._nested_exec import in_plugin_stage_run
+            if in_plugin_stage_run():
+                return
+            from . import stage_events
+            node_id = getattr(getattr(cls_, "hidden", None), "unique_id", None)
+            project_id = kwargs.get("project_id")
+            stage_events.broadcast_stage_run(
+                node_id=node_id,
+                status='error',
+                project_id=project_id if isinstance(project_id, str) else '',
+                stage_uid=stage_events.stage_uid_from_hidden(cls_, node_id),
+                error=str(error),
+                error_type=type(error).__name__,
+                traceback=getattr(error, "inner_traceback", None),
+            )
+        except Exception:
+            pass
 
     if inspect.iscoroutinefunction(inner):
         @functools.wraps(inner)

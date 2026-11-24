@@ -124,6 +124,28 @@ def use_execution_server(server):
         _EXECUTION_SERVER.reset(token)
 
 
+def in_plugin_stage_run() -> bool:
+    """True when the running node belongs to a ComfyTV-initiated run.
+
+    ``api/stage_runs.py`` (the Run button) and ``api/agent_runs.py`` bind an
+    execution server for the whole prompt; ComfyUI's own queue does not. The
+    distinction matters because queue runs have no page waiting for the
+    result, so their outcome has to be broadcast instead of replied to.
+    """
+    return _EXECUTION_SERVER.get() is not None
+
+
+def executing_prompt_id() -> str | None:
+    """Prompt id of the execution currently running this node, if known."""
+    try:
+        from comfy_execution.utils import get_executing_context
+        context = get_executing_context()
+    except Exception:
+        return None
+    prompt_id = getattr(context, "prompt_id", None) if context is not None else None
+    return str(prompt_id) if prompt_id else None
+
+
 def _translate_subprompt_event(event, data, sub_prompt_id, outer_node_id, aggregate):
     if event == 'progress_state':
         nodes_dict = data.get('nodes') or {}

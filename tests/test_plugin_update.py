@@ -9,6 +9,24 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def restore_import_stubs():
+    names = [
+        "ComfyTV", "ComfyTV.api", "ComfyTV.api._common",
+        "ComfyTV.api.capabilities", "ComfyTV.api.plugin_update",
+    ]
+    previous = {name: sys.modules.get(name) for name in names}
+    attributes = {name: dict(module.__dict__) for name, module in previous.items() if module is not None}
+    yield
+    for name, module in previous.items():
+        if module is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = module
+            module.__dict__.clear()
+            module.__dict__.update(attributes[name])
+
+
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", *args],

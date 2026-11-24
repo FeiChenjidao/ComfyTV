@@ -73,6 +73,8 @@ git clone https://github.com/jtydhr88/ComfyTV
 
 重启 ComfyUI。ComfyTV 的节点会出现在 Add-Node 菜单的 **`ComfyTV`** 分类下，再细分成若干子分类（Project / Input / Generate / Image / Panorama / Video / VideoFX / Keying / Compose / Timeline / Audio / AudioFX / Music / 3D / Material / Storyboard / Bridge）。
 
+如果已安装 Git，但底部「工作流」面板仍提示找不到，点「手动指定 Git」，填入 `git.exe` 完整路径（例如 `C:\Program Files\Git\cmd\git.exe`）或 Git 安装目录，再点「验证并加入 PATH」。验证成功后立即生效并保存到本机，重启后自动加载；Windows 同时加入当前用户 PATH，无需管理员权限。路径应属于运行 ComfyUI 后台的电脑。
+
 ### ComfyUI Desktop / macOS / 多个 ComfyUI 实例
 
 如果你用的是 ComfyUI Desktop、在 macOS 上、或机器上装了不止一个 ComfyUI，上面那句相对路径的 `cd ComfyUI/custom_nodes` 很容易进错实例（典型症状：clone 成功了但 ComfyTV 死活不出现）。改成用**绝对路径**装进正在运行的那个实例：
@@ -109,6 +111,7 @@ git clone https://github.com/jtydhr88/ComfyTV
 | [sidebar-config-editor.zh.md](docs/sidebar-config-editor.zh.md) | 用侧边栏 GUI 编辑 stage 输入到工作流节点的绑定 |
 | [bridges.zh.md](docs/bridges.zh.md) | 通过 Bridge 节点接入第三方 ComfyUI 插件（mesh2motion、IPAdapter 等） |
 | [mcp.zh.md](docs/mcp.zh.md) | MCP 端点：45 个 agent 工具、客户端接入、关键套路 |
+| [agent-compat.zh.md](docs/agent-compat.zh.md) | 用 `comfy` CLI / 脚本 / 只会 `/prompt` 的 agent 跑 stage；登录凭据兜底 |
 | [bot.zh.md](docs/bot.zh.md) | 内嵌侧边栏聊天代理：provider、附件、技能 |
 | [skills.zh.md](docs/skills.zh.md) | Agent Skills：格式、管理、怎么写自己的 |
 

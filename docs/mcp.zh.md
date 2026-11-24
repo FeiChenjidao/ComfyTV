@@ -125,6 +125,7 @@ url = "http://127.0.0.1:8188/comfytv/mcp"
 
 ## 另见
 
+- [队列 / 外部 Agent 兼容](agent-compat.zh.md) — 只认 `/prompt` 的 CLI/脚本怎么跑 stage,以及凭据兜底
 - [ComfyTV Bot](bot.zh.md) — 基于同一套工具的内嵌聊天代理
 - [Agent Skills](skills.zh.md) — 经 `skill` 工具和 MCP prompts 提供的指令包
 - [自定义工作流](custom-workflows.zh.md) — 绑定是什么、手工怎么配

@@ -15,6 +15,7 @@ from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 from aiohttp import web
 
+from ..git_runtime import configure_git, git_bin
 from ..runners.workflow_db.link import (
     _native_workflows_dir,
     _template_workflows_dir,
@@ -54,7 +55,7 @@ def _secrets_dir() -> Path:
 
 
 def _git_bin() -> Optional[str]:
-    return shutil.which("git")
+    return git_bin()
 
 
 def _run_git(root: Path, *args: str, check: bool = False) -> subprocess.CompletedProcess[str]:
@@ -1512,6 +1513,17 @@ async def native_git_status(request: web.Request) -> web.Response:
 async def native_git_token_status(request: web.Request) -> web.Response:
     uid = resolve_request_user_id(request)
     data = await asyncio.to_thread(token_status, None, uid)
+    return web.json_response(data)
+
+
+@routes.put("/comfytv/workflows/native/git/executable")
+async def native_git_executable_set(request: web.Request) -> web.Response:
+    try:
+        body = await request.json()
+    except (ValueError, TypeError):
+        body = {}
+    path = str(body.get("path") or "") if isinstance(body, dict) else ""
+    data = await asyncio.to_thread(configure_git, path)
     return web.json_response(data)
 
 

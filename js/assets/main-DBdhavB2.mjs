@@ -9,7 +9,7 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
 import { app as app$2 } from "../../../scripts/app.js";
 /**
-* @vue/shared v3.5.34
+* @vue/shared v3.5.35
 * (c) 2018-present Yuxi (Evan) You and Vue contributors
 * @license MIT
 **/
@@ -264,7 +264,7 @@ const stringifySymbol = (v, i = "") => {
   );
 };
 /**
-* @vue/reactivity v3.5.34
+* @vue/reactivity v3.5.35
 * (c) 2018-present Yuxi (Evan) You and Vue contributors
 * @license MIT
 **/
@@ -1445,9 +1445,6 @@ function targetTypeMap(rawType) {
       return 0;
   }
 }
-function getTargetType(value) {
-  return value["__v_skip"] || !Object.isExtensible(value) ? 0 : targetTypeMap(toRawType(value));
-}
 // @__NO_SIDE_EFFECTS__
 function reactive(target) {
   if (/* @__PURE__ */ isReadonly(target)) {
@@ -1498,13 +1495,16 @@ function createReactiveObject(target, isReadonly2, baseHandlers, collectionHandl
   if (target["__v_raw"] && !(isReadonly2 && target["__v_isReactive"])) {
     return target;
   }
-  const targetType = getTargetType(target);
-  if (targetType === 0) {
+  if (target["__v_skip"] || !Object.isExtensible(target)) {
     return target;
   }
   const existingProxy = proxyMap.get(target);
   if (existingProxy) {
     return existingProxy;
+  }
+  const targetType = targetTypeMap(toRawType(target));
+  if (targetType === 0) {
+    return target;
   }
   const proxy = new Proxy(
     target,
@@ -1949,7 +1949,7 @@ function traverse(value, depth = Infinity, seen) {
   return value;
 }
 /**
-* @vue/runtime-core v3.5.34
+* @vue/runtime-core v3.5.35
 * (c) 2018-present Yuxi (Evan) You and Vue contributors
 * @license MIT
 **/
@@ -2666,19 +2666,18 @@ const TeleportImpl = {
       target,
       props
     } = vnode;
-    let shouldRemove = doRemove || !isTeleportDisabled(props);
+    const shouldRemove = doRemove || !isTeleportDisabled(props);
     const pendingMount = pendingMounts.get(vnode);
     if (pendingMount) {
       pendingMount.flags |= 8;
       pendingMounts.delete(vnode);
-      shouldRemove = false;
     }
     if (target) {
       hostRemove(targetStart);
       hostRemove(targetAnchor);
     }
     doRemove && hostRemove(anchor2);
-    if (shapeFlag & 16) {
+    if (!pendingMount && shapeFlag & 16) {
       for (let i = 0; i < children.length; i++) {
         const child = children[i];
         unmount2(
@@ -6144,9 +6143,13 @@ function baseCreateRenderer(options, createHydrationFns) {
     const needTransition2 = moveType !== 2 && shapeFlag & 1 && transition;
     if (needTransition2) {
       if (moveType === 0) {
-        transition.beforeEnter(el2);
-        hostInsert(el2, container, anchor2);
-        queuePostRenderEffect(() => transition.enter(el2), parentSuspense);
+        if (transition.persisted && !el2[leaveCbKey]) {
+          hostInsert(el2, container, anchor2);
+        } else {
+          transition.beforeEnter(el2);
+          hostInsert(el2, container, anchor2);
+          queuePostRenderEffect(() => transition.enter(el2), parentSuspense);
+        }
       } else {
         const { leave, delayLeave, afterLeave } = transition;
         const remove22 = () => {
@@ -6157,16 +6160,21 @@ function baseCreateRenderer(options, createHydrationFns) {
           }
         };
         const performLeave = () => {
+          const wasLeaving = el2._isLeaving || !!el2[leaveCbKey];
           if (el2._isLeaving) {
             el2[leaveCbKey](
               true
               /* cancelled */
             );
           }
-          leave(el2, () => {
+          if (transition.persisted && !wasLeaving) {
             remove22();
-            afterLeave && afterLeave();
-          });
+          } else {
+            leave(el2, () => {
+              remove22();
+              afterLeave && afterLeave();
+            });
+          }
         };
         if (delayLeave) {
           delayLeave(el2, remove22, performLeave);
@@ -7177,9 +7185,9 @@ function isMemoSame(cached2, memo) {
   }
   return true;
 }
-const version$1 = "3.5.34";
+const version$1 = "3.5.35";
 /**
-* @vue/runtime-dom v3.5.34
+* @vue/runtime-dom v3.5.35
 * (c) 2018-present Yuxi (Evan) You and Vue contributors
 * @license MIT
 **/
@@ -7814,30 +7822,41 @@ function createInvoker(initialValue, instance2) {
     } else if (e._vts <= invoker.attached) {
       return;
     }
-    callWithAsyncErrorHandling(
-      patchStopImmediatePropagation(e, invoker.value),
-      instance2,
-      5,
-      [e]
-    );
+    const value = invoker.value;
+    if (isArray$1(value)) {
+      const originalStop = e.stopImmediatePropagation;
+      e.stopImmediatePropagation = () => {
+        originalStop.call(e);
+        e._stopped = true;
+      };
+      const handlers2 = value.slice();
+      const args = [e];
+      for (let i = 0; i < handlers2.length; i++) {
+        if (e._stopped) {
+          break;
+        }
+        const handler = handlers2[i];
+        if (handler) {
+          callWithAsyncErrorHandling(
+            handler,
+            instance2,
+            5,
+            args
+          );
+        }
+      }
+    } else {
+      callWithAsyncErrorHandling(
+        value,
+        instance2,
+        5,
+        [e]
+      );
+    }
   };
   invoker.value = initialValue;
   invoker.attached = getNow();
   return invoker;
-}
-function patchStopImmediatePropagation(e, value) {
-  if (isArray$1(value)) {
-    const originalStop = e.stopImmediatePropagation;
-    e.stopImmediatePropagation = () => {
-      originalStop.call(e);
-      e._stopped = true;
-    };
-    return value.map(
-      (fn3) => (e2) => !e2._stopped && fn3 && fn3(e2)
-    );
-  } else {
-    return value;
-  }
 }
 const isNativeOn = (key) => key.charCodeAt(0) === 111 && key.charCodeAt(1) === 110 && // lowercase letter
 key.charCodeAt(2) > 96 && key.charCodeAt(2) < 123;
@@ -17557,6 +17576,14 @@ const NativeWorkflowGitTokenSchema = object({
   error: string().optional().default(""),
   saved: boolean().optional()
 });
+const GitExecutableResultSchema = object({
+  ok: boolean(),
+  path: string(),
+  version: string(),
+  user_path_added: boolean(),
+  error: string(),
+  warning: string().optional()
+});
 const PluginUpdateStatusSchema = object({
   ok: boolean(),
   is_repo: boolean(),
@@ -17948,6 +17975,9 @@ function pushNativeWorkflowGit(paths, message2) {
 function fetchNativeWorkflowGitToken() {
   return apiFetch("/comfytv/workflows/native/git/token", NativeWorkflowGitTokenSchema);
 }
+function saveGitExecutable(path) {
+  return apiSend("/comfytv/workflows/native/git/executable", "PUT", GitExecutableResultSchema, { path });
+}
 function saveNativeWorkflowGitToken(token) {
   return apiSend("/comfytv/workflows/native/git/token", "PUT", NativeWorkflowGitTokenSchema, {
     token
@@ -18017,6 +18047,7 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   FxClipPreviewSchema,
   GetBotChatSchema,
   GetProjectSchema,
+  GitExecutableResultSchema,
   GuiNodeSchema,
   IgnisTokenSchema,
   ImportSkillSchema,
@@ -18159,6 +18190,7 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   rollbackPluginUpdate,
   runDbBackup,
   saveCustomIo,
+  saveGitExecutable,
   saveIgnisConfigText,
   saveIgnisToken,
   saveNativeWorkflowGitToken,
@@ -54920,7 +54952,7 @@ function WebGLTextures(_gl, extensions, state2, properties, capabilities, utils,
   function generateMipmap(target) {
     _gl.generateMipmap(target);
   }
-  function getTargetType2(texture) {
+  function getTargetType(texture) {
     if (texture.isWebGLCubeRenderTarget) return _gl.TEXTURE_CUBE_MAP;
     if (texture.isWebGL3DRenderTarget) return _gl.TEXTURE_3D;
     if (texture.isWebGLArrayRenderTarget || texture.isCompressedArrayTexture) return _gl.TEXTURE_2D_ARRAY;
@@ -56027,7 +56059,7 @@ function WebGLTextures(_gl, extensions, state2, properties, capabilities, utils,
     for (let i = 0, il = textures.length; i < il; i++) {
       const texture = textures[i];
       if (textureNeedsGenerateMipmaps(texture)) {
-        const targetType = getTargetType2(renderTarget);
+        const targetType = getTargetType(renderTarget);
         const webglTexture = properties.get(texture).__webglTexture;
         state2.bindTexture(targetType, webglTexture);
         generateMipmap(targetType);
@@ -60028,7 +60060,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-B8sZX8mq.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-BMolIY3B.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -62930,13 +62962,13 @@ const run$2 = { "run": "Run", "runAllStages": "Run all stages", "stagesRunComple
 const shareWorkflow$3 = { "saveFailedTitle": "Save failed", "saveFailedDescription": "The workflow could not be saved: {detail}" };
 const dialog$1 = { "confirm": "OK", "cancel": "Cancel", "close": "Close" };
 const pluginUpdate$1 = { "title": "ComfyTV update available", "repairTitle": "Restore ComfyTV", "message": "A newer ComfyTV is on the remote.\n\nCurrent: v{local}\nLatest: v{remote}\nBehind by {n} commit(s).\n\nThe current commit is kept for rollback. Update now, then restart ComfyUI.", "messageDirty": "A newer ComfyTV is on the remote (v{local} → v{remote}, {n} commit(s)).\n\nUpdate now force-overwrites every tracked file, including shipped workflows. Tracked local changes are saved as a patch, and untracked or ignored user workflows are preserved. Restart ComfyUI after updating.", "messageRepair": "ComfyTV v{local} has tracked local changes or local commits. Restore the configured remote version now. Local tracked changes are saved as a patch before they are overwritten.", "updateNow": "Update now", "updating": "Updating…", "later": "Remind later", "dismiss": "Skip this version", "failed": "Update failed", "restartTitle": "Restart ComfyUI", "restartDetail": "ComfyTV files were updated. Restart ComfyUI (or reload custom nodes) for the new version to load." };
-const v2$1 = /* @__PURE__ */ JSON.parse(`{"meta":{"fps":"{n} fps","silent":"no audio","mono":"mono","stereo":"stereo","channels":"{n} ch","frames":"{n} frames","genTime":"Generated in {t}"},"genopt":{"resolution":"Resolution","ratio":"Aspect ratio","count":"Count"},"seedream":{"model":"Model","sizePreset":"Size preset","width":"Width","height":"Height","background":"Background","seed":"Seed","randomSeed":"Random seed"},"panelCollapse":"Collapse the panel — keeps a one-line summary and Run","panelExpand":"Expand the panel","imageStageTitle":"Image · ImageStage","pickerTitle":"Pick · Image Picker","cropTitle":"Crop · Edit","ed":{"rotate":"Rotate · Edit","mirror":"Mirror · Edit","grade":"Color Grade · Edit","compare":"Compare · Edit","gridSplit":"Grid Split · Edit","customSplit":"Custom Split · Edit","psdLayerTree":"PSD Layer Tree · Edit","layerSeparation":"Layer Separation · Edit","imagesSplit":"Split Images · Edit","imageMerge":"Merge Images · Edit","compareHint":"Wire two images into A and B to compare","wired":"wired","empty":"empty"},"bottomBar":{"add":"Add node","assets":"Assets","workflows":"Workflows","search":"Search","searchPlaceholder":"Search ComfyTV nodes…","categories":"Categories","searchEmpty":"No matching nodes","cat":{"all":"All","generate":"Generate","input":"Input","image":"Image","edit":"Edit","video":"Video","audio":"Audio","text":"Text","model3d":"3D","bridge":"Bridge","utils":"Utils","other":"Other"},"createImage":"Image","createVideo":"Video","createAudio":"Audio","createText":"Text","createModel":"3D Model","workflowEmpty":"Nothing here yet. Templates (left) come from the team repo; workflows (right) are local-only.","workflowLoading":"Loading…","workflowOpenFailed":"Failed to open workflow","templates":"Templates","templateOpenHint":"Creates and opens an independent local copy; saving never modifies the template.","localWorkflows":"Workflows","templatesEmpty":"No cloud templates yet. Click Connect or Update templates to pull.","localWorkflowsEmpty":"No local workflows. Save a graph into this user’s workflows folder to see it here.","gitNoRepo":"The team template repo is not connected. Click Connect to clone it into ComfyTV’s dedicated template directory, outside user workflows.","gitNoGit":"git was not found on this machine — install it and add it to PATH.","gitSynced":"In sync with remote","gitBehind":"{n} cloud template commit(s) ready to overwrite","gitDirty":"Uncommitted changes. Commit workflows includes edited templates","gitUpdate":"Update templates","gitCommit":"Commit workflows","gitConnect":"Connect team repo","gitConnecting":"Connecting team repo…","gitConnectOk":"Connected to team workflows repo","gitCommitPick":"Select workflows to commit. Edited templates are listed here too","gitCommitConfirm":"Confirm commit","gitCommitCancel":"Cancel","gitMessagePlaceholder":"Commit message (optional)","gitChecking":"Checking remote status…","gitUpdating":"Overwriting local templates from cloud…","gitPushing":"Committing & pushing…","gitPullOk":"Cloud templates overwritten locally","gitPushOk":"Committed & pushed","gitError":"Sync failed","gitDuplicate":"Cannot commit: remote already has a workflow with the same name","gitNothingSelected":"Select at least one workflow to commit","gitNeedUpdate":"Remote has new commits. Click Update templates first, then Commit workflows again.","gitNeedUpdateAfterCommit":"Saved locally, but remote moved ahead. Click Update templates, then Commit workflows once more to finish the push.","gitPullConflict":"Update failed (possible conflict). Close the panel and retry, or check uncommitted local edits.","gitPullLocalBackup":"Local untracked file(s) collided with remote; renamed to *.local-backup: {names}","gitNothingToCommit":"No changes to commit for the selected workflows","gitAssetsPacked":"Packed {n} media asset(s)","gitAssetsRestored":"Restored {n} media asset(s) locally","gitAssetsWarn":"Some assets were skipped","gitStateNew":"Uncommitted","gitStateModified":"Modified","gitStateOutdated":"Update available","gitStateDiverged":"Diverged","gitLegend":"Edited templates commit the same way as workflows on the right. Update templates overwrites those local edits.","gitTokenTitle":"Configure team Git token","gitTokenHint":"Paste the GitHub PAT from your admin. It stays in ComfyTV’s dedicated template directory, outside user workflows.","gitTokenPlaceholder":"github_pat_… or ghp_…","gitTokenSave":"Save & continue","gitTokenSaving":"Saving…","gitTokenRequired":"Token is required","gitTokenSaveFailed":"Failed to save token","gitAuthFailed":"The team template repo token is invalid or expired. Paste a valid PAT with Contents read/write access."},"stageHint":"Connect references, press ↑ to generate","apiCostHint":"Estimated workflow API cost","ignisCredits":"Ignis credits","ignisCreditsHint":"This generation is billed to the configured Ignis account; the Ignis service determines the final charge","ignisBackground":{"title":"Background","auto":"Auto","transparent":"Transparent","opaque":"Opaque"},"toolbar":{"hd":"HD","expand":"Expand","angles":"Angles","relight":"Relight","redraw":"Redraw","erase":"Erase","cutout":"Cutout","canvas":"Canvas","grid":"Grid split","panorama":"Panorama","crop":"Crop","download":"Download","generate":"Generate"},"pickerHint":"Connect an upstream batch, click to pick","cropHint":"Connect an upstream image to start cropping","batchCount":"{n}","batchPos":"{i}/{n}","refsCount":"{n} refs","poolCount":"{n} in pool","clear":"Clear","linkWorkflow":"Link workflow","videoColorTitle":"Color · Video FX","videoCurvesTitle":"Curves · Video FX","fxChainTitle":"FX Chain · Render","renderChain":"Render chain","outputLabel":"Output","livePreview":"Live","fxChainHint":"Connect an upstream video to preview the chain","scene3dTitle":"3D Scene · Editor","relightTitle":"Relight · Light ball","applying":"Applying…","appliedLive":"Applied · live downstream","dragToApply":"Drag the box to apply","loaderHint":"Drop a file here, or click to upload","loaderEmpty":"Nothing loaded","assetLoaderHint":"Click to pick from the asset library","assetLoaderEmpty":"No asset selected","params":"Params","generatorHint":"Press ↑ to generate","change":"Change","upload":"Upload","renameHint":"Double-click to rename","removeItem":"Remove","moreActions":"More","fx":{"lut":"LUT · Grade","selectiveColor":"Selective Color · Grade","cdl":"CDL · Grade","histogramEq":"Histogram EQ · Grade","awb":"Auto White Balance · Grade","pseudocolor":"Pseudocolor · Grade","hueCorrect":"Hue Correct · Grade","select0r":"Select0r · Grade","keyer":"Keyer · Key","pik":"PIK · Key","despill":"Despill · Key","colorSuppress":"Color Suppress · Key","matteMorph":"Matte Morph · Key","shapeMask":"Shape Mask · Key","lensDistort":"Lens Distort · Optics","chromaticAberration":"Chromatic Aberration · Optics","lensFlare":"Lens Flare · Optics","glow":"Glow · Optics","godRays":"God Rays · Optics","blurSharpen":"Blur & Sharpen · Restore","denoise":"Denoise · Restore","deinterlace":"Deinterlace · Restore","posterize":"Posterize · Look","oldFilm":"Old Film · Look","artFx":"Art FX · Look","glitch":"Glitch · Look","kaleidoscope":"Kaleidoscope · Look","waveWarp":"Wave Warp · Look","strobe":"Strobe · Look","feedback":"Feedback · Look","regrain":"Regrain · Look","stylize":"Quick Looks · Look","chromaShift":"Chroma Shift · Look","transform":"Transform · Geo","video360":"360 Video · Geo","card3d":"Card 3D · Geo","particles":"Particles · FX","water":"Water · FX","lightGraffiti":"Light Graffiti · FX","trim":"Trim · Cut","vcrop":"Crop · Cut","vsplit":"Split · Cut","concat":"Concat · Cut","speed":"Speed · Cut","rotate":"Rotate & Flip · Cut","volume":"Volume · Cut","muxAudio":"Mux Audio · Cut","resize":"Resize · Cut","frames":"Frames · Cut","videoToFrames":"Video to Frames · Cut","timeRemap":"Time Remap · Cut","sequence":"Sequence · Cut","sceneDetect":"Scene Detect · Cut","chromaKey":"Chroma Key · Comp","composite":"Composite · Comp","cornerPin":"Corner Pin · Comp","rotoMask":"Roto Mask · Comp","keyMix":"Key Mix · Comp","matteMonitor":"Matte Monitor · Comp","maskPropagate":"Mask Propagate · Comp","paintStroke":"Paint Stroke · Comp","stmap":"STMap · Comp","stmapGen":"STMap Gen · Comp","zDefocus":"Z Defocus · Comp","frameBlend":"Frame Blend · Comp","transition":"Transition · Blend","lumaWipe":"Luma Wipe · Blend","stabilize":"Stabilize · Restore","stabilizePro":"Stabilize Pro · Restore","stabilize360":"360 Stabilize · Restore","interpolate":"Interpolate · Restore","faceBlur":"Face Blur · Restore","spotRemover":"Spot Remover · Restore","scopes":"Scopes · Monitor","contactSheet":"Contact Sheet · Monitor","audioMeter":"Audio Meter · Monitor","title":"Title · Text","subtitle":"Subtitle · Text","annotate":"Annotate · Text","kenBurns":"Ken Burns · FX","slitScan":"Slit Scan · FX"},"rich":{"score":"Score · Music","scoreEditor":"Score Editor · Music","midiEditor":"MIDI Editor · Music","expression":"Expression · Anim","motionTrack":"Motion Track · Anim","pattern":"Pattern · Gen","panorama":"Panorama · 360","panoView":"Current View · 360","panoMulti":"Multi View · 360","storyboard":"Storyboard · Story","storyboardEditor":"Storyboard Studio · Story","layerEditor":"Layer Editor · Image","canvas":"Canvas · Image","material":"Material · 3D","modelLoader":"Load Model · 3D","meshPrimitive":"Primitive · 3D","meshOp":"Mesh Ops · 3D","meshBake":"Bake Maps · 3D","meshBoolean":"Boolean · 3D","lineArt":"Line Art · Image","poster":"Poster · Image","splitPart":"Split Parts · Image","erase":"Erase · Paint","inpaint":"Inpaint · Paint","outpaint":"Outpaint · Paint","multiangle":"Multi-angle · Image","director":"Director · Cut"},"afx":{"dynamics":"Compressor · Dyn","loudness":"Loudness · Dyn","duck":"Ducking · Dyn","eq":"EQ · Tone","saturate":"Saturate · Tone","modulation":"Modulation · Tone","echo":"Echo · Tone","stereo":"Stereo Field · Tone","timePitch":"Time & Pitch · Tone","denoise":"Denoise · Restore","noiseReduction":"Spectral Gate · Restore","repair":"Repair · Restore","convolve":"Convolve IR · Space","deconvolve":"Deconvolve · Space","museReverb":"Reverb · Space","mix":"Mixer · Mix","crossfade":"Crossfade · Mix","stemSplit":"Stem Split · Mix","demuxAudio":"Audio Track · Mix","demuxVideo":"Silent Video · Mix","clip":"Trim · Cut","split":"Split · Cut","analyze":"Analyze · Meter","mir":"Music Info · Meter","visualize":"Visualize · Meter","segmentExport":"Segments · Meter","reactive":"Reactive Keys · Meter","sweep":"Sweep · Synth","sf2":"SoundFont · Synth","clickTrack":"Click Track · Synth","chordAccomp":"Chords · Synth","scoreToMidi":"Score Player · Synth","demuxAudioHint":"Extract the audio track from the video","demuxVideoHint":"Strip the audio, keep the picture"},"customParams":{"title":"Workflow params","add":"Add","addHint":"Attach a parameter exposed by the bound workflow","remove":"Remove parameter"},"custom":{"title":"Custom Stage","expose":"Expose I/O","hint":"Pick a workflow, then choose which of its inputs and outputs this card exposes","noWorkflow":"Pick a workflow first","inputs":"Inputs","outputs":"Outputs","exposed":"Exposed","search":"Search nodes…","noCandidates":"This workflow has no exposable {what}","linked":"Wired","unlinked":"Not wired","required":"Required","optional":"Optional","label":"Label","batch":"Batch","save":"Save","cancel":"Cancel","saving":"Saving…","saved":"Saved","loadFailed":"Could not load workflow: {detail}","saveFailed":"Save failed: {detail}","needsOutput":"Pick at least one output","kinds":{"image":"image","images":"image batch","video":"video","audio":"audio","model":"3D model","text":"text","param":"param"},"summary":"{inputs} inputs · {outputs} outputs","moveUp":"Move up","asPrompt":"Feed from the card's main prompt ({'@'} references work there)","viaRef":"From asset reference","saveAs":"Save as…","saveAsHint":"Save these choices as a separate configuration of the same workflow","saveAsPrompt":"Name of the new configuration","asRandom":"Draw a fresh random value on every run (seed)","randomEachRun":"random on every run","moveDown":"Move down"},"ctl":{"mode":"Mode","duration":"Duration (s)","generateAudio":"Generate audio","lyrics":"Lyrics","bpm":"BPM","timeSignature":"Time signature","keyScale":"Key","language":"Language","voice":"Voice","speed":"Speed","referenceText":"Reference transcript","variantCount":"Variant count"}}`);
+const v2$1 = /* @__PURE__ */ JSON.parse(`{"meta":{"fps":"{n} fps","silent":"no audio","mono":"mono","stereo":"stereo","channels":"{n} ch","frames":"{n} frames","genTime":"Generated in {t}"},"genopt":{"resolution":"Resolution","ratio":"Aspect ratio","count":"Count"},"seedream":{"model":"Model","sizePreset":"Size preset","width":"Width","height":"Height","background":"Background","seed":"Seed","randomSeed":"Random seed"},"panelCollapse":"Collapse the panel — keeps a one-line summary and Run","panelExpand":"Expand the panel","imageStageTitle":"Image · ImageStage","pickerTitle":"Pick · Image Picker","cropTitle":"Crop · Edit","ed":{"rotate":"Rotate · Edit","mirror":"Mirror · Edit","grade":"Color Grade · Edit","compare":"Compare · Edit","gridSplit":"Grid Split · Edit","customSplit":"Custom Split · Edit","psdLayerTree":"PSD Layer Tree · Edit","layerSeparation":"Layer Separation · Edit","imagesSplit":"Split Images · Edit","imageMerge":"Merge Images · Edit","compareHint":"Wire two images into A and B to compare","wired":"wired","empty":"empty"},"bottomBar":{"add":"Add node","assets":"Assets","workflows":"Workflows","search":"Search","searchPlaceholder":"Search ComfyTV nodes…","categories":"Categories","searchEmpty":"No matching nodes","cat":{"all":"All","generate":"Generate","input":"Input","image":"Image","edit":"Edit","video":"Video","audio":"Audio","text":"Text","model3d":"3D","bridge":"Bridge","utils":"Utils","other":"Other"},"createImage":"Image","createVideo":"Video","createAudio":"Audio","createText":"Text","createModel":"3D Model","workflowEmpty":"Nothing here yet. Templates (left) come from the team repo; workflows (right) are local-only.","workflowLoading":"Loading…","workflowOpenFailed":"Failed to open workflow","templates":"Templates","templateOpenHint":"Creates and opens an independent local copy; saving never modifies the template.","localWorkflows":"Workflows","templatesEmpty":"No cloud templates yet. Click Connect or Update templates to pull.","localWorkflowsEmpty":"No local workflows. Save a graph into this user’s workflows folder to see it here.","gitNoRepo":"The team template repo is not connected. Click Connect to clone it into ComfyTV’s dedicated template directory, outside user workflows.","gitNoGit":"Git not found. Already installed? Set its path manually and add it to PATH.","gitPathManual":"Set Git path","gitPathHint":"Enter the full git.exe path or Git installation folder on the computer running ComfyUI. It takes effect immediately and is loaded after restart. On Windows it also updates your user PATH without administrator access.","gitPathApply":"Verify and add to PATH","gitPathSaving":"Verifying…","gitPathSaved":"Git path saved and ready to use","gitPathFailed":"Could not configure Git","gitPathUserWarning":"Git is ready in ComfyUI, but updating Windows user PATH failed","gitSynced":"In sync with remote","gitBehind":"{n} cloud template commit(s) ready to overwrite","gitDirty":"Uncommitted changes. Commit workflows includes edited templates","gitUpdate":"Update templates","gitCommit":"Commit workflows","gitConnect":"Connect team repo","gitConnecting":"Connecting team repo…","gitConnectOk":"Connected to team workflows repo","gitCommitPick":"Select workflows to commit. Edited templates are listed here too","gitCommitConfirm":"Confirm commit","gitCommitCancel":"Cancel","gitMessagePlaceholder":"Commit message (optional)","gitChecking":"Checking remote status…","gitUpdating":"Overwriting local templates from cloud…","gitPushing":"Committing & pushing…","gitPullOk":"Cloud templates overwritten locally","gitPushOk":"Committed & pushed","gitError":"Sync failed","gitDuplicate":"Cannot commit: remote already has a workflow with the same name","gitNothingSelected":"Select at least one workflow to commit","gitNeedUpdate":"Remote has new commits. Click Update templates first, then Commit workflows again.","gitNeedUpdateAfterCommit":"Saved locally, but remote moved ahead. Click Update templates, then Commit workflows once more to finish the push.","gitPullConflict":"Update failed (possible conflict). Close the panel and retry, or check uncommitted local edits.","gitPullLocalBackup":"Local untracked file(s) collided with remote; renamed to *.local-backup: {names}","gitNothingToCommit":"No changes to commit for the selected workflows","gitAssetsPacked":"Packed {n} media asset(s)","gitAssetsRestored":"Restored {n} media asset(s) locally","gitAssetsWarn":"Some assets were skipped","gitStateNew":"Uncommitted","gitStateModified":"Modified","gitStateOutdated":"Update available","gitStateDiverged":"Diverged","gitLegend":"Edited templates commit the same way as workflows on the right. Update templates overwrites those local edits.","gitTokenTitle":"Configure team Git token","gitTokenHint":"Paste the GitHub PAT from your admin. It stays in ComfyTV’s dedicated template directory, outside user workflows.","gitTokenPlaceholder":"github_pat_… or ghp_…","gitTokenSave":"Save & continue","gitTokenSaving":"Saving…","gitTokenRequired":"Token is required","gitTokenSaveFailed":"Failed to save token","gitAuthFailed":"The team template repo token is invalid or expired. Paste a valid PAT with Contents read/write access."},"stageHint":"Connect references, press ↑ to generate","apiCostHint":"Estimated workflow API cost","ignisCredits":"Ignis credits","ignisCreditsHint":"This generation is billed to the configured Ignis account; the Ignis service determines the final charge","ignisBackground":{"title":"Background","auto":"Auto","transparent":"Transparent","opaque":"Opaque"},"toolbar":{"hd":"HD","expand":"Expand","angles":"Angles","relight":"Relight","redraw":"Redraw","erase":"Erase","cutout":"Cutout","canvas":"Canvas","grid":"Grid split","panorama":"Panorama","crop":"Crop","download":"Download","generate":"Generate"},"pickerHint":"Connect an upstream batch, click to pick","cropHint":"Connect an upstream image to start cropping","batchCount":"{n}","batchPos":"{i}/{n}","refsCount":"{n} refs","poolCount":"{n} in pool","clear":"Clear","linkWorkflow":"Link workflow","videoColorTitle":"Color · Video FX","videoCurvesTitle":"Curves · Video FX","fxChainTitle":"FX Chain · Render","renderChain":"Render chain","outputLabel":"Output","livePreview":"Live","fxChainHint":"Connect an upstream video to preview the chain","scene3dTitle":"3D Scene · Editor","relightTitle":"Relight · Light ball","applying":"Applying…","appliedLive":"Applied · live downstream","dragToApply":"Drag the box to apply","loaderHint":"Drop a file here, or click to upload","loaderEmpty":"Nothing loaded","assetLoaderHint":"Click to pick from the asset library","assetLoaderEmpty":"No asset selected","params":"Params","generatorHint":"Press ↑ to generate","change":"Change","upload":"Upload","renameHint":"Double-click to rename","removeItem":"Remove","moreActions":"More","fx":{"lut":"LUT · Grade","selectiveColor":"Selective Color · Grade","cdl":"CDL · Grade","histogramEq":"Histogram EQ · Grade","awb":"Auto White Balance · Grade","pseudocolor":"Pseudocolor · Grade","hueCorrect":"Hue Correct · Grade","select0r":"Select0r · Grade","keyer":"Keyer · Key","pik":"PIK · Key","despill":"Despill · Key","colorSuppress":"Color Suppress · Key","matteMorph":"Matte Morph · Key","shapeMask":"Shape Mask · Key","lensDistort":"Lens Distort · Optics","chromaticAberration":"Chromatic Aberration · Optics","lensFlare":"Lens Flare · Optics","glow":"Glow · Optics","godRays":"God Rays · Optics","blurSharpen":"Blur & Sharpen · Restore","denoise":"Denoise · Restore","deinterlace":"Deinterlace · Restore","posterize":"Posterize · Look","oldFilm":"Old Film · Look","artFx":"Art FX · Look","glitch":"Glitch · Look","kaleidoscope":"Kaleidoscope · Look","waveWarp":"Wave Warp · Look","strobe":"Strobe · Look","feedback":"Feedback · Look","regrain":"Regrain · Look","stylize":"Quick Looks · Look","chromaShift":"Chroma Shift · Look","transform":"Transform · Geo","video360":"360 Video · Geo","card3d":"Card 3D · Geo","particles":"Particles · FX","water":"Water · FX","lightGraffiti":"Light Graffiti · FX","trim":"Trim · Cut","vcrop":"Crop · Cut","vsplit":"Split · Cut","concat":"Concat · Cut","speed":"Speed · Cut","rotate":"Rotate & Flip · Cut","volume":"Volume · Cut","muxAudio":"Mux Audio · Cut","resize":"Resize · Cut","frames":"Frames · Cut","videoToFrames":"Video to Frames · Cut","timeRemap":"Time Remap · Cut","sequence":"Sequence · Cut","sceneDetect":"Scene Detect · Cut","chromaKey":"Chroma Key · Comp","composite":"Composite · Comp","cornerPin":"Corner Pin · Comp","rotoMask":"Roto Mask · Comp","keyMix":"Key Mix · Comp","matteMonitor":"Matte Monitor · Comp","maskPropagate":"Mask Propagate · Comp","paintStroke":"Paint Stroke · Comp","stmap":"STMap · Comp","stmapGen":"STMap Gen · Comp","zDefocus":"Z Defocus · Comp","frameBlend":"Frame Blend · Comp","transition":"Transition · Blend","lumaWipe":"Luma Wipe · Blend","stabilize":"Stabilize · Restore","stabilizePro":"Stabilize Pro · Restore","stabilize360":"360 Stabilize · Restore","interpolate":"Interpolate · Restore","faceBlur":"Face Blur · Restore","spotRemover":"Spot Remover · Restore","scopes":"Scopes · Monitor","contactSheet":"Contact Sheet · Monitor","audioMeter":"Audio Meter · Monitor","title":"Title · Text","subtitle":"Subtitle · Text","annotate":"Annotate · Text","kenBurns":"Ken Burns · FX","slitScan":"Slit Scan · FX"},"rich":{"score":"Score · Music","scoreEditor":"Score Editor · Music","midiEditor":"MIDI Editor · Music","expression":"Expression · Anim","motionTrack":"Motion Track · Anim","pattern":"Pattern · Gen","panorama":"Panorama · 360","panoView":"Current View · 360","panoMulti":"Multi View · 360","storyboard":"Storyboard · Story","storyboardEditor":"Storyboard Studio · Story","layerEditor":"Layer Editor · Image","canvas":"Canvas · Image","material":"Material · 3D","modelLoader":"Load Model · 3D","meshPrimitive":"Primitive · 3D","meshOp":"Mesh Ops · 3D","meshBake":"Bake Maps · 3D","meshBoolean":"Boolean · 3D","lineArt":"Line Art · Image","poster":"Poster · Image","splitPart":"Split Parts · Image","erase":"Erase · Paint","inpaint":"Inpaint · Paint","outpaint":"Outpaint · Paint","multiangle":"Multi-angle · Image","director":"Director · Cut"},"afx":{"dynamics":"Compressor · Dyn","loudness":"Loudness · Dyn","duck":"Ducking · Dyn","eq":"EQ · Tone","saturate":"Saturate · Tone","modulation":"Modulation · Tone","echo":"Echo · Tone","stereo":"Stereo Field · Tone","timePitch":"Time & Pitch · Tone","denoise":"Denoise · Restore","noiseReduction":"Spectral Gate · Restore","repair":"Repair · Restore","convolve":"Convolve IR · Space","deconvolve":"Deconvolve · Space","museReverb":"Reverb · Space","mix":"Mixer · Mix","crossfade":"Crossfade · Mix","stemSplit":"Stem Split · Mix","demuxAudio":"Audio Track · Mix","demuxVideo":"Silent Video · Mix","clip":"Trim · Cut","split":"Split · Cut","analyze":"Analyze · Meter","mir":"Music Info · Meter","visualize":"Visualize · Meter","segmentExport":"Segments · Meter","reactive":"Reactive Keys · Meter","sweep":"Sweep · Synth","sf2":"SoundFont · Synth","clickTrack":"Click Track · Synth","chordAccomp":"Chords · Synth","scoreToMidi":"Score Player · Synth","demuxAudioHint":"Extract the audio track from the video","demuxVideoHint":"Strip the audio, keep the picture"},"customParams":{"title":"Workflow params","add":"Add","addHint":"Attach a parameter exposed by the bound workflow","remove":"Remove parameter"},"custom":{"title":"Custom Stage","expose":"Expose I/O","hint":"Pick a workflow, then choose which of its inputs and outputs this card exposes","noWorkflow":"Pick a workflow first","inputs":"Inputs","outputs":"Outputs","exposed":"Exposed","search":"Search nodes…","noCandidates":"This workflow has no exposable {what}","linked":"Wired","unlinked":"Not wired","required":"Required","optional":"Optional","label":"Label","batch":"Batch","save":"Save","cancel":"Cancel","saving":"Saving…","saved":"Saved","loadFailed":"Could not load workflow: {detail}","saveFailed":"Save failed: {detail}","needsOutput":"Pick at least one output","kinds":{"image":"image","images":"image batch","video":"video","audio":"audio","model":"3D model","text":"text","param":"param"},"summary":"{inputs} inputs · {outputs} outputs","moveUp":"Move up","asPrompt":"Feed from the card's main prompt ({'@'} references work there)","viaRef":"From asset reference","saveAs":"Save as…","saveAsHint":"Save these choices as a separate configuration of the same workflow","saveAsPrompt":"Name of the new configuration","asRandom":"Draw a fresh random value on every run (seed)","randomEachRun":"random on every run","moveDown":"Move down"},"ctl":{"mode":"Mode","duration":"Duration (s)","generateAudio":"Generate audio","lyrics":"Lyrics","bpm":"BPM","timeSignature":"Time signature","keyScale":"Key","language":"Language","voice":"Voice","speed":"Speed","referenceText":"Reference transcript","variantCount":"Variant count"}}`);
 const workflow$1 = { "uploadButton": "⬆ Upload workflow", "imported": 'Imported "{label}"', "importFailed": "Workflow import failed", "notJson": "That file isn't valid JSON", "linkButton": "🔗 Link workflow" };
 const stage$1 = { "run": "Run", "rerun": "Re-run", "running": "Running…", "cancel": "Cancel", "preparingWorkflow": "Preparing workflow…", "noWorkflowShort": "No workflow installed — use Upload / Link", "noWorkflowInstalled": "No {kind} workflow is installed — import one with the card's Upload / Link buttons, or under ComfyTV → Stages in the sidebar.", "outputDurationHint": "Generation time", "section": { "context": "Context", "pool": "Pool", "output": "Output ({type})", "actions": "Actions" }, "pool": { "clear": "Clear", "clearHint": "Empty the picker pool and reset the selection", "confirmClear": "Clear pool?", "confirm": "Yes", "cancel": "No", "modeAppend": "Mode: Append", "modeReplace": "Mode: Replace", "modeHint": "How new run results enter the pool (click to switch). Append: keep existing items and add new ones on top. Replace: keep only the latest result. Duplicate URLs are kept once." }, "empty": { "no_output": "no output yet", "generating": "generating…", "pending_upstream": "upstream pending", "unsupported_type": "unsupported type {type}" }, "source": { "upstream": "← upstream", "pending": "… waiting" }, "disconnect": "Disconnect", "modelInput": { "front": "Front", "left": "Left", "back": "Back", "right": "Right", "extra": "Extra", "reference": "Reference {n}", "image": "Image {n}" }, "starting": "starting…", "runByKind": { "text": "Generate Text", "image": "Generate Image", "image-batch": "Generate Images", "video": "Generate Video", "audio": "Generate Audio", "panorama": "Generate Panorama", "storyboard": "Generate Storyboard", "model": "Generate 3D Model", "material": "Generate Material" }, "action": { "viewFull": "View full size", "download": "Download", "exportObjZip": "Export OBJ + textures (ZIP)", "exportObjZipBusy": "Exporting OBJ zip…", "exportObjZipDone": "OBJ zip downloaded", "exportObjZipFailed": "OBJ export failed", "exportModel": "Export model", "exportModelBusy": "Exporting {format}…", "exportModelDone": "{format} downloaded", "exportModelFailed": "{format} export failed", "copyText": "Copy text", "copyImageDone": "Image copied and ready to paste", "copyImageFailed": "Failed to copy image", "copyImageUnavailable": "Image clipboard access requires localhost or HTTPS and browser clipboard permission.", "saveTextAsset": "Save to asset library", "renderMarkdown": "Render as Markdown", "showRawText": "Show raw text", "addTag": "Save to library / tag", "removeFromPicker": "Remove from picker", "close": "Close", "loadAsset": "Load as asset node", "prev": "Previous", "next": "Next", "pick": "Select this track" }, "preparingWorkflowDetail": "Hang on — converting workflow to api JSON. Try Run again in a moment." };
 const error$1 = { "dismiss": "Dismiss", "cancelled": "Cancelled", "upstreamNotReady": "Upstream not ready", "upstreamNotReadyDetail": "Upstream not ready: {list}. Run those stage(s) first so they produce a snapshot, then Run this stage again.", "droppedFromQueue": "Removed from the queue before it ran — the queue was cleared or the prompt was deleted.", "workerDied": "Backend stopped without sending a result. The prompt worker likely died (CUDA OOM during cleanup is the usual cause). Restart ComfyUI to recover." };
 const eagle$1 = { "title": "Eagle Library", "refresh": "Refresh", "search": "Search name or tags…", "loading": "Loading…", "empty": "No items", "loadMore": "Load more", "disabledHint": "Eagle integration is disabled. Turn on “Enable Eagle integration” in Settings and pin the ComfyTV .library path.", "pendingBanner": "{n} item(s) queued for Eagle (waiting for the pinned library to open)", "flushNow": "Send now", "flushing": "Sending…", "mode": { "api": "Online", "disk": "Read-only", "offline": "Offline", "disabled": "Disabled" }, "hint": { "disk": "Eagle is closed or has another library open: reading the library from disk (read-only). Sends are queued and flushed automatically once the pinned library opens.", "offline": "Eagle unreachable: the app is not running and the pinned library path does not exist. Check the library path in Settings." }, "folder": { "all": "All folders" }, "ai": { "label": "AI", "tooltip": "AI semantic search (needs Eagle's AI Search plugin): search by meaning, not by name" }, "similar": { "action": "Find similar", "banner": "Items similar to “{name}”", "clear": "Clear", "failed": "Similar search failed" }, "import": { "action": "Import into Assets", "done": "Imported “{name}”", "existed": "“{name}” is already in Assets", "failed": "Import failed" }, "send": { "action": "Send to Eagle", "sent": "Sent to Eagle: {name}", "queued": "Eagle not ready — queued ({n} pending)", "failed": "Send failed" }, "flush": { "done": "Flushed {n} item(s) to Eagle", "failed": "{n} item(s) failed to flush" } };
 const sidebar$1 = { "tab": { "workflow": "Workflow", "assets": "Assets", "eagle": "Eagle", "entries": "Entries", "params": "Stages", "presets": "Presets", "resources": "Resources", "servers": "Servers", "collab": "Collab", "settings": "Settings" } };
-const settings$1 = /* @__PURE__ */ JSON.parse(`{"title":"Settings","hint":"Defaults come from comfytv.properties in the ComfyTV directory. Values saved here are stored in the database and take precedence.","loading":"Loading…","save":"Save","saving":"Saving…","search":"Search settings…","noMatch":"No settings match","experimental":"Experimental","reset":"Reset to default","on":"On","off":"Off","status":{"checking":"Checking…","online":"Connected","offline":"Offline"},"blender":{"section":"Blender bridge"},"general":{"section":"General"},"backup":{"section":"Database backup","now":"Back up now","running":"Backing up…","ok":"Backup written to {path}","failed":"Backup failed: {error}"},"pluginUpdate":{"section":"ComfyTV updates","desc":"Check the configured GitHub origin for a newer ComfyTV commit and install it without leaving ComfyUI.","policy":"Updating force-overwrites tracked plugin files and shipped workflows. Local tracked changes are backed up, user workflows are preserved, and the previous version can be rolled back.","current":"Current","remote":"Remote","check":"Check for updates","checking":"Checking…","recheck":"Check again","upToDate":"ComfyTV is up to date.","available":"An update is available. This checkout is behind by {n} commit(s).","repairAvailable":"This checkout has local tracked changes or commits and can be restored to the configured remote version.","repair":"Restore official version","dirty":"Local tracked files have changes. Updating will overwrite them, including modified shipped workflows.","rollbackAvailable":"Rollback is available to v{version}.","rollback":"Rollback version","rollingBack":"Rolling back…","rollbackTitle":"Rollback ComfyTV","rollbackConfirm":"Restore ComfyTV v{version}? Current tracked files will be overwritten and ComfyUI must be restarted.","backupSaved":"Recovery backup: {path}","collisionBackups":"{n} local file(s) conflicted with the update and were renamed to .local-backup.","dependenciesChanged":"Dependency files changed: {files}. Restart ComfyUI and reinstall dependencies if the new version requests it.","noGit":"Git is not available on this machine.","notRepo":"This ComfyTV installation is not a Git checkout and cannot update automatically.","error":"Update check failed: {error}"},"teamGit":{"section":"Team workflows Git","desc":"Used to sync cloud templates and push local workflows. Paste the PAT from your admin; it stays on this machine only — do not commit it to GitHub.","configured":"Configured ({hint})","missing":"No token configured","placeholder":"Paste GitHub PAT (github_pat_… / ghp_…)","save":"Save token","saveOk":"Saved locally","saveFailed":"Save failed"},"ignis":{"section":"Ignis image and video generation","desc":"Used for Ignis image models and Seedance, Kling, Sora, and PixVerse video generation. The token stays on this machine and is never written into workflows or Git.","configured":"Configured ({hint})","missing":"No token configured","placeholder":"Paste Ignis token (ignis_ct_…)","save":"Save token","saveOk":"Saved locally","saveFailed":"Save failed","configDesc":"You can also paste the full setup instructions, a config link, or config JSON. ComfyTV extracts and saves the token automatically.","configPlaceholder":"Paste a config link or the full setup text…","importConfig":"Parse and save config","importing":"Parsing…","importOk":"Saved locally from the config link","importFailed":"Could not parse the config"},"fields":{"enable-v2":{"label":"Enable ComfyTV V2 nodes","desc":"EXPERIMENTAL — expect rough edges. Renders migrated stages with the new content-first V2 shells. Requires ComfyUI's own Node 2.0 (Vue nodes) setting to be enabled first. Refresh the page after changing."},"v2-lod-scale":{"label":"Poster mode below zoom","desc":"Below this canvas zoom, V2 cards collapse to a thumbnail with a play/open button; panels come back once you zoom in past it again.","options":{"30":"30%","42":"42%","50":"50%","60":"60%"}},"v2-lod-fill":{"label":"Poster backdrop","desc":"What fills the card around a letterboxed thumbnail: the checkerboard used by image previews, or a dimmed copy of the same picture stretched to fill.","options":{"checker":"Checkerboard","image":"Same picture, dimmed"}},"auto-picker":{"label":"Auto-attach picker on run","desc":"When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically."},"auto-bridge":{"label":"Auto-insert Bridge on connect","desc":"When connecting a native IMAGE/VIDEO/AUDIO/STRING/MASK socket to a ComfyTV socket (or the reverse), insert the matching Bridge node automatically. Into-bridges still need Run to snapshot."},"v2-panel-on-select":{"label":"Show control panel only when selected","desc":"On by default. Unselected V2 nodes show the preview only; select a node to reveal prompts, params, and the run bar (LibTV-style)."},"enable-db-backup":{"label":"Automatic backup on startup","desc":"Back up the ComfyTV data directory (database + workflows) every time the server starts, before any migration runs."},"db-backup-max-count":{"label":"Max backups to keep","desc":"When the number of snapshots exceeds this, the oldest ones are deleted."},"db-backup-path":{"label":"Backup location","desc":"Leave empty to use the db-backup folder inside the ComfyTV directory. Snapshots are timestamped folders like 20260805-093000/comfytv.","placeholder":"e.g. D:\\\\backups\\\\comfytv"},"enable-mcp":{"label":"Enable MCP server","desc":"Expose the ComfyTV MCP endpoint (/comfytv/mcp) so agents can read and drive the canvas. Off by default."},"enable-bot":{"label":"Enable ComfyTV Bot","desc":"Show the embedded bot sidebar and its chat API. Requires the MCP server to be enabled."},"bot-model-claude-code":{"label":"Claude Code model","desc":"Model passed to claude --model for bot turns. Accepts an alias (sonnet, opus, haiku) or a full model id. Blank = the CLI's own default.","placeholder":"CLI default"},"bot-model-codex":{"label":"Codex model","desc":"Model passed to codex -m for bot turns. Blank = the CLI's own default.","placeholder":"CLI default"},"bot-model-qwen-code":{"label":"Qwen Code model","desc":"Model passed to qwen -m for bot turns. Blank = the model selected in qwen's own settings.","placeholder":"CLI default"},"bot-model-local-llm":{"label":"Local LLM model","desc":"Model id on the local endpoint. Blank = the first model the endpoint reports.","placeholder":"first available"},"bot-model-comfyui-llm":{"label":"ComfyUI LLM model","desc":"EXPERIMENTAL — a toy provider, not meant for real use; pick Local LLM or one of the CLI providers instead. Text-encoder checkpoint from models/text_encoders used for bot turns (Qwen3 or Gemma family). Blank = the first generation-capable checkpoint found. Runs inside ComfyUI itself — no external server needed.","placeholder":"first available"},"bot-comfyui-llm-thinking":{"label":"ComfyUI LLM thinking","desc":"EXPERIMENTAL — only affects the toy ComfyUI LLM provider. Let Qwen3 models reason in a hidden <think> block before answering. Noticeably smarter tool use, at the cost of extra generation time per turn."},"bot-local-llm-url":{"label":"Local LLM endpoint","desc":"OpenAI-compatible base URL of a local model server (LM Studio, llama.cpp llama-server, vLLM, Ollama…). The Local LLM provider stays unavailable until this is set. Keyless local endpoints only — no API keys are ever stored.","placeholder":"http://127.0.0.1:1234/v1"},"bot-enable-comfy-mcp":{"label":"Mount comfy-mcp","desc":"Also mount the official comfy-mcp server (read-only tool set: node catalog, workflow validation, model/template search) in bot sessions. Claude Code and Qwen Code only — Codex and Local LLM stay comfytv-only."},"bot-comfy-mcp-command":{"label":"comfy-mcp command","desc":"Command that launches the comfy-mcp stdio server. Blank = find comfy-mcp on PATH.","placeholder":"comfy-mcp"},"bot-always-allow-runs":{"label":"Always allow bot runs","desc":"Run stages immediately without an approval card (the default). Disable this to let chats switched to Ask mode pause for your approval before each run."},"enable-skills":{"label":"Enable Agent Skills","desc":"Serve installed skills to agents over MCP (skill tool + prompts) and to the embedded bot."},"enable-collab":{"label":"Enable collaboration","desc":"EXPERIMENTAL — do not rely on this in production. Real-time multi-user presence and co-editing over the local network. When off, no collaboration code runs at all (no session, no websocket, no UI). Reload open pages after changing this."},"enable-eagle":{"label":"Enable Eagle integration","desc":"Connect the local Eagle (eagle.cool) library to ComfyTV: an Eagle panel appears in the sidebar and assets can be sent to Eagle. Requires the Eagle desktop app."},"eagle-api-url":{"label":"Eagle API URL","desc":"Address of Eagle's local API, default port 41595. Local access only, no token needed.","placeholder":"http://127.0.0.1:41595"},"eagle-library-path":{"label":"Pinned library path","desc":"The .library directory dedicated to ComfyTV. Sends only happen while Eagle has this library open (queued otherwise); browsing falls back to reading the directory from disk. Empty = follow whatever library Eagle has open (not recommended).","placeholder":"e.g. Y:\\\\Eagle\\\\ComfyTV.library"},"eagle-send-folder":{"label":"Send target folder","desc":"Eagle folder that manually sent items are filed into; created automatically if missing. Empty = library root. Auto-archive uses per-project folders instead."},"eagle-auto-send":{"label":"Auto-archive outputs to Eagle","desc":"Automatically archive every stage output (image/video/audio) into Eagle: filed into a per-project folder, annotation carries the full generation params (prompt/model/…), tagged with the project name. Uses the queue — piles up while Eagle is closed, never blocks generation."},"blender-bridge-url":{"label":"Blender bridge URL","desc":"EXPERIMENTAL — expect rough edges. Address of the blender-web bridge that the Blender Scene / Camera / Animation stages talk to. Start it with blender-for-comfytv.bat; the stages stay unavailable until it responds. Default port 7684, local only.","placeholder":"http://127.0.0.1:7684"}},"agent":{"section":"Agent & MCP"},"eagle":{"section":"Eagle Integration"},"collab":{"section":"Collaboration"}}`);
+const settings$1 = /* @__PURE__ */ JSON.parse(`{"title":"Settings","hint":"Defaults come from comfytv.properties in the ComfyTV directory. Values saved here are stored in the database and take precedence.","loading":"Loading…","save":"Save","saving":"Saving…","search":"Search settings…","noMatch":"No settings match","experimental":"Experimental","reset":"Reset to default","on":"On","off":"Off","status":{"checking":"Checking…","online":"Connected","offline":"Offline"},"blender":{"section":"Blender bridge"},"general":{"section":"General"},"backup":{"section":"Database backup","now":"Back up now","running":"Backing up…","ok":"Backup written to {path}","failed":"Backup failed: {error}"},"pluginUpdate":{"section":"ComfyTV updates","desc":"Check the configured GitHub origin for a newer ComfyTV commit and install it without leaving ComfyUI.","policy":"Updating force-overwrites tracked plugin files and shipped workflows. Local tracked changes are backed up, user workflows are preserved, and the previous version can be rolled back.","current":"Current","remote":"Remote","check":"Check for updates","checking":"Checking…","recheck":"Check again","upToDate":"ComfyTV is up to date.","available":"An update is available. This checkout is behind by {n} commit(s).","repairAvailable":"This checkout has local tracked changes or commits and can be restored to the configured remote version.","repair":"Restore official version","dirty":"Local tracked files have changes. Updating will overwrite them, including modified shipped workflows.","rollbackAvailable":"Rollback is available to v{version}.","rollback":"Rollback version","rollingBack":"Rolling back…","rollbackTitle":"Rollback ComfyTV","rollbackConfirm":"Restore ComfyTV v{version}? Current tracked files will be overwritten and ComfyUI must be restarted.","backupSaved":"Recovery backup: {path}","collisionBackups":"{n} local file(s) conflicted with the update and were renamed to .local-backup.","dependenciesChanged":"Dependency files changed: {files}. Restart ComfyUI and reinstall dependencies if the new version requests it.","noGit":"Git is not available on this machine.","notRepo":"This ComfyTV installation is not a Git checkout and cannot update automatically.","error":"Update check failed: {error}"},"teamGit":{"section":"Team workflows Git","desc":"Used to sync cloud templates and push local workflows. Paste the PAT from your admin; it stays on this machine only — do not commit it to GitHub.","configured":"Configured ({hint})","missing":"No token configured","placeholder":"Paste GitHub PAT (github_pat_… / ghp_…)","save":"Save token","saveOk":"Saved locally","saveFailed":"Save failed"},"ignis":{"section":"Ignis image and video generation","desc":"Used for Ignis image models and Seedance, Kling, Sora, and PixVerse video generation. The token stays on this machine and is never written into workflows or Git.","configured":"Configured ({hint})","missing":"No token configured","placeholder":"Paste Ignis token (ignis_ct_…)","save":"Save token","saveOk":"Saved locally","saveFailed":"Save failed","configDesc":"You can also paste the full setup instructions, a config link, or config JSON. ComfyTV extracts and saves the token automatically.","configPlaceholder":"Paste a config link or the full setup text…","importConfig":"Parse and save config","importing":"Parsing…","importOk":"Saved locally from the config link","importFailed":"Could not parse the config"},"fields":{"enable-v2":{"label":"Enable ComfyTV V2 nodes","desc":"EXPERIMENTAL — expect rough edges. Renders migrated stages with the new content-first V2 shells. Requires ComfyUI's own Node 2.0 (Vue nodes) setting to be enabled first. Refresh the page after changing."},"v2-lod-scale":{"label":"Poster mode below zoom","desc":"Below this canvas zoom, V2 cards collapse to a thumbnail with a play/open button; panels come back once you zoom in past it again.","options":{"30":"30%","42":"42%","50":"50%","60":"60%"}},"v2-lod-fill":{"label":"Poster backdrop","desc":"What fills the card around a letterboxed thumbnail: the checkerboard used by image previews, or a dimmed copy of the same picture stretched to fill.","options":{"checker":"Checkerboard","image":"Same picture, dimmed"}},"auto-picker":{"label":"Auto-attach picker on run","desc":"When an Image or Video stage runs with nothing connected to its output, add a Picker stage after it automatically."},"auto-bridge":{"label":"Auto-insert Bridge on connect","desc":"When connecting a native IMAGE/VIDEO/AUDIO/STRING/MASK socket to a ComfyTV socket (or the reverse), insert the matching Bridge node automatically. Into-bridges still need Run to snapshot."},"v2-panel-on-select":{"label":"Show control panel only when selected","desc":"On by default. Unselected V2 nodes show the preview only; select a node to reveal prompts, params, and the run bar (LibTV-style)."},"enable-db-backup":{"label":"Automatic backup on startup","desc":"Back up the ComfyTV data directory (database + workflows) every time the server starts, before any migration runs."},"db-backup-max-count":{"label":"Max backups to keep","desc":"When the number of snapshots exceeds this, the oldest ones are deleted."},"db-backup-path":{"label":"Backup location","desc":"Leave empty to use the db-backup folder inside the ComfyTV directory. Snapshots are timestamped folders like 20260805-093000/comfytv.","placeholder":"e.g. D:\\\\backups\\\\comfytv"},"share-comfy-auth":{"label":"Reuse Comfy login","desc":"Callers outside the browser (the comfy CLI, scripts, an agent posting to /prompt) never carry Comfy.org credentials, so bound paid API nodes 401. When on, the plugin lends the newest credentials it saw from a browser run to those runs. Kept in memory only, dropped on restart. Turn it off to make such runs fail with a missing-credentials error instead."},"enable-mcp":{"label":"Enable MCP server","desc":"Expose the ComfyTV MCP endpoint (/comfytv/mcp) so agents can read and drive the canvas. Off by default."},"enable-bot":{"label":"Enable ComfyTV Bot","desc":"Show the embedded bot sidebar and its chat API. Requires the MCP server to be enabled."},"bot-model-claude-code":{"label":"Claude Code model","desc":"Model passed to claude --model for bot turns. Accepts an alias (sonnet, opus, haiku) or a full model id. Blank = the CLI's own default.","placeholder":"CLI default"},"bot-model-codex":{"label":"Codex model","desc":"Model passed to codex -m for bot turns. Blank = the CLI's own default.","placeholder":"CLI default"},"bot-model-qwen-code":{"label":"Qwen Code model","desc":"Model passed to qwen -m for bot turns. Blank = the model selected in qwen's own settings.","placeholder":"CLI default"},"bot-model-local-llm":{"label":"Local LLM model","desc":"Model id on the local endpoint. Blank = the first model the endpoint reports.","placeholder":"first available"},"bot-model-comfyui-llm":{"label":"ComfyUI LLM model","desc":"EXPERIMENTAL — a toy provider, not meant for real use; pick Local LLM or one of the CLI providers instead. Text-encoder checkpoint from models/text_encoders used for bot turns (Qwen3 or Gemma family). Blank = the first generation-capable checkpoint found. Runs inside ComfyUI itself — no external server needed.","placeholder":"first available"},"bot-comfyui-llm-thinking":{"label":"ComfyUI LLM thinking","desc":"EXPERIMENTAL — only affects the toy ComfyUI LLM provider. Let Qwen3 models reason in a hidden <think> block before answering. Noticeably smarter tool use, at the cost of extra generation time per turn."},"bot-local-llm-url":{"label":"Local LLM endpoint","desc":"OpenAI-compatible base URL of a local model server (LM Studio, llama.cpp llama-server, vLLM, Ollama…). The Local LLM provider stays unavailable until this is set. Keyless local endpoints only — no API keys are ever stored.","placeholder":"http://127.0.0.1:1234/v1"},"bot-enable-comfy-mcp":{"label":"Mount comfy-mcp","desc":"Also mount the official comfy-mcp server (read-only tool set: node catalog, workflow validation, model/template search) in bot sessions. Claude Code and Qwen Code only — Codex and Local LLM stay comfytv-only."},"bot-comfy-mcp-command":{"label":"comfy-mcp command","desc":"Command that launches the comfy-mcp stdio server. Blank = find comfy-mcp on PATH.","placeholder":"comfy-mcp"},"bot-always-allow-runs":{"label":"Always allow bot runs","desc":"Run stages immediately without an approval card (the default). Disable this to let chats switched to Ask mode pause for your approval before each run."},"enable-skills":{"label":"Enable Agent Skills","desc":"Serve installed skills to agents over MCP (skill tool + prompts) and to the embedded bot."},"enable-collab":{"label":"Enable collaboration","desc":"EXPERIMENTAL — do not rely on this in production. Real-time multi-user presence and co-editing over the local network. When off, no collaboration code runs at all (no session, no websocket, no UI). Reload open pages after changing this."},"enable-eagle":{"label":"Enable Eagle integration","desc":"Connect the local Eagle (eagle.cool) library to ComfyTV: an Eagle panel appears in the sidebar and assets can be sent to Eagle. Requires the Eagle desktop app."},"eagle-api-url":{"label":"Eagle API URL","desc":"Address of Eagle's local API, default port 41595. Local access only, no token needed.","placeholder":"http://127.0.0.1:41595"},"eagle-library-path":{"label":"Pinned library path","desc":"The .library directory dedicated to ComfyTV. Sends only happen while Eagle has this library open (queued otherwise); browsing falls back to reading the directory from disk. Empty = follow whatever library Eagle has open (not recommended).","placeholder":"e.g. Y:\\\\Eagle\\\\ComfyTV.library"},"eagle-send-folder":{"label":"Send target folder","desc":"Eagle folder that manually sent items are filed into; created automatically if missing. Empty = library root. Auto-archive uses per-project folders instead."},"eagle-auto-send":{"label":"Auto-archive outputs to Eagle","desc":"Automatically archive every stage output (image/video/audio) into Eagle: filed into a per-project folder, annotation carries the full generation params (prompt/model/…), tagged with the project name. Uses the queue — piles up while Eagle is closed, never blocks generation."},"blender-bridge-url":{"label":"Blender bridge URL","desc":"EXPERIMENTAL — expect rough edges. Address of the blender-web bridge that the Blender Scene / Camera / Animation stages talk to. Start it with blender-for-comfytv.bat; the stages stay unavailable until it responds. Default port 7684, local only.","placeholder":"http://127.0.0.1:7684"}},"agent":{"section":"Agent & MCP"},"eagle":{"section":"Eagle Integration"},"collab":{"section":"Collaboration"}}`);
 const servers$1 = { "title": "ComfyUI Servers", "add": "Add", "addTooltip": "Register another ComfyUI instance on your network so stages can run on it", "empty": "No remote servers configured. Stages run on this machine. Add a server to unlock the per-stage server dropdown and run stages on several machines in parallel.", "edit": "Edit", "delete": "Delete", "deleteConfirm": 'Delete server "{label}"? Stages currently pointed at it will fall back to running locally.', "enable": "Enable", "disable": "Disable", "local": "Local (this machine)", "runOn": "Run on", "form": { "label": "Name", "labelPlaceholder": "e.g. GPU rig upstairs", "host": "Host / IP", "port": "Port", "create": "Add server", "save": "Save", "cancel": "Cancel", "saveFailed": "Save failed — is the name already in use?" }, "test": { "action": "Test connection", "testing": "Testing…", "ok": "Connected", "failed": "Connection failed" }, "job": { "started": "Running on {label}", "failed": "Remote run failed", "cancelled": "Remote run cancelled", "fallbackLocal": "Selected server is gone or disabled — this stage will run locally." }, "status": { "online": "Online", "offline": "Offline", "unknown": "Checking…", "idle": "Idle", "queueShort": "Q {n}", "queueDetail": "{running} running, {pending} pending", "fromComfyTV": "{n} from ComfyTV" }, "caps": { "badge": "ComfyTV v{version}", "comfyOnly": "ComfyUI only — ComfyTV not installed", "missingNodes": "{n} nodes missing", "missingTitle": "Nodes missing on this remote — upgrade its ComfyTV:" }, "preflight": { "blockedTitle": "Remote run blocked", "warnTitle": "Remote resource check", "runAnyway": "Run anyway", "noComfyTV": `Remote "{label}" doesn't have ComfyTV installed — install ComfyTV there or run locally.`, "missingNode": 'Remote "{label}" is missing node {node} — upgrade its ComfyTV.', "missingResource": 'Remote "{label}" is missing resource {file} — run anyway?', "resourceMismatch": 'Resource {file} has different content on remote "{label}" — run anyway?' } };
 const stageManager$1 = { "title": "Stage Manager", "refresh": "Refresh list", "import": "Import", "rescan": "Rescan", "rescanTooltip": "Scan the workflow library on disk (comfytv/workflows/ in the ComfyUI user directory) for new, changed, or removed files — no backend restart needed", "rescanFound": "Found {n} new workflow(s)", "rescanNone": "No new workflows found", "rescanNoneDetail": "Make sure the file is a .json inside comfytv/workflows/<kind>/ in the ComfyUI user directory (preset and .api.json sidecars don't count).", "rescanFailed": "Rescan failed", "setDefault": "Set as default", "unsetDefault": "Unset default", "defaultSet": "{label} is now the default workflow for this stage", "defaultCleared": "{label} is no longer the default — the first listed workflow is used", "defaultFailed": "Could not change the default workflow", "hide": "Hide from stage node", "unhide": "Show on stage node", "hiddenSet": "{label} is now hidden from the workflow dropdown on stage nodes", "hiddenCleared": "{label} is shown in the workflow dropdown again", "hiddenFailed": "Could not change workflow visibility", "section": { "workflows": "Workflows", "params": "Parameters" }, "emptyWorkflows": "No workflows registered for this stage yet — import one here, or drop a .json into comfytv/workflows/<kind>/ in the ComfyUI user directory and hit Rescan.", "hint": "Workflows listed here are picked from the workflow dropdown on the matching stage node on the canvas.", "badge": { "linked": "linked", "linkedHint": "Linked from ComfyUI's native workflow folder (not managed by ComfyTV)", "fileMissing": "file missing", "notGui": "not GUI format", "notGuiHint": "Missing a top-level nodes array — open it in ComfyUI and re-save normally, not with Save (API Format)", "noApi": "API not generated", "noApiHint": "The API prompt is generated automatically the first time this workflow runs — normal for a freshly imported workflow.", "new": "new", "newHint": "Discovered in the most recent scan (startup or rescan)", "builtin": "built-in", "builtinHint": "Ships with ComfyTV (tracked in git). Workflows without this badge were imported or dropped in by a user.", "default": "default", "defaultHint": "Newly added stage nodes of this kind start with this workflow selected. If it is deleted or unlinked, the first listed workflow is used instead.", "hidden": "hidden", "hiddenHint": "Not offered in the workflow dropdown on stage nodes. Nodes that already selected it keep working." } };
 const assets$1 = { "title": "Asset Library", "empty": "No assets yet — add images, video, or audio to reuse them across projects.", "emptyCategory": "No assets in this category yet.", "add": "Add media", "addTooltip": "Upload images, video, or audio into the library (or drag & drop them onto this panel)", "uploading": "Uploading {done}/{total}…", "uploadFailed": "Upload failed: {detail}", "dropHint": "Drop files to add them to the library", "search": "Search assets", "noResults": "No assets match your search.", "scanFolder": "Scan media folder", "scanFolderHint": "Drop large files into this folder — they are adopted on scan without uploading", "view": { "settings": "Display settings", "list": "List view", "grid": "Grid view" }, "media": { "all": "All types", "image": "Images", "video": "Video", "audio": "Audio", "model": "3D models", "text": "Text" }, "category": { "all": "All", "none": "Uncategorized", "new": "New category", "newPrompt": "New category name:", "rename": "Rename category", "renamePrompt": "Category name:", "delete": "Delete category", "deleteConfirm": "Delete this category? It is removed from all assets; the assets and files on disk stay." }, "card": { "rename": "Rename", "renamePrompt": "Asset name:", "delete": "Remove from library", "deleteConfirm": "Remove this asset from the library? The file on disk stays.", "tags": "Edit tags", "loadNode": "Add as node to canvas", "makeProxy": "Generate preview proxy", "more": "More options", "playPreview": "Play", "pausePreview": "Pause", "fileMissing": "File missing", "fileMissingHint": "The file on disk was deleted; the library entry remains — re-import it or remove the asset" }, "tagPopover": { "empty": "No categories yet.", "create": "New category" }, "select": { "enter": "Select assets (Ctrl+click also works)", "exit": "Exit selection", "all": "Select all shown", "missing": "Select only the shown assets whose file is missing ({count})", "count": "{count} selected", "tags": "Edit tags of selected", "loadNodes": "Add selected as nodes to canvas", "remove": "Remove selected from library", "removeConfirm": "Remove {count} assets from the library? The files on disk stay." } };
@@ -63140,13 +63172,13 @@ const run$1 = { "run": "运行", "runAllStages": "运行全部 Stage", "stagesRu
 const shareWorkflow$2 = { "saveFailedTitle": "保存失败", "saveFailedDescription": "工作流保存失败：{detail}" };
 const dialog = { "confirm": "确定", "cancel": "取消", "close": "关闭" };
 const pluginUpdate = { "title": "ComfyTV 有可用更新", "repairTitle": "恢复 ComfyTV", "message": "检测到远程有新的 ComfyTV 版本。\n\n当前：v{local}\n最新：v{remote}\n落后 {n} 个提交。\n\n当前提交会保留用于回退。请立即更新，然后重启 ComfyUI。", "messageDirty": "远程有新版本（v{local} → v{remote}，落后 {n} 个提交）。\n\n更新会强制覆盖所有已跟踪文件，包括内置工作流。本地已跟踪改动会保存为补丁，未跟踪或已忽略的用户自建工作流会保留。更新后请重启 ComfyUI。", "messageRepair": "ComfyTV v{local} 存在本地已跟踪改动或本地提交。可以恢复到当前配置的远程版本；覆盖前会先把本地已跟踪改动保存为补丁。", "updateNow": "立即更新", "updating": "正在更新…", "later": "稍后提醒", "dismiss": "忽略此版本", "failed": "更新失败", "restartTitle": "请重启 ComfyUI", "restartDetail": "ComfyTV 文件已更新。请重启 ComfyUI（或重新加载自定义节点）后才会生效。" };
-const v2 = { "meta": { "fps": "{n} fps", "silent": "无音轨", "mono": "单声道", "stereo": "立体声", "channels": "{n} 声道", "frames": "{n} 帧", "genTime": "生成耗时 {t}" }, "genopt": { "resolution": "清晰度", "ratio": "比例", "count": "生成数量" }, "seedream": { "model": "模型", "sizePreset": "尺寸预设", "width": "宽度", "height": "高度", "background": "背景", "seed": "种子", "randomSeed": "随机种子" }, "panelCollapse": "收起面板——只保留一行信息和运行按钮", "panelExpand": "展开面板", "imageStageTitle": "图像阶段 · 生成", "pickerTitle": "图片选择器 · 挑选", "cropTitle": "裁剪 · 编辑", "ed": { "rotate": "旋转 · 编辑", "mirror": "镜像 · 编辑", "grade": "调色 · 编辑", "compare": "对比 · 编辑", "gridSplit": "宫格切分 · 编辑", "customSplit": "自定义切分 · 编辑", "psdLayerTree": "PSD 图层树 · 编辑", "layerSeparation": "图层分离 · 编辑", "imagesSplit": "图像组分离 · 编辑", "imageMerge": "图片合并 · 编辑", "compareHint": "接入 A、B 两张图开始对比", "wired": "已接入", "empty": "未接入" }, "bottomBar": { "add": "添加节点", "assets": "素材库", "workflows": "工作流", "search": "搜索", "searchPlaceholder": "搜索 ComfyTV 节点…", "categories": "节点分类", "searchEmpty": "没有匹配的节点", "cat": { "all": "全部", "generate": "生成", "input": "输入", "image": "图片", "edit": "编辑", "video": "视频", "audio": "音频", "text": "文本", "model3d": "3D", "bridge": "桥接", "utils": "工具", "other": "其他" }, "createImage": "图片", "createVideo": "视频", "createAudio": "音频", "createText": "文本", "createModel": "模型", "workflowEmpty": "暂无内容。左侧模板来自团队仓；右侧工作流是本机新建。", "workflowLoading": "加载中…", "workflowOpenFailed": "打开工作流失败", "templates": "模板", "templateOpenHint": "点击会新建并打开一个独立的本地副本；保存不会修改模板。", "localWorkflows": "工作流", "templatesEmpty": "暂无云端模板。点「连接团队仓」或「更新模板」拉取。", "localWorkflowsEmpty": "暂无本地工作流。在 ComfyUI 保存到本账号 workflows 即可出现在这里。", "gitNoRepo": "尚未连接团队模板仓。点「连接团队仓」会克隆到 ComfyTV 专属模板目录，不会占用用户 workflows。", "gitNoGit": "本机未找到 git，请先安装并加入 PATH。", "gitSynced": "已与远程同步", "gitBehind": "云端模板有 {n} 个提交可覆盖更新", "gitDirty": "有未提交改动。模板改动也点「提交工作流」", "gitUpdate": "更新模板", "gitCommit": "提交工作流", "gitConnect": "连接团队仓", "gitConnecting": "正在连接团队仓…", "gitConnectOk": "已连接团队工作流仓", "gitCommitPick": "选择要提交的工作流。带「已改动」的模板也会列在这里", "gitCommitConfirm": "确认提交", "gitCommitCancel": "取消", "gitMessagePlaceholder": "提交说明（可空）", "gitChecking": "正在校验远程状态…", "gitUpdating": "正在覆盖更新云端模板…", "gitPushing": "正在提交并推送…", "gitPullOk": "云端模板已覆盖到本机", "gitPushOk": "已提交并推送", "gitError": "同步失败", "gitDuplicate": "无法提交：远程已有同名工作流", "gitNothingSelected": "请先勾选要提交的工作流", "gitNeedUpdate": "远程有新版本。请先点「更新模板」，再重新点「提交工作流」。", "gitNeedUpdateAfterCommit": "本地已保存提交，但远程有更新。请先点「更新模板」，再点一次「提交工作流」完成推送。", "gitPullConflict": "更新失败（可能有冲突）。请关掉面板后再试，或检查本机未保存的改动。", "gitPullLocalBackup": "本地未入库文件与远程同名，已改名为 *.local-backup：{names}", "gitNothingToCommit": "所选工作流没有可提交的改动", "gitAssetsPacked": "已打包 {n} 个媒体资产", "gitAssetsRestored": "已同步 {n} 个媒体资产到本机", "gitAssetsWarn": "部分资产未打包/未覆盖", "gitStateNew": "未提交", "gitStateModified": "已改动", "gitStateOutdated": "可更新", "gitStateDiverged": "冲突", "gitLegend": "模板有「已改动」时，和右侧工作流一样点「提交工作流」。点「更新模板」会用云端覆盖这些改动。", "gitTokenTitle": "配置团队 Git Token", "gitTokenHint": "粘贴管理员发给你的 GitHub PAT。只保存在 ComfyTV 专属模板目录，不会进入用户 workflows。", "gitTokenPlaceholder": "github_pat_… 或 ghp_…", "gitTokenSave": "保存并继续", "gitTokenSaving": "保存中…", "gitTokenRequired": "请先填写 Token", "gitTokenSaveFailed": "Token 保存失败", "gitAuthFailed": "团队模板仓的 GitHub Token 无效或已过期。请重新粘贴有效的 PAT（团队仓 Contents 读写权限）。" }, "stageHint": "连入参考，点 ↑ 生成", "apiCostHint": "估算工作流 API 费用", "ignisCredits": "Ignis 积分", "ignisCreditsHint": "本次生成由 Ignis 账户结算积分，实际扣费以 Ignis 服务端为准", "ignisBackground": { "title": "背景", "auto": "自动", "transparent": "透明", "opaque": "不透明" }, "toolbar": { "hd": "高清", "expand": "扩图", "angles": "多角度", "relight": "打光", "redraw": "重绘", "erase": "擦除", "cutout": "抠图", "canvas": "画板", "grid": "宫格切分", "panorama": "全景", "crop": "裁剪", "download": "下载", "generate": "生成" }, "pickerHint": "连入上游批次，点选一张", "cropHint": "连入上游图片开始裁剪", "batchCount": "{n}张", "batchPos": "{i}/{n}张", "refsCount": "{n} 个引用", "poolCount": "池内 {n} 张", "clear": "清空", "linkWorkflow": "关联工作流", "videoColorTitle": "调色 · Video FX", "videoCurvesTitle": "曲线 · Video FX", "fxChainTitle": "FX 链 · 出片", "renderChain": "渲染整链", "outputLabel": "成片", "livePreview": "实时", "fxChainHint": "连入上游视频即可预览整链", "scene3dTitle": "3D 场景 · 编辑台", "relightTitle": "打光 · 光球", "applying": "应用中…", "appliedLive": "已应用 · 下游实时", "dragToApply": "拖框即应用", "loaderHint": "拖入文件，或点击上传", "loaderEmpty": "未加载内容", "assetLoaderHint": "点击从资产库选择", "assetLoaderEmpty": "未选择资产", "params": "参数", "generatorHint": "点 ↑ 生成", "change": "更换", "upload": "上传", "renameHint": "双击重命名", "removeItem": "移除", "moreActions": "更多", "fx": { "lut": "LUT · 调色", "selectiveColor": "选择性色彩 · 调色", "cdl": "CDL · 调色", "histogramEq": "直方图均衡 · 调色", "awb": "自动白平衡 · 调色", "pseudocolor": "伪彩色 · 调色", "hueCorrect": "色相修正 · 调色", "select0r": "二级校色 · 调色", "keyer": "键控 · 抠像", "pik": "IBK 键控 · 抠像", "despill": "去溢色 · 抠像", "colorSuppress": "色彩抑制 · 抠像", "matteMorph": "遮罩形态 · 抠像", "shapeMask": "形状遮罩 · 抠像", "lensDistort": "镜头畸变 · 光学", "chromaticAberration": "镜头色差 · 光学", "lensFlare": "镜头光晕 · 光学", "glow": "辉光 · 光学", "godRays": "体积光 · 光学", "blurSharpen": "模糊与锐化 · 修复", "denoise": "降噪 · 修复", "deinterlace": "去隔行 · 修复", "posterize": "色调分离 · 风格", "oldFilm": "老电影 · 风格", "artFx": "艺术画风 · 风格", "glitch": "故障艺术 · 风格", "kaleidoscope": "万花筒 · 风格", "waveWarp": "波纹扭曲 · 风格", "strobe": "频闪 · 风格", "feedback": "拖影反馈 · 风格", "regrain": "胶片颗粒 · 风格", "stylize": "快速滤镜 · 风格", "chromaShift": "通道错位 · 风格", "transform": "变换 · 几何", "video360": "360 全景 · 几何", "card3d": "3D 卡片 · 几何", "particles": "粒子 · 特效", "water": "水面 · 特效", "lightGraffiti": "光绘 · 特效", "trim": "修剪 · 剪辑", "vcrop": "画面裁切 · 剪辑", "vsplit": "分割 · 剪辑", "concat": "拼接 · 剪辑", "speed": "变速 · 剪辑", "rotate": "旋转翻转 · 剪辑", "volume": "音量 · 剪辑", "muxAudio": "合成音轨 · 剪辑", "resize": "缩放 · 剪辑", "frames": "逐帧抽取 · 剪辑", "videoToFrames": "视频拆帧 · 剪辑", "timeRemap": "时间重映射 · 剪辑", "sequence": "片段序列 · 剪辑", "sceneDetect": "场景检测 · 剪辑", "chromaKey": "色度抠像 · 合成", "composite": "叠加合成 · 合成", "cornerPin": "四角定位 · 合成", "rotoMask": "手绘遮罩 · 合成", "keyMix": "键混合 · 合成", "matteMonitor": "遮罩监视 · 合成", "maskPropagate": "遮罩追踪 · 合成", "paintStroke": "笔迹绘制 · 合成", "stmap": "UV 重映射 · 合成", "stmapGen": "STMap 生成 · 合成", "zDefocus": "深度散景 · 合成", "frameBlend": "帧混合 · 合成", "transition": "交叉转场 · 转场", "lumaWipe": "亮度擦除 · 转场", "stabilize": "视频稳定 · 修复", "stabilizePro": "专业稳定 · 修复", "stabilize360": "360 稳定 · 修复", "interpolate": "补帧 · 修复", "faceBlur": "人脸打码 · 修复", "spotRemover": "污点移除 · 修复", "scopes": "示波器 · 监看", "contactSheet": "审片宫格 · 监看", "audioMeter": "电平表 · 监看", "title": "标题 · 图文", "subtitle": "字幕 · 图文", "annotate": "标注 · 图文", "kenBurns": "静照运镜 · 特效", "slitScan": "狭缝扫描 · 特效" }, "rich": { "score": "乐谱 · 音乐", "scoreEditor": "打谱器 · 音乐", "midiEditor": "MIDI 编辑 · 音乐", "expression": "表达式 · 动画", "motionTrack": "运动跟踪 · 动画", "pattern": "图案发生 · 生成", "panorama": "全景 · 360", "panoView": "当前视角 · 360", "panoMulti": "多视角 · 360", "storyboard": "故事板 · 叙事", "storyboardEditor": "故事板工作台 · 叙事", "layerEditor": "图层编辑器 · 图像", "canvas": "画板 · 图像", "material": "材质球 · 3D", "modelLoader": "加载模型 · 3D", "meshPrimitive": "基元 · 3D", "meshOp": "网格加工 · 3D", "meshBake": "烘焙贴图 · 3D", "meshBoolean": "布尔 · 3D", "lineArt": "线稿 · 图像", "poster": "排版 · 图像", "splitPart": "部件分割 · 图像", "erase": "擦除 · 涂抹", "inpaint": "局部重绘 · 涂抹", "outpaint": "扩图 · 涂抹", "multiangle": "多角度 · 图像", "director": "导演台 · 剪辑" }, "afx": { "dynamics": "压缩器 · 动态", "loudness": "响度 · 动态", "duck": "闪避 · 动态", "eq": "均衡器 · 音色", "saturate": "饱和 · 音色", "modulation": "调制 · 音色", "echo": "回声 · 音色", "stereo": "声场 · 音色", "timePitch": "变速变调 · 音色", "denoise": "降噪 · 修复", "noiseReduction": "谱门控 · 修复", "repair": "修复工具 · 修复", "convolve": "卷积混响 · 空间", "deconvolve": "逆卷积 · 空间", "museReverb": "算法混响 · 空间", "mix": "调音台 · 混音", "crossfade": "交叉淡化 · 混音", "stemSplit": "分轨 · 混音", "demuxAudio": "抽出音轨 · 混音", "demuxVideo": "抽出画面 · 混音", "clip": "修剪 · 剪辑", "split": "分割 · 剪辑", "analyze": "分析 · 监测", "mir": "乐理探测 · 监测", "visualize": "频谱图 · 监测", "segmentExport": "分段导出 · 监测", "reactive": "节奏打点 · 监测", "sweep": "扫频 · 合成", "sf2": "音源渲染 · 合成", "clickTrack": "节拍轨 · 合成", "chordAccomp": "和弦伴奏 · 合成", "scoreToMidi": "乐谱演奏 · 合成", "demuxAudioHint": "从视频中抽出音轨", "demuxVideoHint": "去掉声音，只留画面" }, "customParams": { "title": "工作流参数", "add": "添加", "addHint": "挂载绑定工作流暴露的自定义参数", "remove": "移除参数" }, "custom": { "title": "自定义节点", "expose": "暴露输入输出", "hint": "先选工作流，再选择这张卡片要暴露的输入和输出", "noWorkflow": "请先选择工作流", "inputs": "输入", "outputs": "输出", "exposed": "已暴露", "search": "搜索节点…", "noCandidates": "这个工作流没有可暴露的{what}", "linked": "已连接", "unlinked": "未连接", "required": "必填", "optional": "可选", "label": "名称", "batch": "批量", "save": "保存", "cancel": "取消", "saving": "保存中…", "saved": "已保存", "loadFailed": "工作流加载失败：{detail}", "saveFailed": "保存失败：{detail}", "needsOutput": "至少选择一个输出", "kinds": { "image": "图像", "images": "图像批次", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本", "param": "参数" }, "summary": "{inputs} 个输入 · {outputs} 个输出", "moveUp": "上移", "asPrompt": "由卡片主提示词驱动（支持 {'@'} 引用）", "viaRef": "来自资产引用", "saveAs": "另存为…", "saveAsHint": "把这组选择另存为同一工作流的一份新配置", "saveAsPrompt": "新配置名称", "asRandom": "每次运行随机取值（用于 seed）", "randomEachRun": "每次运行随机", "moveDown": "下移" }, "ctl": { "mode": "模式", "duration": "时长（秒）", "generateAudio": "生成伴音", "lyrics": "歌词", "bpm": "BPM", "timeSignature": "拍号", "keyScale": "调式", "language": "语言", "voice": "音色", "speed": "语速", "referenceText": "参考文本", "variantCount": "变体数量" } };
+const v2 = { "meta": { "fps": "{n} fps", "silent": "无音轨", "mono": "单声道", "stereo": "立体声", "channels": "{n} 声道", "frames": "{n} 帧", "genTime": "生成耗时 {t}" }, "genopt": { "resolution": "清晰度", "ratio": "比例", "count": "生成数量" }, "seedream": { "model": "模型", "sizePreset": "尺寸预设", "width": "宽度", "height": "高度", "background": "背景", "seed": "种子", "randomSeed": "随机种子" }, "panelCollapse": "收起面板——只保留一行信息和运行按钮", "panelExpand": "展开面板", "imageStageTitle": "图像阶段 · 生成", "pickerTitle": "图片选择器 · 挑选", "cropTitle": "裁剪 · 编辑", "ed": { "rotate": "旋转 · 编辑", "mirror": "镜像 · 编辑", "grade": "调色 · 编辑", "compare": "对比 · 编辑", "gridSplit": "宫格切分 · 编辑", "customSplit": "自定义切分 · 编辑", "psdLayerTree": "PSD 图层树 · 编辑", "layerSeparation": "图层分离 · 编辑", "imagesSplit": "图像组分离 · 编辑", "imageMerge": "图片合并 · 编辑", "compareHint": "接入 A、B 两张图开始对比", "wired": "已接入", "empty": "未接入" }, "bottomBar": { "add": "添加节点", "assets": "素材库", "workflows": "工作流", "search": "搜索", "searchPlaceholder": "搜索 ComfyTV 节点…", "categories": "节点分类", "searchEmpty": "没有匹配的节点", "cat": { "all": "全部", "generate": "生成", "input": "输入", "image": "图片", "edit": "编辑", "video": "视频", "audio": "音频", "text": "文本", "model3d": "3D", "bridge": "桥接", "utils": "工具", "other": "其他" }, "createImage": "图片", "createVideo": "视频", "createAudio": "音频", "createText": "文本", "createModel": "模型", "workflowEmpty": "暂无内容。左侧模板来自团队仓；右侧工作流是本机新建。", "workflowLoading": "加载中…", "workflowOpenFailed": "打开工作流失败", "templates": "模板", "templateOpenHint": "点击会新建并打开一个独立的本地副本；保存不会修改模板。", "localWorkflows": "工作流", "templatesEmpty": "暂无云端模板。点「连接团队仓」或「更新模板」拉取。", "localWorkflowsEmpty": "暂无本地工作流。在 ComfyUI 保存到本账号 workflows 即可出现在这里。", "gitNoRepo": "尚未连接团队模板仓。点「连接团队仓」会克隆到 ComfyTV 专属模板目录，不会占用用户 workflows。", "gitNoGit": "未找到 Git。已安装？可手动指定路径并加入 PATH。", "gitPathManual": "手动指定 Git", "gitPathHint": "填写运行 ComfyUI 的电脑上的 git.exe 完整路径，或 Git 安装目录。验证后立即生效，并在重启后自动加载；Windows 同时加入当前用户 PATH，无需管理员权限。", "gitPathApply": "验证并加入 PATH", "gitPathSaving": "正在验证…", "gitPathSaved": "Git 路径已保存并立即生效", "gitPathFailed": "Git 路径设置失败", "gitPathUserWarning": "ComfyUI 已可使用 Git，但写入 Windows 用户 PATH 失败", "gitSynced": "已与远程同步", "gitBehind": "云端模板有 {n} 个提交可覆盖更新", "gitDirty": "有未提交改动。模板改动也点「提交工作流」", "gitUpdate": "更新模板", "gitCommit": "提交工作流", "gitConnect": "连接团队仓", "gitConnecting": "正在连接团队仓…", "gitConnectOk": "已连接团队工作流仓", "gitCommitPick": "选择要提交的工作流。带「已改动」的模板也会列在这里", "gitCommitConfirm": "确认提交", "gitCommitCancel": "取消", "gitMessagePlaceholder": "提交说明（可空）", "gitChecking": "正在校验远程状态…", "gitUpdating": "正在覆盖更新云端模板…", "gitPushing": "正在提交并推送…", "gitPullOk": "云端模板已覆盖到本机", "gitPushOk": "已提交并推送", "gitError": "同步失败", "gitDuplicate": "无法提交：远程已有同名工作流", "gitNothingSelected": "请先勾选要提交的工作流", "gitNeedUpdate": "远程有新版本。请先点「更新模板」，再重新点「提交工作流」。", "gitNeedUpdateAfterCommit": "本地已保存提交，但远程有更新。请先点「更新模板」，再点一次「提交工作流」完成推送。", "gitPullConflict": "更新失败（可能有冲突）。请关掉面板后再试，或检查本机未保存的改动。", "gitPullLocalBackup": "本地未入库文件与远程同名，已改名为 *.local-backup：{names}", "gitNothingToCommit": "所选工作流没有可提交的改动", "gitAssetsPacked": "已打包 {n} 个媒体资产", "gitAssetsRestored": "已同步 {n} 个媒体资产到本机", "gitAssetsWarn": "部分资产未打包/未覆盖", "gitStateNew": "未提交", "gitStateModified": "已改动", "gitStateOutdated": "可更新", "gitStateDiverged": "冲突", "gitLegend": "模板有「已改动」时，和右侧工作流一样点「提交工作流」。点「更新模板」会用云端覆盖这些改动。", "gitTokenTitle": "配置团队 Git Token", "gitTokenHint": "粘贴管理员发给你的 GitHub PAT。只保存在 ComfyTV 专属模板目录，不会进入用户 workflows。", "gitTokenPlaceholder": "github_pat_… 或 ghp_…", "gitTokenSave": "保存并继续", "gitTokenSaving": "保存中…", "gitTokenRequired": "请先填写 Token", "gitTokenSaveFailed": "Token 保存失败", "gitAuthFailed": "团队模板仓的 GitHub Token 无效或已过期。请重新粘贴有效的 PAT（团队仓 Contents 读写权限）。" }, "stageHint": "连入参考，点 ↑ 生成", "apiCostHint": "估算工作流 API 费用", "ignisCredits": "Ignis 积分", "ignisCreditsHint": "本次生成由 Ignis 账户结算积分，实际扣费以 Ignis 服务端为准", "ignisBackground": { "title": "背景", "auto": "自动", "transparent": "透明", "opaque": "不透明" }, "toolbar": { "hd": "高清", "expand": "扩图", "angles": "多角度", "relight": "打光", "redraw": "重绘", "erase": "擦除", "cutout": "抠图", "canvas": "画板", "grid": "宫格切分", "panorama": "全景", "crop": "裁剪", "download": "下载", "generate": "生成" }, "pickerHint": "连入上游批次，点选一张", "cropHint": "连入上游图片开始裁剪", "batchCount": "{n}张", "batchPos": "{i}/{n}张", "refsCount": "{n} 个引用", "poolCount": "池内 {n} 张", "clear": "清空", "linkWorkflow": "关联工作流", "videoColorTitle": "调色 · Video FX", "videoCurvesTitle": "曲线 · Video FX", "fxChainTitle": "FX 链 · 出片", "renderChain": "渲染整链", "outputLabel": "成片", "livePreview": "实时", "fxChainHint": "连入上游视频即可预览整链", "scene3dTitle": "3D 场景 · 编辑台", "relightTitle": "打光 · 光球", "applying": "应用中…", "appliedLive": "已应用 · 下游实时", "dragToApply": "拖框即应用", "loaderHint": "拖入文件，或点击上传", "loaderEmpty": "未加载内容", "assetLoaderHint": "点击从资产库选择", "assetLoaderEmpty": "未选择资产", "params": "参数", "generatorHint": "点 ↑ 生成", "change": "更换", "upload": "上传", "renameHint": "双击重命名", "removeItem": "移除", "moreActions": "更多", "fx": { "lut": "LUT · 调色", "selectiveColor": "选择性色彩 · 调色", "cdl": "CDL · 调色", "histogramEq": "直方图均衡 · 调色", "awb": "自动白平衡 · 调色", "pseudocolor": "伪彩色 · 调色", "hueCorrect": "色相修正 · 调色", "select0r": "二级校色 · 调色", "keyer": "键控 · 抠像", "pik": "IBK 键控 · 抠像", "despill": "去溢色 · 抠像", "colorSuppress": "色彩抑制 · 抠像", "matteMorph": "遮罩形态 · 抠像", "shapeMask": "形状遮罩 · 抠像", "lensDistort": "镜头畸变 · 光学", "chromaticAberration": "镜头色差 · 光学", "lensFlare": "镜头光晕 · 光学", "glow": "辉光 · 光学", "godRays": "体积光 · 光学", "blurSharpen": "模糊与锐化 · 修复", "denoise": "降噪 · 修复", "deinterlace": "去隔行 · 修复", "posterize": "色调分离 · 风格", "oldFilm": "老电影 · 风格", "artFx": "艺术画风 · 风格", "glitch": "故障艺术 · 风格", "kaleidoscope": "万花筒 · 风格", "waveWarp": "波纹扭曲 · 风格", "strobe": "频闪 · 风格", "feedback": "拖影反馈 · 风格", "regrain": "胶片颗粒 · 风格", "stylize": "快速滤镜 · 风格", "chromaShift": "通道错位 · 风格", "transform": "变换 · 几何", "video360": "360 全景 · 几何", "card3d": "3D 卡片 · 几何", "particles": "粒子 · 特效", "water": "水面 · 特效", "lightGraffiti": "光绘 · 特效", "trim": "修剪 · 剪辑", "vcrop": "画面裁切 · 剪辑", "vsplit": "分割 · 剪辑", "concat": "拼接 · 剪辑", "speed": "变速 · 剪辑", "rotate": "旋转翻转 · 剪辑", "volume": "音量 · 剪辑", "muxAudio": "合成音轨 · 剪辑", "resize": "缩放 · 剪辑", "frames": "逐帧抽取 · 剪辑", "videoToFrames": "视频拆帧 · 剪辑", "timeRemap": "时间重映射 · 剪辑", "sequence": "片段序列 · 剪辑", "sceneDetect": "场景检测 · 剪辑", "chromaKey": "色度抠像 · 合成", "composite": "叠加合成 · 合成", "cornerPin": "四角定位 · 合成", "rotoMask": "手绘遮罩 · 合成", "keyMix": "键混合 · 合成", "matteMonitor": "遮罩监视 · 合成", "maskPropagate": "遮罩追踪 · 合成", "paintStroke": "笔迹绘制 · 合成", "stmap": "UV 重映射 · 合成", "stmapGen": "STMap 生成 · 合成", "zDefocus": "深度散景 · 合成", "frameBlend": "帧混合 · 合成", "transition": "交叉转场 · 转场", "lumaWipe": "亮度擦除 · 转场", "stabilize": "视频稳定 · 修复", "stabilizePro": "专业稳定 · 修复", "stabilize360": "360 稳定 · 修复", "interpolate": "补帧 · 修复", "faceBlur": "人脸打码 · 修复", "spotRemover": "污点移除 · 修复", "scopes": "示波器 · 监看", "contactSheet": "审片宫格 · 监看", "audioMeter": "电平表 · 监看", "title": "标题 · 图文", "subtitle": "字幕 · 图文", "annotate": "标注 · 图文", "kenBurns": "静照运镜 · 特效", "slitScan": "狭缝扫描 · 特效" }, "rich": { "score": "乐谱 · 音乐", "scoreEditor": "打谱器 · 音乐", "midiEditor": "MIDI 编辑 · 音乐", "expression": "表达式 · 动画", "motionTrack": "运动跟踪 · 动画", "pattern": "图案发生 · 生成", "panorama": "全景 · 360", "panoView": "当前视角 · 360", "panoMulti": "多视角 · 360", "storyboard": "故事板 · 叙事", "storyboardEditor": "故事板工作台 · 叙事", "layerEditor": "图层编辑器 · 图像", "canvas": "画板 · 图像", "material": "材质球 · 3D", "modelLoader": "加载模型 · 3D", "meshPrimitive": "基元 · 3D", "meshOp": "网格加工 · 3D", "meshBake": "烘焙贴图 · 3D", "meshBoolean": "布尔 · 3D", "lineArt": "线稿 · 图像", "poster": "排版 · 图像", "splitPart": "部件分割 · 图像", "erase": "擦除 · 涂抹", "inpaint": "局部重绘 · 涂抹", "outpaint": "扩图 · 涂抹", "multiangle": "多角度 · 图像", "director": "导演台 · 剪辑" }, "afx": { "dynamics": "压缩器 · 动态", "loudness": "响度 · 动态", "duck": "闪避 · 动态", "eq": "均衡器 · 音色", "saturate": "饱和 · 音色", "modulation": "调制 · 音色", "echo": "回声 · 音色", "stereo": "声场 · 音色", "timePitch": "变速变调 · 音色", "denoise": "降噪 · 修复", "noiseReduction": "谱门控 · 修复", "repair": "修复工具 · 修复", "convolve": "卷积混响 · 空间", "deconvolve": "逆卷积 · 空间", "museReverb": "算法混响 · 空间", "mix": "调音台 · 混音", "crossfade": "交叉淡化 · 混音", "stemSplit": "分轨 · 混音", "demuxAudio": "抽出音轨 · 混音", "demuxVideo": "抽出画面 · 混音", "clip": "修剪 · 剪辑", "split": "分割 · 剪辑", "analyze": "分析 · 监测", "mir": "乐理探测 · 监测", "visualize": "频谱图 · 监测", "segmentExport": "分段导出 · 监测", "reactive": "节奏打点 · 监测", "sweep": "扫频 · 合成", "sf2": "音源渲染 · 合成", "clickTrack": "节拍轨 · 合成", "chordAccomp": "和弦伴奏 · 合成", "scoreToMidi": "乐谱演奏 · 合成", "demuxAudioHint": "从视频中抽出音轨", "demuxVideoHint": "去掉声音，只留画面" }, "customParams": { "title": "工作流参数", "add": "添加", "addHint": "挂载绑定工作流暴露的自定义参数", "remove": "移除参数" }, "custom": { "title": "自定义节点", "expose": "暴露输入输出", "hint": "先选工作流，再选择这张卡片要暴露的输入和输出", "noWorkflow": "请先选择工作流", "inputs": "输入", "outputs": "输出", "exposed": "已暴露", "search": "搜索节点…", "noCandidates": "这个工作流没有可暴露的{what}", "linked": "已连接", "unlinked": "未连接", "required": "必填", "optional": "可选", "label": "名称", "batch": "批量", "save": "保存", "cancel": "取消", "saving": "保存中…", "saved": "已保存", "loadFailed": "工作流加载失败：{detail}", "saveFailed": "保存失败：{detail}", "needsOutput": "至少选择一个输出", "kinds": { "image": "图像", "images": "图像批次", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本", "param": "参数" }, "summary": "{inputs} 个输入 · {outputs} 个输出", "moveUp": "上移", "asPrompt": "由卡片主提示词驱动（支持 {'@'} 引用）", "viaRef": "来自资产引用", "saveAs": "另存为…", "saveAsHint": "把这组选择另存为同一工作流的一份新配置", "saveAsPrompt": "新配置名称", "asRandom": "每次运行随机取值（用于 seed）", "randomEachRun": "每次运行随机", "moveDown": "下移" }, "ctl": { "mode": "模式", "duration": "时长（秒）", "generateAudio": "生成伴音", "lyrics": "歌词", "bpm": "BPM", "timeSignature": "拍号", "keyScale": "调式", "language": "语言", "voice": "音色", "speed": "语速", "referenceText": "参考文本", "variantCount": "变体数量" } };
 const workflow = { "uploadButton": "⬆ 上传工作流", "imported": "已导入「{label}」", "importFailed": "工作流导入失败", "notJson": "该文件不是合法 JSON", "linkButton": "🔗 链接工作流" };
 const stage = { "run": "运行", "rerun": "重新运行", "running": "运行中…", "cancel": "取消", "preparingWorkflow": "准备工作流中…", "noWorkflowShort": "没有可用工作流 — 请上传 / 链接", "noWorkflowInstalled": "没有可用的 {kind} 工作流 — 用卡片上的「关联工作流」按钮导入一个，或到侧栏 ComfyTV → 阶段管理里添加。", "promptNotBound": "「{label}」没有绑定阶段提示词，卡片上的提示词不会生效。到侧栏 ComfyTV → 工作流，把提示词节点的 text 绑定到「阶段提示词」。", "outputDurationHint": "生成耗时", "section": { "context": "上游输入", "pool": "图片池", "output": "输出 ({type})", "actions": "动作" }, "pool": { "clear": "清除", "clearHint": "清空图片池并重置选择", "confirmClear": "确认清空？", "confirm": "是", "cancel": "否", "modeAppend": "模式:追加", "modeReplace": "模式:覆盖", "modeHint": "新结果如何进入池（点击切换）。追加：保留已有并把新结果放到最上。覆盖：每次运行只保留最新结果。相同 URL 只保留一份。" }, "empty": { "no_output": "暂无输出", "generating": "生成中…", "pending_upstream": "上游待运行", "unsupported_type": "不支持的类型 {type}" }, "source": { "upstream": "← 上游", "pending": "… 等待中" }, "disconnect": "断开此连接", "modelInput": { "front": "正", "left": "左", "back": "背", "right": "右", "extra": "辅", "reference": "参考图 {n}", "image": "图片 {n}" }, "starting": "启动中…", "runByKind": { "text": "生成文本", "image": "生成图片", "image-batch": "生成图片", "video": "生成视频", "audio": "生成音频", "panorama": "生成全景图", "storyboard": "生成分镜", "model": "生成3D模型", "material": "生成材质" }, "action": { "viewFull": "查看大图", "download": "下载", "exportObjZip": "导出 OBJ + 纹理（ZIP）", "exportObjZipBusy": "正在导出 OBJ 压缩包…", "exportObjZipDone": "OBJ 压缩包已下载", "exportObjZipFailed": "OBJ 导出失败", "exportModel": "导出模型", "exportModelBusy": "正在导出 {format}…", "exportModelDone": "{format} 已下载", "exportModelFailed": "{format} 导出失败", "copyText": "复制文本", "copyImageDone": "图片已复制，可粘贴到外部应用", "copyImageFailed": "复制图片失败", "copyImageUnavailable": "图片剪贴板需要使用 localhost 或 HTTPS，并由浏览器支持剪贴板权限。", "saveTextAsset": "存入资产库", "renderMarkdown": "渲染 Markdown", "showRawText": "显示原文", "addTag": "存入资产库 / 打标签", "removeFromPicker": "从选择器移除", "close": "关闭", "loadAsset": "作为资产节点加载", "prev": "上一张", "next": "下一张", "pick": "选用这条" }, "preparingWorkflowDetail": "稍等 — 正在把工作流转换成 api JSON。稍后再点运行。" };
 const error = { "dismiss": "清除", "cancelled": "已取消", "upstreamNotReady": "上游未就绪", "upstreamNotReadyDetail": "上游未就绪:{list}。请先运行这些阶段生成快照,然后再运行此阶段。", "refMissing": "参考素材已失效", "refMissingDetail": "{list} 对应的资产已从资产库移除，或文件已丢失。从参考区移除后重新添加，再运行。", "droppedFromQueue": "尚未运行就被移出队列 — 队列被清空或该任务被删除。", "workerDied": "后端未返回结果就停止了。prompt worker 可能已崩溃(通常是清理阶段 CUDA OOM)。重启 ComfyUI 后恢复。" };
 const eagle = { "title": "Eagle 素材库", "refresh": "刷新", "search": "搜索名称或标签…", "loading": "加载中…", "empty": "没有条目", "loadMore": "加载更多", "disabledHint": "Eagle 集成未启用。到「设置」页打开「启用 Eagle 集成」,并钉死 ComfyTV 专用的 .library 路径。", "pendingBanner": "有 {n} 条待发送到 Eagle(等待打开钉死的库)", "flushNow": "立即补发", "flushing": "补发中…", "mode": { "api": "在线", "disk": "只读", "offline": "离线", "disabled": "未启用" }, "hint": { "disk": "Eagle 未运行或打开了别的库:正在直接读取磁盘上的库(只读)。发送会排队,等库打开后自动补发。", "offline": "找不到 Eagle:应用未运行,钉死的库路径也不可达。检查设置里的库路径。" }, "folder": { "all": "全部文件夹" }, "ai": { "label": "AI", "tooltip": "AI 语义搜索(需要 Eagle 的 AI Search 插件):按含义搜图而非按名称" }, "similar": { "action": "找相似", "banner": "与「{name}」相似的条目", "clear": "清除", "failed": "相似搜索失败" }, "import": { "action": "导入到资产库", "done": "已导入「{name}」", "existed": "「{name}」已在资产库", "failed": "导入失败" }, "send": { "action": "发送到 Eagle", "sent": "已发送到 Eagle:{name}", "queued": "Eagle 未就绪,已排队({n} 条待发)", "failed": "发送失败" }, "flush": { "done": "已补发 {n} 条到 Eagle", "failed": "{n} 条补发失败" } };
 const sidebar = { "tab": { "workflow": "工作流", "assets": "资产库", "eagle": "Eagle", "entries": "条目", "params": "阶段管理", "presets": "预设", "resources": "资源", "servers": "服务器", "collab": "协作", "settings": "设置" } };
-const settings = { "title": "设置", "hint": "默认值来自 ComfyTV 目录下的 comfytv.properties。此处保存的值写入数据库,并优先生效。", "modelRoutes": { "desktop-account": "桌面账号", "api-key": "API Key" }, "loading": "加载中…", "save": "保存", "saving": "保存中…", "search": "搜索设置…", "noMatch": "没有匹配的设置项", "experimental": "实验性", "reset": "恢复默认", "on": "开", "off": "关", "status": { "checking": "检测中…", "online": "已连接", "offline": "未连接" }, "blender": { "section": "Blender 桥接" }, "general": { "section": "通用" }, "backup": { "section": "数据库备份", "now": "立即备份", "running": "备份中…", "ok": "备份已写入 {path}", "failed": "备份失败:{error}" }, "pluginUpdate": { "section": "ComfyTV 更新", "desc": "检查已配置的 GitHub 远程仓库，并直接在 ComfyUI 中安装新的 ComfyTV 版本。", "policy": "更新会强制覆盖已跟踪的插件文件和内置工作流；本地改动会备份，用户工作流会保留，并支持回退到上一版本。", "current": "当前版本", "remote": "远程版本", "check": "检查更新", "checking": "正在检查…", "recheck": "重新检查", "upToDate": "ComfyTV 已是最新版本。", "available": "发现可用更新，当前版本落后 {n} 个提交。", "repairAvailable": "当前目录存在本地已跟踪改动或本地提交，可以恢复到配置的远程版本。", "repair": "恢复官方版本", "dirty": "本地已跟踪文件有改动；更新会覆盖这些改动，包括已修改的内置工作流。", "rollbackAvailable": "可以回退到 v{version}。", "rollback": "回退版本", "rollingBack": "正在回退…", "rollbackTitle": "回退 ComfyTV", "rollbackConfirm": "确定恢复到 ComfyTV v{version} 吗？当前已跟踪文件会被覆盖，完成后需要重启 ComfyUI。", "backupSaved": "恢复备份：{path}", "collisionBackups": "有 {n} 个本地文件与更新内容同名，已自动改名为 .local-backup。", "dependenciesChanged": "依赖文件发生变化：{files}。请重启 ComfyUI；如果新版本有要求，还需要重新安装依赖。", "noGit": "当前机器未安装 Git。", "notRepo": "当前 ComfyTV 目录不是 Git 仓库，无法自动更新。", "error": "检查更新失败：{error}" }, "teamGit": { "section": "团队工作流 Git", "desc": "用于同步云端模板与提交本地工作流。Token 只存本机，请向管理员索取后粘贴；不要提交到 GitHub。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 GitHub PAT（github_pat_… / ghp_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败" }, "ignis": { "section": "Ignis 图片和视频生成", "desc": "用于 Ignis 图片模型以及 Seedance、Kling、Sora 和 PixVerse 视频生成。Token 只保存在本机，不会写入工作流或提交到 Git。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 Ignis Token（ignis_ct_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败", "configDesc": "也可以粘贴管理员发来的完整安装说明、config 链接或 config JSON，ComfyTV 会自动解析并保存 Token。", "configPlaceholder": "粘贴 config 链接或完整安装文本…", "importConfig": "解析并保存配置", "importing": "正在解析…", "importOk": "已从配置链接保存到本机", "importFailed": "配置解析失败" }, "fields": { "enable-v2": { "label": "启用 ComfyTV V2 节点", "desc": "实验性功能，可能存在不稳定行为。已迁移的阶段节点以内容导向的 V2 外壳渲染。必须先在 ComfyUI 本体设置中开启 Nodes 2.0（Vue 节点模式）。修改后需刷新页面。" }, "v2-lod-scale": { "label": "海报图模式阈值", "desc": "画布缩放低于此值时，V2 卡片收起为缩略图并显示播放/放大按钮；放大越过阈值后面板恢复。", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "海报图底", "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。", "options": { "checker": "棋盘格", "image": "同图压暗铺满" } }, "auto-picker": { "label": "运行时自动接挑选节点", "desc": "图像阶段或视频阶段运行时，如果输出端还没有连线，自动在后面接一个图片 / 视频选择器。" }, "auto-bridge": { "label": "连线时自动插入桥接节点", "desc": "把原生 IMAGE / VIDEO / AUDIO / STRING / MASK 与 ComfyTV 类型互连时，自动插入对应的桥接节点。入桥仍需点运行才会写入快照。" }, "drop-files-as-loaders": { "label": "拖入媒体文件生成资产加载节点", "desc": "图片、视频、音频拖到画布空白处时，导入资产库并生成 ComfyTV 资产加载节点，而不是交给 ComfyUI 加载（PNG 里保存的工作流不会再被打开）。拖到节点上的和其他类型的文件仍由 ComfyUI 处理。" }, "v2-panel-on-select": { "label": "仅选中时显示控制面板", "desc": "默认开启。未选中时 V2 节点只保留预览区；选中后再展开下方参数、提示词与运行条（与 LibTV 画布一致）。" }, "enable-db-backup": { "label": "启动时自动备份", "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。" }, "db-backup-max-count": { "label": "最大备份数量", "desc": "快照数量超过该值时,自动删除最旧的备份。" }, "db-backup-path": { "label": "备份位置", "desc": "留空则使用 ComfyTV 目录下的 db-backup 文件夹。快照以时间戳命名,如 20260805-093000/comfytv。", "placeholder": "如 D:\\backups\\comfytv" }, "enable-mcp": { "label": "启用 MCP 服务", "desc": "开放 ComfyTV 的 MCP 端点(/comfytv/mcp),允许 agent 读取并操作画布。默认关闭。" }, "enable-bot": { "label": "启用 ComfyTV Bot", "desc": "显示内嵌 Bot 侧边栏及其聊天接口。前置条件:先启用 MCP 服务。" }, "bot-model-claude-code": { "label": "Claude Code 模型", "desc": "Bot 回合传给 claude --model 的模型,支持别名(sonnet、opus、haiku)或完整模型 id。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-codex": { "label": "Codex 模型", "desc": "Bot 回合传给 codex -m 的模型。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-qwen-code": { "label": "Qwen Code 模型", "desc": "Bot 回合传给 qwen -m 的模型。留空 = 用 qwen 自己设置里选的模型。", "placeholder": "CLI 默认" }, "bot-model-local-llm": { "label": "Local LLM 模型", "desc": "本地端点上的模型 id。留空 = 用端点报告的第一个模型。", "placeholder": "自动取第一个" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM 模型", "desc": "实验性 — 玩具性质的 provider,一般情况不要用,请改用 Local LLM 或 CLI 类 provider。Bot 回合使用的 models/text_encoders 里的文本编码器权重(Qwen3 或 Gemma 系)。留空 = 自动取第一个可生成的权重。推理跑在 ComfyUI 本体内 — 无需外部服务。", "placeholder": "自动取第一个" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM 思考模式", "desc": "实验性 — 只对玩具性质的 ComfyUI LLM provider 生效。让 Qwen3 系模型先在隐藏的 <think> 块里推理再回答。工具调用明显更聪明,代价是每轮多花一些生成时间。" }, "bot-local-llm-url": { "label": "Local LLM 端点", "desc": "本地模型服务的 OpenAI 兼容 base URL(LM Studio、llama.cpp 的 llama-server、vLLM、Ollama 等)。不填时 Local LLM provider 不可用。仅限免 key 的本地端点 — 永远不存 API key。", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "挂载 comfy-mcp", "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex、DeepSeek Harness、Local LLM 与 ComfyUI LLM 保持只挂 comfytv。" }, "bot-comfy-mcp-command": { "label": "comfy-mcp 命令", "desc": "启动 comfy-mcp stdio 服务的命令。留空 = 在 PATH 上找 comfy-mcp。", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "总是允许 bot 运行", "desc": "不弹运行审批卡,bot 直接执行(默认行为)。关闭后,切到询问模式的会话才会在每次运行前等你批准。" }, "bot-model-deepseek-harness": { "label": "DeepSeek Harness 模型", "desc": "模型同时决定计费方式：桌面账号或 API Key。留空 = 桌面账号下的第一个模型，不会自动改用 API Key。", "placeholder": "桌面账号默认" }, "enable-skills": { "label": "启用 Agent Skills", "desc": "把已安装的技能通过 MCP(skill 工具 + prompts)提供给外部 agent 和内嵌 bot。" }, "enable-collab": { "label": "启用多人协作", "desc": "实验性功能——请勿在生产环境依赖。局域网内的实时多人 presence 与共同编辑。关闭时协作代码完全不运行（无会话、无 WebSocket、无 UI）。修改后需刷新已打开的页面。" }, "enable-eagle": { "label": "启用 Eagle 集成", "desc": "把本机的 Eagle(eagle.cool)素材库接入 ComfyTV:侧边栏出现 Eagle 面板,资产可发送到 Eagle。需要 Eagle 桌面应用。" }, "eagle-api-url": { "label": "Eagle API 地址", "desc": "Eagle 本地 API 的地址,默认端口 41595。仅本机访问,不需要 token。", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "钉死的资源库路径", "desc": "ComfyTV 专用的 .library 目录。发送只在 Eagle 打开该库时进行(否则排队),浏览在 Eagle 关闭或切到别的库时直接读磁盘。留空 = 跟随 Eagle 当前打开的库(不推荐)。", "placeholder": "如 Y:\\Eagle资源库\\ComfyTV资源库.library" }, "eagle-send-folder": { "label": "发送目标文件夹", "desc": "手动发送到 Eagle 时归入的文件夹名,不存在会自动创建。留空 = 库根目录。自动沉淀按项目名分文件夹,不走此设置。" }, "eagle-auto-send": { "label": "产出自动沉淀到 Eagle", "desc": "每个阶段节点的产出(图片/视频/音频)自动归档进 Eagle:按项目名分文件夹,annotation 带完整生成参数(prompt/模型等),tag 带项目名。走排队机制,Eagle 没开时攒着,不阻塞生成。" }, "blender-bridge-url": { "label": "Blender 桥接地址", "desc": "实验性 — 会有毛边。Blender Scene / Camera / Animation 这几个阶段节点连接的 blender-web 桥接服务地址。用 blender-for-comfytv.bat 启动;桥接没响应时这些阶段节点不可用。默认端口 7684,仅限本机。", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent 与 MCP" }, "eagle": { "section": "Eagle 集成" }, "collab": { "section": "多人协作" } };
+const settings = { "title": "设置", "hint": "默认值来自 ComfyTV 目录下的 comfytv.properties。此处保存的值写入数据库,并优先生效。", "modelRoutes": { "desktop-account": "桌面账号", "api-key": "API Key" }, "loading": "加载中…", "save": "保存", "saving": "保存中…", "search": "搜索设置…", "noMatch": "没有匹配的设置项", "experimental": "实验性", "reset": "恢复默认", "on": "开", "off": "关", "status": { "checking": "检测中…", "online": "已连接", "offline": "未连接" }, "blender": { "section": "Blender 桥接" }, "general": { "section": "通用" }, "backup": { "section": "数据库备份", "now": "立即备份", "running": "备份中…", "ok": "备份已写入 {path}", "failed": "备份失败:{error}" }, "pluginUpdate": { "section": "ComfyTV 更新", "desc": "检查已配置的 GitHub 远程仓库，并直接在 ComfyUI 中安装新的 ComfyTV 版本。", "policy": "更新会强制覆盖已跟踪的插件文件和内置工作流；本地改动会备份，用户工作流会保留，并支持回退到上一版本。", "current": "当前版本", "remote": "远程版本", "check": "检查更新", "checking": "正在检查…", "recheck": "重新检查", "upToDate": "ComfyTV 已是最新版本。", "available": "发现可用更新，当前版本落后 {n} 个提交。", "repairAvailable": "当前目录存在本地已跟踪改动或本地提交，可以恢复到配置的远程版本。", "repair": "恢复官方版本", "dirty": "本地已跟踪文件有改动；更新会覆盖这些改动，包括已修改的内置工作流。", "rollbackAvailable": "可以回退到 v{version}。", "rollback": "回退版本", "rollingBack": "正在回退…", "rollbackTitle": "回退 ComfyTV", "rollbackConfirm": "确定恢复到 ComfyTV v{version} 吗？当前已跟踪文件会被覆盖，完成后需要重启 ComfyUI。", "backupSaved": "恢复备份：{path}", "collisionBackups": "有 {n} 个本地文件与更新内容同名，已自动改名为 .local-backup。", "dependenciesChanged": "依赖文件发生变化：{files}。请重启 ComfyUI；如果新版本有要求，还需要重新安装依赖。", "noGit": "当前机器未安装 Git。", "notRepo": "当前 ComfyTV 目录不是 Git 仓库，无法自动更新。", "error": "检查更新失败：{error}" }, "teamGit": { "section": "团队工作流 Git", "desc": "用于同步云端模板与提交本地工作流。Token 只存本机，请向管理员索取后粘贴；不要提交到 GitHub。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 GitHub PAT（github_pat_… / ghp_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败" }, "ignis": { "section": "Ignis 图片和视频生成", "desc": "用于 Ignis 图片模型以及 Seedance、Kling、Sora 和 PixVerse 视频生成。Token 只保存在本机，不会写入工作流或提交到 Git。", "configured": "已配置（{hint}）", "missing": "尚未配置 Token", "placeholder": "粘贴 Ignis Token（ignis_ct_…）", "save": "保存 Token", "saveOk": "已保存到本机", "saveFailed": "保存失败", "configDesc": "也可以粘贴管理员发来的完整安装说明、config 链接或 config JSON，ComfyTV 会自动解析并保存 Token。", "configPlaceholder": "粘贴 config 链接或完整安装文本…", "importConfig": "解析并保存配置", "importing": "正在解析…", "importOk": "已从配置链接保存到本机", "importFailed": "配置解析失败" }, "fields": { "enable-v2": { "label": "启用 ComfyTV V2 节点", "desc": "实验性功能，可能存在不稳定行为。已迁移的阶段节点以内容导向的 V2 外壳渲染。必须先在 ComfyUI 本体设置中开启 Nodes 2.0（Vue 节点模式）。修改后需刷新页面。" }, "v2-lod-scale": { "label": "海报图模式阈值", "desc": "画布缩放低于此值时，V2 卡片收起为缩略图并显示播放/放大按钮；放大越过阈值后面板恢复。", "options": { "30": "30%", "42": "42%", "50": "50%", "60": "60%" } }, "v2-lod-fill": { "label": "海报图底", "desc": "缩略图留白部分用什么填充：图片预览同款棋盘格，或同一张画面压暗后铺满整卡。", "options": { "checker": "棋盘格", "image": "同图压暗铺满" } }, "auto-picker": { "label": "运行时自动接挑选节点", "desc": "图像阶段或视频阶段运行时，如果输出端还没有连线，自动在后面接一个图片 / 视频选择器。" }, "auto-bridge": { "label": "连线时自动插入桥接节点", "desc": "把原生 IMAGE / VIDEO / AUDIO / STRING / MASK 与 ComfyTV 类型互连时，自动插入对应的桥接节点。入桥仍需点运行才会写入快照。" }, "drop-files-as-loaders": { "label": "拖入媒体文件生成资产加载节点", "desc": "图片、视频、音频拖到画布空白处时，导入资产库并生成 ComfyTV 资产加载节点，而不是交给 ComfyUI 加载（PNG 里保存的工作流不会再被打开）。拖到节点上的和其他类型的文件仍由 ComfyUI 处理。" }, "v2-panel-on-select": { "label": "仅选中时显示控制面板", "desc": "默认开启。未选中时 V2 节点只保留预览区；选中后再展开下方参数、提示词与运行条（与 LibTV 画布一致）。" }, "enable-db-backup": { "label": "启动时自动备份", "desc": "每次服务器启动时(在任何迁移执行之前)备份 ComfyTV 数据目录(数据库 + 工作流)。" }, "db-backup-max-count": { "label": "最大备份数量", "desc": "快照数量超过该值时,自动删除最旧的备份。" }, "db-backup-path": { "label": "备份位置", "desc": "留空则使用 ComfyTV 目录下的 db-backup 文件夹。快照以时间戳命名,如 20260805-093000/comfytv。", "placeholder": "如 D:\\backups\\comfytv" }, "share-comfy-auth": { "label": "复用 Comfy 登录态", "desc": "浏览器之外的调用方(comfy CLI、脚本、agent 直接提交 /prompt)不会带 Comfy.org 登录凭据,绑定付费 API 节点时会 401。开启后插件会把最近一次浏览器运行带来的凭据借给这类运行;凭据只留在内存,重启即失效。关闭后此类运行将按缺凭据报错。" }, "enable-mcp": { "label": "启用 MCP 服务", "desc": "开放 ComfyTV 的 MCP 端点(/comfytv/mcp),允许 agent 读取并操作画布。默认关闭。" }, "enable-bot": { "label": "启用 ComfyTV Bot", "desc": "显示内嵌 Bot 侧边栏及其聊天接口。前置条件:先启用 MCP 服务。" }, "bot-model-claude-code": { "label": "Claude Code 模型", "desc": "Bot 回合传给 claude --model 的模型,支持别名(sonnet、opus、haiku)或完整模型 id。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-codex": { "label": "Codex 模型", "desc": "Bot 回合传给 codex -m 的模型。留空 = CLI 自己的默认。", "placeholder": "CLI 默认" }, "bot-model-qwen-code": { "label": "Qwen Code 模型", "desc": "Bot 回合传给 qwen -m 的模型。留空 = 用 qwen 自己设置里选的模型。", "placeholder": "CLI 默认" }, "bot-model-local-llm": { "label": "Local LLM 模型", "desc": "本地端点上的模型 id。留空 = 用端点报告的第一个模型。", "placeholder": "自动取第一个" }, "bot-model-comfyui-llm": { "label": "ComfyUI LLM 模型", "desc": "实验性 — 玩具性质的 provider,一般情况不要用,请改用 Local LLM 或 CLI 类 provider。Bot 回合使用的 models/text_encoders 里的文本编码器权重(Qwen3 或 Gemma 系)。留空 = 自动取第一个可生成的权重。推理跑在 ComfyUI 本体内 — 无需外部服务。", "placeholder": "自动取第一个" }, "bot-comfyui-llm-thinking": { "label": "ComfyUI LLM 思考模式", "desc": "实验性 — 只对玩具性质的 ComfyUI LLM provider 生效。让 Qwen3 系模型先在隐藏的 <think> 块里推理再回答。工具调用明显更聪明,代价是每轮多花一些生成时间。" }, "bot-local-llm-url": { "label": "Local LLM 端点", "desc": "本地模型服务的 OpenAI 兼容 base URL(LM Studio、llama.cpp 的 llama-server、vLLM、Ollama 等)。不填时 Local LLM provider 不可用。仅限免 key 的本地端点 — 永远不存 API key。", "placeholder": "http://127.0.0.1:1234/v1" }, "bot-enable-comfy-mcp": { "label": "挂载 comfy-mcp", "desc": "在 bot 会话中同时挂载官方 comfy-mcp(只读工具集:节点目录、工作流校验、模型/模板搜索)。仅 Claude Code 和 Qwen Code — Codex、DeepSeek Harness、Local LLM 与 ComfyUI LLM 保持只挂 comfytv。" }, "bot-comfy-mcp-command": { "label": "comfy-mcp 命令", "desc": "启动 comfy-mcp stdio 服务的命令。留空 = 在 PATH 上找 comfy-mcp。", "placeholder": "comfy-mcp" }, "bot-always-allow-runs": { "label": "总是允许 bot 运行", "desc": "不弹运行审批卡,bot 直接执行(默认行为)。关闭后,切到询问模式的会话才会在每次运行前等你批准。" }, "bot-model-deepseek-harness": { "label": "DeepSeek Harness 模型", "desc": "模型同时决定计费方式：桌面账号或 API Key。留空 = 桌面账号下的第一个模型，不会自动改用 API Key。", "placeholder": "桌面账号默认" }, "enable-skills": { "label": "启用 Agent Skills", "desc": "把已安装的技能通过 MCP(skill 工具 + prompts)提供给外部 agent 和内嵌 bot。" }, "enable-collab": { "label": "启用多人协作", "desc": "实验性功能——请勿在生产环境依赖。局域网内的实时多人 presence 与共同编辑。关闭时协作代码完全不运行（无会话、无 WebSocket、无 UI）。修改后需刷新已打开的页面。" }, "enable-eagle": { "label": "启用 Eagle 集成", "desc": "把本机的 Eagle(eagle.cool)素材库接入 ComfyTV:侧边栏出现 Eagle 面板,资产可发送到 Eagle。需要 Eagle 桌面应用。" }, "eagle-api-url": { "label": "Eagle API 地址", "desc": "Eagle 本地 API 的地址,默认端口 41595。仅本机访问,不需要 token。", "placeholder": "http://127.0.0.1:41595" }, "eagle-library-path": { "label": "钉死的资源库路径", "desc": "ComfyTV 专用的 .library 目录。发送只在 Eagle 打开该库时进行(否则排队),浏览在 Eagle 关闭或切到别的库时直接读磁盘。留空 = 跟随 Eagle 当前打开的库(不推荐)。", "placeholder": "如 Y:\\Eagle资源库\\ComfyTV资源库.library" }, "eagle-send-folder": { "label": "发送目标文件夹", "desc": "手动发送到 Eagle 时归入的文件夹名,不存在会自动创建。留空 = 库根目录。自动沉淀按项目名分文件夹,不走此设置。" }, "eagle-auto-send": { "label": "产出自动沉淀到 Eagle", "desc": "每个阶段节点的产出(图片/视频/音频)自动归档进 Eagle:按项目名分文件夹,annotation 带完整生成参数(prompt/模型等),tag 带项目名。走排队机制,Eagle 没开时攒着,不阻塞生成。" }, "blender-bridge-url": { "label": "Blender 桥接地址", "desc": "实验性 — 会有毛边。Blender Scene / Camera / Animation 这几个阶段节点连接的 blender-web 桥接服务地址。用 blender-for-comfytv.bat 启动;桥接没响应时这些阶段节点不可用。默认端口 7684,仅限本机。", "placeholder": "http://127.0.0.1:7684" } }, "agent": { "section": "Agent 与 MCP" }, "eagle": { "section": "Eagle 集成" }, "collab": { "section": "多人协作" } };
 const servers = { "title": "ComfyUI 服务器", "add": "添加", "addTooltip": "登记局域网内的其他 ComfyUI 实例,让 stage 可以在它上面运行", "empty": "还没有配置远程服务器,所有 stage 都在本机运行。添加服务器后,每个 stage 会出现服务器下拉框,可多机并行运行。", "edit": "编辑", "delete": "删除", "deleteConfirm": "删除服务器「{label}」?指向它的 stage 会回退到本机运行。", "enable": "启用", "disable": "停用", "local": "本机 (Local)", "runOn": "运行于", "form": { "label": "名称", "labelPlaceholder": "例如:楼上那台 4090", "host": "主机 / IP", "port": "端口", "create": "添加服务器", "save": "保存", "cancel": "取消", "saveFailed": "保存失败——名称是不是重复了?" }, "test": { "action": "测试连接", "testing": "测试中…", "ok": "连接成功", "failed": "连接失败" }, "job": { "started": "正在 {label} 上运行", "failed": "远程运行失败", "cancelled": "远程运行已取消", "fallbackLocal": "所选服务器已删除或停用——这个 stage 将在本机运行。" }, "status": { "online": "在线", "offline": "离线", "unknown": "检测中…", "idle": "空闲", "queueShort": "队列 {n}", "queueDetail": "{running} 运行中,{pending} 排队", "fromComfyTV": "其中 {n} 来自 ComfyTV" }, "caps": { "badge": "ComfyTV v{version}", "comfyOnly": "仅 ComfyUI（未装 ComfyTV）", "missingNodes": "缺 {n} 个节点", "missingTitle": "远端缺少的节点——请升级远端 ComfyTV：" }, "preflight": { "blockedTitle": "远程运行被拦截", "warnTitle": "远端资源检查", "runAnyway": "仍要运行", "noComfyTV": "远端「{label}」未安装 ComfyTV——请先在远端安装，或改为本机运行。", "missingNode": "远端「{label}」缺少节点 {node}——请升级远端 ComfyTV。", "missingResource": "远端「{label}」缺少资源 {file}，仍要运行吗？", "resourceMismatch": "资源 {file} 在远端「{label}」上内容不一致，仍要运行吗？" } };
 const stageManager = { "title": "阶段管理", "refresh": "刷新列表", "import": "导入", "rescan": "重新扫描", "rescanTooltip": "扫描磁盘上的工作流库（ComfyUI user 目录下的 comfytv/workflows/），发现新增、变更或删除的文件 —— 无需重启后端", "rescanFound": "发现 {n} 个新工作流", "rescanNone": "没有发现新工作流", "rescanNoneDetail": "请确认文件是 .json 且放在 ComfyUI user 目录下的 comfytv/workflows/对应类别目录中（preset 和 .api.json 附属文件不算）。", "rescanFailed": "重新扫描失败", "setDefault": "设为默认", "unsetDefault": "取消默认", "defaultSet": "{label} 已设为该阶段的默认工作流", "defaultCleared": "{label} 已取消默认 —— 将使用列表中的第一个工作流", "defaultFailed": "修改默认工作流失败", "hide": "从阶段节点隐藏", "unhide": "在阶段节点显示", "hiddenSet": "{label} 已从阶段节点的 workflow 下拉框隐藏", "hiddenCleared": "{label} 已重新显示在 workflow 下拉框中", "hiddenFailed": "修改工作流可见性失败", "section": { "workflows": "工作流", "params": "参数" }, "emptyWorkflows": "该阶段下还没有已注册的工作流 —— 点「导入」上传，或把 .json 放入 ComfyUI user 目录下的 comfytv/workflows/对应类别目录后点「重新扫描」。", "hint": "这里列出的工作流，在画布上对应阶段节点的 workflow 下拉框中选用。", "badge": { "linked": "外链", "linkedHint": "链接自 ComfyUI 原生工作流目录（不由 ComfyTV 管理）", "fileMissing": "文件丢失", "notGui": "非 GUI 格式", "notGuiHint": "缺少顶层 nodes 数组 —— 在 ComfyUI 中打开后用普通「保存」重新导出，不要用「保存（API 格式）」", "noApi": "API 未生成", "noApiHint": "首次运行该工作流时会自动生成 API prompt，新导入的工作流出现此标记属于正常。", "new": "新", "newHint": "最近一次扫描（启动或重新扫描）新发现的工作流", "builtin": "内置", "builtinHint": "ComfyTV 自带的工作流（git 跟踪）。没有此标记的是用户导入或手动放入的。", "default": "默认", "defaultHint": "新添加的该类阶段节点会预选此工作流。若它被删除或取消链接，则回退到列表中的第一个。", "hidden": "已隐藏", "hiddenHint": "不出现在阶段节点的 workflow 下拉框中。已选中它的节点不受影响，仍可正常运行。" } };
 const assets = { "title": "资产库", "empty": "还没有资产 —— 添加图片、视频或音频后可跨项目复用。", "emptyCategory": "这个分类下还没有资产。", "add": "添加素材", "addTooltip": "上传图片、视频或音频到资产库（也可以直接拖拽文件到这个面板）", "uploading": "上传中 {done}/{total}…", "uploadFailed": "上传失败: {detail}", "dropHint": "松开把文件添加到资产库", "search": "搜索资产", "noResults": "没有匹配的资产。", "scanFolder": "扫描素材文件夹", "scanFolderHint": "大文件直接放进这个文件夹,扫描时自动收录,无需上传", "view": { "settings": "显示设置", "list": "列表视图", "grid": "网格视图" }, "media": { "all": "全部类型", "image": "图片", "video": "视频", "audio": "音频", "model": "3D 模型", "text": "文本" }, "category": { "all": "全部", "none": "未分类", "new": "新建分类", "newPrompt": "新分类名称：", "rename": "重命名分类", "renamePrompt": "分类名称：", "delete": "删除分类", "deleteConfirm": "删除这个分类？它会从所有资产上移除；资产和磁盘上的文件保留。" }, "card": { "rename": "重命名", "renamePrompt": "资产名称：", "delete": "从资产库移除", "deleteConfirm": "把这个资产从资产库移除？磁盘上的文件保留。", "tags": "编辑标签", "loadNode": "作为节点添加到画布", "makeProxy": "生成预览代理", "more": "更多操作", "playPreview": "试听", "pausePreview": "暂停", "fileMissing": "文件缺失", "fileMissingHint": "本地文件已被删除，资产条目仍保留；可重新导入或从资产库移除" }, "tagPopover": { "empty": "还没有分类。", "create": "新建分类" }, "select": { "enter": "多选资产（Ctrl+点击也可以）", "exit": "退出多选", "all": "全选当前显示", "missing": "只勾选当前显示中文件缺失的（{count} 个）", "count": "已选 {count} 个", "tags": "编辑所选的标签", "loadNodes": "把所选作为节点添加到画布", "remove": "从资产库移除所选", "removeConfirm": "把这 {count} 个资产从资产库移除？磁盘上的文件保留。" } };
@@ -90545,7 +90577,7 @@ const _sfc_main$4G = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-D7LUo6JO.mjs"),
+      loader: () => import("./AgentPanelRoot-BhA_kIR_.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -94164,14 +94196,14 @@ const _hoisted_65$1 = { class: "ctv:min-w-0" };
 const _hoisted_66$1 = { class: "ctv:text-2xs" };
 const _hoisted_67$1 = { class: "ctv:text-3xs ctv:text-muted-foreground" };
 const _hoisted_68$1 = { class: "ctv:grid ctv:grid-cols-[42px_1fr] ctv:items-center ctv:gap-1.5" };
-const _hoisted_69 = { class: "ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground" };
-const _hoisted_70 = { class: "ctv:m-0 ctv:text-2xs ctv:italic ctv:text-muted-foreground/60" };
-const _hoisted_71 = { key: 8 };
-const _hoisted_72 = { class: "ctv:m-0 ctv:text-xs ctv:whitespace-pre-wrap ctv:text-muted-foreground" };
-const _hoisted_73 = { class: "ctv:mt-4 ctv:pt-2.5 ctv:pb-3.5 ctv:px-3 ctv:flex ctv:flex-col ctv:gap-1 ctv:border-t ctv:border-border-subtle" };
-const _hoisted_74 = ["disabled", "title"];
-const _hoisted_75 = ["disabled", "title"];
-const _hoisted_76 = ["disabled", "title"];
+const _hoisted_69$1 = { class: "ctv:text-3xs ctv:uppercase ctv:tracking-wide ctv:text-muted-foreground" };
+const _hoisted_70$1 = { class: "ctv:m-0 ctv:text-2xs ctv:italic ctv:text-muted-foreground/60" };
+const _hoisted_71$1 = { key: 8 };
+const _hoisted_72$1 = { class: "ctv:m-0 ctv:text-xs ctv:whitespace-pre-wrap ctv:text-muted-foreground" };
+const _hoisted_73$1 = { class: "ctv:mt-4 ctv:pt-2.5 ctv:pb-3.5 ctv:px-3 ctv:flex ctv:flex-col ctv:gap-1 ctv:border-t ctv:border-border-subtle" };
+const _hoisted_74$1 = ["disabled", "title"];
+const _hoisted_75$1 = ["disabled", "title"];
+const _hoisted_76$1 = ["disabled", "title"];
 const _hoisted_77 = {
   key: 0,
   class: "ctv:text-xs ctv:text-destructive-background"
@@ -94642,23 +94674,23 @@ const _sfc_main$4z = /* @__PURE__ */ defineComponent({
                 }, null, 8, ["model-value", "aria-label"])
               ]),
               createBaseVNode("div", _hoisted_68$1, [
-                createBaseVNode("span", _hoisted_69, toDisplayString$1(_ctx.$t("configSidebar.mentionStyle.label")), 1),
+                createBaseVNode("span", _hoisted_69$1, toDisplayString$1(_ctx.$t("configSidebar.mentionStyle.label")), 1),
                 createVNode(_sfc_main$4R, {
                   "model-value": mentionStyleModel.value,
                   options: mentionStyleOptions.value,
                   "onUpdate:modelValue": _cache2[7] || (_cache2[7] = ($event) => onMentionStyleChange($event))
                 }, null, 8, ["model-value", "options"])
               ]),
-              createBaseVNode("p", _hoisted_70, toDisplayString$1(_ctx.$t("configSidebar.mentionStyle.hint")), 1)
+              createBaseVNode("p", _hoisted_70$1, toDisplayString$1(_ctx.$t("configSidebar.mentionStyle.hint")), 1)
             ])
           ])) : createCommentVNode("", true),
-          unref(config2).description ? (openBlock(), createElementBlock("section", _hoisted_71, [
+          unref(config2).description ? (openBlock(), createElementBlock("section", _hoisted_71$1, [
             createBaseVNode("h3", {
               class: normalizeClass(sectionHeading)
             }, toDisplayString$1(_ctx.$t("configSidebar.section.description")), 1),
-            createBaseVNode("p", _hoisted_72, toDisplayString$1(unref(config2).description), 1)
+            createBaseVNode("p", _hoisted_72$1, toDisplayString$1(unref(config2).description), 1)
           ])) : createCommentVNode("", true),
-          createBaseVNode("div", _hoisted_73, [
+          createBaseVNode("div", _hoisted_73$1, [
             createBaseVNode("button", {
               class: normalizeClass(exportBtn),
               disabled: !unref(config2).has_api || unref(exportBusy),
@@ -94668,7 +94700,7 @@ const _sfc_main$4z = /* @__PURE__ */ defineComponent({
             }, [
               _cache2[15] || (_cache2[15] = createBaseVNode("i", { class: "pi pi-download" }, null, -1)),
               createTextVNode(" " + toDisplayString$1(_ctx.$t("configSidebar.exportPreset")), 1)
-            ], 8, _hoisted_74),
+            ], 8, _hoisted_74$1),
             createBaseVNode("button", {
               class: normalizeClass(exportBtn),
               disabled: unref(config2).file_exists === false || unref(openInComfyBusy),
@@ -94678,14 +94710,14 @@ const _sfc_main$4z = /* @__PURE__ */ defineComponent({
             }, [
               _cache2[16] || (_cache2[16] = createBaseVNode("i", { class: "pi pi-external-link" }, null, -1)),
               createTextVNode(" " + toDisplayString$1(_ctx.$t("openInComfy.open")), 1)
-            ], 8, _hoisted_75),
+            ], 8, _hoisted_75$1),
             createBaseVNode("button", {
               class: normalizeClass(resetBtn),
               disabled: unref(resetBusy),
               title: _ctx.$t("configSidebar.resetToPresetTooltip"),
               onClick: _cache2[10] || (_cache2[10] = //@ts-ignore
               (...args) => unref(onResetToPreset) && unref(onResetToPreset)(...args))
-            }, toDisplayString$1(_ctx.$t("configSidebar.resetToPreset")), 9, _hoisted_76),
+            }, toDisplayString$1(_ctx.$t("configSidebar.resetToPreset")), 9, _hoisted_76$1),
             unref(exportError) ? (openBlock(), createElementBlock("span", _hoisted_77, toDisplayString$1(unref(exportError)), 1)) : createCommentVNode("", true),
             unref(resetError) ? (openBlock(), createElementBlock("span", _hoisted_78, toDisplayString$1(unref(resetError)), 1)) : createCommentVNode("", true)
           ])
@@ -96080,24 +96112,28 @@ const _hoisted_2$49 = ["onClick"];
 const _hoisted_3$43 = ["aria-label"];
 const _hoisted_4$3B = { class: "ctv-bbar__pop-head" };
 const _hoisted_5$3o = { class: "ctv-bbar__git" };
-const _hoisted_6$36 = { class: "ctv-bbar__git-actions" };
-const _hoisted_7$2B = ["disabled"];
+const _hoisted_6$36 = ["disabled", "aria-expanded"];
+const _hoisted_7$2B = { class: "ctv-bbar__git-actions" };
 const _hoisted_8$2a = ["disabled"];
 const _hoisted_9$1Y = ["disabled"];
-const _hoisted_10$1K = {
-  key: 0,
+const _hoisted_10$1K = ["disabled"];
+const _hoisted_11$1x = {
+  key: 1,
   class: "ctv-bbar__git-legend"
 };
-const _hoisted_11$1x = {
-  key: 0,
-  class: "ctv-bbar__commit"
+const _hoisted_12$1k = {
+  for: "ctv-git-path",
+  class: "ctv-bbar__commit-head"
 };
-const _hoisted_12$1k = { class: "ctv-bbar__commit-head" };
-const _hoisted_13$1d = { class: "ctv-bbar__git-legend" };
-const _hoisted_14$15 = ["placeholder", "disabled", "onKeydown"];
+const _hoisted_13$1d = {
+  id: "ctv-git-path-hint",
+  class: "ctv-bbar__git-legend"
+};
+const _hoisted_14$15 = ["disabled"];
 const _hoisted_15$_ = {
   key: 0,
-  class: "ctv-bbar__muted"
+  class: "ctv-bbar__git-hint ctv-bbar__git-hint--warn",
+  role: "alert"
 };
 const _hoisted_16$V = { class: "ctv-bbar__git-actions" };
 const _hoisted_17$P = ["disabled"];
@@ -96107,96 +96143,110 @@ const _hoisted_19$G = {
   class: "ctv-bbar__commit"
 };
 const _hoisted_20$A = { class: "ctv-bbar__commit-head" };
-const _hoisted_21$t = ["placeholder", "disabled", "onKeydown"];
-const _hoisted_22$s = { class: "ctv-bbar__commit-list" };
-const _hoisted_23$p = ["onUpdate:modelValue", "disabled"];
-const _hoisted_24$n = { class: "ctv-bbar__row-main" };
-const _hoisted_25$k = {
+const _hoisted_21$t = { class: "ctv-bbar__git-legend" };
+const _hoisted_22$s = ["placeholder", "disabled", "onKeydown"];
+const _hoisted_23$p = {
+  key: 0,
+  class: "ctv-bbar__muted"
+};
+const _hoisted_24$n = { class: "ctv-bbar__git-actions" };
+const _hoisted_25$k = ["disabled"];
+const _hoisted_26$i = ["disabled"];
+const _hoisted_27$i = {
+  key: 2,
+  class: "ctv-bbar__commit"
+};
+const _hoisted_28$e = { class: "ctv-bbar__commit-head" };
+const _hoisted_29$c = ["placeholder", "disabled", "onKeydown"];
+const _hoisted_30$c = { class: "ctv-bbar__commit-list" };
+const _hoisted_31$b = ["onUpdate:modelValue", "disabled"];
+const _hoisted_32$9 = { class: "ctv-bbar__row-main" };
+const _hoisted_33$7 = {
   key: 0,
   class: "ctv-bbar__badge"
 };
-const _hoisted_26$i = {
+const _hoisted_34$6 = {
   key: 1,
   class: "ctv-bbar__badge"
 };
-const _hoisted_27$i = {
+const _hoisted_35$6 = {
   key: 0,
   class: "ctv-bbar__muted"
 };
-const _hoisted_28$e = { class: "ctv-bbar__git-actions" };
-const _hoisted_29$c = ["disabled"];
-const _hoisted_30$c = ["disabled"];
-const _hoisted_31$b = {
-  key: 2,
-  class: "ctv-bbar__muted"
-};
-const _hoisted_32$9 = {
+const _hoisted_36$6 = { class: "ctv-bbar__git-actions" };
+const _hoisted_37$6 = ["disabled"];
+const _hoisted_38$6 = ["disabled"];
+const _hoisted_39$6 = {
   key: 3,
   class: "ctv-bbar__muted"
 };
-const _hoisted_33$7 = {
+const _hoisted_40$5 = {
   key: 4,
   class: "ctv-bbar__muted"
 };
-const _hoisted_34$6 = {
+const _hoisted_41$5 = {
   key: 5,
+  class: "ctv-bbar__muted"
+};
+const _hoisted_42$4 = {
+  key: 6,
   class: "ctv-bbar__split"
 };
-const _hoisted_35$6 = { class: "ctv-bbar__col" };
-const _hoisted_36$6 = { class: "ctv-bbar__col-head" };
-const _hoisted_37$6 = { class: "ctv-bbar__scroll ctv-bbar__scroll--col" };
-const _hoisted_38$6 = {
+const _hoisted_43$4 = { class: "ctv-bbar__col" };
+const _hoisted_44$4 = { class: "ctv-bbar__col-head" };
+const _hoisted_45$3 = { class: "ctv-bbar__scroll ctv-bbar__scroll--col" };
+const _hoisted_46$3 = {
   key: 0,
   class: "ctv-bbar__muted"
 };
-const _hoisted_39$6 = ["disabled", "title", "onClick"];
-const _hoisted_40$5 = { class: "ctv-bbar__row-main" };
-const _hoisted_41$5 = { class: "ctv-bbar__col" };
-const _hoisted_42$4 = { class: "ctv-bbar__col-head" };
-const _hoisted_43$4 = { class: "ctv-bbar__scroll ctv-bbar__scroll--col" };
-const _hoisted_44$4 = {
+const _hoisted_47$3 = ["disabled", "title", "onClick"];
+const _hoisted_48$3 = { class: "ctv-bbar__row-main" };
+const _hoisted_49$3 = { class: "ctv-bbar__col" };
+const _hoisted_50$2 = { class: "ctv-bbar__col-head" };
+const _hoisted_51$2 = { class: "ctv-bbar__scroll ctv-bbar__scroll--col" };
+const _hoisted_52$1 = {
   key: 0,
   class: "ctv-bbar__muted"
 };
-const _hoisted_45$3 = ["disabled", "title", "onClick"];
-const _hoisted_46$3 = { class: "ctv-bbar__row-main" };
-const _hoisted_47$3 = {
+const _hoisted_53 = ["disabled", "title", "onClick"];
+const _hoisted_54 = { class: "ctv-bbar__row-main" };
+const _hoisted_55 = {
   key: 0,
   class: "ctv-bbar__badge"
 };
-const _hoisted_48$3 = ["aria-label"];
-const _hoisted_49$3 = { class: "ctv-bbar__search" };
-const _hoisted_50$2 = ["placeholder"];
-const _hoisted_51$2 = ["aria-label"];
-const _hoisted_52$1 = ["aria-label"];
-const _hoisted_53 = ["aria-selected"];
-const _hoisted_54 = ["aria-selected", "onClick"];
-const _hoisted_55 = {
+const _hoisted_56 = ["aria-label"];
+const _hoisted_57 = { class: "ctv-bbar__search" };
+const _hoisted_58 = ["placeholder"];
+const _hoisted_59 = ["aria-label"];
+const _hoisted_60 = ["aria-label"];
+const _hoisted_61 = ["aria-selected"];
+const _hoisted_62 = ["aria-selected", "onClick"];
+const _hoisted_63 = {
   key: 0,
   class: "ctv-bbar__muted"
 };
-const _hoisted_56 = {
+const _hoisted_64 = {
   key: 1,
   class: "ctv-bbar__muted"
 };
-const _hoisted_57 = {
+const _hoisted_65 = {
   key: 2,
   class: "ctv-bbar__scroll"
 };
-const _hoisted_58 = {
+const _hoisted_66 = {
   key: 0,
   class: "ctv-bbar__group-head"
 };
-const _hoisted_59 = ["onClick"];
-const _hoisted_60 = { class: "ctv-bbar__row-main" };
-const _hoisted_61 = ["aria-label"];
-const _hoisted_62 = ["aria-label", "aria-expanded", "title"];
-const _hoisted_63 = ["aria-label", "aria-expanded", "title"];
-const _hoisted_64 = { class: "ctv-bbar__btn-label" };
-const _hoisted_65 = ["aria-label", "aria-expanded", "title"];
-const _hoisted_66 = { class: "ctv-bbar__btn-label" };
-const _hoisted_67 = ["aria-label", "aria-expanded", "title"];
-const _hoisted_68 = { class: "ctv-bbar__btn-label" };
+const _hoisted_67 = ["onClick"];
+const _hoisted_68 = { class: "ctv-bbar__row-main" };
+const _hoisted_69 = ["aria-label"];
+const _hoisted_70 = ["aria-label", "aria-expanded", "title"];
+const _hoisted_71 = ["aria-label", "aria-expanded", "title"];
+const _hoisted_72 = { class: "ctv-bbar__btn-label" };
+const _hoisted_73 = ["aria-label", "aria-expanded", "title"];
+const _hoisted_74 = { class: "ctv-bbar__btn-label" };
+const _hoisted_75 = ["aria-label", "aria-expanded", "title"];
+const _hoisted_76 = { class: "ctv-bbar__btn-label" };
 const _sfc_main$4u = /* @__PURE__ */ defineComponent({
   __name: "BottomBar",
   setup(__props) {
@@ -96218,6 +96268,10 @@ const _sfc_main$4u = /* @__PURE__ */ defineComponent({
     const gitChecking = /* @__PURE__ */ ref(false);
     const gitMessage = /* @__PURE__ */ ref("");
     const gitFlash = /* @__PURE__ */ ref("");
+    const gitPathOpen = /* @__PURE__ */ ref(false);
+    const gitPathInput = /* @__PURE__ */ ref("");
+    const gitPathSaving = /* @__PURE__ */ ref(false);
+    const gitPathError = /* @__PURE__ */ ref("");
     const commitPickOpen = /* @__PURE__ */ ref(false);
     const commitSelected = /* @__PURE__ */ ref({});
     const tokenDialogOpen = /* @__PURE__ */ ref(false);
@@ -96475,6 +96529,27 @@ const _sfc_main$4u = /* @__PURE__ */ defineComponent({
       }
       void refreshGitStatusInBackground();
     }
+    async function onGitPathSave() {
+      if (gitPathSaving.value || !gitPathInput.value.trim()) return;
+      gitPathSaving.value = true;
+      gitPathError.value = "";
+      try {
+        const result = await saveGitExecutable(gitPathInput.value.trim());
+        if (!result.ok) {
+          gitPathError.value = result.error || t2("v2.bottomBar.gitPathFailed");
+          return;
+        }
+        gitPathOpen.value = false;
+        gitFlash.value = t2("v2.bottomBar.gitPathSaved");
+        toast2("success", t2("v2.bottomBar.gitPathSaved"), `${result.version} · ${result.path}`);
+        if (result.warning) toast2("warn", t2("v2.bottomBar.gitPathUserWarning"), result.warning);
+        await refreshGitStatusInBackground();
+      } catch (e) {
+        gitPathError.value = String((e == null ? void 0 : e.message) || e);
+      } finally {
+        gitPathSaving.value = false;
+      }
+    }
     async function onGitSetup() {
       if (!canGitSetup.value) return;
       const tokOk = await ensureGitTokenConfigured();
@@ -96684,79 +96759,124 @@ const _sfc_main$4u = /* @__PURE__ */ defineComponent({
                 "ctv-bbar__git-hint--warn": gitHintTone.value === "warn"
               }])
             }, toDisplayString$1(gitBusy.value === "pull" ? unref(t2)("v2.bottomBar.gitUpdating") : gitBusy.value === "push" ? unref(t2)("v2.bottomBar.gitPushing") : gitBusy.value === "setup" ? unref(t2)("v2.bottomBar.gitConnecting") : gitChecking.value && !gitFlash.value ? gitHint.value || unref(t2)("v2.bottomBar.gitChecking") : gitFlash.value || gitHint.value), 3),
-            createBaseVNode("div", _hoisted_6$36, [
+            gitStatus.value && !gitStatus.value.has_git ? (openBlock(), createElementBlock("button", {
+              key: 0,
+              type: "button",
+              class: "ctv-bbar__git-btn",
+              disabled: gitPathSaving.value,
+              "aria-expanded": gitPathOpen.value,
+              onClick: _cache2[1] || (_cache2[1] = ($event) => gitPathOpen.value = !gitPathOpen.value)
+            }, toDisplayString$1(unref(t2)("v2.bottomBar.gitPathManual")), 9, _hoisted_6$36)) : createCommentVNode("", true),
+            createBaseVNode("div", _hoisted_7$2B, [
               canGitSetup.value || gitStatus.value && !gitStatus.value.is_repo ? (openBlock(), createElementBlock("button", {
                 key: 0,
                 type: "button",
                 class: "ctv-bbar__git-btn ctv-bbar__git-btn--primary",
                 disabled: !canGitSetup.value,
                 onClick: onGitSetup
-              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitConnect")), 9, _hoisted_7$2B)) : createCommentVNode("", true),
+              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitConnect")), 9, _hoisted_8$2a)) : createCommentVNode("", true),
               createBaseVNode("button", {
                 type: "button",
                 class: "ctv-bbar__git-btn",
                 disabled: !canGitActions.value,
                 onClick: onGitUpdate
-              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitUpdate")), 9, _hoisted_8$2a),
+              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitUpdate")), 9, _hoisted_9$1Y),
               createBaseVNode("button", {
                 type: "button",
                 class: "ctv-bbar__git-btn ctv-bbar__git-btn--primary",
                 disabled: !canGitActions.value || !commitCandidates.value.length,
                 onClick: openCommitPicker
-              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommit")), 9, _hoisted_9$1Y)
+              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommit")), 9, _hoisted_10$1K)
             ]),
-            ((_a2 = gitStatus.value) == null ? void 0 : _a2.is_repo) ? (openBlock(), createElementBlock("div", _hoisted_10$1K, toDisplayString$1(unref(t2)("v2.bottomBar.gitLegend")), 1)) : createCommentVNode("", true)
+            ((_a2 = gitStatus.value) == null ? void 0 : _a2.is_repo) ? (openBlock(), createElementBlock("div", _hoisted_11$1x, toDisplayString$1(unref(t2)("v2.bottomBar.gitLegend")), 1)) : createCommentVNode("", true)
           ]),
-          tokenDialogOpen.value ? (openBlock(), createElementBlock("div", _hoisted_11$1x, [
-            createBaseVNode("div", _hoisted_12$1k, toDisplayString$1(unref(t2)("v2.bottomBar.gitTokenTitle")), 1),
-            createBaseVNode("div", _hoisted_13$1d, toDisplayString$1(unref(t2)("v2.bottomBar.gitTokenHint")), 1),
+          gitPathOpen.value ? (openBlock(), createElementBlock("form", {
+            key: 0,
+            class: "ctv-bbar__commit",
+            onSubmit: withModifiers(onGitPathSave, ["prevent"])
+          }, [
+            createBaseVNode("label", _hoisted_12$1k, toDisplayString$1(unref(t2)("v2.bottomBar.gitPathManual")), 1),
+            createBaseVNode("div", _hoisted_13$1d, toDisplayString$1(unref(t2)("v2.bottomBar.gitPathHint")), 1),
             withDirectives(createBaseVNode("input", {
-              "onUpdate:modelValue": _cache2[1] || (_cache2[1] = ($event) => tokenInput.value = $event),
+              id: "ctv-git-path",
+              "onUpdate:modelValue": _cache2[2] || (_cache2[2] = ($event) => gitPathInput.value = $event),
+              type: "text",
+              class: "ctv-bbar__git-input",
+              autocomplete: "off",
+              spellcheck: "false",
+              "aria-describedby": "ctv-git-path-hint",
+              placeholder: "C:\\Program Files\\Git\\cmd\\git.exe",
+              disabled: gitPathSaving.value,
+              onKeydown: _cache2[3] || (_cache2[3] = withModifiers(() => {
+              }, ["stop"]))
+            }, null, 40, _hoisted_14$15), [
+              [vModelText, gitPathInput.value]
+            ]),
+            gitPathError.value ? (openBlock(), createElementBlock("div", _hoisted_15$_, toDisplayString$1(gitPathError.value), 1)) : createCommentVNode("", true),
+            createBaseVNode("div", _hoisted_16$V, [
+              createBaseVNode("button", {
+                type: "button",
+                class: "ctv-bbar__git-btn",
+                disabled: gitPathSaving.value,
+                onClick: _cache2[4] || (_cache2[4] = ($event) => gitPathOpen.value = false)
+              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitCancel")), 9, _hoisted_17$P),
+              createBaseVNode("button", {
+                type: "submit",
+                class: "ctv-bbar__git-btn ctv-bbar__git-btn--primary",
+                disabled: gitPathSaving.value || !gitPathInput.value.trim()
+              }, toDisplayString$1(gitPathSaving.value ? unref(t2)("v2.bottomBar.gitPathSaving") : unref(t2)("v2.bottomBar.gitPathApply")), 9, _hoisted_18$J)
+            ])
+          ], 32)) : createCommentVNode("", true),
+          tokenDialogOpen.value ? (openBlock(), createElementBlock("div", _hoisted_19$G, [
+            createBaseVNode("div", _hoisted_20$A, toDisplayString$1(unref(t2)("v2.bottomBar.gitTokenTitle")), 1),
+            createBaseVNode("div", _hoisted_21$t, toDisplayString$1(unref(t2)("v2.bottomBar.gitTokenHint")), 1),
+            withDirectives(createBaseVNode("input", {
+              "onUpdate:modelValue": _cache2[5] || (_cache2[5] = ($event) => tokenInput.value = $event),
               type: "password",
               class: "ctv-bbar__git-input",
               autocomplete: "off",
               placeholder: unref(t2)("v2.bottomBar.gitTokenPlaceholder"),
               disabled: tokenSaving.value,
               onKeydown: [
-                _cache2[2] || (_cache2[2] = withModifiers(() => {
+                _cache2[6] || (_cache2[6] = withModifiers(() => {
                 }, ["stop"])),
                 withKeys(withModifiers(onTokenDialogSave, ["prevent"]), ["enter"])
               ]
-            }, null, 40, _hoisted_14$15), [
+            }, null, 40, _hoisted_22$s), [
               [vModelText, tokenInput.value]
             ]),
-            tokenError.value ? (openBlock(), createElementBlock("div", _hoisted_15$_, toDisplayString$1(tokenError.value), 1)) : createCommentVNode("", true),
-            createBaseVNode("div", _hoisted_16$V, [
+            tokenError.value ? (openBlock(), createElementBlock("div", _hoisted_23$p, toDisplayString$1(tokenError.value), 1)) : createCommentVNode("", true),
+            createBaseVNode("div", _hoisted_24$n, [
               createBaseVNode("button", {
                 type: "button",
                 class: "ctv-bbar__git-btn",
                 disabled: tokenSaving.value,
-                onClick: _cache2[3] || (_cache2[3] = ($event) => closeTokenDialog(false))
-              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitCancel")), 9, _hoisted_17$P),
+                onClick: _cache2[7] || (_cache2[7] = ($event) => closeTokenDialog(false))
+              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitCancel")), 9, _hoisted_25$k),
               createBaseVNode("button", {
                 type: "button",
                 class: "ctv-bbar__git-btn ctv-bbar__git-btn--primary",
                 disabled: tokenSaving.value || !tokenInput.value.trim(),
                 onClick: onTokenDialogSave
-              }, toDisplayString$1(tokenSaving.value ? unref(t2)("v2.bottomBar.gitTokenSaving") : unref(t2)("v2.bottomBar.gitTokenSave")), 9, _hoisted_18$J)
+              }, toDisplayString$1(tokenSaving.value ? unref(t2)("v2.bottomBar.gitTokenSaving") : unref(t2)("v2.bottomBar.gitTokenSave")), 9, _hoisted_26$i)
             ])
-          ])) : commitPickOpen.value ? (openBlock(), createElementBlock("div", _hoisted_19$G, [
-            createBaseVNode("div", _hoisted_20$A, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitPick")), 1),
+          ])) : commitPickOpen.value ? (openBlock(), createElementBlock("div", _hoisted_27$i, [
+            createBaseVNode("div", _hoisted_28$e, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitPick")), 1),
             withDirectives(createBaseVNode("input", {
-              "onUpdate:modelValue": _cache2[4] || (_cache2[4] = ($event) => gitMessage.value = $event),
+              "onUpdate:modelValue": _cache2[8] || (_cache2[8] = ($event) => gitMessage.value = $event),
               type: "text",
               class: "ctv-bbar__git-input",
               placeholder: unref(t2)("v2.bottomBar.gitMessagePlaceholder"),
               disabled: !!gitBusy.value,
               onKeydown: [
-                _cache2[5] || (_cache2[5] = withModifiers(() => {
+                _cache2[9] || (_cache2[9] = withModifiers(() => {
                 }, ["stop"])),
                 withKeys(withModifiers(onGitCommitConfirm, ["prevent"]), ["enter"])
               ]
-            }, null, 40, _hoisted_21$t), [
+            }, null, 40, _hoisted_29$c), [
               [vModelText, gitMessage.value]
             ]),
-            createBaseVNode("div", _hoisted_22$s, [
+            createBaseVNode("div", _hoisted_30$c, [
               (openBlock(true), createElementBlock(Fragment$1, null, renderList(commitCandidates.value, (row) => {
                 return openBlock(), createElementBlock("label", {
                   key: row.path,
@@ -96766,42 +96886,42 @@ const _sfc_main$4u = /* @__PURE__ */ defineComponent({
                     "onUpdate:modelValue": ($event) => commitSelected.value[row.path] = $event,
                     type: "checkbox",
                     disabled: !!gitBusy.value
-                  }, null, 8, _hoisted_23$p), [
+                  }, null, 8, _hoisted_31$b), [
                     [vModelCheckbox, commitSelected.value[row.path]]
                   ]),
-                  createBaseVNode("span", _hoisted_24$n, toDisplayString$1(row.name), 1),
-                  remoteTemplateSet.value.has(row.path) ? (openBlock(), createElementBlock("span", _hoisted_25$k, toDisplayString$1(unref(t2)("v2.bottomBar.templates")), 1)) : createCommentVNode("", true),
+                  createBaseVNode("span", _hoisted_32$9, toDisplayString$1(row.name), 1),
+                  remoteTemplateSet.value.has(row.path) ? (openBlock(), createElementBlock("span", _hoisted_33$7, toDisplayString$1(unref(t2)("v2.bottomBar.templates")), 1)) : createCommentVNode("", true),
                   (openBlock(true), createElementBlock(Fragment$1, null, renderList(gitBadgesFor(row.path), (b) => {
                     return openBlock(), createElementBlock("span", {
                       key: b.key,
                       class: normalizeClass(["ctv-bbar__git-badge", `ctv-bbar__git-badge--${b.key}`])
                     }, toDisplayString$1(b.label), 3);
                   }), 128)),
-                  unref(nativeWorkflowFolder)(row.path) ? (openBlock(), createElementBlock("span", _hoisted_26$i, toDisplayString$1(unref(nativeWorkflowFolder)(row.path)), 1)) : createCommentVNode("", true)
+                  unref(nativeWorkflowFolder)(row.path) ? (openBlock(), createElementBlock("span", _hoisted_34$6, toDisplayString$1(unref(nativeWorkflowFolder)(row.path)), 1)) : createCommentVNode("", true)
                 ]);
               }), 128)),
-              !commitCandidates.value.length ? (openBlock(), createElementBlock("div", _hoisted_27$i, toDisplayString$1(unref(t2)("v2.bottomBar.localWorkflowsEmpty")), 1)) : createCommentVNode("", true)
+              !commitCandidates.value.length ? (openBlock(), createElementBlock("div", _hoisted_35$6, toDisplayString$1(unref(t2)("v2.bottomBar.localWorkflowsEmpty")), 1)) : createCommentVNode("", true)
             ]),
-            createBaseVNode("div", _hoisted_28$e, [
+            createBaseVNode("div", _hoisted_36$6, [
               createBaseVNode("button", {
                 type: "button",
                 class: "ctv-bbar__git-btn",
                 disabled: !!gitBusy.value,
                 onClick: closeCommitPicker
-              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitCancel")), 9, _hoisted_29$c),
+              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitCancel")), 9, _hoisted_37$6),
               createBaseVNode("button", {
                 type: "button",
                 class: "ctv-bbar__git-btn ctv-bbar__git-btn--primary",
                 disabled: !!gitBusy.value || !selectedCommitPaths.value.length,
                 onClick: onGitCommitConfirm
-              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitConfirm")), 9, _hoisted_30$c)
+              }, toDisplayString$1(unref(t2)("v2.bottomBar.gitCommitConfirm")), 9, _hoisted_38$6)
             ])
           ])) : createCommentVNode("", true),
-          workflowsLoading.value ? (openBlock(), createElementBlock("div", _hoisted_31$b, toDisplayString$1(unref(t2)("v2.bottomBar.workflowLoading")), 1)) : workflowError.value ? (openBlock(), createElementBlock("div", _hoisted_32$9, toDisplayString$1(workflowError.value), 1)) : !templateWorkflows.value.length && !localWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_33$7, toDisplayString$1(unref(t2)("v2.bottomBar.workflowEmpty")), 1)) : (openBlock(), createElementBlock("div", _hoisted_34$6, [
-            createBaseVNode("div", _hoisted_35$6, [
-              createBaseVNode("div", _hoisted_36$6, toDisplayString$1(unref(t2)("v2.bottomBar.templates")), 1),
-              createBaseVNode("div", _hoisted_37$6, [
-                !templateWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_38$6, toDisplayString$1(unref(t2)("v2.bottomBar.templatesEmpty")), 1)) : createCommentVNode("", true),
+          workflowsLoading.value ? (openBlock(), createElementBlock("div", _hoisted_39$6, toDisplayString$1(unref(t2)("v2.bottomBar.workflowLoading")), 1)) : workflowError.value ? (openBlock(), createElementBlock("div", _hoisted_40$5, toDisplayString$1(workflowError.value), 1)) : !templateWorkflows.value.length && !localWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_41$5, toDisplayString$1(unref(t2)("v2.bottomBar.workflowEmpty")), 1)) : (openBlock(), createElementBlock("div", _hoisted_42$4, [
+            createBaseVNode("div", _hoisted_43$4, [
+              createBaseVNode("div", _hoisted_44$4, toDisplayString$1(unref(t2)("v2.bottomBar.templates")), 1),
+              createBaseVNode("div", _hoisted_45$3, [
+                !templateWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_46$3, toDisplayString$1(unref(t2)("v2.bottomBar.templatesEmpty")), 1)) : createCommentVNode("", true),
                 (openBlock(true), createElementBlock(Fragment$1, null, renderList(templateWorkflows.value, (row) => {
                   return openBlock(), createElementBlock("button", {
                     key: `t-${row.path}`,
@@ -96815,21 +96935,21 @@ const _sfc_main$4u = /* @__PURE__ */ defineComponent({
 ${row.path}`,
                     onClick: ($event) => onOpenWorkflow(row, true)
                   }, [
-                    createBaseVNode("span", _hoisted_40$5, toDisplayString$1(row.name), 1),
+                    createBaseVNode("span", _hoisted_48$3, toDisplayString$1(row.name), 1),
                     (openBlock(true), createElementBlock(Fragment$1, null, renderList(gitBadgesFor(row.path), (b) => {
                       return openBlock(), createElementBlock("span", {
                         key: b.key,
                         class: normalizeClass(["ctv-bbar__git-badge", `ctv-bbar__git-badge--${b.key}`])
                       }, toDisplayString$1(b.label), 3);
                     }), 128))
-                  ], 10, _hoisted_39$6);
+                  ], 10, _hoisted_47$3);
                 }), 128))
               ])
             ]),
-            createBaseVNode("div", _hoisted_41$5, [
-              createBaseVNode("div", _hoisted_42$4, toDisplayString$1(unref(t2)("v2.bottomBar.localWorkflows")), 1),
-              createBaseVNode("div", _hoisted_43$4, [
-                !localWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_44$4, toDisplayString$1(unref(t2)("v2.bottomBar.localWorkflowsEmpty")), 1)) : createCommentVNode("", true),
+            createBaseVNode("div", _hoisted_49$3, [
+              createBaseVNode("div", _hoisted_50$2, toDisplayString$1(unref(t2)("v2.bottomBar.localWorkflows")), 1),
+              createBaseVNode("div", _hoisted_51$2, [
+                !localWorkflows.value.length ? (openBlock(), createElementBlock("div", _hoisted_52$1, toDisplayString$1(unref(t2)("v2.bottomBar.localWorkflowsEmpty")), 1)) : createCommentVNode("", true),
                 (openBlock(true), createElementBlock(Fragment$1, null, renderList(localWorkflows.value, (row) => {
                   return openBlock(), createElementBlock("button", {
                     key: `l-${row.path}`,
@@ -96842,15 +96962,15 @@ ${row.path}`,
                     title: row.path,
                     onClick: ($event) => onOpenWorkflow(row)
                   }, [
-                    createBaseVNode("span", _hoisted_46$3, toDisplayString$1(row.name), 1),
+                    createBaseVNode("span", _hoisted_54, toDisplayString$1(row.name), 1),
                     (openBlock(true), createElementBlock(Fragment$1, null, renderList(gitBadgesFor(row.path), (b) => {
                       return openBlock(), createElementBlock("span", {
                         key: b.key,
                         class: normalizeClass(["ctv-bbar__git-badge", `ctv-bbar__git-badge--${b.key}`])
                       }, toDisplayString$1(b.label), 3);
                     }), 128)),
-                    unref(nativeWorkflowFolder)(row.path) ? (openBlock(), createElementBlock("span", _hoisted_47$3, toDisplayString$1(unref(nativeWorkflowFolder)(row.path)), 1)) : createCommentVNode("", true)
-                  ], 10, _hoisted_45$3);
+                    unref(nativeWorkflowFolder)(row.path) ? (openBlock(), createElementBlock("span", _hoisted_55, toDisplayString$1(unref(nativeWorkflowFolder)(row.path)), 1)) : createCommentVNode("", true)
+                  ], 10, _hoisted_53);
                 }), 128))
               ])
             ])
@@ -96861,17 +96981,17 @@ ${row.path}`,
           role: "dialog",
           "aria-label": unref(t2)("v2.bottomBar.search")
         }, [
-          createBaseVNode("div", _hoisted_49$3, [
+          createBaseVNode("div", _hoisted_57, [
             createVNode(unref(IconSearch), { class: "ctv-bbar__search-icon" }),
             withDirectives(createBaseVNode("input", {
               ref_key: "searchInput",
               ref: searchInput,
-              "onUpdate:modelValue": _cache2[6] || (_cache2[6] = ($event) => searchQ.value = $event),
+              "onUpdate:modelValue": _cache2[10] || (_cache2[10] = ($event) => searchQ.value = $event),
               type: "search",
               class: "ctv-bbar__search-input",
               placeholder: unref(t2)("v2.bottomBar.searchPlaceholder"),
               autocomplete: "off"
-            }, null, 8, _hoisted_50$2), [
+            }, null, 8, _hoisted_58), [
               [vModelText, searchQ.value]
             ]),
             searchQ.value ? (openBlock(), createElementBlock("button", {
@@ -96879,10 +96999,10 @@ ${row.path}`,
               type: "button",
               class: "ctv-bbar__icon-btn",
               "aria-label": unref(t2)("dialog.close"),
-              onClick: _cache2[7] || (_cache2[7] = ($event) => searchQ.value = "")
+              onClick: _cache2[11] || (_cache2[11] = ($event) => searchQ.value = "")
             }, [
               createVNode(unref(IconX), { class: "ctv:size-3.5" })
-            ], 8, _hoisted_51$2)) : createCommentVNode("", true)
+            ], 8, _hoisted_59)) : createCommentVNode("", true)
           ]),
           createBaseVNode("div", {
             class: "ctv-bbar__cats",
@@ -96894,8 +97014,8 @@ ${row.path}`,
               role: "tab",
               class: normalizeClass(["ctv-bbar__cat", { "ctv-bbar__cat--on": searchCat.value === "all" }]),
               "aria-selected": searchCat.value === "all",
-              onClick: _cache2[8] || (_cache2[8] = ($event) => searchCat.value = "all")
-            }, toDisplayString$1(unref(t2)("v2.bottomBar.cat.all")), 11, _hoisted_53),
+              onClick: _cache2[12] || (_cache2[12] = ($event) => searchCat.value = "all")
+            }, toDisplayString$1(unref(t2)("v2.bottomBar.cat.all")), 11, _hoisted_61),
             (openBlock(true), createElementBlock(Fragment$1, null, renderList(unref(SEARCH_CATEGORY_IDS), (cat2) => {
               return openBlock(), createElementBlock("button", {
                 key: cat2,
@@ -96904,16 +97024,16 @@ ${row.path}`,
                 class: normalizeClass(["ctv-bbar__cat", { "ctv-bbar__cat--on": searchCat.value === cat2 }]),
                 "aria-selected": searchCat.value === cat2,
                 onClick: ($event) => searchCat.value = cat2
-              }, toDisplayString$1(unref(t2)(`v2.bottomBar.cat.${cat2}`)), 11, _hoisted_54);
+              }, toDisplayString$1(unref(t2)(`v2.bottomBar.cat.${cat2}`)), 11, _hoisted_62);
             }), 128))
-          ], 8, _hoisted_52$1),
-          catalogLoading.value ? (openBlock(), createElementBlock("div", _hoisted_55, toDisplayString$1(unref(t2)("v2.bottomBar.workflowLoading")), 1)) : !searchGrouped.value.length ? (openBlock(), createElementBlock("div", _hoisted_56, toDisplayString$1(unref(t2)("v2.bottomBar.searchEmpty")), 1)) : (openBlock(), createElementBlock("div", _hoisted_57, [
+          ], 8, _hoisted_60),
+          catalogLoading.value ? (openBlock(), createElementBlock("div", _hoisted_63, toDisplayString$1(unref(t2)("v2.bottomBar.workflowLoading")), 1)) : !searchGrouped.value.length ? (openBlock(), createElementBlock("div", _hoisted_64, toDisplayString$1(unref(t2)("v2.bottomBar.searchEmpty")), 1)) : (openBlock(), createElementBlock("div", _hoisted_65, [
             (openBlock(true), createElementBlock(Fragment$1, null, renderList(searchGrouped.value, (group) => {
               return openBlock(), createElementBlock("section", {
                 key: group.id,
                 class: "ctv-bbar__group"
               }, [
-                searchCat.value === "all" ? (openBlock(), createElementBlock("div", _hoisted_58, toDisplayString$1(unref(t2)(group.labelKey)), 1)) : createCommentVNode("", true),
+                searchCat.value === "all" ? (openBlock(), createElementBlock("div", _hoisted_66, toDisplayString$1(unref(t2)(group.labelKey)), 1)) : createCommentVNode("", true),
                 (openBlock(true), createElementBlock(Fragment$1, null, renderList(group.nodes, (n) => {
                   return openBlock(), createElementBlock("button", {
                     key: n.classType,
@@ -96921,13 +97041,13 @@ ${row.path}`,
                     class: "ctv-bbar__row",
                     onClick: ($event) => onCreate2(n.classType)
                   }, [
-                    createBaseVNode("span", _hoisted_60, toDisplayString$1(n.label), 1)
-                  ], 8, _hoisted_59);
+                    createBaseVNode("span", _hoisted_68, toDisplayString$1(n.label), 1)
+                  ], 8, _hoisted_67);
                 }), 128))
               ]);
             }), 128))
           ]))
-        ], 8, _hoisted_48$3)) : createCommentVNode("", true),
+        ], 8, _hoisted_56)) : createCommentVNode("", true),
         createBaseVNode("div", {
           class: "ctv-bbar__pill",
           role: "toolbar",
@@ -96939,11 +97059,11 @@ ${row.path}`,
             "aria-label": unref(t2)("v2.bottomBar.add"),
             "aria-expanded": panel.value === "plus",
             title: unref(t2)("v2.bottomBar.add"),
-            onClick: _cache2[9] || (_cache2[9] = ($event) => toggle("plus"))
+            onClick: _cache2[13] || (_cache2[13] = ($event) => toggle("plus"))
           }, [
             createVNode(unref(IconPlus), { class: "ctv:size-4" })
-          ], 8, _hoisted_62),
-          _cache2[13] || (_cache2[13] = createBaseVNode("span", {
+          ], 8, _hoisted_70),
+          _cache2[17] || (_cache2[17] = createBaseVNode("span", {
             class: "ctv-bbar__sep",
             "aria-hidden": "true"
           }, null, -1)),
@@ -96953,12 +97073,12 @@ ${row.path}`,
             "aria-label": unref(t2)("v2.bottomBar.assets"),
             "aria-expanded": panel.value === "assets",
             title: unref(t2)("v2.bottomBar.assets"),
-            onClick: _cache2[10] || (_cache2[10] = ($event) => toggle("assets"))
+            onClick: _cache2[14] || (_cache2[14] = ($event) => toggle("assets"))
           }, [
             createVNode(unref(IconImages), { class: "ctv:size-4" }),
-            createBaseVNode("span", _hoisted_64, toDisplayString$1(unref(t2)("v2.bottomBar.assets")), 1)
-          ], 8, _hoisted_63),
-          _cache2[14] || (_cache2[14] = createBaseVNode("span", {
+            createBaseVNode("span", _hoisted_72, toDisplayString$1(unref(t2)("v2.bottomBar.assets")), 1)
+          ], 8, _hoisted_71),
+          _cache2[18] || (_cache2[18] = createBaseVNode("span", {
             class: "ctv-bbar__sep",
             "aria-hidden": "true"
           }, null, -1)),
@@ -96968,12 +97088,12 @@ ${row.path}`,
             "aria-label": unref(t2)("v2.bottomBar.workflows"),
             "aria-expanded": panel.value === "workflows",
             title: unref(t2)("v2.bottomBar.workflows"),
-            onClick: _cache2[11] || (_cache2[11] = ($event) => toggle("workflows"))
+            onClick: _cache2[15] || (_cache2[15] = ($event) => toggle("workflows"))
           }, [
             createVNode(unref(IconWorkflow), { class: "ctv:size-4" }),
-            createBaseVNode("span", _hoisted_66, toDisplayString$1(unref(t2)("v2.bottomBar.workflows")), 1)
-          ], 8, _hoisted_65),
-          _cache2[15] || (_cache2[15] = createBaseVNode("span", {
+            createBaseVNode("span", _hoisted_74, toDisplayString$1(unref(t2)("v2.bottomBar.workflows")), 1)
+          ], 8, _hoisted_73),
+          _cache2[19] || (_cache2[19] = createBaseVNode("span", {
             class: "ctv-bbar__sep",
             "aria-hidden": "true"
           }, null, -1)),
@@ -96983,17 +97103,17 @@ ${row.path}`,
             "aria-label": unref(t2)("v2.bottomBar.search"),
             "aria-expanded": panel.value === "search",
             title: unref(t2)("v2.bottomBar.search"),
-            onClick: _cache2[12] || (_cache2[12] = ($event) => toggle("search"))
+            onClick: _cache2[16] || (_cache2[16] = ($event) => toggle("search"))
           }, [
             createVNode(unref(IconSearch), { class: "ctv:size-4" }),
-            createBaseVNode("span", _hoisted_68, toDisplayString$1(unref(t2)("v2.bottomBar.search")), 1)
-          ], 8, _hoisted_67)
-        ], 8, _hoisted_61)
+            createBaseVNode("span", _hoisted_76, toDisplayString$1(unref(t2)("v2.bottomBar.search")), 1)
+          ], 8, _hoisted_75)
+        ], 8, _hoisted_69)
       ], 512);
     };
   }
 });
-const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4u, [["__scopeId", "data-v-8c1177d7"]]);
+const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4u, [["__scopeId", "data-v-69a4816d"]]);
 const HOST_ID = "comfytv-bottom-bar";
 const MAX_FRAMES = 600;
 let pinia$1 = null;
@@ -97784,11 +97904,8 @@ function findDiffStart(a2, b, pos) {
     if (!childA.sameMarkup(childB))
       return pos;
     if (childA.isText && childA.text != childB.text) {
-      let tA = childA.text, tB = childB.text, j2 = 0;
-      for (; tA[j2] == tB[j2]; j2++)
+      for (let j2 = 0; childA.text[j2] == childB.text[j2]; j2++)
         pos++;
-      if (j2 && j2 < tA.length && j2 < tB.length && surrogateHigh(tA.charCodeAt(j2 - 1)) && surrogateLow(tA.charCodeAt(j2)))
-        pos--;
       return pos;
     }
     if (childA.content.size || childB.content.size) {
@@ -97812,16 +97929,11 @@ function findDiffEnd(a2, b, posA, posB) {
     if (!childA.sameMarkup(childB))
       return { a: posA, b: posB };
     if (childA.isText && childA.text != childB.text) {
-      let tA = childA.text, tB = childB.text, iA2 = tA.length, iB2 = tB.length;
-      while (iA2 > 0 && iB2 > 0 && tA[iA2 - 1] == tB[iB2 - 1]) {
-        iA2--;
-        iB2--;
+      let same = 0, minSize = Math.min(childA.text.length, childB.text.length);
+      while (same < minSize && childA.text[childA.text.length - same - 1] == childB.text[childB.text.length - same - 1]) {
+        same++;
         posA--;
         posB--;
-      }
-      if (iA2 && iB2 && iA2 < tA.length && surrogateHigh(tA.charCodeAt(iA2 - 1)) && surrogateLow(tA.charCodeAt(iA2))) {
-        posA++;
-        posB++;
       }
       return { a: posA, b: posB };
     }
@@ -97833,12 +97945,6 @@ function findDiffEnd(a2, b, posA, posB) {
     posA -= size2;
     posB -= size2;
   }
-}
-function surrogateLow(ch) {
-  return ch >= 56320 && ch < 57344;
-}
-function surrogateHigh(ch) {
-  return ch >= 55296 && ch < 56320;
 }
 class Fragment {
   /**
@@ -98451,8 +98557,7 @@ function addRange($start, $end, depth, target) {
     addNode($end.nodeBefore, target);
 }
 function close(node, content) {
-  if (!node.type.validContent(content))
-    throw new ReplaceError("Invalid content for node " + node.type.name);
+  node.type.checkContent(content);
   return node.copy(content);
 }
 function replaceThreeWay($from, $start, $end, $to, depth) {
@@ -99699,12 +99804,13 @@ function computeAttrs(attrs, value) {
   return built;
 }
 function checkAttrs(attrs, values, type, name) {
-  for (let attr in values)
-    if (!(attr in attrs))
-      throw new RangeError(`Unsupported attribute ${attr} for ${type} of type ${name}`);
-  for (let attr in attrs) {
-    if (attrs[attr].validate)
-      attrs[attr].validate(values[attr]);
+  for (let name2 in values)
+    if (!(name2 in attrs))
+      throw new RangeError(`Unsupported attribute ${name2} for ${type} of type ${name2}`);
+  for (let name2 in attrs) {
+    let attr = attrs[name2];
+    if (attr.validate)
+      attr.validate(values[name2]);
   }
 }
 function initAttrs(typeName, attrs) {
@@ -105546,7 +105652,7 @@ class MarkViewDesc extends ViewDesc {
   }
 }
 class NodeViewDesc extends ViewDesc {
-  constructor(parent, node, outerDeco, innerDeco, dom, contentDOM, nodeDOM) {
+  constructor(parent, node, outerDeco, innerDeco, dom, contentDOM, nodeDOM, view, pos) {
     super(parent, [], dom, contentDOM);
     this.node = node;
     this.outerDeco = outerDeco;
@@ -105589,11 +105695,11 @@ class NodeViewDesc extends ViewDesc {
     let nodeDOM = dom;
     dom = applyOuterDeco(dom, outerDeco, node);
     if (spec)
-      return descObj = new CustomNodeViewDesc(parent, node, outerDeco, innerDeco, dom, contentDOM || null, nodeDOM, spec);
+      return descObj = new CustomNodeViewDesc(parent, node, outerDeco, innerDeco, dom, contentDOM || null, nodeDOM, spec, view, pos + 1);
     else if (node.isText)
-      return new TextViewDesc(parent, node, outerDeco, innerDeco, dom, nodeDOM);
+      return new TextViewDesc(parent, node, outerDeco, innerDeco, dom, nodeDOM, view);
     else
-      return new NodeViewDesc(parent, node, outerDeco, innerDeco, dom, contentDOM || null, nodeDOM);
+      return new NodeViewDesc(parent, node, outerDeco, innerDeco, dom, contentDOM || null, nodeDOM, view, pos + 1);
   }
   parseRule() {
     if (this.node.type.spec.reparseInView)
@@ -105749,14 +105855,14 @@ class NodeViewDesc extends ViewDesc {
 }
 function docViewDesc(doc2, outerDeco, innerDeco, dom, view) {
   applyOuterDeco(dom, outerDeco, doc2);
-  let docView = new NodeViewDesc(void 0, doc2, outerDeco, innerDeco, dom, dom, dom);
+  let docView = new NodeViewDesc(void 0, doc2, outerDeco, innerDeco, dom, dom, dom, view, 0);
   if (docView.contentDOM)
     docView.updateChildren(view, 0);
   return docView;
 }
 class TextViewDesc extends NodeViewDesc {
-  constructor(parent, node, outerDeco, innerDeco, dom, nodeDOM) {
-    super(parent, node, outerDeco, innerDeco, dom, null, nodeDOM);
+  constructor(parent, node, outerDeco, innerDeco, dom, nodeDOM, view) {
+    super(parent, node, outerDeco, innerDeco, dom, null, nodeDOM, view, 0);
   }
   parseRule() {
     let skip = this.nodeDOM.parentNode;
@@ -105795,9 +105901,9 @@ class TextViewDesc extends NodeViewDesc {
   ignoreMutation(mutation) {
     return mutation.type != "characterData" && mutation.type != "selection";
   }
-  slice(from2, to, _view) {
+  slice(from2, to, view) {
     let node = this.node.cut(from2, to), dom = document.createTextNode(node.text);
-    return new TextViewDesc(this.parent, node, this.outerDeco, this.innerDeco, dom, dom);
+    return new TextViewDesc(this.parent, node, this.outerDeco, this.innerDeco, dom, dom, view);
   }
   markDirty(from2, to) {
     super.markDirty(from2, to);
@@ -105826,8 +105932,8 @@ class TrailingHackViewDesc extends ViewDesc {
   }
 }
 class CustomNodeViewDesc extends NodeViewDesc {
-  constructor(parent, node, outerDeco, innerDeco, dom, contentDOM, nodeDOM, spec) {
-    super(parent, node, outerDeco, innerDeco, dom, contentDOM, nodeDOM);
+  constructor(parent, node, outerDeco, innerDeco, dom, contentDOM, nodeDOM, spec, view, pos) {
+    super(parent, node, outerDeco, innerDeco, dom, contentDOM, nodeDOM, view, pos);
     this.spec = spec;
   }
   // A custom `update` method gets to decide whether the update goes
@@ -106042,14 +106148,6 @@ class ViewTreeUpdater {
         if (next.matchesMark(marks[depth]) && !this.isLocked(next.dom)) {
           found2 = i;
           break;
-        }
-      }
-      if (found2 < 0 && this.index < this.top.children.length) {
-        let cur = this.top.children[this.index];
-        if (cur instanceof MarkViewDesc && cur.dirty != NODE_DIRTY && cur.mark.type == marks[depth].type && cur.spec.update && !this.isLocked(cur.dom) && cur.spec.update(marks[depth])) {
-          cur.mark = marks[depth];
-          found2 = this.index;
-          this.changed = true;
         }
       }
       if (found2 > -1) {
@@ -106432,10 +106530,10 @@ function selectionToDOM(view, force = false) {
   syncNodeSelection(view, sel2);
   if (!editorOwnsSelection(view))
     return;
-  let mouseDown = view.input.mouseDown;
-  if (!force && chrome && mouseDown) {
+  if (!force && view.input.mouseDown && view.input.mouseDown.allowDefault && chrome) {
     let domSel = view.domSelectionRange(), curSel = view.domObserver.currentSelection;
-    if (domSel.anchorNode && curSel.anchorNode && isEquivalentPosition(domSel.anchorNode, domSel.anchorOffset, curSel.anchorNode, curSel.anchorOffset) && mouseDown.delaySelUpdate()) {
+    if (domSel.anchorNode && curSel.anchorNode && isEquivalentPosition(domSel.anchorNode, domSel.anchorOffset, curSel.anchorNode, curSel.anchorOffset)) {
+      view.input.mouseDown.delayedSelectionSync = true;
       view.domObserver.setCurSelection();
       return;
     }
@@ -107085,8 +107183,9 @@ const wrapMap = {
   td: ["table", "tbody", "tr"],
   th: ["table", "tbody", "tr"]
 };
+let _detachedDoc = null;
 function detachedDoc() {
-  return document.implementation.createHTMLDocument("title");
+  return _detachedDoc || (_detachedDoc = document.implementation.createHTMLDocument("title"));
 }
 let _policy = null;
 function maybeWrapTrusted(html) {
@@ -107101,7 +107200,7 @@ function readHTML(html) {
   let metas = /^(\s*<meta [^>]*>)*/.exec(html);
   if (metas)
     html = html.slice(metas[0].length);
-  let doc2 = detachedDoc(), elt = doc2.body;
+  let elt = detachedDoc().createElement("div");
   let firstTag = /<([a-z][^>\s]+)/i.exec(html), wrap2;
   if (wrap2 = firstTag && wrapMap[firstTag[1].toLowerCase()])
     html = wrap2.map((n) => "<" + n + ">").join("") + html + wrap2.map((n) => "</" + n + ">").reverse().join("");
@@ -107109,17 +107208,6 @@ function readHTML(html) {
   if (wrap2)
     for (let i = 0; i < wrap2.length; i++)
       elt = elt.querySelector(wrap2[i]) || elt;
-  for (let i = 0; i < doc2.styleSheets.length; i++) {
-    let style2 = doc2.styleSheets[i];
-    for (let j2 = 0; j2 < style2.rules.length; j2++) {
-      let rule = style2.rules[j2];
-      if (rule instanceof CSSStyleRule) {
-        let matches2 = elt.querySelectorAll(rule.selectorText);
-        for (let k2 = 0; k2 < matches2.length; k2++)
-          matches2[k2].style.cssText += rule.style.cssText;
-      }
-    }
-  }
   return elt;
 }
 function restoreReplacedSpaces(dom) {
@@ -107197,8 +107285,6 @@ function setSelectionOrigin(view, origin) {
   view.input.lastSelectionTime = Date.now();
 }
 function destroyInput(view) {
-  if (view.input.mouseDown)
-    view.input.mouseDown.done();
   view.domObserver.stop();
   for (let type in view.input.eventHandlers)
     view.dom.removeEventListener(type, view.input.eventHandlers[type]);
@@ -107235,7 +107321,7 @@ function dispatchEvent(view, event) {
 editHandlers.keydown = (view, _event) => {
   let event = _event;
   view.input.shiftKey = event.keyCode == 16 || event.shiftKey;
-  if (inOrNearComposition(view))
+  if (inOrNearComposition(view, event))
     return;
   view.input.lastKeyCode = event.keyCode;
   view.input.lastKeyCodeTime = Date.now();
@@ -107264,7 +107350,7 @@ editHandlers.keyup = (view, event) => {
 };
 editHandlers.keypress = (view, _event) => {
   let event = _event;
-  if (inOrNearComposition(view) || !event.charCode || event.ctrlKey && !event.altKey || mac$2 && event.metaKey)
+  if (inOrNearComposition(view, event) || !event.charCode || event.ctrlKey && !event.altKey || mac$2 && event.metaKey)
     return;
   if (view.someProp("handleKeyPress", (f2) => f2(view, event))) {
     event.preventDefault();
@@ -107351,28 +107437,26 @@ function handleTripleClick(view, pos, inside, event) {
 function defaultTripleClick(view, inside, event) {
   if (event.button != 0)
     return false;
-  let selection = selectionForTripleClick(view, inside, true), doc2 = view.state.doc;
-  if (!selection)
-    return false;
-  updateSelection(view, selection);
-  if (selection instanceof TextSelection && doc2.eq(view.state.doc))
-    view.input.mouseDown = new TripleClickDrag(view, selection);
-  return true;
-}
-function selectionForTripleClick(view, inside, selectNodes) {
   let doc2 = view.state.doc;
-  if (inside == -1)
-    return doc2.inlineContent ? TextSelection.create(doc2, 0, doc2.content.size) : null;
+  if (inside == -1) {
+    if (doc2.inlineContent) {
+      updateSelection(view, TextSelection.create(doc2, 0, doc2.content.size));
+      return true;
+    }
+    return false;
+  }
   let $pos = doc2.resolve(inside);
   for (let i = $pos.depth + 1; i > 0; i--) {
     let node = i > $pos.depth ? $pos.nodeAfter : $pos.node(i);
     let nodePos = $pos.before(i);
     if (node.inlineContent)
-      return TextSelection.create(doc2, nodePos + 1, nodePos + 1 + node.content.size);
-    else if (selectNodes && NodeSelection.isSelectable(node))
-      return NodeSelection.create(doc2, nodePos);
+      updateSelection(view, TextSelection.create(doc2, nodePos + 1, nodePos + 1 + node.content.size));
+    else if (NodeSelection.isSelectable(node))
+      updateSelection(view, NodeSelection.create(doc2, nodePos));
+    else
+      continue;
+    return true;
   }
-  return null;
 }
 function forceDOMFlush(view) {
   return endComposition(view);
@@ -107390,13 +107474,13 @@ handlers.mousedown = (view, _event) => {
       type = "tripleClick";
   }
   view.input.lastClick = { time: now2, x: event.clientX, y: event.clientY, type, button: event.button };
-  if (view.input.mouseDown)
-    view.input.mouseDown.done();
   let pos = view.posAtCoords(eventCoords(event));
   if (!pos)
     return;
   if (type == "singleClick") {
-    view.input.mouseDown = new LeftMouseDown(view, pos, event, !!flushed);
+    if (view.input.mouseDown)
+      view.input.mouseDown.done();
+    view.input.mouseDown = new MouseDown(view, pos, event, !!flushed);
   } else if ((type == "doubleClick" ? handleDoubleClick : handleTripleClick)(view, pos.pos, pos.inside, event)) {
     event.preventDefault();
   } else {
@@ -107404,36 +107488,13 @@ handlers.mousedown = (view, _event) => {
   }
 };
 class MouseDown {
-  constructor(view) {
-    this.view = view;
-    this.mightDrag = null;
-    view.root.addEventListener("mouseup", this.up = this.up.bind(this));
-    view.root.addEventListener("mousemove", this.move = this.move.bind(this));
-  }
-  up(event) {
-    this.done();
-  }
-  move(event) {
-    if (event.buttons == 0)
-      this.done();
-  }
-  done() {
-    this.view.root.removeEventListener("mouseup", this.up);
-    this.view.root.removeEventListener("mousemove", this.move);
-    if (this.view.input.mouseDown == this)
-      this.view.input.mouseDown = null;
-  }
-  delaySelUpdate() {
-    return false;
-  }
-}
-class LeftMouseDown extends MouseDown {
   constructor(view, pos, event, flushed) {
-    super(view);
+    this.view = view;
     this.pos = pos;
     this.event = event;
     this.flushed = flushed;
     this.delayedSelectionSync = false;
+    this.mightDrag = null;
     this.startDoc = view.state.doc;
     this.selectNode = !!event[selectNodeModifier];
     this.allowDefault = event.shiftKey;
@@ -107468,10 +107529,13 @@ class LeftMouseDown extends MouseDown {
         }, 20);
       this.view.domObserver.start();
     }
+    view.root.addEventListener("mouseup", this.up = this.up.bind(this));
+    view.root.addEventListener("mousemove", this.move = this.move.bind(this));
     setSelectionOrigin(view, "pointer");
   }
   done() {
-    super.done();
+    this.view.root.removeEventListener("mouseup", this.up);
+    this.view.root.removeEventListener("mousemove", this.move);
     if (this.mightDrag && this.target) {
       this.view.domObserver.stop();
       if (this.mightDrag.addAttr)
@@ -107481,10 +107545,8 @@ class LeftMouseDown extends MouseDown {
       this.view.domObserver.start();
     }
     if (this.delayedSelectionSync)
-      setTimeout(() => {
-        if (!this.view.isDestroyed)
-          selectionToDOM(this.view);
-      });
+      setTimeout(() => selectionToDOM(this.view));
+    this.view.input.mouseDown = null;
   }
   up(event) {
     this.done();
@@ -107516,39 +107578,12 @@ class LeftMouseDown extends MouseDown {
   move(event) {
     this.updateAllowDefault(event);
     setSelectionOrigin(this.view, "pointer");
-    super.move(event);
+    if (event.buttons == 0)
+      this.done();
   }
   updateAllowDefault(event) {
     if (!this.allowDefault && (Math.abs(this.event.x - event.clientX) > 4 || Math.abs(this.event.y - event.clientY) > 4))
       this.allowDefault = true;
-  }
-  delaySelUpdate() {
-    if (!this.allowDefault)
-      return false;
-    this.delayedSelectionSync = true;
-    return true;
-  }
-}
-class TripleClickDrag extends MouseDown {
-  constructor(view, startSelection) {
-    super(view);
-    this.startSelection = startSelection;
-    this.startDoc = view.state.doc;
-  }
-  move(event) {
-    if (event.buttons == 0 || this.view.isDestroyed || !this.view.state.doc.eq(this.startDoc)) {
-      this.done();
-      return;
-    }
-    event.preventDefault();
-    setSelectionOrigin(this.view, "pointer");
-    let pos = this.view.posAtCoords(eventCoords(event));
-    let target = pos && selectionForTripleClick(this.view, pos.inside, false);
-    if (!target)
-      return;
-    let { doc: doc2 } = this.view.state, start2 = this.startSelection;
-    let [anchor2, head] = target.from < start2.from ? [start2.to, target.from] : [start2.from, target.to];
-    updateSelection(this.view, TextSelection.create(doc2, anchor2, head));
   }
 }
 handlers.touchstart = (view) => {
@@ -107564,7 +107599,7 @@ handlers.contextmenu = (view) => forceDOMFlush(view);
 function inOrNearComposition(view, event) {
   if (view.composing)
     return true;
-  if (safari && Math.abs(Date.now() - view.input.compositionEndedAt) < 500) {
+  if (safari && Math.abs(event.timeStamp - view.input.compositionEndedAt) < 500) {
     view.input.compositionEndedAt = -2e8;
     return true;
   }
@@ -107613,7 +107648,7 @@ function selectionBeforeUneditable(view) {
 editHandlers.compositionend = (view, event) => {
   if (view.composing) {
     view.input.composing = false;
-    view.input.compositionEndedAt = Date.now();
+    view.input.compositionEndedAt = event.timeStamp;
     view.input.compositionPendingChanges = view.domObserver.pendingRecords().length ? view.input.compositionID : 0;
     view.input.compositionNode = null;
     if (view.input.badSafariComposition)
@@ -107632,7 +107667,7 @@ function scheduleComposeEnd(view, delay) {
 function clearComposition(view) {
   if (view.composing) {
     view.input.composing = false;
-    view.input.compositionEndedAt = Date.now();
+    view.input.compositionEndedAt = timestampFromCustomEvent();
   }
   while (view.input.compositionNodes.length > 0)
     view.input.compositionNodes.pop().markParentsDirty();
@@ -107656,6 +107691,11 @@ function findCompositionNode(view) {
     }
   }
   return textBefore || textAfter;
+}
+function timestampFromCustomEvent() {
+  let event = document.createEvent("Event");
+  event.initEvent("event", true, true);
+  return event.timeStamp;
 }
 function endComposition(view, restarting = false) {
   if (android && view.domObserver.flushingSoon >= 0)
@@ -108711,7 +108751,7 @@ class DOMObserver {
         }
       }
     }
-    if (added.some((n) => n.nodeName == "BR") && (view.input.lastKeyCode == 8 || view.input.lastKeyCode == 46 || chrome && (view.composing || view.input.compositionEndedAt > Date.now() - 50) && mutations.some((m) => m.type == "childList" && m.removedNodes.length))) {
+    if (added.some((n) => n.nodeName == "BR") && (view.input.lastKeyCode == 8 || view.input.lastKeyCode == 46)) {
       for (let node of added)
         if (node.nodeName == "BR" && node.parentNode) {
           let after = node.nextSibling;
@@ -109152,26 +109192,36 @@ function skipClosingAndOpening($pos, fromEnd, mayOpen) {
   return end2;
 }
 function findDiff(a2, b, pos, preferredPos, preferredSide) {
-  let start2 = a2.findDiffStart(b, pos), lenA = pos + a2.size, lenB = pos + b.size;
+  let start2 = a2.findDiffStart(b, pos);
   if (start2 == null)
     return null;
-  let { a: endA, b: endB } = a2.findDiffEnd(b, lenA, lenB);
+  let { a: endA, b: endB } = a2.findDiffEnd(b, pos + a2.size, pos + b.size);
   if (preferredSide == "end") {
     let adjust = Math.max(0, start2 - Math.min(endA, endB));
     preferredPos -= endA + adjust - start2;
   }
-  if (endA < start2 && lenA < lenB) {
+  if (endA < start2 && a2.size < b.size) {
     let move = preferredPos <= start2 && preferredPos >= endA ? start2 - preferredPos : 0;
     start2 -= move;
+    if (start2 && start2 < b.size && isSurrogatePair(b.textBetween(start2 - 1, start2 + 1)))
+      start2 += move ? 1 : -1;
     endB = start2 + (endB - endA);
     endA = start2;
   } else if (endB < start2) {
     let move = preferredPos <= start2 && preferredPos >= endB ? start2 - preferredPos : 0;
     start2 -= move;
+    if (start2 && start2 < a2.size && isSurrogatePair(a2.textBetween(start2 - 1, start2 + 1)))
+      start2 += move ? 1 : -1;
     endA = start2 + (endA - endB);
     endB = start2;
   }
   return { start: start2, endA, endB };
+}
+function isSurrogatePair(str2) {
+  if (str2.length != 2)
+    return false;
+  let a2 = str2.charCodeAt(0), b = str2.charCodeAt(1);
+  return a2 >= 56320 && a2 <= 57343 && b >= 55296 && b <= 56319;
 }
 class EditorView {
   /**
@@ -109316,8 +109366,7 @@ class EditorView {
         if (chromeKludge && (!this.trackWrites || !this.dom.contains(this.trackWrites)))
           forceSelUpdate = true;
       }
-      let mouseDown = this.input.mouseDown;
-      if (forceSelUpdate || !(mouseDown && this.domObserver.currentSelection.eq(this.domSelectionRange()) && anchorInRightPlace(this) && mouseDown.delaySelUpdate())) {
+      if (forceSelUpdate || !(this.input.mouseDown && this.domObserver.currentSelection.eq(this.domSelectionRange()) && anchorInRightPlace(this))) {
         selectionToDOM(this, forceSelUpdate);
       } else {
         syncNodeSelection(this, state2.selection);
@@ -110202,22 +110251,14 @@ var expandSelectionForInlineText = ($from, $to, schema) => {
   return { from: from2, to };
 };
 var deleteSelection = () => ({ state: state2, dispatch }) => {
+  const { $from, $to } = state2.selection;
   if (state2.selection.empty) {
     return false;
   }
+  const { from: from2, to } = expandSelectionForInlineText($from, $to, state2.schema);
   if (dispatch) {
-    const tr2 = state2.tr;
-    const { ranges } = state2.selection;
-    const mapFrom = tr2.steps.length;
-    ranges.forEach((range) => {
-      const mapping = tr2.mapping.slice(mapFrom);
-      const $from = tr2.doc.resolve(mapping.map(range.$from.pos));
-      const $to = tr2.doc.resolve(mapping.map(range.$to.pos));
-      const { from: from2, to } = expandSelectionForInlineText($from, $to, state2.schema);
-      tr2.deleteRange(from2, to);
-    });
-    tr2.scrollIntoView();
-    dispatch(tr2);
+    state2.tr.deleteRange(from2, to).scrollIntoView();
+    dispatch(state2.tr);
   }
   return true;
 };
@@ -112104,12 +112145,6 @@ var splitListItem = (typeOrName, overrideAttrs = {}) => ({ tr: tr2, state: state
   }
   return true;
 };
-function normalizeListType(type) {
-  return !type || type === "1" ? null : type;
-}
-function areListTypesCompatible(typeA, typeB) {
-  return normalizeListType(typeA) === normalizeListType(typeB);
-}
 var joinListBackwards = (tr2, listType) => {
   const list = findParentNode((node) => node.type === listType)(tr2.selection);
   if (!list) {
@@ -112122,9 +112157,6 @@ var joinListBackwards = (tr2, listType) => {
   const nodeBefore = tr2.doc.nodeAt(before);
   const canJoinBackwards = list.node.type === (nodeBefore == null ? void 0 : nodeBefore.type) && canJoin(tr2.doc, list.pos);
   if (!canJoinBackwards) {
-    return true;
-  }
-  if (!areListTypesCompatible(list.node.attrs.type, nodeBefore == null ? void 0 : nodeBefore.attrs.type)) {
     return true;
   }
   tr2.join(list.pos);
@@ -112142,9 +112174,6 @@ var joinListForwards = (tr2, listType) => {
   const nodeAfter = tr2.doc.nodeAt(after);
   const canJoinForwards = list.node.type === (nodeAfter == null ? void 0 : nodeAfter.type) && canJoin(tr2.doc, after);
   if (!canJoinForwards) {
-    return true;
-  }
-  if (!areListTypesCompatible(list.node.attrs.type, nodeAfter == null ? void 0 : nodeAfter.attrs.type)) {
     return true;
   }
   tr2.join(after);
@@ -112499,565 +112528,6 @@ var EventEmitter = class {
     this.callbacks = {};
   }
 };
-function createStyleTag(style2, nonce, suffix) {
-  const tiptapStyleTag = document.querySelector(`style[data-tiptap-style${suffix ? `-${suffix}` : ""}]`);
-  if (tiptapStyleTag !== null) {
-    return tiptapStyleTag;
-  }
-  const styleNode = document.createElement("style");
-  if (nonce) {
-    styleNode.setAttribute("nonce", nonce);
-  }
-  styleNode.setAttribute(`data-tiptap-style${suffix ? `-${suffix}` : ""}`, "");
-  styleNode.innerHTML = style2;
-  document.getElementsByTagName("head")[0].appendChild(styleNode);
-  return styleNode;
-}
-function escapeForRegEx(string2) {
-  return string2.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
-}
-function isNumber(value) {
-  return typeof value === "number";
-}
-function getType(value) {
-  return Object.prototype.toString.call(value).slice(8, -1);
-}
-function isPlainObject(value) {
-  if (getType(value) !== "Object") {
-    return false;
-  }
-  return value.constructor === Object && Object.getPrototypeOf(value) === Object.prototype;
-}
-var markdown_exports = {};
-__export(markdown_exports, {
-  createAtomBlockMarkdownSpec: () => createAtomBlockMarkdownSpec,
-  createBlockMarkdownSpec: () => createBlockMarkdownSpec,
-  createInlineMarkdownSpec: () => createInlineMarkdownSpec,
-  parseAttributes: () => parseAttributes,
-  parseIndentedBlocks: () => parseIndentedBlocks,
-  renderNestedMarkdownContent: () => renderNestedMarkdownContent,
-  serializeAttributes: () => serializeAttributes
-});
-function parseAttributes(attrString) {
-  if (!(attrString == null ? void 0 : attrString.trim())) {
-    return {};
-  }
-  const attributes = {};
-  const quotedStrings = [];
-  const tempString = attrString.replace(/["']([^"']*)["']/g, (match) => {
-    quotedStrings.push(match);
-    return `__QUOTED_${quotedStrings.length - 1}__`;
-  });
-  const classMatches = tempString.match(/(?:^|\s)\.([\w-]+)/g);
-  if (classMatches) {
-    const classes = classMatches.map((match) => match.trim().slice(1));
-    attributes.class = classes.join(" ");
-  }
-  const idMatch = tempString.match(/(?:^|\s)#([\w-]+)/);
-  if (idMatch) {
-    attributes.id = idMatch[1];
-  }
-  const kvRegex = /([a-zA-Z][\w-]*)\s*=\s*(__QUOTED_\d+__)/g;
-  const kvMatches = Array.from(tempString.matchAll(kvRegex));
-  kvMatches.forEach(([, key, quotedRef]) => {
-    var _a2;
-    const quotedIndex = parseInt(((_a2 = quotedRef.match(/__QUOTED_(\d+)__/)) == null ? void 0 : _a2[1]) || "0", 10);
-    const quotedValue = quotedStrings[quotedIndex];
-    if (quotedValue) {
-      attributes[key] = quotedValue.slice(1, -1);
-    }
-  });
-  const cleanString = tempString.replace(/(?:^|\s)\.([\w-]+)/g, "").replace(/(?:^|\s)#([\w-]+)/g, "").replace(/([a-zA-Z][\w-]*)\s*=\s*__QUOTED_\d+__/g, "").trim();
-  if (cleanString) {
-    const booleanAttrs = cleanString.split(/\s+/).filter(Boolean);
-    booleanAttrs.forEach((attr) => {
-      if (attr.match(/^[a-zA-Z][\w-]*$/)) {
-        attributes[attr] = true;
-      }
-    });
-  }
-  return attributes;
-}
-function serializeAttributes(attributes) {
-  if (!attributes || Object.keys(attributes).length === 0) {
-    return "";
-  }
-  const parts = [];
-  if (attributes.class) {
-    const classes = String(attributes.class).split(/\s+/).filter(Boolean);
-    classes.forEach((cls) => parts.push(`.${cls}`));
-  }
-  if (attributes.id) {
-    parts.push(`#${attributes.id}`);
-  }
-  Object.entries(attributes).forEach(([key, value]) => {
-    if (key === "class" || key === "id") {
-      return;
-    }
-    if (value === true) {
-      parts.push(key);
-    } else if (value !== false && value != null) {
-      parts.push(`${key}="${String(value)}"`);
-    }
-  });
-  return parts.join(" ");
-}
-function createAtomBlockMarkdownSpec(options) {
-  const {
-    nodeName,
-    name: markdownName,
-    parseAttributes: parseAttributes2 = parseAttributes,
-    serializeAttributes: serializeAttributes2 = serializeAttributes,
-    defaultAttributes = {},
-    requiredAttributes = [],
-    allowedAttributes
-  } = options;
-  const blockName = markdownName || nodeName;
-  const filterAttributes = (attrs) => {
-    if (!allowedAttributes) {
-      return attrs;
-    }
-    const filtered = {};
-    allowedAttributes.forEach((key) => {
-      if (key in attrs) {
-        filtered[key] = attrs[key];
-      }
-    });
-    return filtered;
-  };
-  return {
-    parseMarkdown: (token, h2) => {
-      const attrs = { ...defaultAttributes, ...token.attributes };
-      return h2.createNode(nodeName, attrs, []);
-    },
-    markdownTokenizer: {
-      name: nodeName,
-      level: "block",
-      start(src) {
-        var _a2;
-        const regex = new RegExp(`^:::${blockName}(?:\\s|$)`, "m");
-        const index2 = (_a2 = src.match(regex)) == null ? void 0 : _a2.index;
-        return index2 !== void 0 ? index2 : -1;
-      },
-      tokenize(src, _tokens, _lexer) {
-        const regex = new RegExp(`^:::${blockName}(?:\\s+\\{([^}]*)\\})?\\s*:::(?:\\n|$)`);
-        const match = src.match(regex);
-        if (!match) {
-          return void 0;
-        }
-        const attrString = match[1] || "";
-        const attributes = parseAttributes2(attrString);
-        const missingRequired = requiredAttributes.find((required2) => !(required2 in attributes));
-        if (missingRequired) {
-          return void 0;
-        }
-        return {
-          type: nodeName,
-          raw: match[0],
-          attributes
-        };
-      }
-    },
-    renderMarkdown: (node) => {
-      const filteredAttrs = filterAttributes(node.attrs || {});
-      const attrs = serializeAttributes2(filteredAttrs);
-      const attrString = attrs ? ` {${attrs}}` : "";
-      return `:::${blockName}${attrString} :::`;
-    }
-  };
-}
-function createBlockMarkdownSpec(options) {
-  const {
-    nodeName,
-    name: markdownName,
-    getContent,
-    parseAttributes: parseAttributes2 = parseAttributes,
-    serializeAttributes: serializeAttributes2 = serializeAttributes,
-    defaultAttributes = {},
-    content = "block",
-    allowedAttributes
-  } = options;
-  const blockName = markdownName || nodeName;
-  const filterAttributes = (attrs) => {
-    if (!allowedAttributes) {
-      return attrs;
-    }
-    const filtered = {};
-    allowedAttributes.forEach((key) => {
-      if (key in attrs) {
-        filtered[key] = attrs[key];
-      }
-    });
-    return filtered;
-  };
-  return {
-    parseMarkdown: (token, h2) => {
-      let nodeContent;
-      if (getContent) {
-        const contentResult = getContent(token);
-        nodeContent = typeof contentResult === "string" ? [{ type: "text", text: contentResult }] : contentResult;
-      } else if (content === "block") {
-        nodeContent = h2.parseChildren(token.tokens || []);
-      } else {
-        nodeContent = h2.parseInline(token.tokens || []);
-      }
-      const attrs = { ...defaultAttributes, ...token.attributes };
-      return h2.createNode(nodeName, attrs, nodeContent);
-    },
-    markdownTokenizer: {
-      name: nodeName,
-      level: "block",
-      start(src) {
-        var _a2;
-        const regex = new RegExp(`^:::${blockName}`, "m");
-        const index2 = (_a2 = src.match(regex)) == null ? void 0 : _a2.index;
-        return index2 !== void 0 ? index2 : -1;
-      },
-      tokenize(src, _tokens, lexer) {
-        var _a2;
-        const openingRegex = new RegExp(`^:::${blockName}(?:\\s+\\{([^}]*)\\})?\\s*\\n`);
-        const openingMatch = src.match(openingRegex);
-        if (!openingMatch) {
-          return void 0;
-        }
-        const [openingTag, attrString = ""] = openingMatch;
-        const attributes = parseAttributes2(attrString);
-        let level2 = 1;
-        const position = openingTag.length;
-        let matchedContent = "";
-        const blockPattern = /^:::([\w-]*)(\s.*)?/gm;
-        const remaining = src.slice(position);
-        blockPattern.lastIndex = 0;
-        for (; ; ) {
-          const match = blockPattern.exec(remaining);
-          if (match === null) {
-            break;
-          }
-          const matchPos = match.index;
-          const blockType = match[1];
-          if ((_a2 = match[2]) == null ? void 0 : _a2.endsWith(":::")) {
-            continue;
-          }
-          if (blockType) {
-            level2 += 1;
-          } else {
-            level2 -= 1;
-            if (level2 === 0) {
-              const rawContent = remaining.slice(0, matchPos);
-              matchedContent = rawContent.trim();
-              const fullMatch = src.slice(0, position + matchPos + match[0].length);
-              let contentTokens = [];
-              if (matchedContent) {
-                if (content === "block") {
-                  contentTokens = lexer.blockTokens(rawContent);
-                  contentTokens.forEach((token) => {
-                    if (token.text && (!token.tokens || token.tokens.length === 0)) {
-                      token.tokens = lexer.inlineTokens(token.text);
-                    }
-                  });
-                  while (contentTokens.length > 0) {
-                    const lastToken = contentTokens[contentTokens.length - 1];
-                    if (lastToken.type === "paragraph" && (!lastToken.text || lastToken.text.trim() === "")) {
-                      contentTokens.pop();
-                    } else {
-                      break;
-                    }
-                  }
-                } else {
-                  contentTokens = lexer.inlineTokens(matchedContent);
-                }
-              }
-              return {
-                type: nodeName,
-                raw: fullMatch,
-                attributes,
-                content: matchedContent,
-                tokens: contentTokens
-              };
-            }
-          }
-        }
-        return void 0;
-      }
-    },
-    renderMarkdown: (node, h2) => {
-      const filteredAttrs = filterAttributes(node.attrs || {});
-      const attrs = serializeAttributes2(filteredAttrs);
-      const attrString = attrs ? ` {${attrs}}` : "";
-      const renderedContent = h2.renderChildren(node.content || [], "\n\n");
-      return `:::${blockName}${attrString}
-
-${renderedContent}
-
-:::`;
-    }
-  };
-}
-function parseShortcodeAttributes(attrString) {
-  if (!attrString.trim()) {
-    return {};
-  }
-  const attributes = {};
-  const regex = /(\w+)=(?:"([^"]*)"|'([^']*)')/g;
-  let match = regex.exec(attrString);
-  while (match !== null) {
-    const [, key, doubleQuoted, singleQuoted] = match;
-    attributes[key] = doubleQuoted || singleQuoted;
-    match = regex.exec(attrString);
-  }
-  return attributes;
-}
-function serializeShortcodeAttributes(attrs) {
-  return Object.entries(attrs).filter(([, value]) => value !== void 0 && value !== null).map(([key, value]) => `${key}="${value}"`).join(" ");
-}
-function createInlineMarkdownSpec(options) {
-  const {
-    nodeName,
-    name: shortcodeName,
-    getContent,
-    parseAttributes: parseAttributes2 = parseShortcodeAttributes,
-    serializeAttributes: serializeAttributes2 = serializeShortcodeAttributes,
-    defaultAttributes = {},
-    selfClosing = false,
-    allowedAttributes
-  } = options;
-  const shortcode = shortcodeName || nodeName;
-  const filterAttributes = (attrs) => {
-    if (!allowedAttributes) {
-      return attrs;
-    }
-    const filtered = {};
-    allowedAttributes.forEach((attr) => {
-      const attrName = typeof attr === "string" ? attr : attr.name;
-      const skipIfDefault = typeof attr === "string" ? void 0 : attr.skipIfDefault;
-      if (attrName in attrs) {
-        const value = attrs[attrName];
-        if (skipIfDefault !== void 0 && value === skipIfDefault) {
-          return;
-        }
-        filtered[attrName] = value;
-      }
-    });
-    return filtered;
-  };
-  const escapedShortcode = shortcode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return {
-    parseMarkdown: (token, h2) => {
-      const attrs = { ...defaultAttributes, ...token.attributes };
-      if (selfClosing) {
-        return h2.createNode(nodeName, attrs);
-      }
-      const content = getContent ? getContent(token) : token.content || "";
-      if (content) {
-        return h2.createNode(nodeName, attrs, [h2.createTextNode(content)]);
-      }
-      return h2.createNode(nodeName, attrs, []);
-    },
-    markdownTokenizer: {
-      name: nodeName,
-      level: "inline",
-      start(src) {
-        const startPattern = selfClosing ? new RegExp(`\\[${escapedShortcode}\\s*[^\\]]*\\]`) : new RegExp(`\\[${escapedShortcode}\\s*[^\\]]*\\][\\s\\S]*?\\[\\/${escapedShortcode}\\]`);
-        const match = src.match(startPattern);
-        const index2 = match == null ? void 0 : match.index;
-        return index2 !== void 0 ? index2 : -1;
-      },
-      tokenize(src, _tokens, _lexer) {
-        const tokenPattern = selfClosing ? new RegExp(`^\\[${escapedShortcode}\\s*([^\\]]*)\\]`) : new RegExp(
-          `^\\[${escapedShortcode}\\s*([^\\]]*)\\]([\\s\\S]*?)\\[\\/${escapedShortcode}\\]`
-        );
-        const match = src.match(tokenPattern);
-        if (!match) {
-          return void 0;
-        }
-        let content = "";
-        let attrString = "";
-        if (selfClosing) {
-          const [, attrs] = match;
-          attrString = attrs;
-        } else {
-          const [, attrs, contentMatch] = match;
-          attrString = attrs;
-          content = contentMatch || "";
-        }
-        const attributes = parseAttributes2(attrString.trim());
-        return {
-          type: nodeName,
-          raw: match[0],
-          content: content.trim(),
-          attributes
-        };
-      }
-    },
-    renderMarkdown: (node) => {
-      let content = "";
-      if (getContent) {
-        content = getContent(node);
-      } else if (node.content && node.content.length > 0) {
-        content = node.content.filter((child) => child.type === "text").map((child) => child.text).join("");
-      }
-      const filteredAttrs = filterAttributes(node.attrs || {});
-      const attrs = serializeAttributes2(filteredAttrs);
-      const attrString = attrs ? ` ${attrs}` : "";
-      if (selfClosing) {
-        return `[${shortcode}${attrString}]`;
-      }
-      return `[${shortcode}${attrString}]${content}[/${shortcode}]`;
-    }
-  };
-}
-function parseIndentedBlocks(src, config2, lexer) {
-  var _a2, _b2, _c, _d;
-  const lines = src.split("\n");
-  const items = [];
-  let totalRaw = "";
-  let i = 0;
-  const baseIndentSize = config2.baseIndentSize || 2;
-  while (i < lines.length) {
-    const currentLine = lines[i];
-    const itemMatch = currentLine.match(config2.itemPattern);
-    if (!itemMatch) {
-      if (items.length > 0) {
-        break;
-      } else if (currentLine.trim() === "") {
-        i += 1;
-        totalRaw = `${totalRaw}${currentLine}
-`;
-        continue;
-      } else {
-        return void 0;
-      }
-    }
-    const itemData = config2.extractItemData(itemMatch);
-    const { indentLevel, mainContent } = itemData;
-    totalRaw = `${totalRaw}${currentLine}
-`;
-    const itemContent = [mainContent];
-    i += 1;
-    while (i < lines.length) {
-      const nextLine = lines[i];
-      if (nextLine.trim() === "") {
-        const nextNonEmptyIndex = lines.slice(i + 1).findIndex((l) => l.trim() !== "");
-        if (nextNonEmptyIndex === -1) {
-          break;
-        }
-        const nextNonEmpty = lines[i + 1 + nextNonEmptyIndex];
-        const nextIndent2 = ((_b2 = (_a2 = nextNonEmpty.match(/^(\s*)/)) == null ? void 0 : _a2[1]) == null ? void 0 : _b2.length) || 0;
-        if (nextIndent2 > indentLevel) {
-          itemContent.push(nextLine);
-          totalRaw = `${totalRaw}${nextLine}
-`;
-          i += 1;
-          continue;
-        } else {
-          break;
-        }
-      }
-      const nextIndent = ((_d = (_c = nextLine.match(/^(\s*)/)) == null ? void 0 : _c[1]) == null ? void 0 : _d.length) || 0;
-      if (nextIndent > indentLevel) {
-        itemContent.push(nextLine);
-        totalRaw = `${totalRaw}${nextLine}
-`;
-        i += 1;
-      } else {
-        break;
-      }
-    }
-    let nestedTokens;
-    const nestedContent = itemContent.slice(1);
-    if (nestedContent.length > 0) {
-      const dedentedNested = nestedContent.map((nestedLine) => nestedLine.slice(indentLevel + baseIndentSize)).join("\n");
-      if (dedentedNested.trim()) {
-        if (config2.customNestedParser) {
-          nestedTokens = config2.customNestedParser(dedentedNested);
-        } else {
-          nestedTokens = lexer.blockTokens(dedentedNested);
-        }
-      }
-    }
-    const token = config2.createToken(itemData, nestedTokens);
-    items.push(token);
-  }
-  if (items.length === 0) {
-    return void 0;
-  }
-  return {
-    items,
-    raw: totalRaw
-  };
-}
-function renderNestedMarkdownContent(node, h2, prefixOrGenerator, ctx) {
-  if (!node || !Array.isArray(node.content)) {
-    return "";
-  }
-  const prefix = typeof prefixOrGenerator === "function" ? prefixOrGenerator(ctx) : prefixOrGenerator;
-  const [content, ...children] = node.content;
-  const mainContent = h2.renderChildren([content]);
-  let output = `${prefix}${mainContent}`;
-  if (children && children.length > 0) {
-    children.forEach((child, index2) => {
-      var _a2, _b2;
-      const childContent = (_b2 = (_a2 = h2.renderChild) == null ? void 0 : _a2.call(h2, child, index2 + 1)) != null ? _b2 : h2.renderChildren([child]);
-      if (childContent !== void 0 && childContent !== null) {
-        const indentedChild = childContent.split("\n").map((line) => line ? h2.indent(line) : h2.indent("")).join("\n");
-        output += child.type === "paragraph" ? `
-
-${indentedChild}` : `
-${indentedChild}`;
-      }
-    });
-  }
-  return output;
-}
-function mergeDeep(target, source) {
-  const output = { ...target };
-  if (isPlainObject(target) && isPlainObject(source)) {
-    Object.keys(source).forEach((key) => {
-      if (isPlainObject(source[key]) && isPlainObject(target[key])) {
-        output[key] = mergeDeep(target[key], source[key]);
-      } else {
-        output[key] = source[key];
-      }
-    });
-  }
-  return output;
-}
-function updateMarkViewAttributes(checkMark, editor, attrs = {}) {
-  const { state: state2 } = editor;
-  const { doc: doc2, tr: tr2 } = state2;
-  const thisMark = checkMark;
-  doc2.descendants((node, pos) => {
-    const from2 = tr2.mapping.map(pos);
-    const to = tr2.mapping.map(pos) + node.nodeSize;
-    let foundMark = null;
-    node.marks.forEach((mark) => {
-      if (mark !== thisMark) {
-        return false;
-      }
-      foundMark = mark;
-    });
-    if (!foundMark) {
-      return;
-    }
-    let needsUpdate = false;
-    Object.keys(attrs).forEach((k2) => {
-      if (attrs[k2] !== foundMark.attrs[k2]) {
-        needsUpdate = true;
-      }
-    });
-    if (needsUpdate) {
-      const updatedMark = checkMark.type.create({
-        ...checkMark.attrs,
-        ...attrs
-      });
-      tr2.removeMark(from2, to, checkMark.type);
-      tr2.addMark(from2, to, updatedMark);
-    }
-  });
-  if (tr2.docChanged) {
-    editor.view.dispatch(tr2);
-  }
-}
 var inputRuleMatcherHandler = (text, find) => {
   if (isRegExp(find)) {
     return find.exec(text);
@@ -113233,6 +112703,28 @@ function inputRulesPlugin(props) {
   });
   return plugin;
 }
+function getType(value) {
+  return Object.prototype.toString.call(value).slice(8, -1);
+}
+function isPlainObject(value) {
+  if (getType(value) !== "Object") {
+    return false;
+  }
+  return value.constructor === Object && Object.getPrototypeOf(value) === Object.prototype;
+}
+function mergeDeep(target, source) {
+  const output = { ...target };
+  if (isPlainObject(target) && isPlainObject(source)) {
+    Object.keys(source).forEach((key) => {
+      if (isPlainObject(source[key]) && isPlainObject(target[key])) {
+        output[key] = mergeDeep(target[key], source[key]);
+      } else {
+        output[key] = source[key];
+      }
+    });
+  }
+  return output;
+}
 var Extendable = class {
   constructor(config2 = {}) {
     this.type = "extendable";
@@ -113328,6 +112820,9 @@ var Mark2 = class _Mark extends Extendable {
     return super.extend(resolvedConfig);
   }
 };
+function isNumber(value) {
+  return typeof value === "number";
+}
 var pasteRuleMatcherHandler = (text, find, event) => {
   if (isRegExp(find)) {
     return [...text.matchAll(find)];
@@ -114619,6 +114114,20 @@ img.ProseMirror-separator {
 .ProseMirror-focused .ProseMirror-gapcursor {
   display: block;
 }`;
+function createStyleTag(style2, nonce, suffix) {
+  const tiptapStyleTag = document.querySelector(`style[data-tiptap-style${suffix ? `-${suffix}` : ""}]`);
+  if (tiptapStyleTag !== null) {
+    return tiptapStyleTag;
+  }
+  const styleNode = document.createElement("style");
+  if (nonce) {
+    styleNode.setAttribute("nonce", nonce);
+  }
+  styleNode.setAttribute(`data-tiptap-style${suffix ? `-${suffix}` : ""}`, "");
+  styleNode.innerHTML = style2;
+  document.getElementsByTagName("head")[0].appendChild(styleNode);
+  return styleNode;
+}
 var Editor$1 = class Editor extends EventEmitter {
   constructor(options = {}) {
     super();
@@ -115198,6 +114707,526 @@ var Editor$1 = class Editor extends EventEmitter {
     return this.$pos(0);
   }
 };
+function escapeForRegEx(string2) {
+  return string2.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+}
+var markdown_exports = {};
+__export(markdown_exports, {
+  createAtomBlockMarkdownSpec: () => createAtomBlockMarkdownSpec,
+  createBlockMarkdownSpec: () => createBlockMarkdownSpec,
+  createInlineMarkdownSpec: () => createInlineMarkdownSpec,
+  parseAttributes: () => parseAttributes,
+  parseIndentedBlocks: () => parseIndentedBlocks,
+  renderNestedMarkdownContent: () => renderNestedMarkdownContent,
+  serializeAttributes: () => serializeAttributes
+});
+function parseAttributes(attrString) {
+  if (!(attrString == null ? void 0 : attrString.trim())) {
+    return {};
+  }
+  const attributes = {};
+  const quotedStrings = [];
+  const tempString = attrString.replace(/["']([^"']*)["']/g, (match) => {
+    quotedStrings.push(match);
+    return `__QUOTED_${quotedStrings.length - 1}__`;
+  });
+  const classMatches = tempString.match(/(?:^|\s)\.([a-zA-Z][\w-]*)/g);
+  if (classMatches) {
+    const classes = classMatches.map((match) => match.trim().slice(1));
+    attributes.class = classes.join(" ");
+  }
+  const idMatch = tempString.match(/(?:^|\s)#([a-zA-Z][\w-]*)/);
+  if (idMatch) {
+    attributes.id = idMatch[1];
+  }
+  const kvRegex = /([a-zA-Z][\w-]*)\s*=\s*(__QUOTED_\d+__)/g;
+  const kvMatches = Array.from(tempString.matchAll(kvRegex));
+  kvMatches.forEach(([, key, quotedRef]) => {
+    var _a2;
+    const quotedIndex = parseInt(((_a2 = quotedRef.match(/__QUOTED_(\d+)__/)) == null ? void 0 : _a2[1]) || "0", 10);
+    const quotedValue = quotedStrings[quotedIndex];
+    if (quotedValue) {
+      attributes[key] = quotedValue.slice(1, -1);
+    }
+  });
+  const cleanString = tempString.replace(/(?:^|\s)\.([a-zA-Z][\w-]*)/g, "").replace(/(?:^|\s)#([a-zA-Z][\w-]*)/g, "").replace(/([a-zA-Z][\w-]*)\s*=\s*__QUOTED_\d+__/g, "").trim();
+  if (cleanString) {
+    const booleanAttrs = cleanString.split(/\s+/).filter(Boolean);
+    booleanAttrs.forEach((attr) => {
+      if (attr.match(/^[a-zA-Z][\w-]*$/)) {
+        attributes[attr] = true;
+      }
+    });
+  }
+  return attributes;
+}
+function serializeAttributes(attributes) {
+  if (!attributes || Object.keys(attributes).length === 0) {
+    return "";
+  }
+  const parts = [];
+  if (attributes.class) {
+    const classes = String(attributes.class).split(/\s+/).filter(Boolean);
+    classes.forEach((cls) => parts.push(`.${cls}`));
+  }
+  if (attributes.id) {
+    parts.push(`#${attributes.id}`);
+  }
+  Object.entries(attributes).forEach(([key, value]) => {
+    if (key === "class" || key === "id") {
+      return;
+    }
+    if (value === true) {
+      parts.push(key);
+    } else if (value !== false && value != null) {
+      parts.push(`${key}="${String(value)}"`);
+    }
+  });
+  return parts.join(" ");
+}
+function createAtomBlockMarkdownSpec(options) {
+  const {
+    nodeName,
+    name: markdownName,
+    parseAttributes: parseAttributes2 = parseAttributes,
+    serializeAttributes: serializeAttributes2 = serializeAttributes,
+    defaultAttributes = {},
+    requiredAttributes = [],
+    allowedAttributes
+  } = options;
+  const blockName = markdownName || nodeName;
+  const filterAttributes = (attrs) => {
+    if (!allowedAttributes) {
+      return attrs;
+    }
+    const filtered = {};
+    allowedAttributes.forEach((key) => {
+      if (key in attrs) {
+        filtered[key] = attrs[key];
+      }
+    });
+    return filtered;
+  };
+  return {
+    parseMarkdown: (token, h2) => {
+      const attrs = { ...defaultAttributes, ...token.attributes };
+      return h2.createNode(nodeName, attrs, []);
+    },
+    markdownTokenizer: {
+      name: nodeName,
+      level: "block",
+      start(src) {
+        var _a2;
+        const regex = new RegExp(`^:::${blockName}(?:\\s|$)`, "m");
+        const index2 = (_a2 = src.match(regex)) == null ? void 0 : _a2.index;
+        return index2 !== void 0 ? index2 : -1;
+      },
+      tokenize(src, _tokens, _lexer) {
+        const regex = new RegExp(`^:::${blockName}(?:\\s+\\{([^}]*)\\})?\\s*:::(?:\\n|$)`);
+        const match = src.match(regex);
+        if (!match) {
+          return void 0;
+        }
+        const attrString = match[1] || "";
+        const attributes = parseAttributes2(attrString);
+        const missingRequired = requiredAttributes.find((required2) => !(required2 in attributes));
+        if (missingRequired) {
+          return void 0;
+        }
+        return {
+          type: nodeName,
+          raw: match[0],
+          attributes
+        };
+      }
+    },
+    renderMarkdown: (node) => {
+      const filteredAttrs = filterAttributes(node.attrs || {});
+      const attrs = serializeAttributes2(filteredAttrs);
+      const attrString = attrs ? ` {${attrs}}` : "";
+      return `:::${blockName}${attrString} :::`;
+    }
+  };
+}
+function createBlockMarkdownSpec(options) {
+  const {
+    nodeName,
+    name: markdownName,
+    getContent,
+    parseAttributes: parseAttributes2 = parseAttributes,
+    serializeAttributes: serializeAttributes2 = serializeAttributes,
+    defaultAttributes = {},
+    content = "block",
+    allowedAttributes
+  } = options;
+  const blockName = markdownName || nodeName;
+  const filterAttributes = (attrs) => {
+    if (!allowedAttributes) {
+      return attrs;
+    }
+    const filtered = {};
+    allowedAttributes.forEach((key) => {
+      if (key in attrs) {
+        filtered[key] = attrs[key];
+      }
+    });
+    return filtered;
+  };
+  return {
+    parseMarkdown: (token, h2) => {
+      let nodeContent;
+      if (getContent) {
+        const contentResult = getContent(token);
+        nodeContent = typeof contentResult === "string" ? [{ type: "text", text: contentResult }] : contentResult;
+      } else if (content === "block") {
+        nodeContent = h2.parseChildren(token.tokens || []);
+      } else {
+        nodeContent = h2.parseInline(token.tokens || []);
+      }
+      const attrs = { ...defaultAttributes, ...token.attributes };
+      return h2.createNode(nodeName, attrs, nodeContent);
+    },
+    markdownTokenizer: {
+      name: nodeName,
+      level: "block",
+      start(src) {
+        var _a2;
+        const regex = new RegExp(`^:::${blockName}`, "m");
+        const index2 = (_a2 = src.match(regex)) == null ? void 0 : _a2.index;
+        return index2 !== void 0 ? index2 : -1;
+      },
+      tokenize(src, _tokens, lexer) {
+        var _a2;
+        const openingRegex = new RegExp(`^:::${blockName}(?:\\s+\\{([^}]*)\\})?\\s*\\n`);
+        const openingMatch = src.match(openingRegex);
+        if (!openingMatch) {
+          return void 0;
+        }
+        const [openingTag, attrString = ""] = openingMatch;
+        const attributes = parseAttributes2(attrString);
+        let level2 = 1;
+        const position = openingTag.length;
+        let matchedContent = "";
+        const blockPattern = /^:::([\w-]*)(\s.*)?/gm;
+        const remaining = src.slice(position);
+        blockPattern.lastIndex = 0;
+        for (; ; ) {
+          const match = blockPattern.exec(remaining);
+          if (match === null) {
+            break;
+          }
+          const matchPos = match.index;
+          const blockType = match[1];
+          if ((_a2 = match[2]) == null ? void 0 : _a2.endsWith(":::")) {
+            continue;
+          }
+          if (blockType) {
+            level2 += 1;
+          } else {
+            level2 -= 1;
+            if (level2 === 0) {
+              const rawContent = remaining.slice(0, matchPos);
+              matchedContent = rawContent.trim();
+              const fullMatch = src.slice(0, position + matchPos + match[0].length);
+              let contentTokens = [];
+              if (matchedContent) {
+                if (content === "block") {
+                  contentTokens = lexer.blockTokens(rawContent);
+                  contentTokens.forEach((token) => {
+                    if (token.text && (!token.tokens || token.tokens.length === 0)) {
+                      token.tokens = lexer.inlineTokens(token.text);
+                    }
+                  });
+                  while (contentTokens.length > 0) {
+                    const lastToken = contentTokens[contentTokens.length - 1];
+                    if (lastToken.type === "paragraph" && (!lastToken.text || lastToken.text.trim() === "")) {
+                      contentTokens.pop();
+                    } else {
+                      break;
+                    }
+                  }
+                } else {
+                  contentTokens = lexer.inlineTokens(matchedContent);
+                }
+              }
+              return {
+                type: nodeName,
+                raw: fullMatch,
+                attributes,
+                content: matchedContent,
+                tokens: contentTokens
+              };
+            }
+          }
+        }
+        return void 0;
+      }
+    },
+    renderMarkdown: (node, h2) => {
+      const filteredAttrs = filterAttributes(node.attrs || {});
+      const attrs = serializeAttributes2(filteredAttrs);
+      const attrString = attrs ? ` {${attrs}}` : "";
+      const renderedContent = h2.renderChildren(node.content || [], "\n\n");
+      return `:::${blockName}${attrString}
+
+${renderedContent}
+
+:::`;
+    }
+  };
+}
+function parseShortcodeAttributes(attrString) {
+  if (!attrString.trim()) {
+    return {};
+  }
+  const attributes = {};
+  const regex = /(\w+)=(?:"([^"]*)"|'([^']*)')/g;
+  let match = regex.exec(attrString);
+  while (match !== null) {
+    const [, key, doubleQuoted, singleQuoted] = match;
+    attributes[key] = doubleQuoted || singleQuoted;
+    match = regex.exec(attrString);
+  }
+  return attributes;
+}
+function serializeShortcodeAttributes(attrs) {
+  return Object.entries(attrs).filter(([, value]) => value !== void 0 && value !== null).map(([key, value]) => `${key}="${value}"`).join(" ");
+}
+function createInlineMarkdownSpec(options) {
+  const {
+    nodeName,
+    name: shortcodeName,
+    getContent,
+    parseAttributes: parseAttributes2 = parseShortcodeAttributes,
+    serializeAttributes: serializeAttributes2 = serializeShortcodeAttributes,
+    defaultAttributes = {},
+    selfClosing = false,
+    allowedAttributes
+  } = options;
+  const shortcode = shortcodeName || nodeName;
+  const filterAttributes = (attrs) => {
+    if (!allowedAttributes) {
+      return attrs;
+    }
+    const filtered = {};
+    allowedAttributes.forEach((attr) => {
+      const attrName = typeof attr === "string" ? attr : attr.name;
+      const skipIfDefault = typeof attr === "string" ? void 0 : attr.skipIfDefault;
+      if (attrName in attrs) {
+        const value = attrs[attrName];
+        if (skipIfDefault !== void 0 && value === skipIfDefault) {
+          return;
+        }
+        filtered[attrName] = value;
+      }
+    });
+    return filtered;
+  };
+  const escapedShortcode = shortcode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return {
+    parseMarkdown: (token, h2) => {
+      const attrs = { ...defaultAttributes, ...token.attributes };
+      if (selfClosing) {
+        return h2.createNode(nodeName, attrs);
+      }
+      const content = getContent ? getContent(token) : token.content || "";
+      if (content) {
+        return h2.createNode(nodeName, attrs, [h2.createTextNode(content)]);
+      }
+      return h2.createNode(nodeName, attrs, []);
+    },
+    markdownTokenizer: {
+      name: nodeName,
+      level: "inline",
+      start(src) {
+        const startPattern = selfClosing ? new RegExp(`\\[${escapedShortcode}\\s*[^\\]]*\\]`) : new RegExp(`\\[${escapedShortcode}\\s*[^\\]]*\\][\\s\\S]*?\\[\\/${escapedShortcode}\\]`);
+        const match = src.match(startPattern);
+        const index2 = match == null ? void 0 : match.index;
+        return index2 !== void 0 ? index2 : -1;
+      },
+      tokenize(src, _tokens, _lexer) {
+        const tokenPattern = selfClosing ? new RegExp(`^\\[${escapedShortcode}\\s*([^\\]]*)\\]`) : new RegExp(
+          `^\\[${escapedShortcode}\\s*([^\\]]*)\\]([\\s\\S]*?)\\[\\/${escapedShortcode}\\]`
+        );
+        const match = src.match(tokenPattern);
+        if (!match) {
+          return void 0;
+        }
+        let content = "";
+        let attrString = "";
+        if (selfClosing) {
+          const [, attrs] = match;
+          attrString = attrs;
+        } else {
+          const [, attrs, contentMatch] = match;
+          attrString = attrs;
+          content = contentMatch || "";
+        }
+        const attributes = parseAttributes2(attrString.trim());
+        return {
+          type: nodeName,
+          raw: match[0],
+          content: content.trim(),
+          attributes
+        };
+      }
+    },
+    renderMarkdown: (node) => {
+      let content = "";
+      if (getContent) {
+        content = getContent(node);
+      } else if (node.content && node.content.length > 0) {
+        content = node.content.filter((child) => child.type === "text").map((child) => child.text).join("");
+      }
+      const filteredAttrs = filterAttributes(node.attrs || {});
+      const attrs = serializeAttributes2(filteredAttrs);
+      const attrString = attrs ? ` ${attrs}` : "";
+      if (selfClosing) {
+        return `[${shortcode}${attrString}]`;
+      }
+      return `[${shortcode}${attrString}]${content}[/${shortcode}]`;
+    }
+  };
+}
+function parseIndentedBlocks(src, config2, lexer) {
+  var _a2, _b2, _c, _d;
+  const lines = src.split("\n");
+  const items = [];
+  let totalRaw = "";
+  let i = 0;
+  const baseIndentSize = config2.baseIndentSize || 2;
+  while (i < lines.length) {
+    const currentLine = lines[i];
+    const itemMatch = currentLine.match(config2.itemPattern);
+    if (!itemMatch) {
+      if (items.length > 0) {
+        break;
+      } else if (currentLine.trim() === "") {
+        i += 1;
+        totalRaw = `${totalRaw}${currentLine}
+`;
+        continue;
+      } else {
+        return void 0;
+      }
+    }
+    const itemData = config2.extractItemData(itemMatch);
+    const { indentLevel, mainContent } = itemData;
+    totalRaw = `${totalRaw}${currentLine}
+`;
+    const itemContent = [mainContent];
+    i += 1;
+    while (i < lines.length) {
+      const nextLine = lines[i];
+      if (nextLine.trim() === "") {
+        const nextNonEmptyIndex = lines.slice(i + 1).findIndex((l) => l.trim() !== "");
+        if (nextNonEmptyIndex === -1) {
+          break;
+        }
+        const nextNonEmpty = lines[i + 1 + nextNonEmptyIndex];
+        const nextIndent2 = ((_b2 = (_a2 = nextNonEmpty.match(/^(\s*)/)) == null ? void 0 : _a2[1]) == null ? void 0 : _b2.length) || 0;
+        if (nextIndent2 > indentLevel) {
+          itemContent.push(nextLine);
+          totalRaw = `${totalRaw}${nextLine}
+`;
+          i += 1;
+          continue;
+        } else {
+          break;
+        }
+      }
+      const nextIndent = ((_d = (_c = nextLine.match(/^(\s*)/)) == null ? void 0 : _c[1]) == null ? void 0 : _d.length) || 0;
+      if (nextIndent > indentLevel) {
+        itemContent.push(nextLine);
+        totalRaw = `${totalRaw}${nextLine}
+`;
+        i += 1;
+      } else {
+        break;
+      }
+    }
+    let nestedTokens;
+    const nestedContent = itemContent.slice(1);
+    if (nestedContent.length > 0) {
+      const dedentedNested = nestedContent.map((nestedLine) => nestedLine.slice(indentLevel + baseIndentSize)).join("\n");
+      if (dedentedNested.trim()) {
+        if (config2.customNestedParser) {
+          nestedTokens = config2.customNestedParser(dedentedNested);
+        } else {
+          nestedTokens = lexer.blockTokens(dedentedNested);
+        }
+      }
+    }
+    const token = config2.createToken(itemData, nestedTokens);
+    items.push(token);
+  }
+  if (items.length === 0) {
+    return void 0;
+  }
+  return {
+    items,
+    raw: totalRaw
+  };
+}
+function renderNestedMarkdownContent(node, h2, prefixOrGenerator, ctx) {
+  if (!node || !Array.isArray(node.content)) {
+    return "";
+  }
+  const prefix = typeof prefixOrGenerator === "function" ? prefixOrGenerator(ctx) : prefixOrGenerator;
+  const [content, ...children] = node.content;
+  const mainContent = h2.renderChildren([content]);
+  let output = `${prefix}${mainContent}`;
+  if (children && children.length > 0) {
+    children.forEach((child, index2) => {
+      var _a2, _b2;
+      const childContent = (_b2 = (_a2 = h2.renderChild) == null ? void 0 : _a2.call(h2, child, index2 + 1)) != null ? _b2 : h2.renderChildren([child]);
+      if (childContent !== void 0 && childContent !== null) {
+        const indentedChild = childContent.split("\n").map((line) => line ? h2.indent(line) : h2.indent("")).join("\n");
+        output += child.type === "paragraph" ? `
+
+${indentedChild}` : `
+${indentedChild}`;
+      }
+    });
+  }
+  return output;
+}
+function updateMarkViewAttributes(checkMark, editor, attrs = {}) {
+  const { state: state2 } = editor;
+  const { doc: doc2, tr: tr2 } = state2;
+  const thisMark = checkMark;
+  doc2.descendants((node, pos) => {
+    const from2 = tr2.mapping.map(pos);
+    const to = tr2.mapping.map(pos) + node.nodeSize;
+    let foundMark = null;
+    node.marks.forEach((mark) => {
+      if (mark !== thisMark) {
+        return false;
+      }
+      foundMark = mark;
+    });
+    if (!foundMark) {
+      return;
+    }
+    let needsUpdate = false;
+    Object.keys(attrs).forEach((k2) => {
+      if (attrs[k2] !== foundMark.attrs[k2]) {
+        needsUpdate = true;
+      }
+    });
+    if (needsUpdate) {
+      const updatedMark = checkMark.type.create({
+        ...checkMark.attrs,
+        ...attrs
+      });
+      tr2.removeMark(from2, to, checkMark.type);
+      tr2.addMark(from2, to, updatedMark);
+    }
+  });
+  if (tr2.docChanged) {
+    editor.view.dispatch(tr2);
+  }
+}
 var Node3 = class _Node extends Extendable {
   constructor() {
     super(...arguments);
@@ -115618,555 +115647,6 @@ function hasInsertedWhitespace(transaction) {
     return /\s/.test(inserted);
   });
 }
-function getAnchorClientRect(editor) {
-  return () => {
-    const pos = editor.state.selection.$anchor.pos;
-    const coords = editor.view.coordsAtPos(pos);
-    const { top: top2, right: right2, bottom: bottom2, left: left2 } = coords;
-    try {
-      return new DOMRect(left2, top2, right2 - left2, bottom2 - top2);
-    } catch {
-      return null;
-    }
-  };
-}
-function clientRectFor(editor, view, decorationNode, pluginKey) {
-  if (!decorationNode) {
-    return getAnchorClientRect(editor);
-  }
-  return () => {
-    const state2 = pluginKey.getState(editor.state);
-    const decorationId = state2 == null ? void 0 : state2.decorationId;
-    const currentDecorationNode = view.dom.querySelector(`[data-decoration-id="${decorationId}"]`);
-    return (currentDecorationNode == null ? void 0 : currentDecorationNode.getBoundingClientRect()) || null;
-  };
-}
-function shouldKeepDismissed({
-  match,
-  dismissedRange,
-  state: state2,
-  transaction,
-  editor,
-  shouldResetDismissed,
-  effectiveAllowSpaces
-}) {
-  if (shouldResetDismissed == null ? void 0 : shouldResetDismissed({
-    editor,
-    state: state2,
-    range: dismissedRange,
-    match,
-    transaction,
-    allowSpaces: effectiveAllowSpaces
-  })) {
-    return false;
-  }
-  if (effectiveAllowSpaces) {
-    return match.range.from === dismissedRange.from;
-  }
-  return match.range.from === dismissedRange.from && !hasInsertedWhitespace(transaction);
-}
-function dispatchExit({
-  view,
-  pluginKeyRef
-}) {
-  const tr2 = view.state.tr.setMeta(pluginKeyRef, { exit: true });
-  view.dispatch(tr2);
-}
-function createSuggestionProps({
-  pluginKey,
-  decorationTag,
-  decorationClass,
-  decorationContent,
-  decorationEmptyClass,
-  renderer: renderer2,
-  dispatchExit: dispatchExit2
-}) {
-  return {
-    /**
-     * Call the keydown hook if suggestion is active.
-     */
-    handleKeyDown(view, event) {
-      var _a2, _b2;
-      const state2 = pluginKey.getState(view.state);
-      if (!state2.active) {
-        return false;
-      }
-      if (event.key === "Escape" || event.key === "Esc") {
-        (_a2 = renderer2 == null ? void 0 : renderer2.onKeyDown) == null ? void 0 : _a2.call(renderer2, { view, event, range: state2.range });
-        dispatchExit2(view);
-        return true;
-      }
-      const handled = ((_b2 = renderer2 == null ? void 0 : renderer2.onKeyDown) == null ? void 0 : _b2.call(renderer2, { view, event, range: state2.range })) || false;
-      return handled;
-    },
-    /**
-     * Setup decorator on the currently active suggestion.
-     */
-    decorations(state2) {
-      const pluginState = pluginKey.getState(state2);
-      const { active: active2, range, decorationId, query } = pluginState;
-      if (!active2) {
-        return null;
-      }
-      const isEmpty = !(query == null ? void 0 : query.length);
-      const classNames = [decorationClass];
-      if (isEmpty) {
-        classNames.push(decorationEmptyClass);
-      }
-      return DecorationSet.create(state2.doc, [
-        Decoration.inline(range.from, range.to, {
-          nodeName: decorationTag,
-          class: classNames.join(" "),
-          "data-decoration-id": decorationId || void 0,
-          "data-decoration-content": decorationContent
-        })
-      ]);
-    }
-  };
-}
-function createSuggestionState({
-  editor,
-  char,
-  effectiveAllowSpaces,
-  allowToIncludeChar,
-  allowedPrefixes,
-  startOfLine,
-  findSuggestionMatch: findSuggestionMatch2,
-  allow,
-  shouldShow,
-  shouldKeepDismissed: shouldKeepDismissed2,
-  pluginKey
-}) {
-  return {
-    /**
-     * Initialize the plugin's internal state.
-     */
-    init() {
-      return {
-        active: false,
-        range: { from: 0, to: 0 },
-        query: null,
-        text: null,
-        composing: false,
-        dismissedRange: null
-      };
-    },
-    /**
-     * Apply changes to the plugin state from a view transaction.
-     */
-    apply(transaction, prev, _oldState, state2) {
-      const { isEditable } = editor;
-      const { composing } = editor.view;
-      const { selection } = transaction;
-      const { empty: empty2, from: from2 } = selection;
-      const next = { ...prev };
-      const meta = transaction.getMeta(pluginKey);
-      if (meta && meta.exit) {
-        next.active = false;
-        next.decorationId = null;
-        next.range = { from: 0, to: 0 };
-        next.query = null;
-        next.text = null;
-        next.dismissedRange = prev.active ? { ...prev.range } : prev.dismissedRange;
-        return next;
-      }
-      next.composing = composing;
-      if (transaction.docChanged && next.dismissedRange !== null) {
-        next.dismissedRange = {
-          from: transaction.mapping.map(next.dismissedRange.from),
-          to: transaction.mapping.map(next.dismissedRange.to)
-        };
-      }
-      if (isEditable && (empty2 || editor.view.composing)) {
-        if ((from2 < prev.range.from || from2 > prev.range.to) && !composing && !prev.composing) {
-          next.active = false;
-        }
-        const match = findSuggestionMatch2({
-          char,
-          allowSpaces: effectiveAllowSpaces,
-          allowToIncludeChar,
-          allowedPrefixes,
-          startOfLine,
-          $position: selection.$from
-        });
-        const decorationId = `id_${Math.floor(Math.random() * 4294967295)}`;
-        if (match && allow({
-          editor,
-          state: state2,
-          range: match.range,
-          isActive: prev.active
-        }) && (!shouldShow || shouldShow({
-          editor,
-          range: match.range,
-          query: match.query,
-          text: match.text,
-          transaction
-        }))) {
-          if (next.dismissedRange !== null && !shouldKeepDismissed2({
-            match,
-            dismissedRange: next.dismissedRange,
-            state: state2,
-            transaction
-          })) {
-            next.dismissedRange = null;
-          }
-          if (next.dismissedRange === null) {
-            next.active = true;
-            next.decorationId = prev.decorationId || decorationId;
-            next.range = match.range;
-            next.query = match.query;
-            next.text = match.text;
-          } else {
-            next.active = false;
-          }
-        } else {
-          if (!match) {
-            next.dismissedRange = null;
-          }
-          next.active = false;
-        }
-      } else {
-        next.active = false;
-      }
-      if (!next.active) {
-        next.decorationId = null;
-        next.range = { from: 0, to: 0 };
-        next.query = null;
-        next.text = null;
-      }
-      return next;
-    }
-  };
-}
-function createSuggestionAsyncRequestManager({
-  editor,
-  items
-}) {
-  let abortController = null;
-  let debounceTimer = null;
-  let debounceResolve = null;
-  const clearDebounceTimer = () => {
-    if (debounceTimer !== null) {
-      clearTimeout(debounceTimer);
-      debounceTimer = null;
-    }
-    debounceResolve == null ? void 0 : debounceResolve();
-    debounceResolve = null;
-  };
-  const waitForDebounce = (delay) => {
-    return new Promise((resolve2) => {
-      debounceResolve = resolve2;
-      debounceTimer = setTimeout(() => {
-        debounceTimer = null;
-        const pendingResolve = debounceResolve;
-        debounceResolve = null;
-        pendingResolve == null ? void 0 : pendingResolve();
-      }, delay);
-    });
-  };
-  const abort = () => {
-    abortController == null ? void 0 : abortController.abort();
-    clearDebounceTimer();
-    abortController = null;
-  };
-  const fetch2 = async (query, debounce2) => {
-    abort();
-    abortController = new AbortController();
-    const controller = abortController;
-    if (debounce2 > 0) {
-      await waitForDebounce(debounce2);
-    }
-    if (abortController !== controller || controller.signal.aborted) {
-      return { status: "aborted" };
-    }
-    try {
-      const result = await items({
-        editor,
-        query,
-        signal: controller.signal
-      });
-      if (abortController !== controller || controller.signal.aborted) {
-        return { status: "aborted" };
-      }
-      return { status: "resolved", items: result };
-    } catch {
-      if (abortController !== controller || controller.signal.aborted) {
-        return { status: "aborted" };
-      }
-      return { status: "error" };
-    }
-  };
-  return {
-    abort,
-    fetch: fetch2
-  };
-}
-function createSuggestionFloatingUiConfig({
-  placement,
-  offset: offset2,
-  flip: flip2,
-  floatingUi
-}) {
-  var _a2, _b2, _c, _d;
-  const middleware = [
-    offset$2({
-      mainAxis: (_a2 = offset2.mainAxis) != null ? _a2 : 4,
-      crossAxis: (_b2 = offset2.crossAxis) != null ? _b2 : 0
-    })
-  ];
-  if (flip2) {
-    middleware.push(flip$2());
-  }
-  if ((_c = floatingUi == null ? void 0 : floatingUi.middleware) == null ? void 0 : _c.length) {
-    middleware.push(...floatingUi.middleware);
-  }
-  return {
-    placement,
-    strategy: (_d = floatingUi == null ? void 0 : floatingUi.strategy) != null ? _d : "absolute",
-    middleware
-  };
-}
-function resolveContainer(container) {
-  if (container instanceof HTMLElement) {
-    return container;
-  }
-  if (typeof container === "string") {
-    try {
-      const found2 = document.querySelector(container);
-      if (found2) {
-        return found2;
-      }
-    } catch {
-      return document.body;
-    }
-  }
-  return document.body;
-}
-function createMount({
-  getReferenceRect,
-  contextElement,
-  config: config2,
-  container,
-  dismissOnOutsideClick,
-  dismiss
-}) {
-  return (element, options = {}) => {
-    const reference2 = {
-      getBoundingClientRect: () => {
-        var _a2;
-        return (_a2 = getReferenceRect()) != null ? _a2 : new DOMRect();
-      },
-      contextElement
-    };
-    let positioned = false;
-    const mountedByUs = !element.isConnected;
-    if (mountedByUs) {
-      resolveContainer(container).appendChild(element);
-    }
-    if (!options.onPosition) {
-      element.style.visibility = "hidden";
-      element.style.width = "max-content";
-    }
-    const update = () => {
-      computePosition(reference2, element, {
-        placement: config2.placement,
-        strategy: config2.strategy,
-        middleware: config2.middleware
-      }).then(({ x, y, placement, strategy }) => {
-        if (options.onPosition) {
-          options.onPosition({ x, y, placement, strategy });
-          return;
-        }
-        Object.assign(element.style, {
-          position: strategy,
-          left: `${x}px`,
-          top: `${y}px`
-        });
-        if (!positioned) {
-          positioned = true;
-          element.style.visibility = "";
-        }
-      });
-    };
-    const cleanupAutoUpdate = autoUpdate(reference2, element, update, options.autoUpdate);
-    let onOutsidePointerDown;
-    if (dismissOnOutsideClick) {
-      onOutsidePointerDown = (event) => {
-        const target = event.target;
-        if (!(target instanceof Node) || element.contains(target) || contextElement.contains(target)) {
-          return;
-        }
-        dismiss();
-      };
-      document.addEventListener("pointerdown", onOutsidePointerDown, true);
-    }
-    return () => {
-      cleanupAutoUpdate();
-      if (onOutsidePointerDown) {
-        document.removeEventListener("pointerdown", onOutsidePointerDown, true);
-      }
-      if (mountedByUs) {
-        element.remove();
-      }
-    };
-  };
-}
-function createSuggestionView({
-  editor,
-  pluginKey,
-  items,
-  renderer: renderer2,
-  minQueryLength,
-  debounce: debounce2,
-  initialItems,
-  placement,
-  offset: offsetOption,
-  container,
-  flip: flip2,
-  floatingUi,
-  dismissOnOutsideClick,
-  command: command2,
-  clientRectFor: clientRectFor2,
-  dispatchExit: dispatchExit2
-}) {
-  let props;
-  const asyncRequest = createSuggestionAsyncRequestManager({
-    editor,
-    items
-  });
-  const floatingUiConfig = createSuggestionFloatingUiConfig({
-    placement,
-    offset: offsetOption,
-    flip: flip2,
-    floatingUi
-  });
-  function dispatchStateUpdate(state2, dispatchProps) {
-    var _a2, _b2, _c;
-    switch (state2) {
-      case "started":
-        (_a2 = renderer2 == null ? void 0 : renderer2.onStart) == null ? void 0 : _a2.call(renderer2, dispatchProps);
-        break;
-      case "updated":
-        (_b2 = renderer2 == null ? void 0 : renderer2.onUpdate) == null ? void 0 : _b2.call(renderer2, dispatchProps);
-        break;
-      case "stopped":
-        (_c = renderer2 == null ? void 0 : renderer2.onExit) == null ? void 0 : _c.call(renderer2, dispatchProps);
-        break;
-    }
-  }
-  return {
-    update: async (view, prevState) => {
-      var _a2, _b2, _c, _d;
-      const prev = pluginKey.getState(prevState);
-      const next = pluginKey.getState(view.state);
-      if (!prev || !next) {
-        return;
-      }
-      let currentState = null;
-      const queryChanged = prev.query !== next.query;
-      const textChanged = prev.text !== next.text;
-      const rangeChanged = prev.range.from !== next.range.from || prev.range.to !== next.range.to;
-      const effectiveQueryChanged = queryChanged || textChanged || rangeChanged;
-      if (!prev.active && next.active) {
-        currentState = "started";
-      } else if (prev.active && !next.active) {
-        currentState = "stopped";
-      } else if (next.active && effectiveQueryChanged) {
-        currentState = "updated";
-      } else {
-        return;
-      }
-      const state2 = currentState === "stopped" ? prev : next;
-      const decorationNode = view.dom.querySelector(`[data-decoration-id="${state2.decorationId}"]`);
-      const clientRect2 = clientRectFor2(view, decorationNode);
-      const exceedsMinQueryLength = minQueryLength === 0 || (state2.query ? state2.query.length >= minQueryLength : false);
-      const willFetch = (currentState === "started" || currentState === "updated") && exceedsMinQueryLength;
-      props = {
-        editor,
-        range: state2.range,
-        query: state2.query || "",
-        text: state2.text || "",
-        items: initialItems != null ? initialItems : [],
-        command: (commandProps) => {
-          return command2({
-            editor,
-            range: state2.range,
-            props: commandProps
-          });
-        },
-        decorationNode,
-        clientRect: clientRect2,
-        loading: willFetch,
-        placement,
-        offset: { mainAxis: (_a2 = offsetOption.mainAxis) != null ? _a2 : 4, crossAxis: (_b2 = offsetOption.crossAxis) != null ? _b2 : 0 },
-        container,
-        flip: flip2,
-        floatingUi: floatingUiConfig,
-        mount: createMount({
-          getReferenceRect: clientRect2,
-          contextElement: view.dom,
-          config: floatingUiConfig,
-          container,
-          dismissOnOutsideClick,
-          dismiss: () => dispatchExit2(editor.view)
-        })
-      };
-      if (currentState === "started") {
-        (_c = renderer2 == null ? void 0 : renderer2.onBeforeStart) == null ? void 0 : _c.call(renderer2, props);
-      }
-      if (currentState === "updated") {
-        (_d = renderer2 == null ? void 0 : renderer2.onBeforeUpdate) == null ? void 0 : _d.call(renderer2, props);
-      }
-      if (currentState === "started") {
-        dispatchStateUpdate(currentState, props);
-      }
-      if (currentState === "started" || currentState === "updated") {
-        if (!willFetch) {
-          asyncRequest.abort();
-          props = { ...props, items: initialItems != null ? initialItems : [], loading: false };
-        } else {
-          props = { ...props, items: initialItems != null ? initialItems : [], loading: true };
-          currentState = "updated";
-          dispatchStateUpdate(currentState, props);
-          const result = await asyncRequest.fetch(state2.query || "", debounce2);
-          if (result.status === "aborted") {
-            return;
-          }
-          const currentPluginState = pluginKey.getState(view.state);
-          if (!(currentPluginState == null ? void 0 : currentPluginState.active)) {
-            asyncRequest.abort();
-            return;
-          }
-          props = result.status === "resolved" ? {
-            ...props,
-            items: result.items,
-            loading: false
-          } : {
-            ...props,
-            loading: false
-          };
-        }
-      }
-      if (currentState === "stopped") {
-        asyncRequest.abort();
-        dispatchStateUpdate(currentState, props);
-        props = void 0;
-        return;
-      }
-      if (currentState === "updated") {
-        dispatchStateUpdate(currentState, props);
-      }
-    },
-    destroy: () => {
-      var _a2;
-      asyncRequest.abort();
-      if (!props) {
-        return;
-      }
-      (_a2 = renderer2 == null ? void 0 : renderer2.onExit) == null ? void 0 : _a2.call(renderer2, props);
-    }
-  };
-}
 var SuggestionPluginKey = new PluginKey("suggestion");
 function Suggestion({
   pluginKey = SuggestionPluginKey,
@@ -116182,79 +115662,294 @@ function Suggestion({
   decorationEmptyClass = "is-empty",
   command: command2 = () => null,
   items = () => [],
-  minQueryLength = 0,
-  debounce: debounce2 = 0,
-  initialItems,
-  placement = "bottom-start",
-  offset: offsetOption = {},
-  container,
-  flip: flip2 = true,
-  floatingUi,
-  dismissOnOutsideClick = true,
   render: render2 = () => ({}),
   allow = () => true,
   findSuggestionMatch: findSuggestionMatch2 = findSuggestionMatch,
   shouldShow,
   shouldResetDismissed
 }) {
+  let props;
   const renderer2 = render2 == null ? void 0 : render2();
   const effectiveAllowSpaces = allowSpaces && !allowToIncludeChar;
-  const clientRectFor2 = (view, decorationNode) => clientRectFor(editor, view, decorationNode, pluginKey);
-  function shouldKeepDismissed2(props) {
-    return shouldKeepDismissed({
-      ...props,
+  const getAnchorClientRect = () => {
+    const pos = editor.state.selection.$anchor.pos;
+    const coords = editor.view.coordsAtPos(pos);
+    const { top: top2, right: right2, bottom: bottom2, left: left2 } = coords;
+    try {
+      return new DOMRect(left2, top2, right2 - left2, bottom2 - top2);
+    } catch {
+      return null;
+    }
+  };
+  const clientRectFor = (view, decorationNode) => {
+    if (!decorationNode) {
+      return getAnchorClientRect;
+    }
+    return () => {
+      const state2 = pluginKey.getState(editor.state);
+      const decorationId = state2 == null ? void 0 : state2.decorationId;
+      const currentDecorationNode = view.dom.querySelector(`[data-decoration-id="${decorationId}"]`);
+      return (currentDecorationNode == null ? void 0 : currentDecorationNode.getBoundingClientRect()) || null;
+    };
+  };
+  const shouldKeepDismissed = ({
+    match,
+    dismissedRange,
+    state: state2,
+    transaction
+  }) => {
+    if (shouldResetDismissed == null ? void 0 : shouldResetDismissed({
       editor,
-      shouldResetDismissed,
-      effectiveAllowSpaces
-    });
+      state: state2,
+      range: dismissedRange,
+      match,
+      transaction,
+      allowSpaces: effectiveAllowSpaces
+    })) {
+      return false;
+    }
+    if (effectiveAllowSpaces) {
+      return match.range.from === dismissedRange.from;
+    }
+    return match.range.from === dismissedRange.from && !hasInsertedWhitespace(transaction);
+  };
+  function dispatchExit(view, pluginKeyRef) {
+    var _a2;
+    try {
+      const state2 = pluginKey.getState(view.state);
+      const decorationNode = (state2 == null ? void 0 : state2.decorationId) ? view.dom.querySelector(`[data-decoration-id="${state2.decorationId}"]`) : null;
+      const exitProps = {
+        // @ts-ignore editor is available in closure
+        editor,
+        range: (state2 == null ? void 0 : state2.range) || { from: 0, to: 0 },
+        query: (state2 == null ? void 0 : state2.query) || null,
+        text: (state2 == null ? void 0 : state2.text) || null,
+        items: [],
+        command: (commandProps) => {
+          return command2({
+            editor,
+            range: (state2 == null ? void 0 : state2.range) || { from: 0, to: 0 },
+            props: commandProps
+          });
+        },
+        decorationNode,
+        clientRect: clientRectFor(view, decorationNode)
+      };
+      (_a2 = renderer2 == null ? void 0 : renderer2.onExit) == null ? void 0 : _a2.call(renderer2, exitProps);
+    } catch {
+    }
+    const tr2 = view.state.tr.setMeta(pluginKeyRef, { exit: true });
+    view.dispatch(tr2);
   }
-  const dispatchExit2 = (view) => dispatchExit({
-    view,
-    pluginKeyRef: pluginKey
-  });
-  return new Plugin({
+  const plugin = new Plugin({
     key: pluginKey,
-    view: () => createSuggestionView({
-      editor,
-      pluginKey,
-      items,
-      renderer: renderer2,
-      minQueryLength,
-      debounce: debounce2,
-      initialItems,
-      placement,
-      offset: offsetOption,
-      container,
-      flip: flip2,
-      floatingUi,
-      dismissOnOutsideClick,
-      command: command2,
-      clientRectFor: clientRectFor2,
-      dispatchExit: dispatchExit2
-    }),
-    state: createSuggestionState({
-      editor,
-      char,
-      effectiveAllowSpaces,
-      allowToIncludeChar,
-      allowedPrefixes,
-      startOfLine,
-      findSuggestionMatch: findSuggestionMatch2,
-      allow,
-      shouldShow,
-      shouldKeepDismissed: shouldKeepDismissed2,
-      pluginKey
-    }),
-    props: createSuggestionProps({
-      pluginKey,
-      decorationTag,
-      decorationClass,
-      decorationContent,
-      decorationEmptyClass,
-      renderer: renderer2,
-      dispatchExit: dispatchExit2
-    })
+    view() {
+      return {
+        update: async (view, prevState) => {
+          var _a2, _b2, _c, _d, _e2, _f, _g;
+          const prev = (_a2 = this.key) == null ? void 0 : _a2.getState(prevState);
+          const next = (_b2 = this.key) == null ? void 0 : _b2.getState(view.state);
+          const moved = prev.active && next.active && prev.range.from !== next.range.from;
+          const started = !prev.active && next.active;
+          const stopped = prev.active && !next.active;
+          const changed = !started && !stopped && prev.query !== next.query;
+          const handleStart = started || moved && changed;
+          const handleChange = changed || moved;
+          const handleExit = stopped || moved && changed;
+          if (!handleStart && !handleChange && !handleExit) {
+            return;
+          }
+          const state2 = handleExit && !handleStart ? prev : next;
+          const decorationNode = view.dom.querySelector(
+            `[data-decoration-id="${state2.decorationId}"]`
+          );
+          props = {
+            editor,
+            range: state2.range,
+            query: state2.query,
+            text: state2.text,
+            items: [],
+            command: (commandProps) => {
+              return command2({
+                editor,
+                range: state2.range,
+                props: commandProps
+              });
+            },
+            decorationNode,
+            clientRect: clientRectFor(view, decorationNode)
+          };
+          if (handleStart) {
+            (_c = renderer2 == null ? void 0 : renderer2.onBeforeStart) == null ? void 0 : _c.call(renderer2, props);
+          }
+          if (handleChange) {
+            (_d = renderer2 == null ? void 0 : renderer2.onBeforeUpdate) == null ? void 0 : _d.call(renderer2, props);
+          }
+          if (handleChange || handleStart) {
+            props.items = await items({
+              editor,
+              query: state2.query
+            });
+          }
+          if (handleExit) {
+            (_e2 = renderer2 == null ? void 0 : renderer2.onExit) == null ? void 0 : _e2.call(renderer2, props);
+          }
+          if (handleChange) {
+            (_f = renderer2 == null ? void 0 : renderer2.onUpdate) == null ? void 0 : _f.call(renderer2, props);
+          }
+          if (handleStart) {
+            (_g = renderer2 == null ? void 0 : renderer2.onStart) == null ? void 0 : _g.call(renderer2, props);
+          }
+        },
+        destroy: () => {
+          var _a2;
+          if (!props) {
+            return;
+          }
+          (_a2 = renderer2 == null ? void 0 : renderer2.onExit) == null ? void 0 : _a2.call(renderer2, props);
+        }
+      };
+    },
+    state: {
+      // Initialize the plugin's internal state.
+      init() {
+        const state2 = {
+          active: false,
+          range: {
+            from: 0,
+            to: 0
+          },
+          query: null,
+          text: null,
+          composing: false,
+          dismissedRange: null
+        };
+        return state2;
+      },
+      // Apply changes to the plugin state from a view transaction.
+      apply(transaction, prev, _oldState, state2) {
+        const { isEditable } = editor;
+        const { composing } = editor.view;
+        const { selection } = transaction;
+        const { empty: empty2, from: from2 } = selection;
+        const next = { ...prev };
+        const meta = transaction.getMeta(pluginKey);
+        if (meta && meta.exit) {
+          next.active = false;
+          next.decorationId = null;
+          next.range = { from: 0, to: 0 };
+          next.query = null;
+          next.text = null;
+          next.dismissedRange = prev.active ? { ...prev.range } : prev.dismissedRange;
+          return next;
+        }
+        next.composing = composing;
+        if (transaction.docChanged && next.dismissedRange !== null) {
+          next.dismissedRange = {
+            from: transaction.mapping.map(next.dismissedRange.from),
+            to: transaction.mapping.map(next.dismissedRange.to)
+          };
+        }
+        if (isEditable && (empty2 || editor.view.composing)) {
+          if ((from2 < prev.range.from || from2 > prev.range.to) && !composing && !prev.composing) {
+            next.active = false;
+          }
+          const match = findSuggestionMatch2({
+            char,
+            allowSpaces,
+            allowToIncludeChar,
+            allowedPrefixes,
+            startOfLine,
+            $position: selection.$from
+          });
+          const decorationId = `id_${Math.floor(Math.random() * 4294967295)}`;
+          if (match && allow({
+            editor,
+            state: state2,
+            range: match.range,
+            isActive: prev.active
+          }) && (!shouldShow || shouldShow({
+            editor,
+            range: match.range,
+            query: match.query,
+            text: match.text,
+            transaction
+          }))) {
+            if (next.dismissedRange !== null && !shouldKeepDismissed({
+              match,
+              dismissedRange: next.dismissedRange,
+              state: state2,
+              transaction
+            })) {
+              next.dismissedRange = null;
+            }
+            if (next.dismissedRange === null) {
+              next.active = true;
+              next.decorationId = prev.decorationId ? prev.decorationId : decorationId;
+              next.range = match.range;
+              next.query = match.query;
+              next.text = match.text;
+            } else {
+              next.active = false;
+            }
+          } else {
+            if (!match) {
+              next.dismissedRange = null;
+            }
+            next.active = false;
+          }
+        } else {
+          next.active = false;
+        }
+        if (!next.active) {
+          next.decorationId = null;
+          next.range = { from: 0, to: 0 };
+          next.query = null;
+          next.text = null;
+        }
+        return next;
+      }
+    },
+    props: {
+      // Call the keydown hook if suggestion is active.
+      handleKeyDown(view, event) {
+        var _a2, _b2;
+        const { active: active2, range } = plugin.getState(view.state);
+        if (!active2) {
+          return false;
+        }
+        if (event.key === "Escape" || event.key === "Esc") {
+          const state2 = plugin.getState(view.state);
+          (_a2 = renderer2 == null ? void 0 : renderer2.onKeyDown) == null ? void 0 : _a2.call(renderer2, { view, event, range: state2.range });
+          dispatchExit(view, pluginKey);
+          return true;
+        }
+        const handled = ((_b2 = renderer2 == null ? void 0 : renderer2.onKeyDown) == null ? void 0 : _b2.call(renderer2, { view, event, range })) || false;
+        return handled;
+      },
+      // Setup decorator on the currently active suggestion.
+      decorations(state2) {
+        const { active: active2, range, decorationId, query } = plugin.getState(state2);
+        if (!active2) {
+          return null;
+        }
+        const isEmpty = !(query == null ? void 0 : query.length);
+        const classNames = [decorationClass];
+        if (isEmpty) {
+          classNames.push(decorationEmptyClass);
+        }
+        return DecorationSet.create(state2.doc, [
+          Decoration.inline(range.from, range.to, {
+            nodeName: decorationTag,
+            class: classNames.join(" "),
+            "data-decoration-id": decorationId,
+            "data-decoration-content": decorationContent
+          })
+        ]);
+      }
+    }
   });
+  return plugin;
 }
 function getSuggestionOptions({
   editor: tiptapEditor,
@@ -116565,7 +116260,6 @@ class DropCursorView {
     this.cursorPos = null;
     this.element = null;
     this.timeout = -1;
-    this.lastDragEvent = null;
     this.width = (_a2 = options.width) !== null && _a2 !== void 0 ? _a2 : 1;
     this.color = options.color === false ? void 0 : options.color || "black";
     this.class = options.class;
@@ -116582,15 +116276,10 @@ class DropCursorView {
   }
   update(editorView, prevState) {
     if (this.cursorPos != null && prevState.doc != editorView.state.doc) {
-      if (this.lastDragEvent) {
-        let target = this.computeTarget(this.lastDragEvent);
-        if (target == this.cursorPos)
-          this.updateOverlay();
-        else
-          this.setCursor(target);
-      } else {
+      if (this.cursorPos > editorView.state.doc.content.size)
+        this.setCursor(null);
+      else
         this.updateOverlay();
-      }
     }
   }
   setCursor(pos) {
@@ -116659,27 +116348,20 @@ class DropCursorView {
     clearTimeout(this.timeout);
     this.timeout = setTimeout(() => this.setCursor(null), timeout);
   }
-  computeTarget(event) {
+  dragover(event) {
+    if (!this.editorView.editable)
+      return;
     let pos = this.editorView.posAtCoords({ left: event.clientX, top: event.clientY });
     let node = pos && pos.inside >= 0 && this.editorView.state.doc.nodeAt(pos.inside);
     let disableDropCursor = node && node.type.spec.disableDropCursor;
     let disabled = typeof disableDropCursor == "function" ? disableDropCursor(this.editorView, pos, event) : disableDropCursor;
-    if (!pos || disabled)
-      return null;
-    let target = pos.pos;
-    if (this.editorView.dragging && this.editorView.dragging.slice) {
-      let point = dropPoint(this.editorView.state.doc, target, this.editorView.dragging.slice);
-      if (point != null)
-        target = point;
-    }
-    return target;
-  }
-  dragover(event) {
-    if (!this.editorView.editable)
-      return;
-    this.lastDragEvent = event;
-    let target = this.computeTarget(event);
-    if (target != null) {
+    if (pos && !disabled) {
+      let target = pos.pos;
+      if (this.editorView.dragging && this.editorView.dragging.slice) {
+        let point = dropPoint(this.editorView.state.doc, target, this.editorView.dragging.slice);
+        if (point != null)
+          target = point;
+      }
       this.setCursor(target);
       this.scheduleRemoval(5e3);
     }
@@ -117627,6 +117309,7 @@ Extension.create({
 });
 var DEFAULT_DATA_ATTRIBUTE = "placeholder";
 var PLUGIN_KEY = new PluginKey("tiptap__placeholder");
+var VIEWPORT_OVERSCAN_PX = 200;
 function createPlaceholderDecoration(options) {
   const {
     editor,
@@ -117655,50 +117338,6 @@ function createPlaceholderDecoration(options) {
 function resolveEmptyNodeClass(emptyNodeClass, props) {
   return typeof emptyNodeClass === "function" ? emptyNodeClass(props) : emptyNodeClass;
 }
-function scanRangeForDecorations({
-  editor,
-  options,
-  dataAttribute,
-  doc: doc2,
-  selection,
-  from: from2,
-  to
-}) {
-  const { anchor: anchor2 } = selection;
-  const decorations = [];
-  const isEmptyDoc = editor.isEmpty;
-  doc2.nodesBetween(from2, to, (node, pos) => {
-    const hasAnchor = anchor2 >= pos && anchor2 <= pos + node.nodeSize;
-    const isEmpty = !node.isLeaf && isNodeEmpty(node);
-    if (!node.type.isTextblock) {
-      return options.includeChildren;
-    }
-    if ((hasAnchor || !options.showOnlyCurrent) && isEmpty) {
-      decorations.push(
-        createPlaceholderDecoration({
-          editor,
-          isEmptyDoc,
-          dataAttribute,
-          hasAnchor,
-          placeholder: options.placeholder,
-          classes: {
-            emptyEditor: options.emptyEditorClass,
-            emptyNode: resolveEmptyNodeClass(options.emptyNodeClass, {
-              editor,
-              node,
-              pos,
-              hasAnchor
-            })
-          },
-          node,
-          pos
-        })
-      );
-    }
-    return options.includeChildren;
-  });
-  return decorations;
-}
 function buildPlaceholderDecorations({
   editor,
   options,
@@ -117706,6 +117345,7 @@ function buildPlaceholderDecorations({
   doc: doc2,
   selection
 }) {
+  var _a2, _b2;
   const active2 = editor.isEditable || !options.showOnlyWhenEditable;
   if (!active2) {
     return null;
@@ -117742,204 +117382,179 @@ function buildPlaceholderDecorations({
       );
     }
   } else {
-    decorations.push(
-      ...scanRangeForDecorations({
-        editor,
-        options,
-        dataAttribute,
-        doc: doc2,
-        selection,
-        from: 0,
-        to: doc2.content.size
-      })
-    );
+    const pluginState = PLUGIN_KEY.getState(editor.state);
+    const from2 = (_a2 = pluginState == null ? void 0 : pluginState.topPos) != null ? _a2 : 0;
+    const to = (_b2 = pluginState == null ? void 0 : pluginState.bottomPos) != null ? _b2 : doc2.content.size;
+    doc2.nodesBetween(from2, to, (node, pos) => {
+      const hasAnchor = anchor2 >= pos && anchor2 <= pos + node.nodeSize;
+      const isEmpty = !node.isLeaf && isNodeEmpty(node);
+      if (!node.type.isTextblock) {
+        return options.includeChildren;
+      }
+      if ((hasAnchor || !options.showOnlyCurrent) && isEmpty) {
+        decorations.push(
+          createPlaceholderDecoration({
+            editor,
+            isEmptyDoc,
+            dataAttribute,
+            hasAnchor,
+            placeholder: options.placeholder,
+            classes: {
+              emptyEditor: options.emptyEditorClass,
+              emptyNode: resolveEmptyNodeClass(options.emptyNodeClass, {
+                editor,
+                node,
+                pos,
+                hasAnchor
+              })
+            },
+            node,
+            pos
+          })
+        );
+      }
+      return options.includeChildren;
+    });
   }
   return DecorationSet.create(doc2, decorations);
-}
-function resolveTopLevelRange(doc2, pos) {
-  var _a2;
-  const resolved = doc2.resolve(pos);
-  if (resolved.depth === 0) {
-    const node2 = (_a2 = resolved.nodeAfter) != null ? _a2 : resolved.nodeBefore;
-    if (!node2) {
-      return { from: pos, to: pos };
-    }
-    const nodePos = resolved.nodeAfter ? pos : pos - node2.nodeSize;
-    return { from: nodePos, to: nodePos + node2.nodeSize };
-  }
-  const topLevelPos = resolved.before(1);
-  const node = resolved.node(1);
-  return { from: topLevelPos, to: topLevelPos + node.nodeSize };
-}
-function toContentRelativeRange(doc2, range) {
-  return {
-    from: Math.max(0, range.from - 1),
-    to: Math.min(doc2.content.size, range.to - 1)
-  };
-}
-function getTopLevelBlocksInRange(doc2, from2, to) {
-  const ranges = [];
-  doc2.forEach((node, offset2) => {
-    const nodeStart = offset2;
-    const nodeEnd = nodeStart + node.nodeSize;
-    const absNodeStart = nodeStart + 1;
-    const absNodeEnd = nodeEnd + 1;
-    if (absNodeStart < to && absNodeEnd > from2) {
-      ranges.push({ from: nodeStart, to: nodeEnd });
-    }
-  });
-  return ranges;
-}
-function mergeRanges(ranges) {
-  if (ranges.length === 0) {
-    return [];
-  }
-  const sorted = [...ranges].sort((a2, b) => a2.from - b.from);
-  const merged = [{ ...sorted[0] }];
-  for (let i = 1; i < sorted.length; i += 1) {
-    const last = merged[merged.length - 1];
-    const current = sorted[i];
-    if (current.from <= last.to) {
-      last.to = Math.max(last.to, current.to);
-    } else {
-      merged.push({ ...current });
-    }
-  }
-  return merged;
-}
-function collectBlocksForChange(doc2, change) {
-  const ranges = getTopLevelBlocksInRange(doc2, change.from, change.to);
-  ranges.push(toContentRelativeRange(doc2, resolveTopLevelRange(doc2, change.from)));
-  if (change.to > change.from) {
-    ranges.push(
-      toContentRelativeRange(
-        doc2,
-        resolveTopLevelRange(doc2, Math.min(change.to, doc2.content.size + 1) - 1)
-      )
-    );
-  } else if (change.from < doc2.content.size + 1) {
-    ranges.push(
-      toContentRelativeRange(
-        doc2,
-        resolveTopLevelRange(doc2, Math.min(change.from + 1, doc2.content.size))
-      )
-    );
-  }
-  return ranges;
-}
-function collectRescanRanges(tr2, oldState, newState) {
-  const ranges = [];
-  if (tr2.docChanged) {
-    const changes = getChangedRanges(tr2);
-    for (const change of changes) {
-      ranges.push(...collectBlocksForChange(newState.doc, change.newRange));
-    }
-  }
-  if (tr2.selectionSet) {
-    ranges.push(
-      toContentRelativeRange(
-        newState.doc,
-        resolveTopLevelRange(newState.doc, tr2.mapping.map(oldState.selection.anchor))
-      )
-    );
-    ranges.push(
-      toContentRelativeRange(
-        newState.doc,
-        resolveTopLevelRange(newState.doc, newState.selection.anchor)
-      )
-    );
-  }
-  return mergeRanges(ranges);
-}
-function clampRange$1(from2, to, doc2) {
-  const clampedFrom = Math.max(0, Math.min(from2, doc2.content.size));
-  const clampedTo = Math.max(clampedFrom, Math.min(to, doc2.content.size));
-  return { from: clampedFrom, to: clampedTo };
-}
-function updateDecorationsInRanges({
-  decorations,
-  ranges,
-  editor,
-  options,
-  dataAttribute,
-  doc: doc2,
-  selection
-}) {
-  let next = decorations;
-  for (const range of ranges) {
-    const { from: from2, to } = clampRange$1(range.from, range.to, doc2);
-    const existing = next.find(from2, to).filter((decoration) => decoration.from >= from2 && decoration.to <= to);
-    if (existing.length) {
-      next = next.remove(existing);
-    }
-    const newDecos = scanRangeForDecorations({
-      editor,
-      options,
-      dataAttribute,
-      doc: doc2,
-      selection,
-      from: from2,
-      to
-    });
-    if (newDecos.length) {
-      next = next.add(doc2, newDecos);
-    }
-  }
-  return next;
-}
-function createPlaceholderStateField({
-  editor,
-  options,
-  dataAttribute
-}) {
-  return {
-    init(_config, state2) {
-      const decorations = buildPlaceholderDecorations({
-        editor,
-        options,
-        dataAttribute,
-        doc: state2.doc,
-        selection: state2.selection
-      });
-      return decorations != null ? decorations : DecorationSet.empty;
-    },
-    apply(tr2, prev, oldState, newState) {
-      if (!tr2.docChanged && !tr2.selectionSet) {
-        return prev;
-      }
-      const mapped = prev.map(tr2.mapping, tr2.doc);
-      const ranges = collectRescanRanges(tr2, oldState, newState);
-      return updateDecorationsInRanges({
-        decorations: mapped,
-        ranges,
-        editor,
-        options,
-        dataAttribute,
-        doc: newState.doc,
-        selection: newState.selection
-      });
-    }
-  };
 }
 function preparePlaceholderAttribute(attr) {
   return attr.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-]/g, "").replace(/^[0-9-]+/, "").replace(/^-+/, "").toLowerCase();
 }
+function isScrollable(el2) {
+  const style2 = getComputedStyle(el2);
+  const overflow = `${style2.overflow} ${style2.overflowY} ${style2.overflowX}`;
+  return /auto|scroll|overlay/.test(overflow);
+}
+function findScrollParent(element) {
+  let el2 = element;
+  while (el2) {
+    if (isScrollable(el2)) {
+      return el2;
+    }
+    const parent = el2.parentElement;
+    if (!parent) {
+      const root = el2.getRootNode();
+      if (root instanceof ShadowRoot) {
+        el2 = root.host;
+        continue;
+      }
+      return window;
+    }
+    el2 = parent;
+  }
+  return window;
+}
+function getContainerRect(container) {
+  if (container === window) {
+    return { top: 0, bottom: window.innerHeight };
+  }
+  return container.getBoundingClientRect();
+}
+function getViewportBoundaryPositions({
+  doc: doc2,
+  view,
+  scrollContainer
+}) {
+  const editorRect = view.dom.getBoundingClientRect();
+  const containerRect = scrollContainer ? getContainerRect(scrollContainer) : { top: 0, bottom: window.innerHeight };
+  const visibleTop = Math.max(editorRect.top, containerRect.top) - VIEWPORT_OVERSCAN_PX;
+  const visibleBottom = Math.min(editorRect.bottom, containerRect.bottom) + VIEWPORT_OVERSCAN_PX;
+  if (visibleTop >= visibleBottom) {
+    return { top: 0, bottom: doc2.content.size };
+  }
+  const isRTL2 = getComputedStyle(view.dom).direction === "rtl";
+  const x = isRTL2 ? Math.max(editorRect.right - 2, editorRect.left + 2) : editorRect.left + 2;
+  const topPos = view.posAtCoords({ left: x, top: visibleTop + 2 });
+  const bottomPos = view.posAtCoords({ left: x, top: visibleBottom - 2 });
+  return {
+    top: topPos ? topPos.pos : 0,
+    bottom: bottomPos ? bottomPos.pos : doc2.content.size
+  };
+}
+var viewportPluginState = {
+  /**
+   * Initialises the viewport state with no known positions.
+   * @returns The initial viewport state.
+   */
+  init() {
+    return { topPos: null, bottomPos: null };
+  },
+  /**
+   * Updates the viewport state from incoming transactions.
+   * @param tr - The transaction being applied.
+   * @param prev - The previous viewport state.
+   * @returns The next viewport state.
+   */
+  apply(tr2, prev) {
+    const meta = tr2.getMeta(PLUGIN_KEY);
+    if (meta == null ? void 0 : meta.positions) {
+      return { topPos: meta.positions.top, bottomPos: meta.positions.bottom };
+    }
+    if (!tr2.docChanged) {
+      return prev;
+    }
+    return {
+      topPos: prev.topPos !== null ? tr2.mapping.map(prev.topPos) : null,
+      bottomPos: prev.bottomPos !== null ? tr2.mapping.map(prev.bottomPos) : null
+    };
+  }
+};
+function createViewportPluginView(view) {
+  const scrollContainer = findScrollParent(view.dom);
+  const computeAndDispatch = () => {
+    const positions2 = getViewportBoundaryPositions({
+      view,
+      doc: view.state.doc,
+      scrollContainer
+    });
+    const prev = PLUGIN_KEY.getState(view.state);
+    if ((prev == null ? void 0 : prev.topPos) === positions2.top && (prev == null ? void 0 : prev.bottomPos) === positions2.bottom) {
+      return;
+    }
+    const tr2 = view.state.tr.setMeta(PLUGIN_KEY, { positions: positions2 });
+    view.dispatch(tr2);
+  };
+  let frame = null;
+  let lastCompute = 0;
+  const MIN_SCROLL_INTERVAL = 150;
+  const scheduleFrame = () => {
+    if (frame !== null) return;
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      const now2 = performance.now();
+      if (now2 - lastCompute >= MIN_SCROLL_INTERVAL) {
+        lastCompute = now2;
+        computeAndDispatch();
+      } else {
+        scheduleFrame();
+      }
+    });
+  };
+  scrollContainer.addEventListener("scroll", scheduleFrame, { passive: true });
+  computeAndDispatch();
+  return {
+    update(_view, prevState) {
+      if (view.state.doc.content.size !== prevState.doc.content.size) {
+        scheduleFrame();
+      }
+    },
+    destroy: () => {
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
+      scrollContainer.removeEventListener("scroll", scheduleFrame);
+    }
+  };
+}
 function createPlaceholderPlugin({ editor, options }) {
   const dataAttribute = options.dataAttribute ? `data-${preparePlaceholderAttribute(options.dataAttribute)}` : `data-${DEFAULT_DATA_ATTRIBUTE}`;
-  const useResolvedPath = options.showOnlyCurrent && !options.includeChildren;
   return new Plugin({
     key: PLUGIN_KEY,
-    ...useResolvedPath ? {} : {
-      state: createPlaceholderStateField({ editor, options, dataAttribute })
-    },
+    state: viewportPluginState,
+    view: createViewportPluginView,
     props: {
-      decorations: useResolvedPath ? ({ doc: doc2, selection }) => buildPlaceholderDecorations({ editor, options, dataAttribute, doc: doc2, selection }) : (state2) => {
-        var _a2;
-        if (options.showOnlyWhenEditable && !editor.isEditable) {
-          return DecorationSet.empty;
-        }
-        return (_a2 = PLUGIN_KEY.getState(state2)) != null ? _a2 : DecorationSet.empty;
-      }
+      decorations: ({ doc: doc2, selection }) => buildPlaceholderDecorations({ editor, options, dataAttribute, doc: doc2, selection })
     }
   });
 }
@@ -125441,33 +125056,6 @@ var slc$1 = function(v, s, e) {
     e = v.length;
   return new u8$1(v.subarray(s, e));
 };
-var ec$1 = [
-  "unexpected EOF",
-  "invalid block type",
-  "invalid length/literal",
-  "invalid distance",
-  "stream finished",
-  "no stream handler",
-  ,
-  // determined by compression function
-  "no callback",
-  "invalid UTF-8 data",
-  "extra field too long",
-  "date not in range 1980-2099",
-  "filename too long",
-  "stream finishing",
-  "invalid zip data"
-  // determined by unknown compression method
-];
-var err$1 = function(ind, msg, nt2) {
-  var e = new Error(msg || ec$1[ind]);
-  e.code = ind;
-  if (Error.captureStackTrace)
-    Error.captureStackTrace(e, err$1);
-  if (!nt2)
-    throw e;
-  return e;
-};
 var wbits = function(d, p2, v) {
   v <<= p2 & 7;
   var o = p2 / 8 | 0;
@@ -125769,30 +125357,6 @@ var dflt = function(dat, lvl, plvl, pre, post2, st2) {
   }
   return slc$1(o, 0, pre + shft$1(pos) + post2);
 };
-var crct = /* @__PURE__ */ (function() {
-  var t2 = new Int32Array(256);
-  for (var i = 0; i < 256; ++i) {
-    var c2 = i, k2 = 9;
-    while (--k2)
-      c2 = (c2 & 1 && -306674912) ^ c2 >>> 1;
-    t2[i] = c2;
-  }
-  return t2;
-})();
-var crc = function() {
-  var c2 = -1;
-  return {
-    p: function(d) {
-      var cr2 = c2;
-      for (var i = 0; i < d.length; ++i)
-        cr2 = crct[cr2 & 255 ^ d[i]] ^ cr2 >>> 8;
-      c2 = cr2;
-    },
-    d: function() {
-      return ~c2;
-    }
-  };
-};
 var adler = function() {
   var a2 = 1, b = 0;
   return {
@@ -125827,14 +125391,6 @@ var dopt = function(dat, opt, pre, post2, st2) {
   }
   return dflt(dat, opt.level == null ? 6 : opt.level, opt.mem == null ? st2.l ? Math.ceil(Math.max(8, Math.min(13, Math.log(dat.length))) * 1.5) : 20 : 12 + opt.mem, pre, post2, st2);
 };
-var mrg = function(a2, b) {
-  var o = {};
-  for (var k2 in a2)
-    o[k2] = a2[k2];
-  for (var k2 in b)
-    o[k2] = b[k2];
-  return o;
-};
 var wbytes = function(d, b, v) {
   for (; v; ++b)
     d[b] = v, v >>>= 8;
@@ -125849,9 +125405,6 @@ var zlh = function(c2, o) {
     wbytes(c2, 2, h2.d());
   }
 };
-function deflateSync(data, opts) {
-  return dopt(data, opts || {}, 0, 0);
-}
 function zlibSync(data, opts) {
   if (!opts)
     opts = {};
@@ -125860,20 +125413,6 @@ function zlibSync(data, opts) {
   var d = dopt(data, opts, opts.dictionary ? 6 : 2, 4);
   return zlh(d, opts), wbytes(d, d.length - 4, a2.d()), d;
 }
-var fltn = function(d, p2, t2, o) {
-  for (var k2 in d) {
-    var val = d[k2], n = p2 + k2, op = o;
-    if (Array.isArray(val))
-      op = mrg(o, val[1]), val = val[0];
-    if (ArrayBuffer.isView(val))
-      t2[n] = [val, op];
-    else {
-      t2[n += "/"] = [new u8$1(0), op];
-      fltn(val, n, t2, o);
-    }
-  }
-};
-var te$1 = typeof TextEncoder != "undefined" && /* @__PURE__ */ new TextEncoder();
 var td$1 = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
 var tds$1 = 0;
 try {
@@ -125881,142 +125420,6 @@ try {
   tds$1 = 1;
 } catch (e) {
 }
-function strToU8(str2, latin1) {
-  var i;
-  if (te$1)
-    return te$1.encode(str2);
-  var l = str2.length;
-  var ar2 = new u8$1(str2.length + (str2.length >> 1));
-  var ai = 0;
-  var w = function(v) {
-    ar2[ai++] = v;
-  };
-  for (var i = 0; i < l; ++i) {
-    if (ai + 5 > ar2.length) {
-      var n = new u8$1(ai + 8 + (l - i << 1));
-      n.set(ar2);
-      ar2 = n;
-    }
-    var c2 = str2.charCodeAt(i);
-    if (c2 < 128 || latin1)
-      w(c2);
-    else if (c2 < 2048)
-      w(192 | c2 >> 6), w(128 | c2 & 63);
-    else if (c2 > 55295 && c2 < 57344)
-      c2 = 65536 + (c2 & 1023 << 10) | str2.charCodeAt(++i) & 1023, w(240 | c2 >> 18), w(128 | c2 >> 12 & 63), w(128 | c2 >> 6 & 63), w(128 | c2 & 63);
-    else
-      w(224 | c2 >> 12), w(128 | c2 >> 6 & 63), w(128 | c2 & 63);
-  }
-  return slc$1(ar2, 0, ai);
-}
-var exfl = function(ex) {
-  var le2 = 0;
-  if (ex) {
-    for (var k2 in ex) {
-      var l = ex[k2].length;
-      if (l > 65535)
-        err$1(9);
-      le2 += l + 4;
-    }
-  }
-  return le2;
-};
-var wzh = function(d, b, f2, fn3, u, c2, ce2, co) {
-  var fl2 = fn3.length, ex = f2.extra, col = co && co.length;
-  var exl = exfl(ex);
-  wbytes(d, b, ce2 != null ? 33639248 : 67324752), b += 4;
-  if (ce2 != null)
-    d[b++] = 20, d[b++] = f2.os;
-  d[b] = 20, b += 2;
-  d[b++] = f2.flag << 1 | (c2 < 0 && 8), d[b++] = u && 8;
-  d[b++] = f2.compression & 255, d[b++] = f2.compression >> 8;
-  var dt2 = new Date(f2.mtime == null ? Date.now() : f2.mtime), y = dt2.getFullYear() - 1980;
-  if (y < 0 || y > 119)
-    err$1(10);
-  wbytes(d, b, y << 25 | dt2.getMonth() + 1 << 21 | dt2.getDate() << 16 | dt2.getHours() << 11 | dt2.getMinutes() << 5 | dt2.getSeconds() >> 1), b += 4;
-  if (c2 != -1) {
-    wbytes(d, b, f2.crc);
-    wbytes(d, b + 4, c2 < 0 ? -c2 - 2 : c2);
-    wbytes(d, b + 8, f2.size);
-  }
-  wbytes(d, b + 12, fl2);
-  wbytes(d, b + 14, exl), b += 16;
-  if (ce2 != null) {
-    wbytes(d, b, col);
-    wbytes(d, b + 6, f2.attrs);
-    wbytes(d, b + 10, ce2), b += 14;
-  }
-  d.set(fn3, b);
-  b += fl2;
-  if (exl) {
-    for (var k2 in ex) {
-      var exf = ex[k2], l = exf.length;
-      wbytes(d, b, +k2);
-      wbytes(d, b + 2, l);
-      d.set(exf, b + 4), b += 4 + l;
-    }
-  }
-  if (col)
-    d.set(co, b), b += col;
-  return b;
-};
-var wzf = function(o, b, c2, d, e) {
-  wbytes(o, b, 101010256);
-  wbytes(o, b + 8, c2);
-  wbytes(o, b + 10, c2);
-  wbytes(o, b + 12, d);
-  wbytes(o, b + 16, e);
-};
-function zipSync(data, opts) {
-  if (!opts)
-    opts = {};
-  var r2 = {};
-  var files = [];
-  fltn(data, "", r2, opts);
-  var o = 0;
-  var tot = 0;
-  for (var fn3 in r2) {
-    var _a2 = r2[fn3], file = _a2[0], p2 = _a2[1];
-    var compression = p2.level == 0 ? 0 : 8;
-    var f2 = strToU8(fn3), s = f2.length;
-    var com = p2.comment, m = com && strToU8(com), ms = m && m.length;
-    var exl = exfl(p2.extra);
-    if (s > 65535)
-      err$1(11);
-    var d = compression ? deflateSync(file, p2) : file, l = d.length;
-    var c2 = crc();
-    c2.p(file);
-    files.push(mrg(p2, {
-      size: file.length,
-      crc: c2.d(),
-      c: d,
-      f: f2,
-      m,
-      u: s != fn3.length || m && com.length != ms,
-      o,
-      compression
-    }));
-    o += 30 + s + exl + l;
-    tot += 76 + 2 * (s + exl) + (ms || 0) + l;
-  }
-  var out = new u8$1(tot + 22), oe = o, cdl = tot - o;
-  for (var i = 0; i < files.length; ++i) {
-    var f2 = files[i];
-    wzh(out, f2.o, f2, f2.f, f2.u, f2.c.length);
-    var badd = 30 + f2.f.length + exfl(f2.extra);
-    out.set(f2.c, f2.o + badd);
-    wzh(out, o, f2, f2.f, f2.u, f2.c.length, f2.o, f2.m), o += 16 + badd + (f2.m ? f2.m.length : 0);
-  }
-  wzf(out, o, files.length, cdl, oe);
-  return out;
-}
-const browser = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  deflateSync,
-  strToU8,
-  zipSync,
-  zlibSync
-}, Symbol.toStringTag, { value: "Module" }));
 const BOOL = "B".charCodeAt(0);
 const CHAR = "C".charCodeAt(0);
 const INT8 = "Z".charCodeAt(0);
@@ -128490,11 +127893,11 @@ function ensureCrcTable() {
 }
 function crc32$1(buf) {
   const t2 = ensureCrcTable();
-  let crc2 = 4294967295;
+  let crc = 4294967295;
   for (let i = 0; i < buf.length; i++) {
-    crc2 = (t2[(crc2 ^ buf[i]) & 255] ^ crc2 >>> 8) >>> 0;
+    crc = (t2[(crc ^ buf[i]) & 255] ^ crc >>> 8) >>> 0;
   }
-  return (crc2 ^ 4294967295) >>> 0;
+  return (crc ^ 4294967295) >>> 0;
 }
 function writeChunk(type, data) {
   const typeBytes = new TextEncoder().encode(type);
@@ -150201,7 +149604,6 @@ function useImageCrop(options) {
   const isLoading = /* @__PURE__ */ ref(false);
   const naturalWidth = /* @__PURE__ */ ref(0);
   const naturalHeight = /* @__PURE__ */ ref(0);
-  const lastInitializedUrl = /* @__PURE__ */ ref(null);
   const displayedWidth = /* @__PURE__ */ ref(0);
   const displayedHeight = /* @__PURE__ */ ref(0);
   const scaleFactor = /* @__PURE__ */ ref(1);
@@ -150442,11 +149844,9 @@ function useImageCrop(options) {
     updateDisplayedDimensions();
     if (naturalWidth.value <= 0 || naturalHeight.value <= 0) return;
     const noValidBounds = modelValue.value.width <= 0 || modelValue.value.height <= 0;
-    const switchedImage = lastInitializedUrl.value !== null && lastInitializedUrl.value !== imageUrl.value;
-    if (noValidBounds || switchedImage) {
+    if (noValidBounds) {
       modelValue.value = defaultBounds();
     }
-    lastInitializedUrl.value = imageUrl.value;
   }
   function handleImageError() {
     isLoading.value = false;
@@ -151341,7 +150741,7 @@ function parseProbeableViewUrl(videoUrl) {
 }
 let mediabunnyModulePromise;
 function importMediabunny() {
-  return import("./index-CEiRlEKx.mjs");
+  return import("./index-D51OeKiR.mjs");
 }
 function loadMediabunny() {
   mediabunnyModulePromise ?? (mediabunnyModulePromise = importMediabunny().catch((error2) => {
@@ -160992,7 +160392,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-DrO4-BMY.mjs");
+    const { TGALoader } = await import("./TGALoader-C2lOvgi3.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -161005,7 +160405,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-ISq3hkTi.mjs");
+      const { MTLLoader } = await import("./MTLLoader-BgKiQarT.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -161014,7 +160414,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-DulpRS_j.mjs");
+    const { STLLoader } = await import("./STLLoader-BOipGv0k.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -161022,7 +160422,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-C7dqDzW1.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-OjKR75fp.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -166255,7 +165655,7 @@ async function downloadOutputImages(state2) {
     downloadUrl(items[0].url);
     return;
   }
-  const { zipSync: zipSync2 } = await Promise.resolve().then(() => browser);
+  const { zipSync } = await import("./browser-BT3AJCRr.mjs");
   const files = {};
   const used = /* @__PURE__ */ new Set();
   for (let i = 0; i < items.length; i++) {
@@ -166265,7 +165665,7 @@ async function downloadOutputImages(state2) {
     const bytes = new Uint8Array(await res.arrayBuffer());
     files[uniqueZipName(filenameFromUrl(item.url, `crop-${i + 1}.png`), used)] = bytes;
   }
-  const zipped = zipSync2(files);
+  const zipped = zipSync(files);
   downloadBlob$2("crops.zip", new Blob([zipped], { type: "application/zip" }));
 }
 function buildToolbar(dispatch) {
@@ -206481,6 +205881,38 @@ function createStageCapture(ctx) {
     g2.drawImage(tmp3, 0, 0);
     return out;
   }
+  function cropLayerToContent(canvas2) {
+    const source = canvas2.getContext("2d");
+    if (!source || canvas2.width === 0 || canvas2.height === 0) return canvas2;
+    const pixels = source.getImageData(0, 0, canvas2.width, canvas2.height);
+    let minX = canvas2.width;
+    let minY = canvas2.height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < canvas2.height; y++) {
+      for (let x = 0; x < canvas2.width; x++) {
+        if (pixels.data[(y * canvas2.width + x) * 4 + 3] === 0) continue;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < minX || maxY < minY) return newCanvas(1, 1);
+    const out = newCanvas(maxX - minX + 1, maxY - minY + 1);
+    out.getContext("2d").drawImage(
+      canvas2,
+      minX,
+      minY,
+      out.width,
+      out.height,
+      0,
+      0,
+      out.width,
+      out.height
+    );
+    return out;
+  }
   function scheduleCapture() {
     if (!(opts == null ? void 0 : opts.onCaptured)) return;
     if (captureTimer != null) window.clearTimeout(captureTimer);
@@ -206538,7 +205970,10 @@ function createStageCapture(ctx) {
           if (!saved[i] || children[i].kind === "adjustment") continue;
           children.forEach((n, j2) => n.visible = j2 === i);
           editor.render();
-          const url = await host2.uploadCanvas(flattenComposite(), { subfolder: storage.subfolder, filenamePrefix: `pentrado-layer-${instanceId}` });
+          const layerImage = compositor.readback();
+          const layer = newCanvas(layerImage.width, layerImage.height);
+          layer.getContext("2d").putImageData(layerImage, 0, 0);
+          const url = await host2.uploadCanvas(cropLayerToContent(layer), { subfolder: storage.subfolder, filenamePrefix: `pentrado-layer-${instanceId}` });
           images.push({ index: idx++, label: children[i].name, image_url: url });
         }
       } finally {
@@ -218573,7 +218008,7 @@ function buildZip(entries2) {
   const central = [];
   for (const entry2 of entries2) {
     const name = enc$1.encode(entry2.name);
-    const crc2 = crc32(entry2.data);
+    const crc = crc32(entry2.data);
     const localOffset = offset2;
     push(concat2(
       u32(67324752),
@@ -218582,7 +218017,7 @@ function buildZip(entries2) {
       u162(0),
       u162(0),
       u162(0),
-      u32(crc2),
+      u32(crc),
       u32(entry2.data.length),
       u32(entry2.data.length),
       u162(name.length),
@@ -218598,7 +218033,7 @@ function buildZip(entries2) {
       u162(0),
       u162(0),
       u162(0),
-      u32(crc2),
+      u32(crc),
       u32(entry2.data.length),
       u32(entry2.data.length),
       u162(name.length),
@@ -247348,6 +246783,14 @@ function bindOutputRestore(opts) {
     stopTagWatch();
   };
 }
+function shouldApplyExternalRun(d, ctx) {
+  if (!d || d.external !== true) return false;
+  if (String(d.node_id ?? "") !== String(ctx.nodeId)) return false;
+  if (d.project_id && ctx.projectId && String(d.project_id) !== ctx.projectId) return false;
+  if (d.prompt_id && ctx.runPromptId && String(d.prompt_id) === ctx.runPromptId) return false;
+  if (ctx.running || ctx.runStageRunId) return false;
+  return d.status === "done" || d.status === "error";
+}
 function mergeModelOutputIntoPool(node, state2, store2, url) {
   var _a2;
   if (state2.kind !== "model" || state2.variant !== "generator") return;
@@ -248383,8 +247826,34 @@ function createStageRun(opts) {
       });
     }
   };
+  const onExternalStageRun = (d) => {
+    const currentProject = useProjectStore().currentProjectId || "";
+    if (!shouldApplyExternalRun(d, {
+      nodeId: node.id,
+      projectId: currentProject,
+      runPromptId: state2.runPromptId ?? null,
+      running: state2.running,
+      runStageRunId: state2.runStageRunId ?? null
+    })) return;
+    if (d.status === "done") {
+      store2.applyExecutedPayload(state2, d.ui || {});
+      if (kind === "model" && state2.variant === "generator") {
+        mergeModelOutputIntoPool(node, state2, store2, state2.output);
+      }
+    } else {
+      store2.applyExecutionError(state2, {
+        message: String(d.error || "execution failed"),
+        type: String(d.error_type || "ExecutionError"),
+        traceback: Array.isArray(d.traceback) ? d.traceback.join("") : d.traceback
+      });
+    }
+  };
   const onStageRun = (d) => {
     if (!d) return;
+    if (d.external) {
+      onExternalStageRun(d);
+      return;
+    }
     if (!state2.runStageRunId && state2.running && d.job_id) {
       state2.runStageRunId = String(d.job_id);
     }
@@ -269843,239 +269312,239 @@ const extension = {
 };
 app$1.registerExtension(extension);
 export {
-  LinearMipmapLinearFilter as $,
-  AGENT_WS_EVENT_TYPES as A,
-  Bone as B,
-  Camera as C,
-  DOMParser$1 as D,
-  DropdownMenuTrigger_default as E,
-  DynamicDrawUsage as F,
-  EditorState as G,
-  EditorView as H,
-  Euler as I,
-  FileLoader as J,
-  Float32BufferAttribute as K,
-  FloatType as L,
-  FocusScope_default as M,
-  Fragment$1 as N,
-  Fragment as O,
-  FrontSide as P,
-  GLSL3 as Q,
-  Group as R,
-  InstancedBufferAttribute as S,
-  InstancedBufferGeometry as T,
-  InterpolateBezier as U,
-  InterpolateDiscrete as V,
-  Line as W,
-  LineBasicMaterial as X,
-  LineSegments as Y,
-  LinearFilter as Z,
-  LinearMipMapLinearFilter as _,
-  AgentApiError as a,
-  WebGLRenderTarget as a$,
-  LinearSRGBColorSpace as a0,
-  Loader as a1,
-  LoaderUtils as a2,
-  MathUtils as a3,
-  Matrix2 as a4,
-  Matrix3 as a5,
-  Matrix4 as a6,
-  MenuItem_default as a7,
-  Mesh as a8,
-  MeshBasicMaterial as a9,
-  Skeleton as aA,
-  SkinnedMesh as aB,
-  Slice as aC,
-  SliderRange_default as aD,
-  SliderRoot_default as aE,
-  SliderThumb_default as aF,
-  SliderTrack_default as aG,
-  SpotLight as aH,
-  Teleport as aI,
-  TextSelection as aJ,
-  Texture as aK,
-  TextureLoader as aL,
-  TooltipContent_default as aM,
-  TooltipPortal_default as aN,
-  TooltipProvider_default as aO,
-  TooltipRoot_default as aP,
-  TooltipTrigger_default as aQ,
-  Triangle as aR,
-  UnsignedByteType as aS,
-  UnsignedIntType as aT,
-  UnsignedShortType as aU,
-  Vector2 as aV,
-  Vector3 as aW,
-  Vector4 as aX,
-  VectorKeyframeTrack as aY,
-  WebGLArrayRenderTarget as aZ,
-  WebGLCubeRenderTarget as a_,
-  MeshLambertMaterial as aa,
-  MeshPhongMaterial as ab,
-  MeshStandardMaterial as ac,
-  NearestFilter as ad,
-  Object3D as ae,
-  OrthographicCamera as af,
-  PMREMGenerator as ag,
-  PerspectiveCamera as ah,
-  PointLight as ai,
-  Presence_default as aj,
-  Primitive as ak,
-  Quaternion as al,
-  QuaternionKeyframeTrack as am,
-  REVISION as an,
-  RGBAFormat as ao,
-  RGBAIntegerFormat as ap,
-  RGIntegerFormat as aq,
-  RawShaderMaterial as ar,
-  Raycaster as as,
-  RepeatWrapping as at,
-  SRGBColorSpace as au,
-  Scene as av,
-  Schema as aw,
-  ShaderChunk as ax,
-  ShaderMaterial as ay,
-  ShapeUtils as az,
-  AmbientLight as b,
-  readonly$1 as b$,
-  _export_sfc as b0,
-  agentBusy as b1,
-  api as b2,
+  FloatType as $,
+  DataTexture as A,
+  BufferGeometry as B,
+  ColorManagement as C,
+  DefaultLoadingManager as D,
+  Euler as E,
+  FileLoader as F,
+  GLSL3 as G,
+  Raycaster as H,
+  Object3D as I,
+  Matrix3 as J,
+  LinearSRGBColorSpace as K,
+  Loader as L,
+  MeshPhongMaterial as M,
+  NearestFilter as N,
+  OrthographicCamera as O,
+  PMREMGenerator as P,
+  Quaternion as Q,
+  RepeatWrapping as R,
+  SRGBColorSpace as S,
+  TextureLoader as T,
+  UnsignedByteType as U,
+  Vector2 as V,
+  WebGLCubeRenderTarget as W,
+  LinearFilter as X,
+  Camera as Y,
+  Box3 as Z,
+  UnsignedShortType as _,
+  LoaderUtils as a,
+  normalizeProps as a$,
+  InstancedBufferGeometry as a0,
+  InstancedBufferAttribute as a1,
+  DynamicDrawUsage as a2,
+  REVISION as a3,
+  RawShaderMaterial as a4,
+  ShaderChunk as a5,
+  Texture as a6,
+  Data3DTexture as a7,
+  defineComponent as a8,
+  openBlock as a9,
+  Bone as aA,
+  Group as aB,
+  LineBasicMaterial as aC,
+  SkinnedMesh as aD,
+  Line as aE,
+  LineSegments as aF,
+  ClampToEdgeWrapping as aG,
+  Scene as aH,
+  useVModel as aI,
+  toRefs as aJ,
+  useForwardExpose as aK,
+  withCtx as aL,
+  renderSlot as aM,
+  unref as aN,
+  Primitive as aO,
+  createContext as aP,
+  useId as aQ,
+  ref as aR,
+  watch as aS,
+  nextTick as aT,
+  useEventListener as aU,
+  createVNode as aV,
+  mergeProps as aW,
+  Presence_default as aX,
+  injectPopperContentContext as aY,
+  normalizeStyle as aZ,
+  useEmitAsProps as a_,
+  createElementBlock as aa,
+  createBaseVNode as ab,
+  toDisplayString$1 as ac,
+  onMounted as ad,
+  onBeforeUnmount as ae,
+  createBlock as af,
+  createCommentVNode as ag,
+  Fragment$1 as ah,
+  withModifiers as ai,
+  Teleport as aj,
+  computed as ak,
+  MathUtils as al,
+  VectorKeyframeTrack as am,
+  QuaternionKeyframeTrack as an,
+  InterpolateDiscrete as ao,
+  InterpolateBezier as ap,
+  AnimationClip as aq,
+  MeshBasicMaterial as ar,
+  MeshLambertMaterial as as,
+  AmbientLight as at,
+  SpotLight as au,
+  PointLight as av,
+  DirectionalLight as aw,
+  Triangle as ax,
+  ShapeUtils as ay,
+  Skeleton as az,
+  FrontSide as b,
+  reactiveOmit as b$,
+  guardReactiveProps as b0,
+  MenuItem_default as b1,
+  hostStore$1 as b2,
   app as b3,
-  assetIdOf as b4,
-  autoUpdate as b5,
-  baseKeymap as b6,
-  buildTooltipConfig as b7,
-  closeEaglePicker as b8,
-  closeHistory as b9,
-  inject as bA,
-  injectPopperContentContext as bB,
-  isAgentEvent as bC,
-  isComfyTVAssetDrag as bD,
-  isEagleDrag as bE,
-  isMemoSame as bF,
-  isNodeLocatorId as bG,
-  keymap as bH,
-  mergeModels as bI,
-  mergeProps as bJ,
-  newChatRequests as bK,
-  nextTick as bL,
-  normalizeClass as bM,
-  normalizeProps as bN,
-  normalizeStyle as bO,
-  offset$2 as bP,
-  onBeforeUnmount as bQ,
-  onMounted as bR,
-  onScopeDispose as bS,
-  openAssetPicker as bT,
-  openBlock as bU,
-  openEaglePicker as bV,
-  parseAgentWsEvent as bW,
-  parseNodeId as bX,
-  parseNodeLocatorId as bY,
-  provide as bZ,
-  reactiveOmit as b_,
+  parseNodeLocatorId as b4,
+  hostVersion as b5,
+  hostManager as b6,
+  defineStore as b7,
+  useStorage as b8,
+  toValue$2 as b9,
+  keymap as bA,
+  redo as bB,
+  undo as bC,
+  baseKeymap as bD,
+  EditorView as bE,
+  DOMParser$1 as bF,
+  Slice as bG,
+  Fragment as bH,
+  closeHistory as bI,
+  Decoration as bJ,
+  DecorationSet as bK,
+  TextSelection as bL,
+  EditorState as bM,
+  shallowRef as bN,
+  storeToRefs as bO,
+  useAgentRunModeStore as bP,
+  useId$1 as bQ,
+  resolveDirective as bR,
+  buildTooltipConfig as bS,
+  DropdownMenuRadioGroup_default as bT,
+  DropdownMenuRadioItem_default as bU,
+  reportError as bV,
+  inject as bW,
+  isMemoSame as bX,
+  useClipboard as bY,
+  watchDebounced as bZ,
+  api as b_,
   clsx as ba,
-  cn as bb,
-  computed as bc,
-  createAgentRestClient as bd,
-  createBaseVNode as be,
-  createBlock as bf,
-  createCommentVNode as bg,
-  createContext as bh,
-  createElementBlock as bi,
-  createNodeLocatorId as bj,
-  createSlots as bk,
-  createTextVNode as bl,
-  createVNode as bm,
-  defineAsyncComponent as bn,
-  defineComponent as bo,
-  defineStore as bp,
-  droppedComfyTVAssets as bq,
-  droppedEagleAssets as br,
-  eagleAvailable as bs,
-  getCurrentScope as bt,
-  guardReactiveProps as bu,
-  history as bv,
-  hostManager as bw,
-  hostStore$1 as bx,
-  hostVersion as by,
-  i18n as bz,
-  AnimationClip as c,
-  redo as c0,
-  ref as c1,
-  renderList as c2,
-  renderSlot as c3,
-  reportError as c4,
-  resolveDirective as c5,
-  shallowRef as c6,
-  shift$1 as c7,
-  storeToRefs as c8,
-  toAttachment as c9,
-  useStorage as cA,
-  useTemplateRef as cB,
-  useTimestamp as cC,
-  useVModel as cD,
-  useWindowSize as cE,
-  useWorkflowStore as cF,
-  vModelText as cG,
-  watch as cH,
-  watchDebounced as cI,
-  whenever as cJ,
-  withCtx as cK,
-  withDirectives as cL,
-  withKeys as cM,
-  withModifiers as cN,
-  zAgentAdmissionError as cO,
-  zDisownedWorkflowError as cP,
-  toDisplayString$1 as ca,
+  normalizeClass as bb,
+  cn as bc,
+  useModel as bd,
+  useTemplateRef as be,
+  withDirectives as bf,
+  vModelText as bg,
+  mergeModels as bh,
+  _export_sfc as bi,
+  TooltipProvider_default as bj,
+  TooltipRoot_default as bk,
+  TooltipTrigger_default as bl,
+  TooltipPortal_default as bm,
+  TooltipContent_default as bn,
+  createTextVNode as bo,
+  useI18n as bp,
+  renderList as bq,
+  DropdownMenuRoot_default as br,
+  DropdownMenuTrigger_default as bs,
+  DropdownMenuPortal_default as bt,
+  DropdownMenuContent_default as bu,
+  getCurrentScope as bv,
+  onScopeDispose as bw,
+  Schema as bx,
+  isNodeLocatorId as by,
+  history as bz,
+  Color as c,
+  useForwardPropsEmits as c0,
+  SliderRoot_default as c1,
+  SliderTrack_default as c2,
+  SliderRange_default as c3,
+  SliderThumb_default as c4,
+  useMediaControls as c5,
+  whenever as c6,
+  toRef$1 as c7,
+  defineAsyncComponent as c8,
+  useLocalStorage as c9,
+  newChatRequests as cA,
+  agentBusy as cB,
+  provide as cC,
+  eagleAvailable as cD,
+  openEaglePicker as cE,
+  closeEaglePicker as cF,
+  openAssetPicker as cG,
+  isComfyTVAssetDrag as cH,
+  isEagleDrag as cI,
+  droppedEagleAssets as cJ,
+  droppedComfyTVAssets as cK,
+  uploadToLibrary as cL,
+  toAttachment as cM,
+  createAgentRestClient as cN,
+  assetIdOf as cO,
+  readonly$1 as cP,
+  useWorkflowStore as ca,
   toRaw as cb,
-  toRef$1 as cc,
-  toRefs as cd,
-  toTurnId as ce,
-  toValue$2 as cf,
-  undo as cg,
-  unref as ch,
-  uploadToLibrary as ci,
-  useAgentPanelStore as cj,
-  useAgentRunModeStore as ck,
-  useClipboard as cl,
-  useClipboardItems as cm,
-  useElementBounding as cn,
-  useEmitAsProps as co,
-  useEventListener as cp,
-  useFloating as cq,
-  useForwardExpose as cr,
-  useForwardPropsEmits as cs,
-  useI18n as ct,
-  useId as cu,
-  useId$1 as cv,
-  useIntersectionObserver as cw,
-  useLocalStorage as cx,
-  useMediaControls as cy,
-  useModel as cz,
-  Box3 as d,
-  BufferAttribute as e,
-  BufferGeometry as f,
-  ClampToEdgeWrapping as g,
-  Clock as h,
-  Color as i,
-  ColorManagement as j,
-  CubeCamera as k,
-  DOMSerializer as l,
-  Data3DTexture as m,
-  DataArrayTexture as n,
-  DataTexture as o,
-  DataTextureLoader as p,
-  Decoration as q,
-  DecorationSet as r,
-  DefaultLoadingManager as s,
-  DirectionalLight as t,
-  DoubleSide as u,
-  DropdownMenuContent_default as v,
-  DropdownMenuPortal_default as w,
-  DropdownMenuRadioGroup_default as x,
-  DropdownMenuRadioItem_default as y,
-  DropdownMenuRoot_default as z
+  useAgentPanelStore as cc,
+  DOMSerializer as cd,
+  useClipboardItems as ce,
+  withKeys as cf,
+  useIntersectionObserver as cg,
+  createSlots as ch,
+  createNodeLocatorId as ci,
+  useElementBounding as cj,
+  useFloating as ck,
+  autoUpdate as cl,
+  FocusScope_default as cm,
+  offset$2 as cn,
+  shift$1 as co,
+  useWindowSize as cp,
+  i18n as cq,
+  AgentApiError as cr,
+  toTurnId as cs,
+  isAgentEvent as ct,
+  parseAgentWsEvent as cu,
+  zDisownedWorkflowError as cv,
+  zAgentAdmissionError as cw,
+  AGENT_WS_EVENT_TYPES as cx,
+  useTimestamp as cy,
+  parseNodeId as cz,
+  BufferAttribute as d,
+  Vector3 as e,
+  Float32BufferAttribute as f,
+  DataTextureLoader as g,
+  LinearMipmapLinearFilter as h,
+  Mesh as i,
+  Matrix4 as j,
+  ShaderMaterial as k,
+  DoubleSide as l,
+  Clock as m,
+  Vector4 as n,
+  Matrix2 as o,
+  LinearMipMapLinearFilter as p,
+  RGBAFormat as q,
+  CubeCamera as r,
+  MeshStandardMaterial as s,
+  WebGLRenderTarget as t,
+  PerspectiveCamera as u,
+  DataArrayTexture as v,
+  RGIntegerFormat as w,
+  UnsignedIntType as x,
+  RGBAIntegerFormat as y,
+  WebGLArrayRenderTarget as z
 };
-//# sourceMappingURL=main-CHEf0ixJ.mjs.map
+//# sourceMappingURL=main-DBdhavB2.mjs.map

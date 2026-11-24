@@ -188,9 +188,9 @@ class RemoteComfyUIRunner(Runner):
 
     async def _queue_prompt(self, session: aiohttp.ClientSession,
                             workflow: dict, client_id: str) -> str:
-        from .auth_extra import current_auth_extra
+        from .auth_extra import auth_for_run
         body: dict = {"prompt": workflow, "client_id": client_id}
-        extra = current_auth_extra()
+        extra = auth_for_run()
         if extra:
             body["extra_data"] = extra
         async with session.post(f"{self.base_url}/prompt", json=body) as resp:

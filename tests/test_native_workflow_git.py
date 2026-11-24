@@ -6,6 +6,27 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def restore_import_stubs():
+    names = [
+        "ComfyTV", "ComfyTV.api", "ComfyTV.runners", "ComfyTV.runners.workflow_db",
+        "ComfyTV.runners.workflow_db.link", "ComfyTV.api._common",
+        "ComfyTV.api.native_workflow_assets", "ComfyTV.api.native_workflow_git",
+    ]
+    previous = {name: sys.modules.get(name) for name in names}
+    attributes = {name: dict(module.__dict__) for name, module in previous.items() if module is not None}
+    yield
+    for name, module in previous.items():
+        if module is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = module
+            module.__dict__.clear()
+            module.__dict__.update(attributes[name])
+
 
 def _load_mod():
     root = Path(__file__).resolve().parents[1]

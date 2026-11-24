@@ -73,6 +73,38 @@ export function createStageCapture(ctx: StageCtx) {
     g.drawImage(tmp, 0, 0)
     return out
   }
+
+  /**
+   * Export one isolated layer at its visible pixel bounds. The compositor
+   * readback keeps the layer's alpha, so partially transparent selection or
+   * paint pixels remain partially transparent in the uploaded PNG.
+   */
+  function cropLayerToContent(canvas: HTMLCanvasElement): HTMLCanvasElement {
+    const source = canvas.getContext('2d')
+    if (!source || canvas.width === 0 || canvas.height === 0) return canvas
+    const pixels = source.getImageData(0, 0, canvas.width, canvas.height)
+    let minX = canvas.width
+    let minY = canvas.height
+    let maxX = -1
+    let maxY = -1
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        if (pixels.data[(y * canvas.width + x) * 4 + 3] === 0) continue
+        if (x < minX) minX = x
+        if (y < minY) minY = y
+        if (x > maxX) maxX = x
+        if (y > maxY) maxY = y
+      }
+    }
+    if (maxX < minX || maxY < minY) return newCanvas(1, 1)
+    const out = newCanvas(maxX - minX + 1, maxY - minY + 1)
+    out.getContext('2d')!.drawImage(
+      canvas,
+      minX, minY, out.width, out.height,
+      0, 0, out.width, out.height,
+    )
+    return out
+  }
   function scheduleCapture(): void {
     if (!opts?.onCaptured) return
     if (captureTimer != null) window.clearTimeout(captureTimer)
@@ -128,7 +160,10 @@ export function createStageCapture(ctx: StageCtx) {
           if (!saved[i] || children[i].kind === 'adjustment') continue
           children.forEach((n, j) => (n.visible = j === i))
           editor.render()
-          const url = await host.uploadCanvas(flattenComposite(), { subfolder: storage.subfolder, filenamePrefix: `pentrado-layer-${instanceId}` })
+          const layerImage = compositor.readback()
+          const layer = newCanvas(layerImage.width, layerImage.height)
+          layer.getContext('2d')!.putImageData(layerImage, 0, 0)
+          const url = await host.uploadCanvas(cropLayerToContent(layer), { subfolder: storage.subfolder, filenamePrefix: `pentrado-layer-${instanceId}` })
           images.push({ index: idx++, label: children[i].name, image_url: url })
         }
       } finally {

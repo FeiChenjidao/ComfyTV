@@ -61,3 +61,13 @@ export const NativeWorkflowGitTokenSchema = z.object({
   saved: z.boolean().optional(),
 })
 export type NativeWorkflowGitToken = z.infer<typeof NativeWorkflowGitTokenSchema>
+
+export const GitExecutableResultSchema = z.object({
+  ok: z.boolean(),
+  path: z.string(),
+  version: z.string(),
+  user_path_added: z.boolean(),
+  error: z.string(),
+  warning: z.string().optional(),
+})
+export type GitExecutableResult = z.infer<typeof GitExecutableResultSchema>

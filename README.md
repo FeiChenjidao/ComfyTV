@@ -73,6 +73,8 @@ git clone https://github.com/jtydhr88/ComfyTV
 
 Restart ComfyUI. ComfyTV nodes appear under the **`ComfyTV`** category in the Add-Node menu, grouped into sub-categories (Project / Input / Generate / Image / Panorama / Video / VideoFX / Keying / Compose / Timeline / Audio / AudioFX / Music / 3D / Material / Storyboard / Bridge).
 
+If Git is installed but the bottom Workflows panel cannot find it, click **Set Git path**, enter the full executable path (for example `C:\Program Files\Git\cmd\git.exe`) or its installation folder, then click **Verify and add to PATH**. The validated path takes effect immediately and is saved locally for future starts; Windows also adds it to your user PATH without administrator access. Use a path on the computer running the ComfyUI backend.
+
 ### ComfyUI Desktop / macOS / multiple ComfyUI installs
 
 If you use ComfyUI Desktop, are on macOS, or have more than one ComfyUI on your machine, the relative `cd ComfyUI/custom_nodes` above can easily drop you into the wrong instance (a common symptom: the clone succeeds but ComfyTV never shows up). Install into the *running* instance by its absolute path instead:
@@ -109,6 +111,7 @@ The full documentation lives at **[comfytv.org](https://comfytv.org)** — guide
 | [sidebar-config-editor.md](docs/sidebar-config-editor.md) | The sidebar GUI for editing how a stage's inputs map to its workflow nodes |
 | [bridges.md](docs/bridges.md) | Connecting third-party ComfyUI plugins (mesh2motion, IPAdapter, …) via Bridge nodes |
 | [mcp.md](docs/mcp.md) | The MCP endpoint: 45 agent tools, connecting clients, agent patterns |
+| [agent-compat.md](docs/agent-compat.md) | Running stages from the `comfy` CLI / a script / an agent that only knows `/prompt`; the credential fallback |
 | [bot.md](docs/bot.md) | The embedded sidebar chat agent: providers, attachments, skills |
 | [skills.md](docs/skills.md) | Agent Skills: the format, managing them, writing your own |
 

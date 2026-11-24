@@ -138,7 +138,14 @@
       "templatesEmpty": "暂无云端模板。点「连接团队仓」或「更新模板」拉取。",
       "localWorkflowsEmpty": "暂无本地工作流。在 ComfyUI 保存到本账号 workflows 即可出现在这里。",
       "gitNoRepo": "尚未连接团队模板仓。点「连接团队仓」会克隆到 ComfyTV 专属模板目录，不会占用用户 workflows。",
-      "gitNoGit": "本机未找到 git，请先安装并加入 PATH。",
+      "gitNoGit": "未找到 Git。已安装？可手动指定路径并加入 PATH。",
+      "gitPathManual": "手动指定 Git",
+      "gitPathHint": "填写运行 ComfyUI 的电脑上的 git.exe 完整路径，或 Git 安装目录。验证后立即生效，并在重启后自动加载；Windows 同时加入当前用户 PATH，无需管理员权限。",
+      "gitPathApply": "验证并加入 PATH",
+      "gitPathSaving": "正在验证…",
+      "gitPathSaved": "Git 路径已保存并立即生效",
+      "gitPathFailed": "Git 路径设置失败",
+      "gitPathUserWarning": "ComfyUI 已可使用 Git，但写入 Windows 用户 PATH 失败",
       "gitSynced": "已与远程同步",
       "gitBehind": "云端模板有 {n} 个提交可覆盖更新",
       "gitDirty": "有未提交改动。模板改动也点「提交工作流」",
@@ -735,6 +742,10 @@
         "label": "备份位置",
         "desc": "留空则使用 ComfyTV 目录下的 db-backup 文件夹。快照以时间戳命名,如 20260805-093000/comfytv。",
         "placeholder": "如 D:\\backups\\comfytv"
+      },
+      "share-comfy-auth": {
+        "label": "复用 Comfy 登录态",
+        "desc": "浏览器之外的调用方(comfy CLI、脚本、agent 直接提交 /prompt)不会带 Comfy.org 登录凭据,绑定付费 API 节点时会 401。开启后插件会把最近一次浏览器运行带来的凭据借给这类运行;凭据只留在内存,重启即失效。关闭后此类运行将按缺凭据报错。"
       },
       "enable-mcp": {
         "label": "启用 MCP 服务",

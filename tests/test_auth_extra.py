@@ -63,3 +63,63 @@ def test_passthrough_exposes_hidden_auth_during_execute():
     }
     assert ae.current_auth_extra() == {}
     ae.install_auth_passthrough(Dummy)
+
+
+def _fresh_credentials():
+    ae.forget_credentials()
+    ae.reset_share_cache()
+
+
+def test_credentials_from_a_prompt_are_lent_to_later_runs():
+    _fresh_credentials()
+    ae.remember_credentials({"auth_token_comfy_org": " jwt ", "ignored": "x"})
+    assert ae.cached_credentials() == {"auth_token_comfy_org": "jwt"}
+
+    token = ae._CURRENT_AUTH.set({})
+    try:
+        # A queue/agent run arrives with nothing of its own.
+        extra = ae.nested_extra_data("client-1")
+        assert extra["auth_token_comfy_org"] == "jwt"
+        assert extra["client_id"] == "client-1"
+    finally:
+        ae._CURRENT_AUTH.reset(token)
+    _fresh_credentials()
+
+
+def test_explicit_credentials_win_over_the_cached_pair():
+    _fresh_credentials()
+    ae.remember_credentials({
+        "auth_token_comfy_org": "cached",
+        "api_key_comfy_org": "cached-key",
+    })
+    token = ae._CURRENT_AUTH.set({"auth_token_comfy_org": "own"})
+    try:
+        extra = ae.auth_for_run()
+        assert extra["auth_token_comfy_org"] == "own"
+        assert extra["api_key_comfy_org"] == "cached-key"
+    finally:
+        ae._CURRENT_AUTH.reset(token)
+        _fresh_credentials()
+
+
+def test_cached_pair_is_ignored_when_sharing_is_off(monkeypatch):
+    _fresh_credentials()
+    ae.remember_credentials({"auth_token_comfy_org": "jwt"})
+    monkeypatch.setattr(ae, "share_enabled", lambda: False)
+    assert ae.borrowed_credentials() == {}
+    assert "auth_token_comfy_org" not in ae.nested_extra_data()
+    _fresh_credentials()
+
+
+def test_usage_source_is_never_borrowed():
+    _fresh_credentials()
+    ae.remember_credentials({"comfy_usage_source": "comfyui-frontend"})
+    assert ae.cached_credentials() == {}
+    _fresh_credentials()
+
+
+def test_share_defaults_on_when_settings_are_unavailable(monkeypatch):
+    ae.reset_share_cache()
+    # Standalone module load has no package to reach storage through.
+    assert ae.share_enabled() is True
+    _fresh_credentials()
