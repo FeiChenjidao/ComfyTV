@@ -50,6 +50,7 @@ interface GeneratorConfig {
   footerExtra?: FooterExtra[]
   controls?: ControlSpec[]
   modelOptions?: boolean
+  noteKey?: string
   /** When true, StageControls only lists widgets bound as option:* on the workflow. */
   boundOnlyControls?: boolean
 }
@@ -113,6 +114,11 @@ function makeGeneratorShell(config: GeneratorConfig) {
     const promptAnchor = el('div', 'v2-panel__prompthost')
     const presetAnchor = el('div', 'v2-panel__presets')
     const controlsAnchor = el('div', 'v2-panel__controls')
+    const note = config.noteKey ? el('div', 'v2-panel__note') : null
+    if (note) {
+      note.textContent = t(config.noteKey!)
+      note.style.cssText = 'font-size:11px;line-height:1.5;color:var(--v2-text-muted);padding:0 2px;'
+    }
     const customAnchor = el('div', 'v2-panel__custom')
     const paramsAnchor = el('div', 'v2-panel__params')
     const footer = el('div', 'v2-panel__footer')
@@ -125,6 +131,7 @@ function makeGeneratorShell(config: GeneratorConfig) {
     if (modeBtn) footer.append(wfAnchor, serverAnchor, modeBtn, run)
     else footer.append(wfAnchor, serverAnchor, run)
     panel.append(refsAnchor, promptAnchor, presetAnchor, controlsAnchor, customAnchor, paramsAnchor, footer)
+    if (note) panel.insertBefore(note, footer)
     card.append(preview, panel)
 
     // Model3D (and similar) ship dozens of native option widgets; LiteGraph sizes
@@ -343,6 +350,15 @@ const GENERATORS: Record<string, GeneratorConfig> = {
     /** Only show a control when the linked workflow binds option:<name>. */
     boundOnlyControls: true,
     modelOptions: true,
+  },
+  'ComfyTV.ModelRetopologyStage': {
+    preview: 'model', refTypes: ['model'],
+    noteKey: 'retopology.hint',
+    controls: [
+      { name: 'face_limit', control: 'number', labelKey: 'retopology.faceLimit' },
+      { name: 'quad', control: 'toggle', labelKey: 'retopology.quad' },
+      { name: 'bake', control: 'toggle', labelKey: 'retopology.bake' },
+    ],
   },
   'ComfyTV.TimelineVideoStage':    { preview: 'video', linkKind: 'timeline' },
 }

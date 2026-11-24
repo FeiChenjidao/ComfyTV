@@ -386,6 +386,7 @@ export const RICH_STAGE_MIN_HEIGHTS: Record<string, number> = {
   'ComfyTV.AssetTextLoaderStage':     560,
   'ComfyTV.AssetModelLoaderStage':    620,
   'ComfyTV.Model3DStage':             560,
+  'ComfyTV.ModelRetopologyStage':     560,
   'ComfyTV.ModelLoaderStage':         760,
   'ComfyTV.MeshOpStage':              720,
   'ComfyTV.MeshBakeMapsStage':        720,

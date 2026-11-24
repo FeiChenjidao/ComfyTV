@@ -219,6 +219,9 @@
     "Model3DStage": {
       "display_name": "3D 模型阶段"
     },
+    "ModelRetopologyStage": {
+      "display_name": "3D 重拓扑（Tripo）"
+    },
     "ModelLoaderStage": {
       "display_name": "加载 3D 模型"
     },
@@ -2198,6 +2201,16 @@
         "tooltip": "最近一次导出的动画稿视频（按板时长串片）。"
       }
     }
+  },
+  "ComfyTV_ModelRetopologyStage": {
+    "display_name": "3D 重拓扑（Tripo）",
+    "inputs": {
+      "model": { "name": "模型" },
+      "face_limit": { "name": "目标面数", "tooltip": "-1 自动。三角面 500–20,000；四边面 500–10,000。" },
+      "quad": { "name": "四边面", "tooltip": "开启后输出 FBX，保留四边面。" },
+      "bake": { "name": "烘焙贴图", "tooltip": "将原模型贴图烘焙到重拓扑后的模型。" }
+    },
+    "outputs": { "0": { "name": "模型" } }
   },
   "ComfyTV_Model3DStage": {
     "display_name": "3D 模型阶段",

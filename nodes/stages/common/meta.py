@@ -198,6 +198,7 @@ STAGE_META: dict[str, dict] = {
     'StoryboardEditorStage':        {'kind': 'image',       'variant': 'loader'},
     'MaterialStage':                {'kind': 'material',     'workflow_kind': 'material-estimate'},
     'Model3DStage':                 {'kind': 'model',        'workflow_kind': 'model'},
+    'ModelRetopologyStage':         {'kind': 'model'},
     'ModelLoaderStage':             {'kind': 'model',       'variant': 'loader'},
     'AssetModelLoaderStage':        {'kind': 'model',       'variant': 'loader'},
     'MeshOpStage':                  {'kind': 'model'},

@@ -219,6 +219,9 @@
     "Model3DStage": {
       "display_name": "3D Model Stage"
     },
+    "ModelRetopologyStage": {
+      "display_name": "3D Retopology (Tripo)"
+    },
     "ModelLoaderStage": {
       "display_name": "Load 3D Model"
     },
@@ -2182,6 +2185,16 @@
         "tooltip": "The last exported animatic video (boards timed back-to-back)."
       }
     }
+  },
+  "ComfyTV_ModelRetopologyStage": {
+    "display_name": "3D Retopology (Tripo)",
+    "inputs": {
+      "model": { "name": "model" },
+      "face_limit": { "name": "target faces", "tooltip": "-1 automatic. 500–20,000 triangles or 500–10,000 quads." },
+      "quad": { "name": "quads", "tooltip": "Output FBX to preserve quad topology." },
+      "bake": { "name": "bake textures", "tooltip": "Bake source textures onto the retopologized model." }
+    },
+    "outputs": { "0": { "name": "model" } }
   },
   "ComfyTV_Model3DStage": {
     "display_name": "3D Model Stage",

@@ -2631,6 +2631,12 @@
     "done": "Done — see the viewport above",
     "frameThenRun": "Frame the view, then run"
   },
+  "retopology": {
+    "hint": "Paid Tripo service using your Comfy account. -1 chooses faces automatically; 500–20,000 triangles or 500–10,000 quads. Use GLB to preserve textures. Quad output is FBX.",
+    "faceLimit": "Target faces (-1 automatic)",
+    "quad": "Quads (FBX)",
+    "bake": "Bake source textures"
+  },
   "meshOps": {
     "operation": "Operation",
     "op": {

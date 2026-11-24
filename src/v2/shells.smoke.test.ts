@@ -56,6 +56,7 @@ import '@/v2/scene3dV2'
 import '@/v2/relightV2'
 import '@/v2/loadersV2'
 import '@/v2/generatorV2'
+import StageControlsV2 from '@/v2/StageControlsV2.vue'
 
 interface Meta {
   kind: StageKind
@@ -239,6 +240,7 @@ const SHELL_META: Record<string, Meta> = {
   'ComfyTV.MultiangleStage': { kind: 'image' },
   'ComfyTV.DirectorStage': { kind: 'video' },
   'ComfyTV.Model3DStage': { kind: 'model' },
+  'ComfyTV.ModelRetopologyStage': { kind: 'model' },
   'ComfyTV.TimelineVideoStage': { kind: 'video' },
   'ComfyTV.UpscaleStage': { kind: 'image' },
   'ComfyTV.ImageEditStage': { kind: 'image' },
@@ -254,6 +256,7 @@ const EXTRA_WIDGETS: Record<string, Array<[string, string]>> = {
   'ComfyTV.VideoPickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.AudioPickerStage': [['selected_index', 'number'], ['pool', 'string']],
   'ComfyTV.Model3DStage': [['selected_index', 'number'], ['pool', 'string'], ['append_results', 'toggle']],
+  'ComfyTV.ModelRetopologyStage': [['face_limit', 'number'], ['quad', 'toggle'], ['bake', 'toggle']],
   'ComfyTV.VideoStage': [['mode', 'combo'], ['resolution', 'combo'], ['aspect_ratio', 'combo'], ['duration_s', 'number'], ['generate_audio', 'toggle'], ['batch_size', 'number']],
   'ComfyTV.AudioStage': [['lyrics', 'customtext'], ['duration_s', 'number'], ['bpm', 'number'], ['timesignature', 'combo'], ['keyscale', 'combo'], ['language', 'combo']],
   'ComfyTV.SpeechStage': [['voice', 'string'], ['language', 'combo'], ['speed', 'number'], ['reference_text', 'customtext']],
@@ -344,6 +347,22 @@ describe('V2 shell smoke', () => {
   afterEach(() => {
     mounts.splice(0, mounts.length)
     document.body.innerHTML = ''
+  })
+
+  it('ModelRetopologyStage exposes native controls and the paid-service note', () => {
+    const node = makeNode('ComfyTV.ModelRetopologyStage')
+    node.widgets.splice(0, 3)
+    vi.stubGlobal('IntersectionObserver', undefined)
+    try {
+      V2_SHELLS[node.comfyClass](node as any, 'model', 'generator')
+      const controls = mounts.find(m => m.component === StageControlsV2)
+      expect(controls?.props.controls.map((c: any) => c.name)).toEqual(['face_limit', 'quad', 'bake'])
+      const shell = node.widgets.find((w: any) => w.name === 'v2_shell')?.element as HTMLElement
+      expect(shell.querySelector('.v2-panel__note')?.textContent).toContain('Tripo')
+    } finally {
+      node.onRemoved?.()
+      vi.unstubAllGlobals()
+    }
   })
 
   it('covers every registered shell with meta', () => {

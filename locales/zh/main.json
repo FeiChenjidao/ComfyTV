@@ -2700,6 +2700,12 @@
     "done": "完成——结果见上方视口",
     "frameThenRun": "摆好视角后点击运行"
   },
+  "retopology": {
+    "hint": "Tripo 付费服务，使用 Comfy 登录账户。-1 为自动面数；三角面 500–20,000，四边面 500–10,000。建议输入 GLB 以保留贴图；四边面输出为 FBX。",
+    "faceLimit": "目标面数（-1 自动）",
+    "quad": "四边面（FBX）",
+    "bake": "烘焙原模型贴图"
+  },
   "meshOps": {
     "operation": "操作",
     "op": {

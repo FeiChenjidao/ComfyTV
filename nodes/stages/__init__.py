@@ -112,6 +112,7 @@ from .loaders import (
 from .geometry import (
     LineArtStage, MeshOpStage, MeshPrimitiveStage, MeshBooleanStage, MeshBakeMapsStage,
 )
+from .retopology import ModelRetopologyStage
 from .scene3d import Scene3DStage
 from .blender import BlenderSceneStage, BlenderCameraStage, BlenderAnimationStage
 from .layer_editor import CanvasStage, LayerEditorStage
@@ -185,7 +186,7 @@ def stage_classes() -> list:
         AssetImageLoaderStage, AssetVideoLoaderStage, AssetAudioLoaderStage,
         AssetTextLoaderStage,
         PsdLayerTreeStage,
-        Model3DStage, ModelLoaderStage, AssetModelLoaderStage,
+        Model3DStage, ModelRetopologyStage, ModelLoaderStage, AssetModelLoaderStage,
         MeshOpStage, MeshPrimitiveStage, MeshBooleanStage, MeshBakeMapsStage,
         LineArtStage,
         Scene3DStage,
