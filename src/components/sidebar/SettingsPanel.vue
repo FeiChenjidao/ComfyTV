@@ -110,6 +110,14 @@
               <div class="ctv:text-2xs ctv:text-muted-foreground ctv:leading-relaxed">
                 {{ $t('settings.ignis.configDesc') }}
               </div>
+              <div
+                class="ctv:text-2xs"
+                :class="ignisConfigured ? 'ctv:text-emerald-400' : 'ctv:text-amber-400'"
+              >
+                {{ ignisConfigured
+                  ? $t('settings.ignis.configured', { hint: ignisHint || '••••' })
+                  : $t('settings.ignis.missing') }}
+              </div>
               <ComfyTVText
                 :model-value="ignisConfigInput"
                 :placeholder="$t('settings.ignis.configPlaceholder')"
@@ -126,6 +134,12 @@
                 >
                   {{ ignisSaving ? $t('settings.ignis.importing') : $t('settings.ignis.importConfig') }}
                 </button>
+              </div>
+              <div v-if="ignisError" class="ctv:text-2xs ctv:text-destructive-background">
+                {{ ignisError }}
+              </div>
+              <div v-else-if="ignisFlash" class="ctv:text-2xs ctv:text-emerald-400">
+                {{ ignisFlash }}
               </div>
             </div>
           </div>
@@ -192,6 +206,7 @@ import { TooltipProvider } from 'reka-ui'
 import { useI18n } from 'vue-i18n'
 
 import {
+  fetchIgnisToken,
   fetchNativeWorkflowGitToken,
   saveIgnisConfigText,
   saveNativeWorkflowGitToken,
@@ -241,6 +256,8 @@ const teamGitSaving = ref(false)
 const teamGitError = ref('')
 const teamGitFlash = ref('')
 const ignisConfigInput = ref('')
+const ignisConfigured = ref(false)
+const ignisHint = ref('')
 const ignisSaving = ref(false)
 const ignisError = ref('')
 const ignisFlash = ref('')
@@ -304,6 +321,16 @@ async function refreshTeamGitToken() {
   }
 }
 
+async function refreshIgnisToken() {
+  try {
+    const res = await fetchIgnisToken()
+    ignisConfigured.value = !!res.configured
+    ignisHint.value = res.hint || ''
+  } catch {
+    /* keep last known */
+  }
+}
+
 async function saveIgnisConfigValue() {
   const text = ignisConfigInput.value.trim()
   if (!text) return
@@ -316,6 +343,8 @@ async function saveIgnisConfigValue() {
       ignisError.value = res.error || t('settings.ignis.importFailed')
       return
     }
+    ignisConfigured.value = !!res.configured
+    ignisHint.value = res.hint || ''
     ignisConfigInput.value = ''
     ignisFlash.value = t('settings.ignis.importOk')
   } catch (e: any) {
@@ -353,6 +382,7 @@ watch(
   (on) => {
     if (on) {
       void refreshTeamGitToken()
+      void refreshIgnisToken()
     }
   },
   { immediate: true },
