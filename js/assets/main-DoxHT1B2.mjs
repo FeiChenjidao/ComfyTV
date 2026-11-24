@@ -60060,7 +60060,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-DgBNAKho.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-Be7kRil7.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -90585,7 +90585,7 @@ const _sfc_main$4G = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-4tmknT1U.mjs"),
+      loader: () => import("./AgentPanelRoot-0ykNBjbH.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -145672,7 +145672,7 @@ const _sfc_main$47 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const IMAGE_TYPES = /* @__PURE__ */ new Set([
+const IMAGE_TYPES$1 = /* @__PURE__ */ new Set([
   "COMFYTV_IMAGE",
   "COMFYTV_IMAGES",
   "COMFYTV_PANORAMA"
@@ -145681,7 +145681,7 @@ function pickSourceImageUrl(inputs, slot = "image") {
   const inp = inputs.find((i) => i.slot === slot);
   if (!inp || inp.source !== "upstream" || !inp.content) return null;
   const raw = String(inp.content);
-  if (!IMAGE_TYPES.has(String(inp.type ?? ""))) return raw;
+  if (!IMAGE_TYPES$1.has(String(inp.type ?? ""))) return raw;
   return coerceImageUrl(raw) ?? raw;
 }
 function coerceImageUrl(content) {
@@ -160400,7 +160400,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-C4SEztMS.mjs");
+    const { TGALoader } = await import("./TGALoader-E_7uSgCI.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -160413,7 +160413,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-De2kw42A.mjs");
+      const { MTLLoader } = await import("./MTLLoader-CoPk4aKd.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -160422,7 +160422,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-6-BFpPks.mjs");
+    const { STLLoader } = await import("./STLLoader-C_EbNUNy.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -160430,7 +160430,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-BQzKbpkL.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-DDDaZm-F.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -165488,7 +165488,19 @@ function bindCardHeight(node, opts) {
     useResizeObserver(flexible, onResize);
   });
   if (hasStoredWanted) requestAnimationFrame(() => requestAnimationFrame(apply2));
-  return apply2;
+  return {
+    sync: apply2,
+    fitPreview(width, height) {
+      var _a3, _b2;
+      if (!activate() || !laidOut()) return false;
+      rememberWanted(height);
+      chrome2 = chromeOf();
+      applied = chrome2 + wanted - offset2;
+      node.setSize([width, applied]);
+      (_b2 = (_a3 = app$1.graph) == null ? void 0 : _a3.setDirtyCanvas) == null ? void 0 : _b2.call(_a3, true, true);
+      return true;
+    }
+  };
 }
 function bindPromptResize(node, promptAnchor, scope2) {
   scope2.run(() => {
@@ -259222,6 +259234,86 @@ function bindWheelCapture(root) {
     held = null;
   });
 }
+const FIT_PROP = "v2_initial_image_fit";
+const IMAGE_KINDS = /* @__PURE__ */ new Set(["image", "image-batch", "image-picker", "panorama"]);
+const IMAGE_TYPES = /* @__PURE__ */ new Set(["COMFYTV_IMAGE", "COMFYTV_IMAGES", "COMFYTV_PANORAMA"]);
+function initialImagePreviewSize(width, height) {
+  const ratio = width / height;
+  const w = Math.max(320, Math.min(720, Math.sqrt(360 * 360 * ratio)));
+  return [Math.round(w), Math.round(Math.max(170, Math.min(720, w / ratio)))];
+}
+function initialImageUrl(state2) {
+  let waitingForInput = false;
+  for (const input of state2.inputs) {
+    if (!IMAGE_TYPES.has(input.type)) continue;
+    const url = previewUrlFromPayload(input.content);
+    if (url) return url;
+    if (input.source === "upstream" || input.source === "upstream-pending") waitingForInput = true;
+  }
+  if (waitingForInput) return "";
+  return previewUrlFromPayload(state2.output) || previewUrlFromPayload(state2.pool) || "";
+}
+function bindInitialImageSize(node, opts) {
+  var _a2;
+  const anyNode = node;
+  if (!IMAGE_KINDS.has(opts.state.kind) || anyNode.__comfytvFromSave || ((_a2 = anyNode.properties) == null ? void 0 : _a2[FIT_PROP])) return;
+  let stopped = false;
+  let dimensions = null;
+  let revision = 0;
+  let release = () => {
+  };
+  const createdWidth = node.size[0];
+  const finish = () => {
+    stopped = true;
+    (anyNode.properties ?? (anyNode.properties = {}))[FIT_PROP] = true;
+    release();
+  };
+  const fit = () => {
+    var _a3;
+    if (stopped || !dimensions || anyNode.__comfytvFromSave) return;
+    if (((_a3 = app$1.canvas) == null ? void 0 : _a3.resizing_node) === node || Math.abs(node.size[0] - createdWidth) > 1) {
+      finish();
+      return;
+    }
+    const box = opts.box();
+    if (!(opts.card.offsetHeight > 0 && box.clientWidth > 0 && box.offsetHeight > 0)) return;
+    const [width, height] = initialImagePreviewSize(...dimensions);
+    const border = Math.max(0, node.size[0] - box.clientWidth);
+    if (opts.resize(width + border, height)) finish();
+  };
+  opts.scope.run(() => {
+    const stopWatch = watch(() => initialImageUrl(opts.state), async (url) => {
+      const current = ++revision;
+      dimensions = null;
+      if (stopped || !url || anyNode.__comfytvFromSave) return;
+      const info = await loadMediaInfo(url);
+      if (stopped || current !== revision || anyNode.__comfytvFromSave) return;
+      const width = Number(info == null ? void 0 : info.width);
+      const height = Number(info == null ? void 0 : info.height);
+      if ((info == null ? void 0 : info.kind) !== "image" || !(width > 0 && height > 0) || !Number.isFinite(width + height)) return;
+      dimensions = [width, height];
+      fit();
+    }, { immediate: true });
+    const resizeObserver = useResizeObserver(opts.card, fit);
+    const mutationObserver = useMutationObserver(opts.card, fit, { childList: true, subtree: true });
+    const onResize = anyNode.onResize;
+    const resized = function(...args) {
+      var _a3;
+      if (!stopped && ((_a3 = app$1.canvas) == null ? void 0 : _a3.resizing_node) === node) finish();
+      return onResize == null ? void 0 : onResize.apply(this, args);
+    };
+    anyNode.onResize = resized;
+    release = () => {
+      stopped = true;
+      ++revision;
+      stopWatch();
+      resizeObserver.stop();
+      mutationObserver.stop();
+      if (anyNode.onResize === resized) anyNode.onResize = onResize;
+    };
+    onScopeDispose(release);
+  });
+}
 function bindShellChrome(node, opts) {
   var _a2, _b2, _c;
   const anyNode = node;
@@ -259233,13 +259325,15 @@ function bindShellChrome(node, opts) {
   };
   stopNativeAutoGrow(node);
   let syncHeight = null;
+  let heightController = null;
   if (opts.manageHeight) {
-    syncHeight = bindCardHeight(node, {
+    heightController = bindCardHeight(node, {
       scope: scope2,
       card,
       flexible: socketAnchor,
       min: opts.manageHeight.min
     });
+    syncHeight = heightController.sync;
     anyNode.__comfytvSyncHeight = syncHeight;
   }
   card.addEventListener("pointerdown", (e) => {
@@ -259274,6 +259368,24 @@ function bindShellChrome(node, opts) {
   };
   if (opts.state) {
     const state2 = opts.state;
+    const previewBox = () => {
+      var _a3;
+      return ((_a3 = opts.socketBox) == null ? void 0 : _a3.call(opts)) || card.querySelector(".v2-al__preview, .v2-crop__canvas, .v2-ed__canvas") || socketAnchor;
+    };
+    bindInitialImageSize(node, {
+      scope: scope2,
+      state: state2,
+      card,
+      box: previewBox,
+      resize(width, height) {
+        var _a3, _b3;
+        if (heightController) return heightController.fitPreview(width, height);
+        const chrome2 = node.size[1] - previewBox().offsetHeight;
+        node.setSize([width, Math.round(height + chrome2)]);
+        (_b3 = (_a3 = app$1.graph) == null ? void 0 : _a3.setDirtyCanvas) == null ? void 0 : _b3.call(_a3, true, true);
+        return true;
+      }
+    });
     const strip = el$9("div", "v2-error");
     const msg = el$9("div", "v2-error__msg");
     const x = el$9("button", "v2-error__x", "×");
@@ -269572,4 +269684,4 @@ export {
   RGBAIntegerFormat as y,
   WebGLArrayRenderTarget as z
 };
-//# sourceMappingURL=main-CEr_UIAK.mjs.map
+//# sourceMappingURL=main-DoxHT1B2.mjs.map

@@ -41,7 +41,7 @@ export function bindCardHeight(node: ComfyNode, opts: {
   card: HTMLElement
   flexible: HTMLElement
   min: number
-}): () => void {
+}): { sync: () => void; fitPreview: (width: number, height: number) => boolean } {
   const anyNode = node as any
   const { card, flexible, min } = opts
   const laidOut = () => card.offsetHeight > 0
@@ -129,7 +129,18 @@ export function bindCardHeight(node: ComfyNode, opts: {
     useResizeObserver(flexible, onResize)
   })
   if (hasStoredWanted) requestAnimationFrame(() => requestAnimationFrame(apply))
-  return apply
+  return {
+    sync: apply,
+    fitPreview(width, height) {
+      if (!activate() || !laidOut()) return false
+      rememberWanted(height)
+      chrome = chromeOf()
+      applied = chrome + wanted - offset
+      node.setSize([width, applied])
+      ;(app as any).graph?.setDirtyCanvas?.(true, true)
+      return true
+    },
+  }
 }
 
 export function bindPromptResize(node: ComfyNode, promptAnchor: HTMLElement, scope: EffectScope) {

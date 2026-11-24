@@ -83,4 +83,23 @@ describe('bindCardHeight', () => {
     expect(compact.node.properties.v2_preview_height).toBe(200)
     compact.scope.stop()
   })
+
+  it('fits the preview once and keeps its requested height when panel chrome changes', () => {
+    const card = document.createElement('div')
+    const preview = document.createElement('div')
+    card.appendChild(preview)
+    const node = makeNode(500)
+    let chrome = 200
+    Object.defineProperty(card, 'offsetHeight', { get: () => node.size[1] })
+    Object.defineProperty(preview, 'offsetHeight', { get: () => node.size[1] - chrome })
+    const scope = effectScope(true)
+    const controller = bindCardHeight(node, { scope, card, flexible: preview, min: 170 })
+    expect(controller.fitPreview(480, 270)).toBe(true)
+    expect(node.size).toEqual([480, 470])
+    expect(node.properties.v2_preview_height).toBe(270)
+    chrome = 80
+    controller.sync()
+    expect(node.size).toEqual([480, 350])
+    scope.stop()
+  })
 })

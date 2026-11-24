@@ -20,6 +20,7 @@ import {
 } from '@/v2/panelOnSelect'
 import { isTextEntry } from '@/v2/wheelCapture'
 import { bindCardHeight, el, stopNativeAutoGrow } from '@/v2/shellCommon'
+import { bindInitialImageSize } from '@/v2/initialImageSize'
 
 export function bindShellChrome(node: ComfyNode, opts: {
   scope: EffectScope
@@ -40,10 +41,12 @@ export function bindShellChrome(node: ComfyNode, opts: {
 
   stopNativeAutoGrow(node)
   let syncHeight: (() => void) | null = null
+  let heightController: ReturnType<typeof bindCardHeight> | null = null
   if (opts.manageHeight) {
-    syncHeight = bindCardHeight(node, {
+    heightController = bindCardHeight(node, {
       scope, card, flexible: socketAnchor, min: opts.manageHeight.min,
     })
+    syncHeight = heightController.sync
     anyNode.__comfytvSyncHeight = syncHeight
   }
 
@@ -85,6 +88,19 @@ export function bindShellChrome(node: ComfyNode, opts: {
 
   if (opts.state) {
     const state = opts.state
+    const previewBox = () => opts.socketBox?.()
+      || card.querySelector<HTMLElement>('.v2-al__preview, .v2-crop__canvas, .v2-ed__canvas')
+      || socketAnchor
+    bindInitialImageSize(node, {
+      scope, state, card, box: previewBox,
+      resize(width, height) {
+        if (heightController) return heightController.fitPreview(width, height)
+        const chrome = node.size[1] - previewBox().offsetHeight
+        node.setSize([width, Math.round(height + chrome)])
+        ;(app as any).graph?.setDirtyCanvas?.(true, true)
+        return true
+      },
+    })
     const strip = el('div', 'v2-error')
     const msg = el('div', 'v2-error__msg')
     const x = el('button', 'v2-error__x', '×') as HTMLButtonElement
