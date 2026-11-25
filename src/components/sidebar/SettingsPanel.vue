@@ -37,6 +37,7 @@
       </div>
 
       <template v-else>
+        <WorkflowAutoSaveSettings ref="autoSaveSettings" :query="query" />
         <SettingsSection
           v-if="pluginUpdateVisible"
           :section="pluginUpdateSection"
@@ -185,7 +186,7 @@
         </SettingsSection>
 
         <div
-          v-if="!sections.length && !teamGitVisible && !ignisVisible && !pluginUpdateVisible"
+          v-if="!sections.length && !teamGitVisible && !ignisVisible && !pluginUpdateVisible && !autoSaveSettings?.visible"
           class="ctv:py-5 ctv:px-1.5 ctv:text-center ctv:italic ctv:text-muted-foreground/60"
         >
           {{ $t('settings.noMatch') }}
@@ -213,6 +214,7 @@ import {
 } from '@/api'
 import SettingItem from '@/components/sidebar/SettingItem.vue'
 import PluginUpdateSettings from '@/components/sidebar/PluginUpdateSettings.vue'
+import WorkflowAutoSaveSettings from '@/components/sidebar/WorkflowAutoSaveSettings.vue'
 import SettingsSection from '@/components/sidebar/SettingsSection.vue'
 import SkillsSection from '@/components/sidebar/SkillsSection.vue'
 import ComfyTVText from '@/components/widgets/ComfyTVText.vue'
@@ -222,6 +224,7 @@ import type { SettingSection } from '@/composables/sidebar/useSettingsPanel'
 import IconSearch from '~icons/lucide/search'
 
 const props = defineProps<{ active?: boolean }>()
+const autoSaveSettings = ref<InstanceType<typeof WorkflowAutoSaveSettings> | null>(null)
 
 const { t } = useI18n()
 

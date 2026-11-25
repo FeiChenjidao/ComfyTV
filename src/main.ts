@@ -56,6 +56,7 @@ import { installClipboardImagePaste } from '@/composables/stages/clipboardImageP
 import { installClipboardImageCopy } from '@/composables/stages/clipboardImageCopy'
 import { installAppModeHint } from '@/composables/appModeHint'
 import { installPluginUpdateCheck } from '@/composables/pluginUpdateCheck'
+import { installWorkflowAutoSave } from '@/composables/workflowAutoSave'
 import { guardGhostPlacement } from '@/composables/ghostPlacementInert'
 import { installWorkflowRegistrySync } from '@/composables/stages/workflowRegistrySync'
 import {
@@ -393,6 +394,7 @@ const extension: ComfyExtension = {
     installDeleteKeyFix()
     void refreshAgentStatus()
     installPluginUpdateCheck()
+    installWorkflowAutoSave()
   },
 
   async beforeRegisterNodeDef(nodeType, nodeData: ComfyNodeDef) {
