@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import re
@@ -20,6 +21,7 @@ from ..runners.workflow_db.link import (
     _native_workflows_dir,
     _template_workflows_dir,
     resolve_request_user_id,
+    prepare_native_workflow_template,
 )
 from . import native_workflow_assets
 from ._common import routes
@@ -1459,6 +1461,15 @@ def push_paths(
         remote = status.get("remote") or "origin"
         branch = status.get("branch") or "main"
         packed = native_workflow_assets.pack_for_workflows(root, cleaned)
+        for rel in cleaned:
+            path = root / rel
+            data = json.loads(path.read_text(encoding="utf-8"))
+            portable = prepare_native_workflow_template(data)
+            if portable != data:
+                path.write_text(
+                    json.dumps(portable, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
         add_paths = list(cleaned) + list(packed.added)
         _run_git(root, "add", "--", *add_paths)
         diff = _run_git(root, "diff", "--cached", "--quiet")

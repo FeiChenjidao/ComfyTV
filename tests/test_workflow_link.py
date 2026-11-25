@@ -24,6 +24,26 @@ def native_dir(tmp_path, monkeypatch):
 
 
 class TestInstantiateNativeWorkflowTemplate:
+    def test_resets_stage_history_and_runtime_widgets_without_changing_saved_workflow(self, native_dir, monkeypatch):
+        import nodes
+
+        class ImageStage:
+            @classmethod
+            def INPUT_TYPES(cls):
+                return {"required": {"force_run_token": ("INT", {}), "project_id": ("STRING", {}),
+                                     "parent_output_id": ("INT", {}), "workflow": ("STRING", {})}}
+
+        monkeypatch.setitem(nodes.NODE_CLASS_MAPPINGS, "ComfyTV.ImageStage", ImageStage)
+        graph = {"nodes": [{"id": 1, "type": "ComfyTV.ImageStage", "properties": {"comfytv_stage_uid": "old-stage"},
+                            "widgets_values": [123, "source-project", 99, "GPT_Image_2.5"]}]}
+        source = native_dir / "image.json"
+        source.write_text(json.dumps(graph), encoding="utf-8")
+        first = wdb.instantiate_native_workflow_template("image.json")["graph"]
+        second = wdb.instantiate_native_workflow_template("image.json")["graph"]
+        assert first["nodes"][0]["widgets_values"] == [0, "", 0, "GPT_Image_2.6"]
+        assert first["nodes"][0]["properties"]["comfytv_stage_uid"] != second["nodes"][0]["properties"]["comfytv_stage_uid"]
+        assert json.loads(source.read_text(encoding="utf-8")) == graph
+
     def test_prepares_distinct_unsaved_local_workflow(self, native_dir):
         source_data = {
             "id": "template-id",

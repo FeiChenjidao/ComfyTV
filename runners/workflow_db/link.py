@@ -2,13 +2,14 @@ import json
 import logging
 from pathlib import Path
 from typing import Any, Optional
-from uuid import uuid4
 
 from sqlalchemy import select
 
 from ... import db
 from .auto_bind import add_size_node_bindings
 from .labels import _label_from_stem, _is_gui_format
+from .convert import _node_schema
+from ..workflow_templates import prepare_template_graph, workflow_nodes
 
 _log = logging.getLogger(__name__)
 
@@ -165,6 +166,19 @@ def list_template_workflows() -> list[dict]:
     return items
 
 
+def prepare_native_workflow_template(data: dict, *, new_instance: bool = False) -> dict:
+    import nodes
+
+    mappings = nodes.NODE_CLASS_MAPPINGS
+    classes = {node.get("type") for node in workflow_nodes(data)}
+    schemas = {
+        name: _node_schema(name, mappings[name]) or {}
+        for name in classes if isinstance(name, str)
+        and name.startswith("ComfyTV.") and name in mappings
+    }
+    return prepare_template_graph(data, schemas, new_instance=new_instance)
+
+
 def instantiate_native_workflow_template(
     rel_path: str,
     user_id: Optional[str] = None,
@@ -187,10 +201,7 @@ def instantiate_native_workflow_template(
             "not a GUI-format workflow (missing a top-level 'nodes' array)"
         )
 
-    # A copied graph must be a distinct ComfyUI document, not just another file
-    # containing the template's document id.
-    data["id"] = str(uuid4())
-    data["revision"] = 0
+    data = prepare_native_workflow_template(data, new_instance=True)
     native_root = _native_workflows_dir(user_id)
     if native_root is None:
         raise ValueError("ComfyUI workflow library is unavailable")

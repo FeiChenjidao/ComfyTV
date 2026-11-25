@@ -199,14 +199,24 @@ describe('useAssetLoaderCard — relative selection', () => {
 })
 
 describe('useAssetLoaderCard — mount restore', () => {
-  it('restores the saved asset by id and heals a stale url', async () => {
+  it('keeps the saved URL when another server reuses its numeric asset id', async () => {
     fakeAssetStore.byId.mockImplementation((id: number) => (id === 1 ? IMG_ASSET : undefined))
     const node = makeNode({ asset_id: 1, asset_url: '/stale.png', category: '2' })
     const { api, state } = await setup(node)
-    expect(api.selectedId.value).toBe(1)
+    expect(api.selectedId.value).toBeNull()
     expect(api.activeFilter.value).toBe(2)
+    expect(widgetValue(node, 'asset_url')).toBe('/stale.png')
+    expect(widgetValue(node, 'asset_id')).toBe(0)
+    expect(fakeStageStore.setOutputSlot).toHaveBeenCalledWith(state, 0, '/stale.png')
+  })
+
+  it('matches by URL even when the saved id belongs to a different asset', async () => {
+    fakeAssetStore.byId.mockReturnValue(VID_ASSET)
+    fakeAssetStore.byPayloadUrl.mockReturnValue(IMG_ASSET)
+    const { api, node } = await setup(makeNode({ asset_id: 2, asset_url: '/a/pic.png' }))
+    expect(api.selectedId.value).toBe(1)
+    expect(widgetValue(node, 'asset_id')).toBe(1)
     expect(widgetValue(node, 'asset_url')).toBe('/a/pic.png')
-    expect(fakeStageStore.setOutputSlot).toHaveBeenCalledWith(state, 0, '/a/pic.png')
   })
 
   it('falls back to a payload-url lookup when no id is saved', async () => {

@@ -1,7 +1,9 @@
 const WORKFLOW_LABEL_ALIASES: Record<string, Record<string, string>> = {
   image: {
     NanoBanana2: 'NanoBanana 2.1',
+    'GPT_Image_2.5': 'GPT_Image_2.6',
   },
+  model: { Meshy: 'Meshy Multi' },
 }
 
 export function canonicalWorkflowLabel(kind: string, label: unknown): string {

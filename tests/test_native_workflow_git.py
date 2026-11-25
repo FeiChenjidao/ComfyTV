@@ -51,6 +51,7 @@ def _load_mod():
     link._native_workflows_dir = lambda *_a, **_k: None
     link._template_workflows_dir = lambda: None
     link.resolve_request_user_id = lambda *_a, **_k: "default"
+    link.prepare_native_workflow_template = lambda data, **_k: data
 
     common = types.ModuleType("ComfyTV.api._common")
 

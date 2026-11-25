@@ -82,6 +82,7 @@ import { installDeleteKeyFix } from '@/v2/deleteKeyFix'
 import { hydrateV2Flag, isV2Enabled } from '@/v2/flagV2'
 import { installPlaybackArbiter } from '@/composables/widgets/playbackArbiter'
 import { installCameraMotionLod } from '@/composables/widgets/cameraMotionLod'
+import { migrateModelStageConfigureInfo, normalizeModelStageWidgets } from '@/composables/stages/modelStageMigration'
 import { installV2Lod } from '@/v2/lodV2'
 
 ;(window as any).__comfytv_host_pinia = getActivePinia()
@@ -404,7 +405,9 @@ const extension: ComfyExtension = {
     const proto = nodeType.prototype as ComfyNode
     const configured = proto.onConfigure
     proto.onConfigure = function (this: ComfyNode, info: any) {
+      if (nodeData.name === 'ComfyTV.Model3DStage') migrateModelStageConfigureInfo(this, info)
       const result = configured?.call(this, info)
+      if (nodeData.name === 'ComfyTV.Model3DStage') normalizeModelStageWidgets(this)
       ;(this as any).__comfytvConfigured = true
       return result
     }

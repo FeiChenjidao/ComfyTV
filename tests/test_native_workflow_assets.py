@@ -6,6 +6,23 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def restore_import_stubs():
+    names = ["folder_paths", "ComfyTV.api", "ComfyTV.runners", "ComfyTV.runners._workflow_resolve", "ComfyTV.api.native_workflow_assets"]
+    previous = {name: sys.modules.get(name) for name in names}
+    attributes = {name: dict(module.__dict__) for name, module in previous.items() if module is not None}
+    yield
+    for name, module in previous.items():
+        if module is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = module
+            module.__dict__.clear()
+            module.__dict__.update(attributes[name])
+
 
 def _load_assets_mod(tmp_path: Path):
     root = Path(__file__).resolve().parents[1]
@@ -16,6 +33,7 @@ def _load_assets_mod(tmp_path: Path):
         sys.modules[pkg] = m
     for name in ("ComfyTV.api", "ComfyTV.runners", "ComfyTV.runners._workflow_resolve"):
         sys.modules.setdefault(name, types.ModuleType(name))
+    sys.modules["ComfyTV.runners"].__path__ = [str(root / "runners")]
 
     # Minimal /view? helper used by resolver
     resolve = sys.modules["ComfyTV.runners._workflow_resolve"]
@@ -121,3 +139,52 @@ def test_pack_and_restore(tmp_path):
     restored = mod.restore_assets(root)
     assert restored.restored >= 1
     assert (input2 / "comfytv" / "uploads" / "a.png").read_bytes() == b"png-bytes"
+
+
+def test_scans_editor_captures_properties_descriptors_and_subgraphs(tmp_path):
+    mod, *_ = _load_assets_mod(tmp_path)
+    doc = {
+        "nodes": [{
+            "type": "ComfyTV.CanvasStage",
+            "widgets_values": ["/view?filename=capture.png&type=input", json.dumps({"root": {"children": [{"url": "/view?filename=layer.png&type=input"}]}})],
+            "properties": {
+                "comfytv_split_overrides": {"/view?filename=source.png&type=input": "/view?filename=edit.png&type=input"},
+                "comfytv_layer_separation_compositor": {"compositor_layers": [{"filename": "piece.png", "subfolder": "layers", "type": "output"}]},
+            },
+        }],
+        "definitions": {"subgraphs": [{"nodes": [{"type": "ComfyTV.VideoLoaderStage", "widgets_values": ["default", 0, "clip.mp4"]}]}]},
+    }
+    refs = mod.scan_workflow_media(doc)
+    for name in ("capture.png", "layer.png", "source.png", "edit.png", "piece.png", "clip.mp4"):
+        assert any(name in ref for ref in refs)
+    assert not any(ref == "piece.png" for ref in refs)
+    assert any("subfolder=layers" in ref and "type=output" in ref for ref in refs)
+
+
+def test_model_history_does_not_pack_large_model_artifacts(tmp_path):
+    mod, *_ = _load_assets_mod(tmp_path)
+    refs = mod.scan_workflow_media({"nodes": [{"type": "ComfyTV.Model3DStage", "widgets_values": [json.dumps({"images": [{"image_url": "/view?filename=model.glb&type=output"}]})]}]})
+    assert refs == []
+
+
+def test_editor_assets_pack_and_restore_with_their_original_folders(tmp_path):
+    mod, input_dir, output_dir, _ = _load_assets_mod(tmp_path)
+    (input_dir / "edit.png").write_bytes(b"edited-layer")
+    (output_dir / "layers").mkdir()
+    (output_dir / "layers" / "piece.png").write_bytes(b"compositor-layer")
+    root = tmp_path / "templates"
+    root.mkdir()
+    doc = {"nodes": [{"type": "ComfyTV.LayerSeparationStage", "widgets_values": ["/view?filename=edit.png&type=input"],
+                      "properties": {"compositor": {"compositor_layers": [{"filename": "piece.png", "subfolder": "layers", "type": "output"}]}}}]}
+    (root / "editor.json").write_text(json.dumps(doc), encoding="utf-8")
+    packed = mod.pack_for_workflows(root, ["editor.json"])
+    assert packed.packed_files == 2
+    assert packed.warnings == []
+    import folder_paths
+    fresh = tmp_path / "fresh"
+    folder_paths.get_input_directory = lambda: str(fresh / "input")
+    folder_paths.get_output_directory = lambda: str(fresh / "output")
+    restored = mod.restore_assets(root)
+    assert restored.restored == 2
+    assert (fresh / "input" / "edit.png").read_bytes() == b"edited-layer"
+    assert (fresh / "output" / "layers" / "piece.png").read_bytes() == b"compositor-layer"

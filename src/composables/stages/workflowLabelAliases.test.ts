@@ -16,4 +16,10 @@ describe('workflow label aliases', () => {
   it('leaves unrelated labels unchanged', () => {
     expect(canonicalWorkflowLabel('video', 'NanoBanana2')).toBe('NanoBanana2')
   })
+
+  it('migrates renamed image and model providers without changing other kinds', () => {
+    expect(canonicalWorkflowLabel('image', 'GPT_Image_2.5')).toBe('GPT_Image_2.6')
+    expect(canonicalWorkflowLabel('model', 'Meshy')).toBe('Meshy Multi')
+    expect(canonicalWorkflowLabel('video', 'Meshy')).toBe('Meshy')
+  })
 })

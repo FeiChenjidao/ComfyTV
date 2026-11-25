@@ -12,7 +12,9 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import unquote
+from urllib.parse import unquote, urlencode, parse_qs, urlsplit
+
+from ..runners.workflow_templates import workflow_nodes
 
 _log = logging.getLogger(__name__)
 
@@ -32,6 +34,8 @@ _LOADER_TYPES = {
     "LoadVideo",
     "LoadAudio",
     "ComfyTV.ImageLoaderStage",
+    "ComfyTV.VideoLoaderStage",
+    "ComfyTV.AudioLoaderStage",
     "ComfyTV.AssetImageLoaderStage",
     "ComfyTV.AssetVideoLoaderStage",
     "ComfyTV.AssetAudioLoaderStage",
@@ -58,7 +62,8 @@ def _looks_like_media_ref(value: str) -> bool:
     if not text or text.startswith("http://") or text.startswith("https://"):
         return False
     if text.startswith("/view?"):
-        return True
+        filename = parse_qs(urlsplit(text).query).get("filename", [""])[0]
+        return Path(filename).suffix.lower() in (_IMAGE_EXT | _AV_EXT)
     if "[" in text and text.rstrip().endswith("]"):
         return True
     lower = text.lower().split("?", 1)[0]
@@ -79,6 +84,8 @@ def _refs_from_node(node: dict[str, Any]) -> list[str]:
             add(wv[0])
     elif ntype in (
         "ComfyTV.ImageLoaderStage",
+        "ComfyTV.VideoLoaderStage",
+        "ComfyTV.AudioLoaderStage",
         "ComfyTV.AssetImageLoaderStage",
         "ComfyTV.AssetVideoLoaderStage",
         "ComfyTV.AssetAudioLoaderStage",
@@ -89,25 +96,33 @@ def _refs_from_node(node: dict[str, Any]) -> list[str]:
         for v in wv:
             add(v)
 
-    # Nested JSON blobs (e.g. ImagePickerStage image_url lists)
-    for v in wv:
-        if not isinstance(v, str) or not v.startswith("{"):
-            continue
-        try:
-            blob = json.loads(v)
-        except Exception:
-            continue
-        stack: list[Any] = [blob]
-        while stack:
-            cur = stack.pop()
-            if isinstance(cur, dict):
-                for key, val in cur.items():
-                    if key in ("image_url", "url", "src", "filename", "path", "image") and isinstance(val, str):
-                        add(val)
-                    else:
-                        stack.append(val)
-            elif isinstance(cur, list):
-                stack.extend(cur)
+    # Editor captures, split overrides, nested pools and compositor ImageRefs.
+    stack: list[Any] = [node.get("properties", {}), *wv]
+    while stack:
+        cur = stack.pop()
+        if isinstance(cur, dict):
+            if isinstance(cur.get("filename"), str):
+                add("/view?" + urlencode({
+                    "filename": cur["filename"],
+                    "subfolder": cur.get("subfolder", ""),
+                    "type": cur.get("type", "output"),
+                }))
+            for key, value in cur.items():
+                if key != "filename":
+                    stack.append(value)
+                if key.startswith("/view?"):
+                    add(key)
+        elif isinstance(cur, list):
+            stack.extend(cur)
+        elif isinstance(cur, str):
+            text = cur.lstrip()
+            if text.startswith(("{", "[")):
+                try:
+                    stack.append(json.loads(text))
+                except json.JSONDecodeError:
+                    pass
+            elif text.startswith("/view?"):
+                add(text)
 
     # Dedup preserve order
     seen: set[str] = set()
@@ -185,9 +200,8 @@ def _wf_asset_dir(root: Path, workflow_rel: str) -> Path:
 
 def scan_workflow_media(doc: dict[str, Any]) -> list[str]:
     refs: list[str] = []
-    for node in doc.get("nodes") or []:
-        if isinstance(node, dict):
-            refs.extend(_refs_from_node(node))
+    for node in workflow_nodes(doc):
+        refs.extend(_refs_from_node(node))
     # unique
     seen: set[str] = set()
     out: list[str] = []

@@ -137,15 +137,20 @@ export function useAssetLoaderCard(node: LGraphNode, getState: () => StageState)
 
     const savedId = Number(getWidget(node, 'asset_id')?.value)
     const savedUrl = readWidgetStr(node, 'asset_url', '')
-    const match = Number.isFinite(savedId) && savedId > 0
-      ? store.byId(savedId)
-      : (savedUrl ? store.byPayloadUrl(savedUrl) : undefined)
+    // Library ids are local to a server. A shared workflow's URL is the source
+    // of truth when another server happens to have the same numeric id.
+    const byId = Number.isFinite(savedId) && savedId > 0 ? store.byId(savedId) : undefined
+    const match = savedUrl
+      ? store.byPayloadUrl(savedUrl) ?? (byId?.payload_url === savedUrl ? byId : undefined)
+      : byId
 
-    if (match) {
+    if (match && match.media_type === mediaType.value) {
       selectedId.value = match.id
+      writeWidget(node, 'asset_id', match.id, { fireCallback: false })
       if (match.payload_url !== savedUrl) writeWidget(node, 'asset_url', match.payload_url)
       setOutputFromUrl(match.payload_url)
     } else if (savedUrl) {
+      writeWidget(node, 'asset_id', 0, { fireCallback: false })
       setOutputFromUrl(savedUrl)
     }
   })

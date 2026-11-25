@@ -60060,7 +60060,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-D4qXIISj.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-t29Zuruq.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -80996,7 +80996,7 @@ const _sfc_main$4N = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const WorkflowAutoSaveSettings = /* @__PURE__ */ _export_sfc(_sfc_main$4N, [["__scopeId", "data-v-f1bc301b"]]);
+const WorkflowAutoSaveSettings = /* @__PURE__ */ _export_sfc(_sfc_main$4N, [["__scopeId", "data-v-fff11bc1"]]);
 function message$1(e) {
   return e instanceof Error ? e.message : String(e);
 }
@@ -90891,7 +90891,7 @@ const _sfc_main$4I = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-ClysTygY.mjs"),
+      loader: () => import("./AgentPanelRoot-DTkDDAY_.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -161289,12 +161289,15 @@ function useAssetLoaderCard(node, getState) {
     activeFilter.value = parseCategoryFilter(readWidgetStr(node, "category", "all"));
     const savedId = Number((_a2 = getWidget(node, "asset_id")) == null ? void 0 : _a2.value);
     const savedUrl = readWidgetStr(node, "asset_url", "");
-    const match = Number.isFinite(savedId) && savedId > 0 ? store2.byId(savedId) : savedUrl ? store2.byPayloadUrl(savedUrl) : void 0;
-    if (match) {
+    const byId = Number.isFinite(savedId) && savedId > 0 ? store2.byId(savedId) : void 0;
+    const match = savedUrl ? store2.byPayloadUrl(savedUrl) ?? ((byId == null ? void 0 : byId.payload_url) === savedUrl ? byId : void 0) : byId;
+    if (match && match.media_type === mediaType.value) {
       selectedId.value = match.id;
+      writeWidget(node, "asset_id", match.id, { fireCallback: false });
       if (match.payload_url !== savedUrl) writeWidget(node, "asset_url", match.payload_url);
       setOutputFromUrl(match.payload_url);
     } else if (savedUrl) {
+      writeWidget(node, "asset_id", 0, { fireCallback: false });
       setOutputFromUrl(savedUrl);
     }
   });
@@ -161731,7 +161734,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-DS8LcZQw.mjs");
+    const { TGALoader } = await import("./TGALoader-BwULUk91.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -161744,7 +161747,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-Bkc0dWjK.mjs");
+      const { MTLLoader } = await import("./MTLLoader-Bfiw1XEl.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -161753,7 +161756,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-C3e7xgHD.mjs");
+    const { STLLoader } = await import("./STLLoader-D9GrqY5b.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -161761,7 +161764,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-CufEXqIu.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-CjiAwDlz.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -249201,8 +249204,10 @@ async function postPickedIndex(outputId, pickedIndex) {
 }
 const WORKFLOW_LABEL_ALIASES = {
   image: {
-    NanoBanana2: "NanoBanana 2.1"
-  }
+    NanoBanana2: "NanoBanana 2.1",
+    "GPT_Image_2.5": "GPT_Image_2.6"
+  },
+  model: { Meshy: "Meshy Multi" }
 };
 function canonicalWorkflowLabel(kind, label) {
   var _a2;
@@ -270181,6 +270186,34 @@ function uninstallCameraMotionLod() {
   styleEl = null;
   clearLod();
 }
+function migrateModelStageConfigureInfo(node, info) {
+  var _a2, _b2, _c;
+  const values = info == null ? void 0 : info.widgets_values;
+  if (((_a2 = info == null ? void 0 : info.widgets_values_named) == null ? void 0 : _a2.selected_index) != null) return false;
+  const index2 = ((_b2 = node.widgets) == null ? void 0 : _b2.findIndex((widget) => widget.name === "selected_index")) ?? -1;
+  if (!Array.isArray(values) || index2 < 0 || values.length > index2 + 3) return false;
+  const oldCustom = values[index2];
+  if (typeof oldCustom !== "string" || !oldCustom.trimStart().startsWith("{")) return false;
+  try {
+    const parsed = JSON.parse(oldCustom);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+  } catch {
+    return false;
+  }
+  values.splice(index2, 0, 1, "", true);
+  for (let i = index2; i < values.length; i++) {
+    const widget = (_c = node.widgets) == null ? void 0 : _c[i];
+    if (widget && widget.serialize !== false) widget.value = values[i];
+  }
+  return true;
+}
+function normalizeModelStageWidgets(node) {
+  var _a2, _b2;
+  const seed = (_a2 = node.widgets) == null ? void 0 : _a2.find((widget) => widget.name === "seed");
+  const append3 = (_b2 = node.widgets) == null ? void 0 : _b2.find((widget) => widget.name === "append_results");
+  if (seed && seed.value == null) seed.value = 0;
+  if (append3 && typeof append3.value !== "boolean") append3.value = true;
+}
 window.__comfytv_host_pinia = getActivePinia();
 const pinia = createPinia();
 setActivePinia(pinia);
@@ -270490,7 +270523,9 @@ const extension = {
     const proto = nodeType.prototype;
     const configured = proto.onConfigure;
     proto.onConfigure = function(info) {
+      if (nodeData.name === "ComfyTV.Model3DStage") migrateModelStageConfigureInfo(this, info);
       const result = configured == null ? void 0 : configured.call(this, info);
+      if (nodeData.name === "ComfyTV.Model3DStage") normalizeModelStageWidgets(this);
       this.__comfytvConfigured = true;
       return result;
     };
@@ -270831,4 +270866,4 @@ export {
   RGBAIntegerFormat as y,
   WebGLArrayRenderTarget as z
 };
-//# sourceMappingURL=main-DJq_z_cg.mjs.map
+//# sourceMappingURL=main-Cd4AOuOd.mjs.map
