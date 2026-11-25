@@ -3,6 +3,8 @@
 **English** | [简体中文](README.zh.md)
 
 # ComfyTV
+
+Utility: [Quick Black to Alpha / 快速去黑](docs/fast-black.md) — live preview, protection masks, outside-in edge cleanup, residual-black recoloring, and silent VP8 WebM alpha export.
 ComfyTV — the canvas-based app that truly belongs to ComfyUI.
 
 ComfyTV turns ComfyUI into a **TapNow / LibTV-style canvas app** — and keeps going, all the way to a full media workbench. Every operation is its own node; results flow downstream automatically. Chain stages into a complete flow: **generate → pick → edit → composite → export**, across image, video, audio, music, panorama, 2D layers, and 3D.

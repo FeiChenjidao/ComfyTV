@@ -3,6 +3,8 @@
 [English](README.md) | **简体中文**
 
 # ComfyTV
+
+新增工具：[快速去黑](docs/fast-black.md) — 即时预览、蒙版保护、从外向内清理黑边、残留黑色改色，以及无音频透明 VP8 WebM 导出。
 ComfyTV，真正属于 ComfyUI 的画布式应用。
 
 ComfyTV 把 ComfyUI 变成一个**类 TapNow / LibTV 型的画布式应用**——并且一路做深，做成完整的媒体工作台。每一步操作是一个独立节点，结果自动传播到下游。用 stage 连成完整流程：**生成 → 挑选 → 编辑 → 合成 → 导出**，覆盖图像、视频、音频、音乐、全景、2D 图层和 3D。

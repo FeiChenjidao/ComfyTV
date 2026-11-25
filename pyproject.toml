@@ -3,7 +3,7 @@ name = "ComfyTV"
 description = "LibTV-style Canvas pipeline for ComfyUI"
 version = "1.10.0"
 license = {text = "MIT"}
-dependencies = []
+dependencies = ["scipy"]
 
 [project.urls]
 Repository = "https://github.com/jtydhr88/ComfyTV"
