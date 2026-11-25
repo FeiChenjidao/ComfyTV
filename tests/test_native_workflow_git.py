@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
+import functools
+import http.server
 import subprocess
 import sys
+import threading
 import types
 from pathlib import Path
 
@@ -232,7 +235,7 @@ class TestNativeWorkflowGit:
         assert out["ok"] is True
         assert (templates / "local-new.json").read_text(encoding="utf-8") == '{"nodes":[2]}'
 
-    def test_setup_repo_clones_into_existing_dir(self, tmp_path):
+    def test_setup_repo_clones_into_existing_dir(self, tmp_path, monkeypatch):
         mod = _load_mod()
         remote = tmp_path / "remote.git"
         _git(tmp_path, "init", "--bare", str(remote))
@@ -255,11 +258,125 @@ class TestNativeWorkflowGit:
         target = tmp_path / "workflows"
         target.mkdir()
         (target / "local-only.json").write_text('{"nodes":[1]}', encoding="utf-8")
+        # An expired write token must not affect public clone, fetch or update.
+        (target / ".comfytv-git-token").write_text("expired-write-token", encoding="utf-8")
+        def forbid_write_auth(*_args):
+            raise AssertionError("Read operation requested write credentials")
+        monkeypatch.setattr(mod, "_authed_origin", forbid_write_auth)
         out = mod.setup_repo(str(remote), root=target)
         assert out["ok"] is True
         assert out["is_repo"] is True
         assert (target / "team.json").is_file()
         assert (target / "local-only.json").read_text(encoding="utf-8") == '{"nodes":[1]}'
+        assert mod.pull_repo(root=target)["ok"] is True
+
+    def test_public_fetch_strips_credentials_without_modifying_origin(self, tmp_path, monkeypatch):
+        mod = _load_mod()
+        calls = []
+        def run(root, *args, **_kwargs):
+            calls.append(args)
+            stdout = (
+                "https://x-access-token:expired-secret@github.com/example/team.git\n"
+                if args == ("remote", "get-url", "origin") else ""
+            )
+            return subprocess.CompletedProcess(args, 0, stdout, "")
+        monkeypatch.setattr(mod, "_run_git", run)
+        assert mod._fetch_read_remote(tmp_path, "origin").returncode == 0
+        fetch = calls[-1]
+        assert "expired-secret" not in " ".join(fetch)
+        assert "https://github.com/example/team.git" in fetch
+        assert "http.extraHeader=" in fetch
+        assert "http.https://github.com/example/team.git.extraHeader=" in fetch
+        assert "+refs/heads/*:refs/remotes/origin/*" in fetch
+        assert not any("set-url" in args for args in calls)
+
+    def test_private_read_reuses_server_token_only_after_anonymous_denial(self, tmp_path, monkeypatch):
+        mod = _load_mod()
+        calls = []
+        url = "https://github.com/example/private.git"
+        def run(root, *args, **_kwargs):
+            calls.append(args)
+            if len(calls) == 1:
+                return subprocess.CompletedProcess(args, 128, "", "Repository not found")
+            return subprocess.CompletedProcess(args, 0, "", "")
+        monkeypatch.setattr(mod, "_run_git", run)
+        result = mod._run_read_git(tmp_path, url, "clone", url, "target", token="stored-server-token")
+        assert result.returncode == 0
+        assert url in calls[0] and "stored-server-token" not in " ".join(calls[0])
+        assert "https://x-access-token:stored-server-token@github.com/example/private.git" in calls[1]
+        assert not any("set-url" in args for args in calls)
+
+    def test_read_does_not_retry_network_failure_with_credentials(self, tmp_path, monkeypatch):
+        mod = _load_mod()
+        calls = []
+        def run(root, *args, **_kwargs):
+            calls.append(args)
+            return subprocess.CompletedProcess(args, 128, "", "Could not resolve host: github.com")
+        monkeypatch.setattr(mod, "_run_git", run)
+        url = "https://github.com/example/public.git"
+        result = mod._run_read_git(tmp_path, url, "clone", url, "target", token="expired-token")
+        assert result.returncode == 128
+        assert len(calls) == 1
+        assert "expired-token" not in " ".join(calls[0])
+
+    def test_pull_stops_before_reset_when_public_fetch_fails(self, tmp_path, monkeypatch):
+        mod = _load_mod()
+        monkeypatch.setattr(mod, "collect_status", lambda *_a, **_kw: {
+            "ok": True, "is_repo": True, "fetch_error": "Repository not found",
+        })
+        def forbid_reset(*_args, **_kwargs):
+            raise AssertionError("Must not reset the working tree after a failed fetch")
+        monkeypatch.setattr(mod, "_run_git", forbid_reset)
+        result = mod.pull_repo(root=tmp_path)
+        assert result["ok"] is False
+        assert result["error_code"] == "read_failed"
+        assert result["error"] == "Repository not found"
+
+    def test_public_http_fetch_sends_no_stored_authorization(self, tmp_path):
+        mod = _load_mod()
+        seed = _init_repo(tmp_path)
+        remote = tmp_path / "public.git"
+        _git(tmp_path, "clone", "--bare", str(seed), str(remote))
+        _git(remote, "update-server-info")
+        received_auth = []
+
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def do_GET(self):
+                received_auth.append(self.headers.get("Authorization"))
+                if self.headers.get("Authorization"):
+                    self.send_error(401)
+                    return
+                super().do_GET()
+
+            def log_message(self, *_args):
+                pass
+
+        server = http.server.ThreadingHTTPServer(
+            ("127.0.0.1", 0), functools.partial(Handler, directory=str(tmp_path)),
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            url = f"http://127.0.0.1:{server.server_port}/public.git"
+            target = tmp_path / "reader"
+            target.mkdir()
+            _git(target, "init")
+            _git(target, "remote", "add", "origin", url)
+            _git(target, "config", "http.extraHeader", "Authorization: Bearer expired-global")
+            _git(target, "config", f"http.{url}.extraHeader", "Authorization: Bearer expired-scoped")
+            (target / ".comfytv-git-token").write_text("expired-write-token", encoding="utf-8")
+            result = mod._fetch_read_remote(target, "origin")
+            assert result.returncode == 0, result.stderr
+            assert received_auth and all(header is None for header in received_auth)
+            refs = subprocess.run(
+                ["git", "for-each-ref", "--format=%(refname)", "refs/remotes/origin"],
+                cwd=target, capture_output=True, text=True, check=True,
+            )
+            assert "refs/remotes/origin/" in refs.stdout
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
 
     def test_strip_auth_from_remote_url(self):
         mod = _load_mod()

@@ -345,7 +345,6 @@ async function refreshGitStatusInBackground() {
         const setup = await setupNativeWorkflowGit()
         gitStatus.value = setup
         if (!setup.ok || !setup.is_repo) {
-          void promptTokenIfAuthFailed(setup)
           return
         }
         if (setup.ok && setup.is_repo) {
@@ -366,10 +365,6 @@ async function refreshGitStatusInBackground() {
     // 2) Then silent fetch for 可更新 / behind
     const remote = await fetchNativeWorkflowGitStatus(true).catch(() => null)
     if (remote) gitStatus.value = remote
-    if (remote && isGitAuthFailure(remote) && !tokenDialogOpen.value) {
-      void ensureGitTokenConfigured(true)
-      return
-    }
 
     // Cloud templates behind → overwrite locally without asking
     if (
@@ -428,8 +423,6 @@ async function onGitPathSave() {
 
 async function onGitSetup() {
   if (!canGitSetup.value) return
-  const tokOk = await ensureGitTokenConfigured()
-  if (!tokOk) return
   gitBusy.value = 'setup'
   gitFlash.value = ''
   commitPickOpen.value = false
@@ -438,7 +431,6 @@ async function onGitSetup() {
     gitStatus.value = res
     if (!res.ok || !res.is_repo) {
       toast('error', t('v2.bottomBar.gitError'), gitErrorDetail(res))
-      await promptTokenIfAuthFailed(res)
       return
     }
     gitFlash.value = t('v2.bottomBar.gitConnectOk')
@@ -473,8 +465,6 @@ async function promptTokenIfAuthFailed(res: NativeWorkflowGitStatus): Promise<vo
 
 async function onGitUpdate() {
   if (!canGitActions.value) return
-  const tokOk = await ensureGitTokenConfigured()
-  if (!tokOk) return
   gitBusy.value = 'pull'
   gitFlash.value = ''
   commitPickOpen.value = false
@@ -483,7 +473,6 @@ async function onGitUpdate() {
     gitStatus.value = res
     if (!res.ok) {
       toast('error', t('v2.bottomBar.gitError'), gitErrorDetail(res))
-      await promptTokenIfAuthFailed(res)
       return
     }
     gitFlash.value = t('v2.bottomBar.gitPullOk')

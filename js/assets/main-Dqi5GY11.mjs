@@ -60060,7 +60060,7 @@ class ArrayStream {
 }
 let sparkPromise = null;
 function loadSpark() {
-  return sparkPromise ?? (sparkPromise = import("./spark.module-B4Ltfwe-.mjs"));
+  return sparkPromise ?? (sparkPromise = import("./spark.module-CQrRVpBK.mjs"));
 }
 const MESH_MODEL_EXTENSIONS = [".glb", ".gltf", ".fbx", ".obj", ".stl", ".dae"];
 const SPLAT_MODEL_EXTENSIONS = [".spz", ".splat", ".ksplat"];
@@ -90560,7 +90560,7 @@ const _sfc_main$4I = /* @__PURE__ */ defineComponent({
       }
     });
     const AgentPanelRoot = /* @__PURE__ */ defineAsyncComponent({
-      loader: () => import("./AgentPanelRoot-H9NecHJk.mjs"),
+      loader: () => import("./AgentPanelRoot-B0NLjrSv.mjs"),
       errorComponent: AgentPanelLoadError,
       onError: (error2, _retry, fail) => {
         reportError(error2, { errorType: "agent_panel_load_failure" });
@@ -96943,7 +96943,6 @@ const _sfc_main$4v = /* @__PURE__ */ defineComponent({
             const setup2 = await setupNativeWorkflowGit();
             gitStatus.value = setup2;
             if (!setup2.ok || !setup2.is_repo) {
-              void promptTokenIfAuthFailed(setup2);
               return;
             }
             if (setup2.ok && setup2.is_repo) {
@@ -96962,10 +96961,6 @@ const _sfc_main$4v = /* @__PURE__ */ defineComponent({
         }
         const remote = await fetchNativeWorkflowGitStatus(true).catch(() => null);
         if (remote) gitStatus.value = remote;
-        if (remote && isGitAuthFailure(remote) && !tokenDialogOpen.value) {
-          void ensureGitTokenConfigured(true);
-          return;
-        }
         if ((remote == null ? void 0 : remote.ok) && remote.is_repo && remote.behind > 0 && !gitBusy.value && panel.value === "workflows") {
           void onGitUpdate();
         }
@@ -97013,8 +97008,6 @@ const _sfc_main$4v = /* @__PURE__ */ defineComponent({
     }
     async function onGitSetup() {
       if (!canGitSetup.value) return;
-      const tokOk = await ensureGitTokenConfigured();
-      if (!tokOk) return;
       gitBusy.value = "setup";
       gitFlash.value = "";
       commitPickOpen.value = false;
@@ -97023,7 +97016,6 @@ const _sfc_main$4v = /* @__PURE__ */ defineComponent({
         gitStatus.value = res;
         if (!res.ok || !res.is_repo) {
           toast2("error", t2("v2.bottomBar.gitError"), gitErrorDetail(res));
-          await promptTokenIfAuthFailed(res);
           return;
         }
         gitFlash.value = t2("v2.bottomBar.gitConnectOk");
@@ -97056,8 +97048,6 @@ const _sfc_main$4v = /* @__PURE__ */ defineComponent({
     async function onGitUpdate() {
       var _a2;
       if (!canGitActions.value) return;
-      const tokOk = await ensureGitTokenConfigured();
-      if (!tokOk) return;
       gitBusy.value = "pull";
       gitFlash.value = "";
       commitPickOpen.value = false;
@@ -97066,7 +97056,6 @@ const _sfc_main$4v = /* @__PURE__ */ defineComponent({
         gitStatus.value = res;
         if (!res.ok) {
           toast2("error", t2("v2.bottomBar.gitError"), gitErrorDetail(res));
-          await promptTokenIfAuthFailed(res);
           return;
         }
         gitFlash.value = t2("v2.bottomBar.gitPullOk");
@@ -97639,7 +97628,7 @@ const _sfc_main$4v = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4v, [["__scopeId", "data-v-5ab66c64"]]);
+const BottomBar = /* @__PURE__ */ _export_sfc(_sfc_main$4v, [["__scopeId", "data-v-c309aed0"]]);
 const HOST_ID = "comfytv-bottom-bar";
 const MAX_FRAMES = 600;
 let pinia$1 = null;
@@ -155950,7 +155939,7 @@ const _sfc_main$3M = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const VideoToFramesStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$3M, [["__scopeId", "data-v-24559916"]]);
+const VideoToFramesStageCard = /* @__PURE__ */ _export_sfc(_sfc_main$3M, [["__scopeId", "data-v-74be56b2"]]);
 function evenDim(n) {
   return Math.max(2, Math.round(n / 2) * 2);
 }
@@ -161402,7 +161391,7 @@ function matchingMtlFiles(objFile, objText, resources2) {
 async function parseToObject(file, resources2, manager) {
   const lower = file.name.toLowerCase();
   if (resources2.some((resource) => resource.name.toLowerCase().endsWith(".tga"))) {
-    const { TGALoader } = await import("./TGALoader-3QFvsFkW.mjs");
+    const { TGALoader } = await import("./TGALoader-C1fpCUE_.mjs");
     manager.addHandler(/\.tga$/i, new TGALoader(manager));
   }
   if (lower.endsWith(".fbx")) {
@@ -161415,7 +161404,7 @@ async function parseToObject(file, resources2, manager) {
     const loader = new OBJLoader2(manager);
     const mtlFiles = matchingMtlFiles(file, text, resources2);
     if (mtlFiles.length) {
-      const { MTLLoader } = await import("./MTLLoader-wqAjn48r.mjs");
+      const { MTLLoader } = await import("./MTLLoader-BJOj5Bha.mjs");
       const mtlText = (await Promise.all(mtlFiles.map((mtl) => mtl.text()))).join("\n");
       const materials = new MTLLoader(manager).parse(mtlText, "");
       materials.preload();
@@ -161424,7 +161413,7 @@ async function parseToObject(file, resources2, manager) {
     return loader.parse(text);
   }
   if (lower.endsWith(".stl")) {
-    const { STLLoader } = await import("./STLLoader-HhBN1Ow0.mjs");
+    const { STLLoader } = await import("./STLLoader-BdL6MqWZ.mjs");
     const geometry = new STLLoader().parse(await file.arrayBuffer());
     const material = new MeshStandardMaterial({ color: 13421772 });
     const group = new Group();
@@ -161432,7 +161421,7 @@ async function parseToObject(file, resources2, manager) {
     return group;
   }
   if (lower.endsWith(".dae")) {
-    const { ColladaLoader } = await import("./ColladaLoader-GStB25LS.mjs");
+    const { ColladaLoader } = await import("./ColladaLoader-Bl22rq9s.mjs");
     const collada = new ColladaLoader(manager).parse(await file.text(), "");
     if (!(collada == null ? void 0 : collada.scene)) throw new Error(`failed to parse ${file.name}`);
     return collada.scene;
@@ -252019,7 +252008,7 @@ const _sfc_main$t = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const GptImageOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$t, [["__scopeId", "data-v-c4ddb1a2"]]);
+const GptImageOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$t, [["__scopeId", "data-v-94b6e92c"]]);
 const _hoisted_1$r = {
   viewBox: "0 0 24 24",
   width: "1.2em",
@@ -252319,7 +252308,7 @@ const _sfc_main$s = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const SeedreamOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$s, [["__scopeId", "data-v-dfc58aa0"]]);
+const SeedreamOptionsV2 = /* @__PURE__ */ _export_sfc(_sfc_main$s, [["__scopeId", "data-v-a45d272c"]]);
 const _hoisted_1$p = ["aria-expanded"];
 const _hoisted_2$o = { class: "v2-ignisopt__value" };
 const _hoisted_3$n = { class: "v2-ignisopt__title" };
@@ -263057,7 +263046,7 @@ const _sfc_main$h = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const GradeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-7897210e"]]);
+const GradeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["__scopeId", "data-v-e55d3f0b"]]);
 const _hoisted_1$f = { class: "v2-ed__fit" };
 const _hoisted_2$e = ["src"];
 const _hoisted_3$d = {
@@ -267020,7 +267009,7 @@ const _sfc_main$5 = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const PsdLayerTreeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-61dc2db8"]]);
+const PsdLayerTreeEditorV2 = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-c354bcbe"]]);
 const LOADER_CSS = `
 .v2-loader-preview { cursor: pointer; }
 .v2-loader-preview[data-drag="1"] {
@@ -270501,4 +270490,4 @@ export {
   RGBAIntegerFormat as y,
   WebGLArrayRenderTarget as z
 };
-//# sourceMappingURL=main-BXFDtlh5.mjs.map
+//# sourceMappingURL=main-Dqi5GY11.mjs.map

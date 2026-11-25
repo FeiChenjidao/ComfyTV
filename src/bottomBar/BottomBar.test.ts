@@ -10,13 +10,14 @@ const mocks = vi.hoisted(() => ({
   saveGitExecutable: vi.fn(),
   setupNativeWorkflowGit: vi.fn(),
   fetchNativeWorkflowGitToken: vi.fn(),
+  pullNativeWorkflowGit: vi.fn(),
 }))
 
 vi.mock('@/api', () => ({
   fetchNativeWorkflowGitStatus: mocks.fetchNativeWorkflowGitStatus,
   saveGitExecutable: mocks.saveGitExecutable,
   fetchNativeWorkflowGitToken: mocks.fetchNativeWorkflowGitToken,
-  pullNativeWorkflowGit: vi.fn(),
+  pullNativeWorkflowGit: mocks.pullNativeWorkflowGit,
   pushNativeWorkflowGit: vi.fn(),
   saveNativeWorkflowGitToken: vi.fn(),
   setupNativeWorkflowGit: mocks.setupNativeWorkflowGit,
@@ -120,5 +121,57 @@ describe('team repository connection status', () => {
     await waitFor(() => expect(mocks.fetchNativeWorkflowGitStatus).toHaveBeenLastCalledWith(true))
     expect(screen.getByRole('button', { name: 'Update templates' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Connect team repo' })).not.toBeInTheDocument()
+  })
+
+  it('updates public templates without reading a token or opening the token dialog', async () => {
+    const connected = { ...disconnected, is_repo: true, behind: 0, token_configured: false }
+    mocks.fetchNativeWorkflowGitStatus.mockResolvedValue(connected)
+    mocks.fetchNativeWorkflowGitToken.mockResolvedValue({ configured: false })
+    mocks.pullNativeWorkflowGit.mockResolvedValue({ ...connected, pulled: true })
+    renderWithPlugins(BottomBar)
+    await userEvent.click(screen.getByRole('button', { name: 'Workflows' }))
+    const update = await screen.findByRole('button', { name: 'Update templates' })
+    await waitFor(() => expect(update).toBeEnabled())
+    await userEvent.click(update)
+    await waitFor(() => expect(mocks.pullNativeWorkflowGit).toHaveBeenCalledOnce())
+    expect(mocks.fetchNativeWorkflowGitToken).not.toHaveBeenCalled()
+    expect(screen.queryByRole('textbox', { name: /token/i })).not.toBeInTheDocument()
+  })
+
+  it('retries a manual repository connection without requiring a token', async () => {
+    mocks.setupNativeWorkflowGit.mockResolvedValueOnce({ ...disconnected, ok: false, error: 'Offline' })
+      .mockResolvedValue({ ...disconnected, is_repo: true })
+    renderWithPlugins(BottomBar)
+    await userEvent.click(screen.getByRole('button', { name: 'Workflows' }))
+    const connect = await screen.findByRole('button', { name: 'Connect team repo' })
+    await waitFor(() => expect(connect).toBeEnabled())
+    await userEvent.click(connect)
+    await waitFor(() => expect(mocks.setupNativeWorkflowGit).toHaveBeenCalledTimes(2))
+    expect(mocks.fetchNativeWorkflowGitToken).not.toHaveBeenCalled()
+  })
+
+  it('does not open a token dialog when a background read fails authentication', async () => {
+    mocks.setupNativeWorkflowGit.mockResolvedValue({
+      ...disconnected, ok: false, error_code: 'auth_failed', error: 'Authentication failed',
+    })
+    renderWithPlugins(BottomBar)
+    await userEvent.click(screen.getByRole('button', { name: 'Workflows' }))
+    await waitFor(() => expect(mocks.setupNativeWorkflowGit).toHaveBeenCalledOnce())
+    expect(mocks.fetchNativeWorkflowGitToken).not.toHaveBeenCalled()
+  })
+
+  it('still requests write credentials before workflow submission', async () => {
+    mocks.fetchNativeWorkflowGitToken.mockResolvedValue({ configured: false })
+    mocks.fetchNativeWorkflowGitStatus.mockResolvedValue({
+      ...disconnected, is_repo: true, behind: 0, remote_workflows: ['changed.json'],
+      files: [{ path: 'changed.json', kind: 'template', dirty: true, state: 'modified' }],
+    })
+    renderWithPlugins(BottomBar)
+    await userEvent.click(screen.getByRole('button', { name: 'Workflows' }))
+    const commit = await screen.findByRole('button', { name: 'Commit workflows' })
+    await waitFor(() => expect(commit).toBeEnabled())
+    await userEvent.click(commit)
+    await waitFor(() => expect(mocks.fetchNativeWorkflowGitToken).toHaveBeenCalledOnce())
+    expect(document.querySelector('input[type="password"]')).not.toBeNull()
   })
 })

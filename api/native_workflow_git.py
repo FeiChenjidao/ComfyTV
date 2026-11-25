@@ -619,6 +619,50 @@ def _push_current_branch(root: Path, remote: str, branch: str) -> subprocess.Com
     return p
 
 
+def _run_read_git(
+    root: Path, url: str, *args: str, token: str = "",
+) -> subprocess.CompletedProcess[str]:
+    """Read anonymously first; use a stored server token only for private repos.
+
+    Use a clean URL directly rather than changing origin, which may be used by
+    another request. _run_git already disables credential helpers and prompts.
+    """
+    clean = _normalize_remote_url(_strip_auth(url))
+    public = _run_git(
+        root, "-c", "http.extraHeader=", "-c", f"http.{clean}.extraHeader=", *args,
+    )
+    detail = f"{public.stderr or ''} {public.stdout or ''}".lower()
+    denied = _is_auth_error(detail) or any(text in detail for text in (
+        "repository not found", "could not read password", "returned error: 401",
+        "returned error: 403", "returned error: 404",
+    ))
+    if public.returncode == 0 or not token or not clean.startswith("https://") or not denied:
+        return public
+    authed = _with_token(clean, token)
+    # Never persist the authenticated URL into origin, even for private reads.
+    try:
+        return _run_git(
+            root, "-c", "http.extraHeader=", "-c", f"http.{clean}.extraHeader=",
+            *(authed if arg == clean else arg for arg in args),
+        )
+    except Exception as error:
+        # TimeoutExpired includes its command (and therefore the credential URL)
+        # in str(error), which is returned to the UI by the caller.
+        raise RuntimeError(str(error).replace(authed, clean).replace(token, "***")) from None
+
+
+def _fetch_read_remote(root: Path, remote: str) -> subprocess.CompletedProcess[str]:
+    result = _run_git(root, "remote", "get-url", remote)
+    if result.returncode != 0:
+        return result
+    clean = _normalize_remote_url(_strip_auth((result.stdout or "").strip()))
+    return _run_read_git(
+        root, clean, "fetch", "--quiet", "--", clean,
+        f"+refs/heads/*:refs/remotes/{remote}/*",
+        token=_read_token(root),
+    )
+
+
 def collect_status(
     root: Optional[Path] = None,
     *,
@@ -672,10 +716,9 @@ def collect_status(
         payload["default_remote"] = _strip_auth(_origin_url(root)) or _read_configured_remote(root) or _DEFAULT_REMOTE
 
         if fetch_remote and payload["remote"]:
-            # Silent remote check: use .comfytv-git-token when present; never open a login UI.
+            # Public reads are anonymous; private reads can reuse server auth.
             try:
-                with _authed_origin(root):
-                    fr = _run_git(root, "fetch", "--quiet", payload["remote"])
+                fr = _fetch_read_remote(root, payload["remote"])
                 if fr.returncode != 0:
                     detail = (fr.stderr or fr.stdout or "").strip()[:240]
                     tok = _read_token(root)
@@ -683,8 +726,6 @@ def collect_status(
                         detail = detail.replace(tok, "***")
                     # Soft-fail — still return local status so the panel stays usable.
                     payload["fetch_error"] = detail or "git fetch failed"
-                    if _is_auth_error(payload["fetch_error"]):
-                        payload["error_code"] = "auth_failed"
             except Exception as e:
                 payload["fetch_error"] = str(e) or type(e).__name__
 
@@ -1142,6 +1183,13 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
         )
         return status
     assert root is not None
+    if status.get("fetch_error"):
+        # Do not report a successful update or reset to a stale remote tip when
+        # the public read failed (e.g. private repository or network error).
+        status["ok"] = False
+        status["error_code"] = "read_failed"
+        status["error"] = status["fetch_error"]
+        return status
     try:
         remote = status.get("remote") or "origin"
         branch = status.get("branch") or "main"
@@ -1149,24 +1197,23 @@ def pull_repo(root: Optional[Path] = None, user_id: Optional[str] = None) -> dic
         # Avoid "untracked … would be overwritten by checkout" (common colleague case).
         local_backups = quarantine_untracked_collisions(root, remote, branch)
         local_only = _snapshot_local_only_workflows(root, remote, branch)
-        with _authed_origin(root):
-            upstream = _upstream_ref(root) or f"{remote}/{branch}"
-            r = _run_git(root, "reset", "--hard", upstream)
-            # One more chance: parse overwrite error and quarantine those names.
-            if r.returncode != 0:
-                detail = (r.stderr or r.stdout or "")
-                if "overwritten by checkout" in detail.lower():
-                    extra = _parse_overwrite_untracked(detail)
-                    for rel in extra:
-                        src = root / rel
-                        if src.is_file():
-                            try:
-                                src.rename(_unique_backup_path(src))
-                                local_backups.append(rel)
-                            except OSError:
-                                pass
-                    if extra:
-                        r = _run_git(root, "reset", "--hard", upstream)
+        upstream = _upstream_ref(root) or f"{remote}/{branch}"
+        r = _run_git(root, "reset", "--hard", upstream)
+        # One more chance: parse overwrite error and quarantine those names.
+        if r.returncode != 0:
+            detail = (r.stderr or r.stdout or "")
+            if "overwritten by checkout" in detail.lower():
+                extra = _parse_overwrite_untracked(detail)
+                for rel in extra:
+                    src = root / rel
+                    if src.is_file():
+                        try:
+                            src.rename(_unique_backup_path(src))
+                            local_backups.append(rel)
+                        except OSError:
+                            pass
+                if extra:
+                    r = _run_git(root, "reset", "--hard", upstream)
         if r.returncode != 0:
             detail = (r.stderr or r.stdout or "").strip()[:500]
             _abort_rebase_if_any(root)
@@ -1233,9 +1280,9 @@ def setup_repo(
         status["setup"] = True
         return status
 
-    clean = _strip_auth((remote_url or "").strip()) or _read_configured_remote(root) or _DEFAULT_REMOTE
-    token = _read_token(root)
-    clone_url = _with_token(clean, token) if token else clean
+    clean = _normalize_remote_url(
+        _strip_auth((remote_url or "").strip()) or _read_configured_remote(root) or _DEFAULT_REMOTE
+    )
 
     root.mkdir(parents=True, exist_ok=True)
     parent = root.parent
@@ -1244,22 +1291,25 @@ def setup_repo(
         tmp = Path(tempfile.mkdtemp(prefix=".comfytv_wf_clone_", dir=str(parent)))
         # Clone into empty temp dir (git requires target empty / non-existent)
         clone_target = tmp / "repo"
-        r = _run_git(
-            parent,
+        r = _run_read_git(
+            parent, clean,
             "clone",
             "--depth",
             "1",
-            clone_url,
+            clean,
             str(clone_target),
+            token=_read_token(root),
         )
         if r.returncode != 0:
             detail = (r.stderr or r.stdout or "").strip()[:500]
             # Redact token if somehow present in stderr
+            token = _read_token(root)
             if token:
                 detail = detail.replace(token, "***")
             status = collect_status(root, fetch_remote=False)
             status["ok"] = False
-            _apply_git_fail(status, detail, fallback="git clone failed")
+            status["error_code"] = "read_failed"
+            status["error"] = detail or "Repository clone failed"
             status["default_remote"] = clean
             return status
 
@@ -1501,7 +1551,8 @@ def push_paths(
 @routes.get("/comfytv/workflows/native/git")
 async def native_git_status(request: web.Request) -> web.Response:
     # Default fetch=1 so the panel can show "remote has updates".
-    # Auth comes from .comfytv-git-token (no interactive login). Pass ?fetch=0 for local-only.
+    # Public reads are anonymous; private reads reuse server auth without UI.
+    # Pass ?fetch=0 for local-only status.
     raw = str(request.rel_url.query.get("fetch") or "1").lower()
     fetch = raw not in ("0", "false", "no")
     uid = resolve_request_user_id(request)
