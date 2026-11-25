@@ -18,6 +18,12 @@ export const WorkflowGroupsSchema = z.object({
 export type WorkflowGroups = z.infer<typeof WorkflowGroupsSchema>
 export type WorkflowGroupLibrary = WorkflowGroups[WorkflowScope]
 
+export function newWorkflowGroupId(): string {
+  // getRandomValues also works on HTTP LAN deployments, where randomUUID may
+  // be unavailable because the browser does not consider the origin secure.
+  return `custom-${Array.from(crypto.getRandomValues(new Uint32Array(4)), part => part.toString(16).padStart(8, '0')).join('')}`
+}
+
 // These names describe the existing team library. Users can move or rename
 // groups independently in their account without moving the workflow JSON.
 export const DEFAULT_GROUPS = ['character', 'scene', 'general', 'testing'] as const

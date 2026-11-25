@@ -5,7 +5,8 @@ import { useI18n } from 'vue-i18n'
 import type { NativeWorkflow } from '@/api'
 import {
   groupWorkflowRows, initialWorkflowGroups, loadWorkflowGroups,
-  removeWorkflowGroup, saveWorkflowGroups,
+  newWorkflowGroupId, removeWorkflowGroup, saveWorkflowGroups,
+  WorkflowGroupsSchema,
   type WorkflowGroups, type WorkflowScope,
 } from './workflowGroups'
 
@@ -14,6 +15,7 @@ const props = defineProps<{
   local: NativeWorkflow[]
   openingPath: string | null
   badges: Map<string, { key: string; label: string }[]>
+  disabled?: boolean
 }>()
 const emit = defineEmits<{ open: [row: NativeWorkflow, fromTemplate: boolean] }>()
 const { t } = useI18n({
@@ -26,7 +28,7 @@ const { t } = useI18n({
       ungrouped: '未分组', move: '移动到分组', empty: '此分组暂无工作流',
       loading: '正在读取分组…', saving: '正在保存…', saved: '分组已保存',
       loadFailed: '分组读取失败，请重试。', saveFailed: '分组保存失败，请重试。', retry: '重试',
-      duplicate: '分组名称已存在', openHint: '打开为新的工作流',
+      duplicate: '分组名称已存在', invalidName: '请输入不超过 60 个字的分组名称', openHint: '打开为新的工作流',
       templatesEmpty: '暂无云端模板', localEmpty: '暂无本地工作流。在 ComfyUI 保存到本账号 workflows 即可出现在这里。',
       character: '角色', scene: '场景', general: '通用', testing: '测试',
     },
@@ -37,7 +39,7 @@ const { t } = useI18n({
       ungrouped: 'Ungrouped', move: 'Move to group', empty: 'No workflows in this group',
       loading: 'Loading groups…', saving: 'Saving…', saved: 'Groups saved',
       loadFailed: 'Could not load groups. Please retry.', saveFailed: 'Could not save groups. Please retry.', retry: 'Retry',
-      duplicate: 'Group name already exists', openHint: 'Open as a new workflow',
+      duplicate: 'Group name already exists', invalidName: 'Enter a group name of up to 60 characters', openHint: 'Open as a new workflow',
       templatesEmpty: 'No cloud templates yet', localEmpty: 'No local workflows yet. Save to your account’s workflows folder in ComfyUI.',
       character: 'Character', scene: 'Scene', general: 'General', testing: 'Testing',
     },
@@ -59,6 +61,43 @@ const columns = computed(() => scopes.map(scope => ({
   scope, rows: props[scope],
   groups: state.value ? groupWorkflowRows(props[scope], state.value[scope]) : [],
 })))
+const templateGroups = computed(() => state.value?.templates.groups ?? [])
+const ready = computed(() => !!state.value && !loading.value && !saving.value && !loadError.value && !saveError.value)
+
+async function assignTemplateGroup(paths: string[], groupId: string) {
+  if (!ready.value) throw new Error(t('loadFailed'))
+  // Re-read account preferences so assigning published workflows preserves any
+  // other changes saved since this panel was opened.
+  const current = await loadWorkflowGroups() ?? WorkflowGroupsSchema.parse(state.value!)
+  if (groupId && !current.templates.groups.some(group => group.id === groupId)) {
+    throw new Error(t('loadFailed'))
+  }
+  for (const path of paths) current.templates.assignments[path] = groupId
+  await saveWorkflowGroups(current)
+  state.value = current
+}
+
+async function createTemplateGroup(rawName: string): Promise<string> {
+  if (!ready.value) throw new Error(t('loadFailed'))
+  const name = rawName.trim()
+  if (!name || name.length > 60) throw new Error(t('invalidName'))
+  saving.value = true
+  try {
+    const current = await loadWorkflowGroups() ?? WorkflowGroupsSchema.parse(state.value!)
+    if (current.templates.groups.some(group => group.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+      throw new Error(t('duplicate'))
+    }
+    const id = newWorkflowGroupId()
+    current.templates.groups.push({ id, name })
+    await saveWorkflowGroups(current)
+    state.value = current
+    return id
+  } finally {
+    saving.value = false
+  }
+}
+
+defineExpose({ templateGroups, ready, assignTemplateGroup, createTemplateGroup })
 
 async function load() {
   loading.value = true
@@ -102,7 +141,7 @@ function nameAvailable(scope: WorkflowScope, name: string, except?: string) {
 async function addGroup(scope: WorkflowScope) {
   const name = newNames.value[scope].trim().slice(0, 60)
   if (!name || !nameAvailable(scope, name)) return
-  state.value![scope].groups.push({ id: crypto.randomUUID(), name })
+  state.value![scope].groups.push({ id: newWorkflowGroupId(), name })
   newNames.value[scope] = ''
   await persist()
 }
@@ -137,7 +176,7 @@ function toggle(scope: WorkflowScope, id: string) {
     <div class="workflow-library__tools">
       <span v-if="saving" role="status">{{ t('saving') }}</span>
       <span v-else-if="saved && !saveError" role="status">{{ t('saved') }}</span>
-      <button type="button" :disabled="loading || loadError || saving" :aria-pressed="managing" @click="managing = !managing">
+      <button type="button" :disabled="disabled || loading || loadError || saving" :aria-pressed="managing" @click="managing = !managing">
         {{ managing ? t('done') : t('manage') }}
       </button>
     </div>
@@ -147,15 +186,15 @@ function toggle(scope: WorkflowScope, id: string) {
     </div>
     <template v-if="!loading && state">
       <div v-if="saveError" class="workflow-library__message" role="alert">
-        {{ t('saveFailed') }} <button type="button" :disabled="saving" @click="persist">{{ t('retry') }}</button>
+        {{ t('saveFailed') }} <button type="button" :disabled="disabled || saving" @click="persist">{{ t('retry') }}</button>
       </div>
       <div v-if="validationError" class="workflow-library__message" role="alert">{{ validationError }}</div>
       <div class="workflow-library__columns">
         <section v-for="column in columns" :key="column.scope" class="workflow-library__column" :aria-label="t(column.scope)">
           <h3>{{ t(column.scope) }}</h3>
           <form v-if="managing" class="workflow-library__new" @submit.prevent="addGroup(column.scope)" @keydown.stop>
-            <input v-model="newNames[column.scope]" :aria-label="`${t(column.scope)}: ${t('groupName')}`" :placeholder="t('newGroup')" maxlength="60" :disabled="saving">
-            <button type="submit" :disabled="saving || !newNames[column.scope].trim()">{{ t('add') }}</button>
+            <input v-model="newNames[column.scope]" :aria-label="`${t(column.scope)}: ${t('groupName')}`" :placeholder="t('newGroup')" maxlength="60" :disabled="disabled || saving">
+            <button type="submit" :disabled="disabled || saving || !newNames[column.scope].trim()">{{ t('add') }}</button>
           </form>
           <div class="workflow-library__scroll">
             <div v-if="!column.rows.length && !managing" class="workflow-library__message">{{ t(column.scope === 'templates' ? 'templatesEmpty' : 'localEmpty') }}</div>
@@ -167,17 +206,17 @@ function toggle(scope: WorkflowScope, id: string) {
                     <span>{{ group.id ? group.name : t('ungrouped') }}</span>
                     <small>{{ group.rows.length }}</small>
                   </button>
-                  <button v-if="managing && group.id" type="button" :disabled="saving" :title="t('deleteHint')" :aria-label="`${t('delete')}: ${group.name}`" @click="deleteGroup(column.scope, group.id)">×</button>
+                  <button v-if="managing && group.id" type="button" :disabled="disabled || saving" :title="t('deleteHint')" :aria-label="`${t('delete')}: ${group.name}`" @click="deleteGroup(column.scope, group.id)">×</button>
                 </div>
                 <template v-if="!collapsed.has(`${column.scope}:${group.id}`)">
-                  <input v-if="managing && group.id" class="workflow-library__rename" :value="group.name" :aria-label="`${t('rename')}: ${group.name}`" maxlength="60" :disabled="saving" @keydown.stop @change="renameGroup(column.scope, group.id, $event)">
+                  <input v-if="managing && group.id" class="workflow-library__rename" :value="group.name" :aria-label="`${t('rename')}: ${group.name}`" maxlength="60" :disabled="disabled || saving" @keydown.stop @change="renameGroup(column.scope, group.id, $event)">
                   <div v-if="!group.rows.length && managing" class="workflow-library__message">{{ t('empty') }}</div>
                   <div v-for="row in group.rows" :key="row.path" class="workflow-library__entry">
                     <button type="button" class="workflow-library__row" :disabled="openingPath === row.path || (column.scope === 'templates' && row.mtime === 0)" :title="column.scope === 'templates' ? `${t('openHint')}\n${row.path}` : row.path" @click="emit('open', row, column.scope === 'templates')">
                       <span class="workflow-library__name">{{ row.name }}</span>
                       <span v-for="badge in badges.get(row.path) || []" :key="badge.key" class="workflow-library__badge" :class="`workflow-library__badge--${badge.key}`">{{ badge.label }}</span>
                     </button>
-                    <select v-if="managing" :value="group.id" :aria-label="`${t('move')}: ${row.name}`" :disabled="saving" @keydown.stop @change="move(column.scope, row.path, $event)">
+                    <select v-if="managing" :value="group.id" :aria-label="`${t('move')}: ${row.name}`" :disabled="disabled || saving" @keydown.stop @change="move(column.scope, row.path, $event)">
                       <option value="">{{ t('ungrouped') }}</option>
                       <option v-for="option in state[column.scope].groups" :key="option.id" :value="option.id">{{ option.name }}</option>
                     </select>

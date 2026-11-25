@@ -1,4 +1,4 @@
-import { a8 as defineComponent, ad as onMounted, ae as onBeforeUnmount, a9 as openBlock, af as createBlock, ab as createBaseVNode, aa as createElementBlock, ag as createCommentVNode, ah as Fragment, ai as withModifiers, aj as Teleport, ak as computed } from "./main-DoxHT1B2.mjs";
+import { a8 as defineComponent, ad as onMounted, ae as onBeforeUnmount, a9 as openBlock, af as createBlock, ab as createBaseVNode, aa as createElementBlock, ag as createCommentVNode, ah as Fragment, ai as withModifiers, aj as Teleport, ak as computed } from "./main-D45xeaeM.mjs";
 const _hoisted_1 = ["src"];
 const _hoisted_2 = ["src"];
 const _hoisted_3 = ["src", "alt"];
@@ -96,4 +96,4 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
 export {
   _sfc_main as default
 };
-//# sourceMappingURL=MediaLightbox-D8ltkXe7.mjs.map
+//# sourceMappingURL=MediaLightbox-CUNA1nWv.mjs.map

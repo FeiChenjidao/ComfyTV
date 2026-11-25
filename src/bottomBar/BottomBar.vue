@@ -43,6 +43,27 @@ import WorkflowLibrary from './WorkflowLibrary.vue'
 type Panel = 'plus' | 'workflows' | 'search' | 'assets' | null
 
 const { t } = useI18n()
+const { t: groupT } = useI18n({
+  useScope: 'local',
+  messages: {
+    zh: {
+      target: '提交到分组', keep: '保留原分组', ungrouped: '未分组',
+      create: '新建分组', name: '分组名称', createConfirm: '创建并选用', cancel: '取消',
+      hint: '本次勾选的工作流提交成功后，统一归入所选分组（当前账号）。',
+      loading: '正在读取分组…',
+      saveFailed: '工作流已提交，但分组保存失败。请重试保存分组，无需重复提交工作流。',
+      retry: '重试保存分组',
+    },
+    en: {
+      target: 'Submit to group', keep: 'Keep current groups', ungrouped: 'Ungrouped',
+      create: 'New group', name: 'Group name', createConfirm: 'Create and select', cancel: 'Cancel',
+      hint: 'After submission, assign all selected workflows to this group for your account.',
+      loading: 'Loading groups…',
+      saveFailed: 'Workflows submitted, but the group could not be saved. Retry saving the group without resubmitting.',
+      retry: 'Retry saving group',
+    },
+  },
+})
 
 const root = ref<HTMLElement | null>(null)
 const panel = ref<Panel>(null)
@@ -68,6 +89,15 @@ const gitPathSaving = ref(false)
 const gitPathError = ref('')
 const commitPickOpen = ref(false)
 const commitSelected = ref<Record<string, boolean>>({})
+const workflowLibrary = ref<InstanceType<typeof WorkflowLibrary> | null>(null)
+const KEEP_GROUP = '__keep__'
+const commitGroup = ref(KEEP_GROUP)
+const pendingCommitGroup = ref<{ paths: string[]; groupId: string } | null>(null)
+const commitGroupError = ref('')
+const newCommitGroupOpen = ref(false)
+const newCommitGroupName = ref('')
+const newCommitGroupSaving = ref(false)
+const newCommitGroupError = ref('')
 const tokenDialogOpen = ref(false)
 const tokenInput = ref('')
 const tokenSaving = ref(false)
@@ -291,6 +321,8 @@ watch(panel, async (next) => {
     gitFlash.value = ''
     commitPickOpen.value = false
     commitSelected.value = {}
+    pendingCommitGroup.value = null
+    commitGroupError.value = ''
     void refreshWorkflowsPanel()
   }
 })
@@ -488,6 +520,12 @@ async function openCommitPicker() {
   const ok = await ensureGitTokenConfigured()
   if (!ok) return
   commitPickOpen.value = true
+  commitGroup.value = KEEP_GROUP
+  pendingCommitGroup.value = null
+  commitGroupError.value = ''
+  newCommitGroupOpen.value = false
+  newCommitGroupName.value = ''
+  newCommitGroupError.value = ''
   const next: Record<string, boolean> = {}
   for (const row of commitCandidates.value) {
     next[row.path] = workflowLocallyChanged(row.path)
@@ -499,8 +537,47 @@ function closeCommitPicker() {
   commitPickOpen.value = false
 }
 
+async function createCommitGroup() {
+  if (newCommitGroupSaving.value || !workflowLibrary.value?.ready) return
+  newCommitGroupSaving.value = true
+  newCommitGroupError.value = ''
+  try {
+    commitGroup.value = await workflowLibrary.value.createTemplateGroup(newCommitGroupName.value)
+    newCommitGroupOpen.value = false
+    newCommitGroupName.value = ''
+  } catch (e: any) {
+    newCommitGroupError.value = String(e?.message || e)
+  } finally {
+    newCommitGroupSaving.value = false
+  }
+}
+
+async function savePendingCommitGroup(): Promise<boolean> {
+  const pending = pendingCommitGroup.value
+  if (!pending) return true
+  commitGroupError.value = ''
+  try {
+    if (!workflowLibrary.value) throw new Error('Workflow library unavailable')
+    await workflowLibrary.value.assignTemplateGroup(pending.paths, pending.groupId)
+    pendingCommitGroup.value = null
+    return true
+  } catch {
+    commitGroupError.value = groupT('saveFailed')
+    return false
+  }
+}
+
 async function onGitCommitConfirm() {
-  if (!canGitActions.value) return
+  if (!canGitActions.value || newCommitGroupOpen.value || newCommitGroupSaving.value) return
+  if (pendingCommitGroup.value) {
+    gitBusy.value = 'push'
+    try {
+      if (await savePendingCommitGroup()) commitPickOpen.value = false
+    } finally {
+      gitBusy.value = null
+    }
+    return
+  }
   const paths = selectedCommitPaths.value
   if (!paths.length) {
     toast('warn', t('v2.bottomBar.gitNothingSelected'))
@@ -508,6 +585,7 @@ async function onGitCommitConfirm() {
   }
   gitBusy.value = 'push'
   gitFlash.value = ''
+  const groupId = commitGroup.value
   try {
     const res = await pushNativeWorkflowGit(paths, gitMessage.value.trim())
     gitStatus.value = res
@@ -518,7 +596,13 @@ async function onGitCommitConfirm() {
     }
     gitFlash.value = t('v2.bottomBar.gitPushOk')
     gitMessage.value = ''
-    commitPickOpen.value = false
+    if (groupId !== KEEP_GROUP) {
+      // The server returns published template paths: local subfolders can be
+      // flattened when copied into the team's top-level template gallery.
+      pendingCommitGroup.value = { paths: res.paths ?? paths, groupId }
+    }
+    const grouped = await savePendingCommitGroup()
+    if (grouped) commitPickOpen.value = false
     const packed = res.assets_packed || 0
     toast(
       'success',
@@ -705,10 +789,46 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
           type="text"
           class="ctv-bbar__git-input"
           :placeholder="t('v2.bottomBar.gitMessagePlaceholder')"
-          :disabled="!!gitBusy"
+          :disabled="!!gitBusy || !!pendingCommitGroup"
           @keydown.stop
           @keydown.enter.prevent="onGitCommitConfirm"
         >
+        <label class="ctv-bbar__commit-head" for="ctv-commit-group">{{ groupT('target') }}</label>
+        <select
+          id="ctv-commit-group"
+          v-model="commitGroup"
+          class="ctv-bbar__git-input"
+          :disabled="!!gitBusy || !!pendingCommitGroup || newCommitGroupSaving || !workflowLibrary?.ready"
+          @keydown.stop
+        >
+          <option :value="KEEP_GROUP">{{ groupT('keep') }}</option>
+          <option value="">{{ groupT('ungrouped') }}</option>
+          <option v-for="group in workflowLibrary?.templateGroups || []" :key="group.id" :value="group.id">{{ group.name }}</option>
+        </select>
+        <button
+          v-if="!newCommitGroupOpen"
+          type="button"
+          class="ctv-bbar__git-btn"
+          :disabled="!!gitBusy || !!pendingCommitGroup || !workflowLibrary?.ready"
+          @click="newCommitGroupOpen = true; newCommitGroupError = ''"
+        >{{ groupT('create') }}</button>
+        <form v-else class="ctv-bbar__commit" @submit.prevent="createCommitGroup" @keydown.stop>
+          <input
+            v-model="newCommitGroupName"
+            class="ctv-bbar__git-input"
+            :aria-label="groupT('name')"
+            :placeholder="groupT('name')"
+            maxlength="60"
+            :disabled="newCommitGroupSaving"
+          >
+          <div v-if="newCommitGroupError" class="ctv-bbar__git-hint ctv-bbar__git-hint--warn" role="alert">{{ newCommitGroupError }}</div>
+          <div class="ctv-bbar__git-actions">
+            <button type="button" class="ctv-bbar__git-btn" :disabled="newCommitGroupSaving" @click="newCommitGroupOpen = false">{{ groupT('cancel') }}</button>
+            <button type="submit" class="ctv-bbar__git-btn" :disabled="newCommitGroupSaving || !newCommitGroupName.trim()">{{ groupT('createConfirm') }}</button>
+          </div>
+        </form>
+        <div class="ctv-bbar__git-legend">{{ workflowLibrary?.ready ? groupT('hint') : groupT('loading') }}</div>
+        <div v-if="commitGroupError" class="ctv-bbar__git-hint ctv-bbar__git-hint--warn" role="alert">{{ commitGroupError }}</div>
         <div class="ctv-bbar__commit-list">
           <label
             v-for="row in commitCandidates"
@@ -718,7 +838,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
             <input
               v-model="commitSelected[row.path]"
               type="checkbox"
-              :disabled="!!gitBusy"
+              :disabled="!!gitBusy || !!pendingCommitGroup"
             >
             <span class="ctv-bbar__row-main">{{ row.name }}</span>
             <span v-if="remoteTemplateSet.has(row.path)" class="ctv-bbar__badge">
@@ -742,15 +862,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
           <button
             type="button"
             class="ctv-bbar__git-btn"
-            :disabled="!!gitBusy"
+            :disabled="!!gitBusy || newCommitGroupSaving"
             @click="closeCommitPicker"
           >{{ t('v2.bottomBar.gitCommitCancel') }}</button>
           <button
             type="button"
             class="ctv-bbar__git-btn ctv-bbar__git-btn--primary"
-            :disabled="!!gitBusy || !selectedCommitPaths.length"
+            :disabled="!!gitBusy || newCommitGroupOpen || newCommitGroupSaving || (!selectedCommitPaths.length && !pendingCommitGroup)"
             @click="onGitCommitConfirm"
-          >{{ t('v2.bottomBar.gitCommitConfirm') }}</button>
+          >{{ pendingCommitGroup ? groupT('retry') : t('v2.bottomBar.gitCommitConfirm') }}</button>
         </div>
       </div>
 
@@ -758,10 +878,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
       <div v-else-if="workflowError" class="ctv-bbar__muted">{{ workflowError }}</div>
       <WorkflowLibrary
         v-else
+        ref="workflowLibrary"
         :templates="templateWorkflows"
         :local="localWorkflows"
         :opening-path="openingPath"
         :badges="gitBadgesByPath"
+        :disabled="commitPickOpen || !!gitBusy"
         @open="onOpenWorkflow"
       />
     </div>
