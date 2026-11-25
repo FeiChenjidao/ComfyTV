@@ -1,16 +1,31 @@
 <template>
   <div class="v2-mp" :data-kind="kind">
     <template v-if="kind === 'video'">
-      <ProxiedVideo
-        v-if="resolvedUrl"
-        :src="resolvedUrl"
-        :poster="posterUrl"
-        class="v2-mp__video"
-        controls
-        playsinline
-        preload="none"
-        @pointerdown.stop
-      />
+      <div v-if="resolvedUrl" class="v2-mp__videoplayer">
+        <ProxiedVideo
+          :src="resolvedUrl"
+          :poster="posterUrl"
+          :loop="loop"
+          class="v2-mp__video"
+          controls
+          playsinline
+          preload="none"
+          @pointerdown.stop
+        />
+        <div class="v2-mp__videocontrols" @pointerdown.stop @pointerup.stop @click.stop @dblclick.stop @keydown.stop>
+          <button
+            type="button"
+            class="v2-mp__loop"
+            :aria-label="t('videoTrim.loopPlayback')"
+            :title="t('videoTrim.loopPlayback')"
+            :aria-pressed="loop"
+            @click="loop = !loop"
+          >
+            <IconRepeat aria-hidden="true" />
+            <span>{{ t('videoTrim.loopPlayback') }}</span>
+          </button>
+        </div>
+      </div>
       <span v-if="batchCount > 1" class="v2-mp__count">{{ batchCount }}</span>
     </template>
     <template v-else-if="kind === 'audio'">
@@ -128,8 +143,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import IconRepeat from '~icons/lucide/repeat'
 
 import ModelPreview from '@/components/stages/ModelPreview.vue'
 import ProxiedVideo from '@/components/widgets/ProxiedVideo.vue'
@@ -265,6 +281,9 @@ const resolvedUrl = computed(() => {
   return (app as any).api.apiURL(u.replace(/^\/api/, ''))
 })
 
+const loop = ref(false)
+watch([() => props.kind, resolvedUrl], () => { loop.value = false })
+
 const posterUrl = computed(() => {
   if (props.kind !== 'video' || !resolvedUrl.value) return undefined
   const raw = String(resolvedUrl.value).replace(/^\/api/, '')
@@ -324,6 +343,51 @@ const hasContent = computed(() =>
   height: 100%;
   object-fit: contain;
   background: #000;
+}
+.v2-mp__videoplayer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.v2-mp__videoplayer :deep(video) {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  height: 0;
+}
+.v2-mp__videocontrols {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: 5px 8px;
+  background: var(--v2-slab-bg, #232327);
+}
+.v2-mp__loop {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid var(--v2-chip-border, rgba(255,255,255,.09));
+  border-radius: 6px;
+  background: var(--v2-chip-bg, rgba(255,255,255,.05));
+  color: var(--v2-text-mid, #b9b9c0);
+  font: 500 11px/1.2 system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.v2-mp__loop svg { width: 14px; height: 14px; }
+.v2-mp__loop:hover { background: var(--v2-hover-bg, rgba(255,255,255,.08)); }
+.v2-mp__loop[aria-pressed="true"] {
+  border-color: var(--v2-accent-border, rgba(167,139,250,.55));
+  background: var(--v2-accent-soft, rgba(167,139,250,.16));
+  color: var(--v2-accent-text, #cdbdfc);
+}
+.v2-mp__loop:focus-visible {
+  outline: 2px solid var(--v2-accent, #a78bfa);
+  outline-offset: 2px;
 }
 .v2-mp__audiowrap {
   display: flex;

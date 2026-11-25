@@ -1,13 +1,19 @@
 import { createTestingPinia } from '@pinia/testing'
-import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { Component } from 'vue'
 
 import { makeI18n } from '@/__tests__/renderHelpers'
 import { app } from '@/lib/comfyApp'
 
 import MediaPreviewV2 from './MediaPreviewV2.vue'
 
-function mountPreview(props: Record<string, unknown>, stubs: Record<string, unknown> = {}) {
+enableAutoUnmount(afterEach)
+
+function mountPreview(
+  props: InstanceType<typeof MediaPreviewV2>['$props'],
+  stubs: Record<string, Component | boolean> = {},
+) {
   return mount(MediaPreviewV2, {
     props,
     global: {
@@ -45,6 +51,61 @@ describe('MediaPreviewV2', () => {
     expect(wrapper.find('video').attributes('src'))
       .toBe('/view?filename=a.mp4&type=output')
     expect(wrapper.find('.v2-mp__count').text()).toBe('2')
+  })
+
+  it('shows a loop switch below the native video controls', async () => {
+    ;(app as any).api.apiURL = (p: string) => p
+    const wrapper = mountPreview(
+      { kind: 'video', url: '/view?filename=clip.mp4&type=output', hint: '' },
+      { ProxiedVideo: { template: '<video v-bind="$attrs" />' } },
+    )
+    const video = wrapper.get('video').element as HTMLVideoElement
+    const play = vi.spyOn(video, 'play')
+    const pause = vi.spyOn(video, 'pause')
+    video.currentTime = 1.2
+    const button = wrapper.get('button[aria-label="Loop playback"]')
+    expect(video.loop).toBe(false)
+    expect(button.attributes('aria-pressed')).toBe('false')
+    await button.trigger('click')
+    expect(video.loop).toBe(true)
+    expect(button.attributes('aria-pressed')).toBe('true')
+    expect(wrapper.find('.v2-mp__videocontrols').exists()).toBe(true)
+    expect(video.currentTime).toBe(1.2)
+    expect(play).not.toHaveBeenCalled()
+    expect(pause).not.toHaveBeenCalled()
+    await button.trigger('click')
+    expect(video.loop).toBe(false)
+  })
+
+  it('resets loop when the selected video changes', async () => {
+    ;(app as any).api.apiURL = (p: string) => p
+    const wrapper = mountPreview(
+      { kind: 'video', url: '/first.mp4', hint: '' },
+      { ProxiedVideo: { template: '<video v-bind="$attrs" />' } },
+    )
+    await wrapper.get('.v2-mp__loop').trigger('click')
+    await wrapper.setProps({ url: '/second.mp4' })
+    expect(wrapper.get('.v2-mp__loop').attributes('aria-pressed')).toBe('false')
+    expect((wrapper.get('video').element as HTMLVideoElement).loop).toBe(false)
+  })
+
+  it('keeps video previews independent and resets after a preview is reopened', async () => {
+    ;(app as any).api.apiURL = (p: string) => p
+    const stubs = { ProxiedVideo: { template: '<video v-bind="$attrs" />' } }
+    const first = mountPreview({ kind: 'video', url: '/clip.mp4', hint: '' }, stubs)
+    const second = mountPreview({ kind: 'video', url: '/clip.mp4', hint: '' }, stubs)
+    await first.get('.v2-mp__loop').trigger('click')
+    expect((second.get('video').element as HTMLVideoElement).loop).toBe(false)
+    await first.setProps({ url: null })
+    expect(first.find('.v2-mp__loop').exists()).toBe(false)
+    await first.setProps({ url: '/clip.mp4' })
+    expect((first.get('video').element as HTMLVideoElement).loop).toBe(false)
+  })
+
+  it('does not add loop controls to non-video or empty previews', () => {
+    ;(app as any).api.apiURL = (p: string) => p
+    expect(mountPreview({ kind: 'text', text: 'test', hint: '' }).find('.v2-mp__loop').exists()).toBe(false)
+    expect(mountPreview({ kind: 'video', url: null, hint: '' }).find('.v2-mp__loop').exists()).toBe(false)
   })
 
   it('shows model history as prev/next pager at the top', async () => {

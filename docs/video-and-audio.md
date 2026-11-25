@@ -10,6 +10,8 @@
 
 ## Video editing (ComfyTV / Video)
 
+**Loop playback** is available below the video controls in stage and picker previews, and beside Play in live effect previews. It starts off for each video. Enable it and press Play to repeat the clip; press Pause to stop, or disable looping to finish the current pass. Selecting another video resets the switch; switching to a proxy for the same clip keeps it. This setting only affects the preview.
+
 Feed a video (from a **Generate → Video** stage or a **Load Video** node) into any of these:
 
 - **Clip / Split / Concat** — trim to a range, cut at a timestamp (two outputs), join clips.

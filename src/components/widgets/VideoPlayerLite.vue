@@ -19,6 +19,7 @@
           data-ctv-media
           :src="effectiveUrl ?? undefined"
           :muted="muted"
+          :loop="loop"
           :style="videoStyle"
           class="ctv:block ctv:size-full ctv:object-contain ctv:cursor-pointer"
           :class="{ 'ctv-alpha-checker': isAlphaSource }"
@@ -27,6 +28,7 @@
           @timeupdate="onTimeUpdatePlus"
           @play="onPlay"
           @pause="onPause"
+          @ended="onEnded"
           @error="onError"
           @click="togglePlay"
         />
@@ -91,6 +93,20 @@
       ><i :class="['pi', playing ? 'pi-pause' : 'pi-play']" /></button>
       <button
         type="button"
+        class="ctv:flex ctv:shrink-0 ctv:items-center ctv:justify-center ctv:w-7 ctv:h-6 ctv:text-xs ctv:rounded ctv:cursor-pointer
+               ctv:bg-secondary-background ctv:border ctv:hover:border-primary-background
+               ctv:disabled:opacity-40 ctv:disabled:cursor-default"
+        :class="loop
+          ? 'ctv:border-primary-background ctv:text-primary-background'
+          : 'ctv:border-border-subtle ctv:text-base-foreground'"
+        :disabled="duration <= 0 || loadError"
+        :title="$t('videoTrim.loopPlayback')"
+        :aria-label="$t('videoTrim.loopPlayback')"
+        :aria-pressed="loop"
+        @click="loop = !loop"
+      ><IconRepeat class="ctv:size-3.5" /></button>
+      <button
+        type="button"
         class="ctv:flex ctv:items-center ctv:justify-center ctv:w-7 ctv:h-6 ctv:text-xs ctv:rounded ctv:cursor-pointer
                ctv:bg-secondary-background ctv:border ctv:border-border-subtle ctv:text-base-foreground
                ctv:hover:border-primary-background"
@@ -121,6 +137,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import IconRepeat from '~icons/lucide/repeat'
 import { subscribeRafTick } from '@/composables/widgets/sharedRafTicker'
 import { isMidiUrl, useMidiRenderedUrl } from '@/composables/widgets/useMidiRenderedUrl'
 import { useMidiPianoRoll } from '@/composables/widgets/useMidiPianoRoll'
@@ -148,8 +165,10 @@ const emit = defineEmits<{
 const videoEl = ref<HTMLVideoElement | null>(null)
 const boxEl = ref<HTMLDivElement | null>(null)
 const seekEl = ref<HTMLDivElement | null>(null)
+const loop = ref(false)
 
 const sourceVideoUrlRef = computed(() => props.sourceVideoUrl)
+watch(sourceVideoUrlRef, () => { loop.value = false })
 const { url: midiResolvedUrl } = useMidiRenderedUrl(sourceVideoUrlRef)
 const {
   url: effectiveUrl, isProxy, canProxy, building, pct, requestProxy,
@@ -227,6 +246,11 @@ onBeforeUnmount(() => {
 function onTimeUpdatePlus() {
   onTimeUpdate()
   if (audioOnly.value && !playing.value) playheadTick()
+}
+
+function onEnded() {
+  onTimeUpdatePlus()
+  onPause()
 }
 
 function applyTuning() {

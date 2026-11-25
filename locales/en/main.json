@@ -1767,6 +1767,7 @@
     "loading": "Loading…",
     "loadError": "Failed to load video",
     "playSelection": "Play selection",
+    "loopPlayback": "Loop playback",
     "pause": "Pause",
     "mute": "Mute",
     "unmute": "Unmute",

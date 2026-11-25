@@ -1835,6 +1835,7 @@
     "loading": "加载中…",
     "loadError": "视频加载失败",
     "playSelection": "播放选段",
+    "loopPlayback": "循环播放",
     "pause": "暂停",
     "mute": "静音",
     "unmute": "取消静音",
