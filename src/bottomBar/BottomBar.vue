@@ -38,6 +38,7 @@ import {
   type SearchCategoryId,
 } from './actions'
 import AssetsPopup from './AssetsPopup.vue'
+import WorkflowLibrary from './WorkflowLibrary.vue'
 
 type Panel = 'plus' | 'workflows' | 'search' | 'assets' | null
 
@@ -140,9 +141,10 @@ const gitHint = computed(() => {
   const g = gitStatus.value
   if (!g) return gitChecking.value ? t('v2.bottomBar.gitChecking') : ''
   if (!g.has_git) return t('v2.bottomBar.gitNoGit')
-  if (!g.is_repo) return t('v2.bottomBar.gitNoRepo')
   if (isGitAuthFailure(g)) return t('v2.bottomBar.gitAuthFailed')
   if (g.error && !g.ok) return g.error
+  if (g.fetch_error) return g.fetch_error
+  if (!g.is_repo) return t('v2.bottomBar.gitNoRepo')
   if (g.behind > 0) return t('v2.bottomBar.gitBehind', { n: g.behind })
   if (g.dirty) return t('v2.bottomBar.gitDirty')
   return t('v2.bottomBar.gitSynced')
@@ -151,14 +153,14 @@ const gitHint = computed(() => {
 const gitHintTone = computed(() => {
   const g = gitStatus.value
   if (!g?.is_repo || !g.has_git) return 'warn'
-  if (g && isGitAuthFailure(g)) return 'warn'
+  if (isGitAuthFailure(g) || !g.ok || g.fetch_error) return 'warn'
   if (g.behind > 0 || g.dirty) return 'accent'
   return 'muted'
 })
 
 const canGitActions = computed(() => !!gitStatus.value?.is_repo && !gitBusy.value)
 const canGitSetup = computed(
-  () => !!gitStatus.value?.has_git && !gitStatus.value?.is_repo && !gitBusy.value,
+  () => !!gitStatus.value?.has_git && !gitStatus.value?.is_repo && !gitBusy.value && !gitChecking.value,
 )
 
 const selectedCommitPaths = computed(() =>
@@ -310,6 +312,10 @@ async function refreshGitStatusInBackground() {
       try {
         const setup = await setupNativeWorkflowGit()
         gitStatus.value = setup
+        if (!setup.ok || !setup.is_repo) {
+          void promptTokenIfAuthFailed(setup)
+          return
+        }
         if (setup.ok && setup.is_repo) {
           gitFlash.value = t('v2.bottomBar.gitConnectOk')
           ;[templates.value, workflows.value] = await Promise.all([
@@ -317,8 +323,9 @@ async function refreshGitStatusInBackground() {
             listBottomBarWorkflows(),
           ])
         }
-      } catch {
-        /* keep Connect button available */
+      } catch (e: any) {
+        gitStatus.value = { ...local, ok: false, error: String(e?.message || e) }
+        return
       } finally {
         gitBusy.value = null
       }
@@ -749,73 +756,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
 
       <div v-if="workflowsLoading" class="ctv-bbar__muted">{{ t('v2.bottomBar.workflowLoading') }}</div>
       <div v-else-if="workflowError" class="ctv-bbar__muted">{{ workflowError }}</div>
-      <div
-        v-else-if="!templateWorkflows.length && !localWorkflows.length"
-        class="ctv-bbar__muted"
-      >{{ t('v2.bottomBar.workflowEmpty') }}</div>
-      <div v-else class="ctv-bbar__split">
-        <div class="ctv-bbar__col">
-          <div class="ctv-bbar__col-head">{{ t('v2.bottomBar.templates') }}</div>
-          <div class="ctv-bbar__scroll ctv-bbar__scroll--col">
-            <div v-if="!templateWorkflows.length" class="ctv-bbar__muted">
-              {{ t('v2.bottomBar.templatesEmpty') }}
-            </div>
-            <button
-              v-for="row in templateWorkflows"
-              :key="`t-${row.path}`"
-              type="button"
-              class="ctv-bbar__row"
-              :class="{
-                'ctv-bbar__row--git-outdated': gitBadgesFor(row.path).some((b) => b.key === 'outdated'),
-                'ctv-bbar__row--git-modified': gitBadgesFor(row.path).some((b) => b.key === 'modified'),
-              }"
-              :disabled="openingPath === row.path || row.mtime === 0"
-              :title="`${t('v2.bottomBar.templateOpenHint')}\n${row.path}`"
-              @click="onOpenWorkflow(row, true)"
-            >
-              <span class="ctv-bbar__row-main">{{ row.name }}</span>
-              <span
-                v-for="b in gitBadgesFor(row.path)"
-                :key="b.key"
-                class="ctv-bbar__git-badge"
-                :class="`ctv-bbar__git-badge--${b.key}`"
-              >{{ b.label }}</span>
-            </button>
-          </div>
-        </div>
-        <div class="ctv-bbar__col">
-          <div class="ctv-bbar__col-head">{{ t('v2.bottomBar.localWorkflows') }}</div>
-          <div class="ctv-bbar__scroll ctv-bbar__scroll--col">
-            <div v-if="!localWorkflows.length" class="ctv-bbar__muted">
-              {{ t('v2.bottomBar.localWorkflowsEmpty') }}
-            </div>
-            <button
-              v-for="row in localWorkflows"
-              :key="`l-${row.path}`"
-              type="button"
-              class="ctv-bbar__row"
-              :class="{
-                'ctv-bbar__row--git-new': gitBadgesFor(row.path).some((b) => b.key === 'new'),
-                'ctv-bbar__row--git-modified': gitBadgesFor(row.path).some((b) => b.key === 'modified'),
-              }"
-              :disabled="openingPath === row.path"
-              :title="row.path"
-              @click="onOpenWorkflow(row)"
-            >
-              <span class="ctv-bbar__row-main">{{ row.name }}</span>
-              <span
-                v-for="b in gitBadgesFor(row.path)"
-                :key="b.key"
-                class="ctv-bbar__git-badge"
-                :class="`ctv-bbar__git-badge--${b.key}`"
-              >{{ b.label }}</span>
-              <span v-if="nativeWorkflowFolder(row.path)" class="ctv-bbar__badge">
-                {{ nativeWorkflowFolder(row.path) }}
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <WorkflowLibrary
+        v-else
+        :templates="templateWorkflows"
+        :local="localWorkflows"
+        :opening-path="openingPath"
+        :badges="gitBadgesByPath"
+        @open="onOpenWorkflow"
+      />
     </div>
 
     <div
@@ -1036,7 +984,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown, true))
   width: min(360px, 88vw);
 }
 
-.ctv-bbar__pop--wide:has(.ctv-bbar__split) {
+.ctv-bbar__pop--wide:has(.workflow-library) {
   width: min(640px, 94vw);
 }
 

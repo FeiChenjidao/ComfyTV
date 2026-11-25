@@ -8,19 +8,22 @@ import BottomBar from './BottomBar.vue'
 const mocks = vi.hoisted(() => ({
   fetchNativeWorkflowGitStatus: vi.fn(),
   saveGitExecutable: vi.fn(),
+  setupNativeWorkflowGit: vi.fn(),
+  fetchNativeWorkflowGitToken: vi.fn(),
 }))
 
 vi.mock('@/api', () => ({
   fetchNativeWorkflowGitStatus: mocks.fetchNativeWorkflowGitStatus,
   saveGitExecutable: mocks.saveGitExecutable,
-  fetchNativeWorkflowGitToken: vi.fn(),
+  fetchNativeWorkflowGitToken: mocks.fetchNativeWorkflowGitToken,
   pullNativeWorkflowGit: vi.fn(),
   pushNativeWorkflowGit: vi.fn(),
   saveNativeWorkflowGitToken: vi.fn(),
-  setupNativeWorkflowGit: vi.fn(),
+  setupNativeWorkflowGit: mocks.setupNativeWorkflowGit,
 }))
 
 vi.mock('./AssetsPopup.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('./WorkflowLibrary.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('./actions', () => ({
   QUICK_CREATE: [], SEARCH_CATEGORY_IDS: [],
   filterNodes: () => [], groupNodesByCategory: () => [],
@@ -65,5 +68,57 @@ describe('manual Git path', () => {
     expect(mocks.fetchNativeWorkflowGitStatus).toHaveBeenLastCalledWith(true)
     expect(screen.getByRole('button', { name: 'Update templates' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Set Git path' })).not.toBeInTheDocument()
+  })
+})
+
+describe('team repository connection status', () => {
+  const disconnected = { ok: true, has_git: true, is_repo: false, token_configured: true, files: [] }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.fetchNativeWorkflowGitToken.mockResolvedValue({ ok: true, configured: true })
+    mocks.fetchNativeWorkflowGitStatus.mockResolvedValue(disconnected)
+  })
+
+  it('preserves the actual clone failure instead of overwriting it with not connected', async () => {
+    mocks.setupNativeWorkflowGit.mockResolvedValue({
+      ...disconnected, ok: false, error: 'Could not resolve host: github.com',
+    })
+    renderWithPlugins(BottomBar)
+    await userEvent.click(screen.getByRole('button', { name: 'Workflows' }))
+    expect(await screen.findByText('Could not resolve host: github.com')).toBeInTheDocument()
+    expect(mocks.fetchNativeWorkflowGitStatus).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole('button', { name: 'Connect team repo' })).toBeEnabled()
+  })
+
+  it('keeps setup request errors visible and allows retry', async () => {
+    mocks.setupNativeWorkflowGit.mockRejectedValue(new Error('Setup request timed out'))
+    renderWithPlugins(BottomBar)
+    await userEvent.click(screen.getByRole('button', { name: 'Workflows' }))
+    expect(await screen.findByText('Setup request timed out')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Connect team repo' })).toBeEnabled()
+    expect(mocks.fetchNativeWorkflowGitStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows remote fetch failures instead of claiming the repository is synced', async () => {
+    mocks.fetchNativeWorkflowGitStatus.mockResolvedValue({
+      ...disconnected, is_repo: true, ahead: 0, behind: 0, dirty: false,
+      fetch_error: 'Failed to connect to github.com',
+    })
+    renderWithPlugins(BottomBar)
+    await userEvent.click(screen.getByRole('button', { name: 'Workflows' }))
+    expect(await screen.findByText('Failed to connect to github.com')).toBeInTheDocument()
+    expect(mocks.setupNativeWorkflowGit).not.toHaveBeenCalled()
+  })
+
+  it('refreshes remote status after a successful first clone', async () => {
+    const connected = { ...disconnected, is_repo: true, ahead: 0, behind: 0, dirty: false }
+    mocks.setupNativeWorkflowGit.mockResolvedValue(connected)
+    mocks.fetchNativeWorkflowGitStatus.mockResolvedValueOnce(disconnected).mockResolvedValue(connected)
+    renderWithPlugins(BottomBar)
+    await userEvent.click(screen.getByRole('button', { name: 'Workflows' }))
+    await waitFor(() => expect(mocks.fetchNativeWorkflowGitStatus).toHaveBeenLastCalledWith(true))
+    expect(screen.getByRole('button', { name: 'Update templates' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Connect team repo' })).not.toBeInTheDocument()
   })
 })
