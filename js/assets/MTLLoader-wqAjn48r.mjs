@@ -1,4 +1,4 @@
-import { a1 as Loader, a2 as LoaderUtils, J as FileLoader, P as FrontSide, at as RepeatWrapping, j as ColorManagement, i as Color, au as SRGBColorSpace, ab as MeshPhongMaterial, aV as Vector2, s as DefaultLoadingManager, aL as TextureLoader } from "./main-D2oXbADd.mjs";
+import { L as Loader, a as LoaderUtils, F as FileLoader, b as FrontSide, R as RepeatWrapping, C as ColorManagement, c as Color, S as SRGBColorSpace, M as MeshPhongMaterial, V as Vector2, D as DefaultLoadingManager, T as TextureLoader } from "./main-BXFDtlh5.mjs";
 class MTLLoader extends Loader {
   constructor(manager) {
     super(manager);
@@ -297,4 +297,4 @@ class MaterialCreator {
 export {
   MTLLoader
 };
-//# sourceMappingURL=MTLLoader-nsKZOtaQ.mjs.map
+//# sourceMappingURL=MTLLoader-wqAjn48r.mjs.map

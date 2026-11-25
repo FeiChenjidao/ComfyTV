@@ -1,11 +1,17 @@
+from base64 import b64encode
+from io import BytesIO
+import json
+import zipfile
+
 import pytest
 
 np = pytest.importorskip("numpy")
 torch = pytest.importorskip("torch")
 pytest.importorskip("scipy")
 
-from PIL import Image
+from PIL import Image, ImageFile
 
+from ComfyTV.mesh3d import io3d
 from ComfyTV.mesh3d.core import pack_variable_mesh_batch
 from ComfyTV.mesh3d.io3d import (
     export_obj_bytes, export_stl_bytes, load_mesh_bytes, mesh_item_to_glb_bytes, save_glb,
@@ -43,6 +49,44 @@ def test_glb_texture_roundtrip(cube):
     back = load_mesh_bytes(mesh_item_to_glb_bytes(m, 0), 'glb')
     assert back.texture is not None
     assert tuple(back.texture.shape) == (1, 16, 16, 3)
+
+
+def test_obj_zip_recovers_truncated_texture(cube, monkeypatch):
+    v, f, _, u, _ = item(cube)
+    m = pack_variable_mesh_batch([v], [f], uvs=[u], texture=torch.ones(1, 16, 16, 3))
+    glb = mesh_item_to_glb_bytes(m, 0)
+    json_length = int.from_bytes(glb[12:16], "little")
+    gltf = json.loads(glb[20:20 + json_length])
+    binary = glb[28 + json_length:]
+    gltf["buffers"][0]["uri"] = "data:application/octet-stream;base64," + b64encode(binary).decode()
+    buf = BytesIO()
+    Image.new("RGB", (16, 16), (200, 100, 50)).save(buf, format="JPEG")
+    truncated = buf.getvalue()[:-2]  # Missing JPEG end marker; the pixels are intact.
+    gltf["images"][0] = {"uri": "data:image/jpeg;base64," + b64encode(truncated).decode()}
+    monkeypatch.setattr(ImageFile, "LOAD_TRUNCATED_IMAGES", False)
+    retries = []
+
+    def pillow_retry(fn, arg):
+        # Exercise ComfyUI's pillow contract; conftest supplies a no-op stub.
+        try:
+            return fn(arg)
+        except OSError:
+            retries.append(True)
+            with monkeypatch.context() as patch:
+                patch.setattr(ImageFile, "LOAD_TRUNCATED_IMAGES", True)
+                return fn(arg)
+
+    monkeypatch.setattr(io3d, "pillow", pillow_retry)
+    mesh = load_mesh_bytes(json.dumps(gltf).encode(), "gltf")
+    with zipfile.ZipFile(BytesIO(io3d.export_obj_zip_bytes(mesh))) as archive:
+        assert "mtllib model.mtl" in archive.read("model.obj").decode()
+        assert "map_Kd texture.png" in archive.read("model.mtl").decode()
+        with Image.open(BytesIO(archive.read("texture.png"))) as texture:
+            texture.load()
+            assert texture.size == (16, 16)
+            assert np.allclose(texture.getpixel((0, 0)), (200, 100, 50), atol=3)
+    assert retries == [True]
+    assert ImageFile.LOAD_TRUNCATED_IMAGES is False
 
 
 def test_save_glb_validates_inputs():

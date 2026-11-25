@@ -76,30 +76,7 @@
         :class="previewActionsClass"
         :data-busy="exporting ? '1' : undefined"
       >
-        <div class="ctv:relative">
-          <button type="button" :class="previewActionBtn"
-                  :disabled="exporting"
-                  :title="exporting ? $t('stage.action.exportModelBusy', { format: activeExportFormat.toUpperCase() }) : $t('stage.action.exportModel')"
-                  @click.stop="exportMenuOpen = !exportMenuOpen">
-            <i :class="exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download'" />
-          </button>
-          <div
-            v-if="exportMenuOpen"
-            class="ctv:absolute ctv:top-6 ctv:right-0 ctv:z-20 ctv:min-w-16 ctv:overflow-hidden ctv:rounded-md ctv:border ctv:border-border-subtle ctv:bg-secondary-background ctv:shadow-lg"
-            @pointerdown.stop
-            @mousedown.stop
-          >
-            <button
-              v-for="format in MODEL_EXPORT_FORMATS"
-              :key="format"
-              type="button"
-              class="ctv:block ctv:w-full ctv:border-0 ctv:bg-transparent ctv:px-3 ctv:py-1.5 ctv:text-left ctv:text-2xs ctv:text-base-foreground ctv:cursor-pointer ctv:hover:bg-secondary-background-hover"
-              @click.stop="onDownloadModel(format)"
-            >
-              {{ format.toUpperCase() }}
-            </button>
-          </div>
-        </div>
+        <ModelExportButton :export-model="onDownloadModel" @update:busy="exporting = $event" />
         <button type="button" :class="previewTagBtn"
                 :disabled="exporting"
                 :title="$t('stage.action.addTag')"
@@ -355,6 +332,7 @@ import IconBox from '~icons/lucide/box'
 
 import { app, type LGraphNode } from '@/lib/comfyApp'
 import ModelPreview from '@/components/stages/ModelPreview.vue'
+import ModelExportButton from '@/components/stages/ModelExportButton.vue'
 import ModelThumb from '@/components/widgets/ModelThumb.vue'
 import StageCard from '@/components/stages/StageCard.vue'
 import type { StageState } from '@/stores/stageStore'
@@ -370,21 +348,12 @@ import { isPrimitivePayload } from '@/widgets/three/primitiveGeometry'
 import { useOutputAssetTagging } from '@/composables/stages/useOutputAssetTagging'
 import { MODEL_FILE_EXTENSIONS } from '@/widgets/three/modelFormats'
 import { isModelResourceFile, MODEL_RESOURCE_EXTENSIONS } from '@/widgets/three/convertToGlb'
-import {
-  MODEL_EXPORT_FORMATS,
-  type ModelExportFormat,
-} from '@/widgets/three/modelExporter'
+import type { ModelExportFormat } from '@/widgets/three/modelExporter'
 
 const { t } = useI18n()
 const exporting = ref(false)
-const exportMenuOpen = ref(false)
-const activeExportFormat = ref<ModelExportFormat>('glb')
 
-function toast(severity: 'info' | 'success' | 'warn' | 'error', summary: string, detail = '') {
-  ;(app as any)?.extensionManager?.toast?.add?.({
-    severity, summary, detail, life: severity === 'info' ? 12000 : 4000,
-  })
-}
+
 
 const props = defineProps<{
   state: StageState
@@ -489,28 +458,14 @@ const PREVIEW_BTN_BASE =
   + ' ctv:disabled:opacity-60 ctv:disabled:cursor-wait'
 const previewActionsClass =
   'ctv-hover-reveal ctv:absolute ctv:top-1 ctv:right-1 ctv:z-10 ctv:flex ctv:gap-1'
-const previewActionBtn = PREVIEW_BTN_BASE + ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'
 const previewTagBtn = computed(() => PREVIEW_BTN_BASE
   + (isSaved(modelSrc.value)
     ? ' ctv:bg-primary-background ctv:text-white ctv:hover:bg-primary-background/90'
     : ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'))
 
 async function onDownloadModel(format: ModelExportFormat): Promise<void> {
-  if (!modelSrc.value || !previewEl.value || exporting.value) return
-  exportMenuOpen.value = false
-  activeExportFormat.value = format
-  exporting.value = true
-  const label = format.toUpperCase()
-  toast('info', t('stage.action.exportModelBusy', { format: label }))
-  try {
-    await previewEl.value.exportModel(format, nameFromUrl(modelSrc.value))
-    toast('success', t('stage.action.exportModelDone', { format: label }))
-  } catch (e: any) {
-    console.error(`[ComfyTV/model-loader] ${label} export failed`, e)
-    toast('error', t('stage.action.exportModelFailed', { format: label }), String(e?.message || e))
-  } finally {
-    exporting.value = false
-  }
+  if (!previewEl.value) throw new Error('No model is ready to export')
+  await previewEl.value.exportModel(format, nameFromUrl(modelSrc.value))
 }
 
 async function onCreateCategory(): Promise<void> {
@@ -553,7 +508,6 @@ const fileDrop = useLoaderFileDrop({
 function onKeydown(e: KeyboardEvent): void {
   if (e.key !== 'Escape') return
   if (tagMenu.value) closeTagMenu()
-  else if (exportMenuOpen.value) exportMenuOpen.value = false
   else if (menuOpen.value) menuOpen.value = false
 }
 

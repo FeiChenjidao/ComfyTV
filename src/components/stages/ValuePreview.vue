@@ -136,7 +136,7 @@
           controls
           @view-changed="scheduleModelCapture"
         />
-        <div :class="imgActionsClass">
+        <div :class="imgActionsClass" :data-busy="modelExporting ? '1' : undefined">
           <MediaActionBar
             :url="String(content)"
             :label="nameFromUrl(String(content))"
@@ -145,7 +145,11 @@
             @download="onDownload"
             @tag="onTagFromBar"
             @load-asset="onLoadAssetFromBar"
-          />
+          >
+            <template #download>
+              <ModelExportButton :export-model="onExportModel" @update:busy="modelExporting = $event" />
+            </template>
+          </MediaActionBar>
         </div>
       </div>
     </template>
@@ -224,6 +228,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import ModelPreview from './ModelPreview.vue'
+import ModelExportButton from './ModelExportButton.vue'
+import type { ModelExportFormat } from '@/widgets/three/modelExporter'
 import MediaActionBar from './MediaActionBar.vue'
 import OutputTagMenu from './OutputTagMenu.vue'
 import ValuePreviewBatch from './ValuePreviewBatch.vue'
@@ -269,6 +275,12 @@ const MODEL_CAPTURE_SIZE = 1024
 const MODEL_CAPTURE_DELAY_MS = 250
 
 const modelPreviewEl = ref<InstanceType<typeof ModelPreview> | null>(null)
+const modelExporting = ref(false)
+async function onExportModel(format: ModelExportFormat) {
+  if (!modelPreviewEl.value) throw new Error('No model is ready to export')
+  await modelPreviewEl.value.exportModel(format, nameFromUrl(String(props.content)))
+}
+
 
 const { scheduleCapture: scheduleModelCapture, cancelCapture: cancelModelCapture } = useModelViewCapture({
   getCanvas: () => modelPreviewEl.value?.captureCanvas(MODEL_CAPTURE_SIZE, MODEL_CAPTURE_SIZE),

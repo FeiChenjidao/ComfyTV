@@ -1,5 +1,5 @@
 import { createTestingPinia } from '@pinia/testing'
-import { enableAutoUnmount, mount } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Component } from 'vue'
 
@@ -24,6 +24,24 @@ function mountPreview(
 }
 
 describe('MediaPreviewV2', () => {
+  it('uses the shared model export menu for generated models', async () => {
+    ;(app as any).api.apiURL = (p: string) => p
+    const exportModel = vi.fn().mockResolvedValue(undefined)
+    const wrapper = mountPreview(
+      { kind: 'model', url: '/view?filename=generated.glb&type=output', hint: '' },
+      {
+        ModelPreview: { template: '<div />', methods: { exportModel } },
+        ComfyTVPopover: { template: '<div><slot name="trigger" /><slot /></div>' },
+      },
+    )
+    for (const label of ['GLB', 'OBJ', 'STL', 'FBX']) {
+      expect(wrapper.findAll('button').some((button) => button.text() === label)).toBe(true)
+    }
+    await wrapper.findAll('button').find((button) => button.text() === 'OBJ')!.trigger('click')
+    await flushPromises()
+    expect(exportModel).toHaveBeenCalledWith('obj', 'generated')
+  })
+
   it('plays video previews with sound', () => {
     ;(app as any).api.apiURL = (p: string) => p
     const wrapper = mountPreview(

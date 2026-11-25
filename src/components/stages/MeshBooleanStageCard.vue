@@ -47,10 +47,9 @@
       </div>
 
       <div v-if="viewingResult && resultUrl"
+           :data-busy="exporting ? '1' : undefined"
            class="ctv-hover-reveal ctv:absolute ctv:top-1 ctv:right-1 ctv:z-10 ctv:flex ctv:gap-1">
-        <button type="button" :class="downloadBtnClass"
-                :title="$t('stage.action.download')"
-                @click.stop="onDownloadResult"><i class="pi pi-download" /></button>
+        <ModelExportButton :export-model="onDownloadResult" @update:busy="exporting = $event" />
         <button type="button" :class="tagBtnClass"
                 :title="$t('stage.action.addTag')"
                 @click.stop="tagMenuEl?.open(resultUrl, $event)"><i class="pi pi-tag" /></button>
@@ -118,6 +117,9 @@ import IconBox from '~icons/lucide/box'
 import type { LGraphNode } from '@/lib/comfyApp'
 import AssetTagMenu from '@/components/stages/AssetTagMenu.vue'
 import StageCard from '@/components/stages/StageCard.vue'
+import ModelExportButton from '@/components/stages/ModelExportButton.vue'
+import { urlFilename } from '@/composables/stages/useModelPreview'
+import { exportModelObject, type ModelExportFormat } from '@/widgets/three/modelExporter'
 import type { StageState } from '@/stores/stageStore'
 import {
   BOOLEAN_CHANNELS as CHANNELS,
@@ -134,7 +136,6 @@ import {
   useModelViewCapture
 } from '@/composables/stages/useModelViewCapture'
 import { onNodeConfigure } from '@/utils/widget'
-import { downloadFile } from '@/utils/download'
 import { applyViewChannel, type ViewChannel } from '@/widgets/three/channelShading'
 import { guardOrbitControlsDragEnd } from '@/widgets/three/orbitControlsGuard'
 import { RendererView } from '@/widgets/three/RendererView'
@@ -473,7 +474,7 @@ onBeforeUnmount(() => {
 const PREVIEW_BTN_BASE =
   'ctv:relative ctv:inline-flex ctv:items-center ctv:justify-center ctv:cursor-pointer ctv:appearance-none'
   + ' ctv:border-none ctv:transition-colors ctv:size-5 ctv:p-0 ctv:rounded-sm ctv:text-sm'
-const downloadBtnClass = PREVIEW_BTN_BASE + ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'
+const exporting = ref(false)
 
 const tagMenuEl = ref<InstanceType<typeof AssetTagMenu> | null>(null)
 const tagBtnClass = computed(() => PREVIEW_BTN_BASE
@@ -481,12 +482,13 @@ const tagBtnClass = computed(() => PREVIEW_BTN_BASE
     ? ' ctv:bg-primary-background ctv:text-white ctv:hover:bg-primary-background/90'
     : ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'))
 
-async function onDownloadResult(): Promise<void> {
-  if (!resultUrl.value) return
+async function onDownloadResult(format: ModelExportFormat): Promise<void> {
+  if (!resultUrl.value || !groupResult.children.length) throw new Error('No model is ready to export')
+  applyViewChannel(groupResult, 'material')
   try {
-    await downloadFile(resultUrl.value)
-  } catch (e) {
-    console.error('[ComfyTV/mesh-boolean] download failed', e)
+    await exportModelObject(cloneSkinned(groupResult), format, urlFilename(resultUrl.value))
+  } finally {
+    applyViewChannel(groupResult, channel.value)
   }
 }
 

@@ -25,7 +25,7 @@ describe('modelExporter', () => {
     for (const format of MODEL_EXPORT_FORMATS) {
       await exportModelObject(model(), format, 'sample.glb')
       const [filename, blob] = mocks.downloadBlob.mock.calls.at(-1) as [string, Blob]
-      expect(filename).toBe(`sample.${format}`)
+      expect(filename).toBe(format === 'obj' ? 'sample_obj.zip' : `sample.${format}`)
       expect(blob.size).toBeGreaterThan(20)
     }
   })

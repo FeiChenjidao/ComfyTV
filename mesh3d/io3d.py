@@ -10,6 +10,7 @@ from io import BytesIO
 import numpy as np
 import torch
 from PIL import Image
+from node_helpers import pillow
 
 from .core import get_mesh_batch_item, pack_variable_mesh_batch
 
@@ -79,7 +80,8 @@ def _gltf_image_pil(gltf: dict, buffers: list[bytes], image_idx: int):
         raw = b64decode(img["uri"].split(",", 1)[1])
     else:
         raise ValueError("load_mesh: external image URIs are not supported (use a self-contained .glb)")
-    return Image.open(BytesIO(raw)).convert("RGB")
+    # Decode inside pillow's retry: Image.open alone only reads the header.
+    return pillow(lambda data: Image.open(BytesIO(data)).convert("RGB"), raw)
 
 
 def _parse_gltf(data: bytes):

@@ -4,11 +4,6 @@ import { nextTick, reactive } from 'vue'
 import { app } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
 
-const downloadFile = vi.hoisted(() => vi.fn(async (..._a: unknown[]) => {}))
-vi.mock('@/utils/download', () => ({
-  downloadFile: (...a: unknown[]) => downloadFile(...(a as [string]))
-}))
-
 import { fmtCount, useMeshOp } from './useMeshOp'
 
 function makeWidget(name: string, value: unknown) {
@@ -231,29 +226,7 @@ describe('useMeshOp: stats', () => {
   })
 })
 
-describe('useMeshOp: download + asset url', () => {
-  it('downloads the preview, preferring the export result', async () => {
-    const { api, state } = meshOpSetup('export')
-    ;(state as any).inputs = [
-      { slot: 'model', source: 'upstream', content: '/view/src.glb' }
-    ]
-    ;(state as any).output = '/view/out.glb'
-    await api.onDownloadModel()
-    expect(downloadFile).toHaveBeenCalledWith('/view/out.glb')
-  })
-
-  it('does nothing without a target and swallows failures', async () => {
-    downloadFile.mockClear()
-    const { api, state } = meshOpSetup()
-    await api.onDownloadModel()
-    expect(downloadFile).not.toHaveBeenCalled()
-    ;(state as any).inputs = [
-      { slot: 'model', source: 'upstream', content: '/view/src.glb' }
-    ]
-    downloadFile.mockRejectedValueOnce(new Error('nope'))
-    await expect(api.onDownloadModel()).resolves.toBeUndefined()
-  })
-
+describe('useMeshOp: asset url', () => {
   it('assetUrl uses api.fileURL when available', () => {
     const { api } = meshOpSetup()
     expect(api.assetUrl('/x.png')).toBe('/x.png')

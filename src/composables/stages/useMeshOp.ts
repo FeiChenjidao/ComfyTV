@@ -4,7 +4,6 @@ import type { LGraphNode } from '@/lib/comfyApp'
 import type { StageState } from '@/stores/stageStore'
 import { app } from '@/lib/comfyApp'
 import { pickSourceImageUrl } from '@/composables/stages/stageInputs'
-import { downloadFile } from '@/utils/download'
 import { bindWidgetCallback, getWidget, onNodeConfigure, readWidgetStr, writeWidget } from '@/utils/widget'
 import type { ViewChannel } from '@/widgets/three/channelShading'
 
@@ -196,15 +195,6 @@ export function useMeshOp(node: LGraphNode, stageState: StageState) {
     return typeof api?.fileURL === 'function' ? api.fileURL(path) : path
   }
 
-  async function onDownloadModel(): Promise<void> {
-    const target = (isExport.value && resultUrl.value) ? resultUrl.value : previewSrc.value
-    if (!target) return
-    try {
-      await downloadFile(target)
-    } catch (e) {
-      console.error('[ComfyTV/mesh-op] download failed', e)
-    }
-  }
 
   return {
     nodeType,
@@ -232,6 +222,5 @@ export function useMeshOp(node: LGraphNode, stageState: StageState) {
     onModelStats,
     statsLine,
     assetUrl,
-    onDownloadModel,
   }
 }

@@ -130,9 +130,14 @@
               <div class="ctv:mt-0.5 ctv:text-2xs ctv:text-white/45">
                 {{ selectedMap ? mapStatus(selectedMap) : '' }}
               </div>
-              <div class="ctv:mt-2 ctv:flex ctv:gap-1">
+              <div class="ctv:mt-2 ctv:flex ctv:flex-wrap ctv:gap-1">
                 <button type="button" :class="smallButtonClass" @click.stop="selectedMap && pickMap(selectedMap.key)">
                   <IconUpload class="ctv:size-3" /> {{ $t('modelPreview.replaceMap') }}
+                </button>
+                <button type="button" :class="smallButtonClass"
+                        :disabled="!selectedMap || selectedMap.source === 'empty' || downloadingMap"
+                        @click.stop="selectedMap && emit('download-map', selectedMap.key)">
+                  <IconDownload class="ctv:size-3" /> {{ $t('stage.action.download') }}
                 </button>
                 <button
                   v-if="selectedMap?.source === 'custom'"
@@ -243,6 +248,7 @@ import { useI18n } from 'vue-i18n'
 import IconBox from '~icons/lucide/box'
 import IconCircleCheck from '~icons/lucide/circle-check'
 import IconCompass from '~icons/lucide/compass'
+import IconDownload from '~icons/lucide/download'
 import IconGrid3X3 from '~icons/lucide/grid-3x3'
 import IconImage from '~icons/lucide/image'
 import IconImages from '~icons/lucide/images'
@@ -276,6 +282,7 @@ const props = defineProps<{
   mapSlots: PreviewMapSlot[]
   stats: ModelViewerStats
   fullscreen: boolean
+  downloadingMap?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -286,6 +293,7 @@ const emit = defineEmits<{
   (e: 'reset-pbr'): void
   (e: 'map-file', key: MaterialMapKey, file: File): void
   (e: 'clear-map', key: MaterialMapKey): void
+  (e: 'download-map', key: MaterialMapKey): void
   (e: 'reset-view'): void
   (e: 'toggle-fullscreen'): void
 }>()
@@ -411,5 +419,5 @@ function segmentClass(active: boolean): string {
 }
 
 const iconClass = 'ctv:flex ctv:size-6 ctv:items-center ctv:justify-center ctv:rounded ctv:border-none ctv:bg-transparent ctv:text-white/50 ctv:cursor-pointer ctv:hover:bg-white/10 ctv:hover:text-white'
-const smallButtonClass = 'ctv:inline-flex ctv:h-6 ctv:items-center ctv:gap-1 ctv:rounded ctv:border ctv:border-white/10 ctv:bg-white/[0.04] ctv:px-1.5 ctv:text-[9px] ctv:text-white/65 ctv:cursor-pointer ctv:hover:bg-white/10 ctv:hover:text-white'
+const smallButtonClass = 'ctv:inline-flex ctv:h-6 ctv:items-center ctv:gap-1 ctv:rounded ctv:border ctv:border-white/10 ctv:bg-white/[0.04] ctv:px-1.5 ctv:text-[9px] ctv:text-white/65 ctv:cursor-pointer ctv:hover:bg-white/10 ctv:hover:text-white ctv:disabled:opacity-40 ctv:disabled:cursor-not-allowed'
 </script>

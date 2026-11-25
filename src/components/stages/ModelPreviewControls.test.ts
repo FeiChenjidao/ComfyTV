@@ -34,6 +34,26 @@ function renderControls(overrides: Record<string, unknown> = {}) {
 }
 
 describe('ModelPreviewControls', () => {
+  it('disables texture download for an empty slot', async () => {
+    renderControls()
+    await fireEvent.click(screen.getByTitle('Material inspector'))
+    expect(screen.getByRole('button', { name: 'Download', exact: true })).toBeDisabled()
+  })
+
+  it('downloads the selected embedded or custom texture', async () => {
+    const { emitted } = renderControls({
+      mapSlots: [
+        { key: 'map', previewUrl: '/albedo.png', source: 'embedded', count: 1 },
+        { key: 'normalMap', previewUrl: '/normal.png', source: 'custom', count: 0, fileName: 'normal.png' },
+      ],
+    })
+    await fireEvent.click(screen.getByTitle('Material inspector'))
+    await fireEvent.click(screen.getByRole('button', { name: 'Download', exact: true }))
+    await fireEvent.click(screen.getByRole('button', { name: /Normal normal.png/ }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Download', exact: true }))
+    expect(emitted()['download-map']).toEqual([['map'], ['normalMap']])
+  })
+
   it('selects a material map slot and emits the chosen custom file', async () => {
     const { container, emitted } = renderControls()
     await fireEvent.click(screen.getByTitle('Material inspector'))

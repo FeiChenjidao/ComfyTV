@@ -48,15 +48,7 @@
           :data-busy="exporting ? '1' : undefined"
           @pointerdown.stop
         >
-          <button
-            type="button"
-            :class="modelExportBtnClass"
-            :disabled="exporting"
-            :title="exporting ? t('stage.action.exportObjZipBusy') : t('stage.action.exportObjZip')"
-            @click.stop="onDownloadModel"
-          >
-            <i :class="exporting ? 'pi pi-spin pi-spinner' : 'pi pi-download'" />
-          </button>
+          <ModelExportButton :export-model="onDownloadModel" @update:busy="exporting = $event" />
           <button
             type="button"
             :class="modelTagBtnClass"
@@ -148,13 +140,14 @@ import { useI18n } from 'vue-i18n'
 import IconRepeat from '~icons/lucide/repeat'
 
 import ModelPreview from '@/components/stages/ModelPreview.vue'
+import ModelExportButton from '@/components/stages/ModelExportButton.vue'
 import ProxiedVideo from '@/components/widgets/ProxiedVideo.vue'
 import ThumbImg from '@/components/widgets/ThumbImg.vue'
 import { askText } from '@/composables/dialog/useTextInputDialog'
 import { useModelViewCapture } from '@/composables/stages/useModelViewCapture'
 import { useOutputAssetTagging } from '@/composables/stages/useOutputAssetTagging'
 import { app } from '@/lib/comfyApp'
-import { downloadModelObjZip } from '@/utils/download'
+import type { ModelExportFormat } from '@/widgets/three/modelExporter'
 import { THUMB_CELL, THUMB_PREVIEW, thumbUrl } from '@/utils/thumbUrl'
 import { mediaItems, pickedMediaIndex } from '@/v2/mediaItems'
 
@@ -201,17 +194,10 @@ const MODEL_BTN_BASE =
   + ' ctv:disabled:opacity-60 ctv:disabled:cursor-wait'
 const modelActionsClass =
   'ctv-hover-reveal ctv:absolute ctv:top-1 ctv:right-1 ctv:z-10 ctv:flex ctv:gap-1'
-const modelExportBtnClass = MODEL_BTN_BASE + ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'
 const modelTagBtnClass = computed(() => MODEL_BTN_BASE
   + (modelSaved.value
     ? ' ctv:bg-primary-background ctv:text-white ctv:hover:bg-primary-background/90'
     : ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'))
-
-function toast(severity: 'info' | 'success' | 'warn' | 'error', summary: string, detail = '') {
-  ;(app as any)?.extensionManager?.toast?.add?.({
-    severity, summary, detail, life: severity === 'info' ? 12000 : 4000,
-  })
-}
 
 const { scheduleCapture } = useModelViewCapture({
   getCanvas: () => modelPreviewEl.value?.captureCanvas(MODEL_CAPTURE_SIZE, MODEL_CAPTURE_SIZE),
@@ -225,20 +211,9 @@ function onModelViewChanged() {
   if (props.onCaptureView) scheduleCapture()
 }
 
-async function onDownloadModel() {
-  const url = props.url
-  if (!url || exporting.value) return
-  exporting.value = true
-  toast('info', t('stage.action.exportObjZipBusy'))
-  try {
-    await downloadModelObjZip(url)
-    toast('success', t('stage.action.exportObjZipDone'))
-  } catch (e: any) {
-    console.error('[ComfyTV/model-preview] OBJ zip export failed', e)
-    toast('error', t('stage.action.exportObjZipFailed'), String(e?.message || e))
-  } finally {
-    exporting.value = false
-  }
+async function onDownloadModel(format: ModelExportFormat) {
+  if (!modelPreviewEl.value) throw new Error('No model is ready to export')
+  await modelPreviewEl.value.exportModel(format, nameFromUrl(props.url || 'model'))
 }
 
 function onTagModel(e: MouseEvent) {
@@ -423,7 +398,7 @@ const hasContent = computed(() =>
   min-height: 0;
   width: 100%;
 }
-/* Keep export/tag visible while OBJ zip is running. */
+/* Keep export/tag visible while exporting. */
 .v2-mp__model .ctv-hover-reveal[data-busy='1'] {
   opacity: 1;
   pointer-events: auto;

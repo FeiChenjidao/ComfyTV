@@ -25,6 +25,7 @@
       :lighting="lightingMode"
       :pbr="pbr"
       :map-slots="mapSlots"
+      :downloading-map="downloadingMap"
       :stats="viewerStats"
       :fullscreen="isFullscreen"
       @update:channel="onChannelChange"
@@ -34,6 +35,7 @@
       @reset-pbr="resetPbr"
       @map-file="onMapFile"
       @clear-map="onClearMap"
+      @download-map="onDownloadMap"
       @reset-view="resetView"
       @toggle-fullscreen="toggleFullscreen"
     />
@@ -61,6 +63,9 @@ import {
 } from '@/composables/stages/useModelPreview'
 import { buildPointCloud, classifyModelBytes, loadSpark } from '@/widgets/three/modelFormats'
 import { exportModelObject, type ModelExportFormat } from '@/widgets/three/modelExporter'
+import { texturePng } from '@/widgets/three/modelTextures'
+import { downloadBlob } from '@/utils/download'
+import { app } from '@/lib/comfyApp'
 import { guardOrbitControlsDragEnd } from '@/widgets/three/orbitControlsGuard'
 import { RendererView } from '@/widgets/three/RendererView'
 import { buildPrimitiveMesh, parsePrimitiveRecipe } from '@/widgets/three/primitiveGeometry'
@@ -122,6 +127,8 @@ const viewerStats = ref<ModelViewerStats>({
 const isFullscreen = ref(false)
 
 const overrideTextures = new Map<MaterialMapKey, THREE.Texture>()
+const embeddedTextures = new Map<MaterialMapKey, THREE.Texture>()
+const downloadingMap = ref(false)
 const overrideMapMeta = new Map<MaterialMapKey, { fileName: string; previewUrl: string }>()
 let embeddedMapSlots: PreviewMapSlot[] = emptyMapSlots()
 
@@ -219,6 +226,7 @@ function texturePreviewUrl(texture: THREE.Texture): string | null {
 }
 
 function refreshEmbeddedMaps(): void {
+  embeddedTextures.clear()
   if (!modelRoot) {
     embeddedMapSlots = emptyMapSlots()
     syncMapSlots()
@@ -234,6 +242,7 @@ function refreshEmbeddedMaps(): void {
       for (const key of MATERIAL_MAP_KEYS) {
         const texture = (material as unknown as Record<MaterialMapKey, THREE.Texture | null>)[key]
         if (!texture) continue
+        if (!embeddedTextures.has(key)) embeddedTextures.set(key, texture)
         counts.set(key, (counts.get(key) ?? 0) + 1)
         if (!previews.has(key)) {
           const preview = texturePreviewUrl(texture)
@@ -376,6 +385,26 @@ function onClearMap(key: MaterialMapKey): void {
   applyShading()
 }
 
+async function onDownloadMap(key: MaterialMapKey): Promise<void> {
+  const texture = overrideTextures.get(key) ?? embeddedTextures.get(key)
+  if (!texture || downloadingMap.value) return
+  downloadingMap.value = true
+  try {
+    const channel = key === 'roughnessMap' || key === 'alphaMap' ? 1 : key === 'metalnessMap' ? 2 : undefined
+    const bytes = await texturePng(texture, channel)
+    const sourceName = overrideMapMeta.get(key)?.fileName ?? urlFilename(props.src)
+    const name = sourceName.replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|\x00-\x1f]/g, '_') || 'model'
+    downloadBlob(`${name}_${key}.png`, new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'image/png' }))
+  } catch (e) {
+    console.error('[ComfyTV/ModelPreview] texture download failed', key, e)
+    ;(app as any)?.extensionManager?.toast?.add?.({
+      severity: 'error', summary: e instanceof Error ? e.message : String(e), life: 4000,
+    })
+  } finally {
+    downloadingMap.value = false
+  }
+}
+
 function resetView(): void {
   if (!modelRoot) return
   frameModel(modelRoot)
@@ -415,6 +444,7 @@ async function ensureSparkRenderer(): Promise<void> {
 }
 
 function disposeModelRoot(): void {
+  embeddedTextures.clear()
   if (modelRoot) {
     applyViewChannel(modelRoot, 'material')
     clearPreviewMaterialClones(modelRoot)
@@ -638,9 +668,16 @@ onBeforeUnmount(() => {
 defineExpose({
   async exportModel(format: ModelExportFormat, baseName = 'model'): Promise<void> {
     if (!modelRoot || !modelReady.value) throw new Error('No model is ready to export')
-    const exportRoot = cloneSkinned(modelRoot)
-    exportRoot.animations = [...(modelRoot.animations ?? [])]
-    await exportModelObject(exportRoot, format, baseName)
+    const restoreHighlight = mp.suspendHighlight()
+    applyViewChannel(modelRoot, 'material')
+    try {
+      const exportRoot = cloneSkinned(modelRoot)
+      exportRoot.animations = [...(modelRoot.animations ?? [])]
+      await exportModelObject(exportRoot, format, baseName)
+    } finally {
+      applyShading()
+      restoreHighlight()
+    }
   },
   cameraState(): { position: number[]; target: number[]; fov: number } | null {
     if (!camera || !controlsOrbit) return null

@@ -29,10 +29,9 @@
       </div>
 
       <div v-if="previewSrc"
+           :data-busy="exporting ? '1' : undefined"
            class="ctv-hover-reveal ctv:absolute ctv:top-1 ctv:right-1 ctv:z-10 ctv:flex ctv:gap-1">
-        <button type="button" :class="downloadBtnClass"
-                :title="$t('stage.action.download')"
-                @click.stop="onDownloadModel"><i class="pi pi-download" /></button>
+        <ModelExportButton :export-model="onDownloadModel" @update:busy="exporting = $event" />
         <button type="button" :class="tagBtnClass"
                 :title="$t('stage.action.addTag')"
                 @click.stop="tagMenuEl?.open(previewSrc, $event)"><i class="pi pi-tag" /></button>
@@ -157,6 +156,9 @@ import IconBox from '~icons/lucide/box'
 import type { LGraphNode } from '@/lib/comfyApp'
 import AssetTagMenu from '@/components/stages/AssetTagMenu.vue'
 import ModelPreview from '@/components/stages/ModelPreview.vue'
+import ModelExportButton from '@/components/stages/ModelExportButton.vue'
+import { urlFilename } from '@/composables/stages/useModelPreview'
+import type { ModelExportFormat } from '@/widgets/three/modelExporter'
 import StageCard from '@/components/stages/StageCard.vue'
 import ViewFullButton from '@/components/ViewFullButton.vue'
 import type { StageState } from '@/stores/stageStore'
@@ -197,12 +199,17 @@ const {
   onModelStats,
   statsLine,
   assetUrl,
-  onDownloadModel
 } = useMeshOp(props.node, props.state)
 
 const mapsPanelLabel = computed(() => t(isUnwrap.value ? 'meshOps.uvAtlas' : 'meshOps.bakedMaps'))
 
 const previewEl = ref<InstanceType<typeof ModelPreview> | null>(null)
+const exporting = ref(false)
+
+async function onDownloadModel(format: ModelExportFormat) {
+  if (!previewEl.value) throw new Error('No model is ready to export')
+  await previewEl.value.exportModel(format, urlFilename(previewSrc.value))
+}
 
 const { scheduleCapture } = useModelViewCapture({
   getCanvas: () => previewEl.value?.captureCanvas(MODEL_VIEW_CAPTURE_SIZE, MODEL_VIEW_CAPTURE_SIZE),
@@ -224,7 +231,6 @@ function chipClass(active: boolean): string {
 const PREVIEW_BTN_BASE =
   'ctv:relative ctv:inline-flex ctv:items-center ctv:justify-center ctv:cursor-pointer ctv:appearance-none'
   + ' ctv:border-none ctv:transition-colors ctv:size-5 ctv:p-0 ctv:rounded-sm ctv:text-sm'
-const downloadBtnClass = PREVIEW_BTN_BASE + ' ctv:bg-white ctv:text-gray-600 ctv:hover:bg-white/90'
 
 const tagMenuEl = ref<InstanceType<typeof AssetTagMenu> | null>(null)
 const tagBtnClass = computed(() => PREVIEW_BTN_BASE

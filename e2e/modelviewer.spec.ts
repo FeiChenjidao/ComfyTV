@@ -7,7 +7,7 @@ test.describe('model viewer', () => {
   })
 
   test('shows material modes and the texture inspector', async ({ page }) => {
-    await expect(page.getByTitle('材质')).toBeVisible()
+    await expect(page.getByTitle('材质', { exact: true })).toBeVisible()
     const dataUrl = await page.locator('canvas').evaluate((canvas) =>
       (canvas as HTMLCanvasElement).toDataURL('image/png'))
     expect(dataUrl.length).toBeGreaterThan(1000)

@@ -2,9 +2,11 @@
   <button v-if="showView" type="button" :class="actionBtn"
           :title="t('stage.action.viewFull')"
           @click.stop="emit('view')"><i class="pi pi-window-maximize" /></button>
-  <button type="button" :class="actionBtn"
+  <slot name="download">
+    <button type="button" :class="actionBtn"
           :title="t('stage.action.download')"
           @click.stop="emit('download', url)"><i class="pi pi-download" /></button>
+  </slot>
   <button type="button" :class="tagBtn"
           :title="t('stage.action.addTag')"
           @click.stop="emit('tag', { url, label, mediaType, event: $event })"><i class="pi pi-tag" /></button>
