@@ -1,8 +1,9 @@
 import { screen, waitFor } from '@testing-library/vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as THREE from 'three'
+import { flushPromises, mount } from '@vue/test-utils'
 
-import { renderWithPlugins } from '@/__tests__/renderHelpers'
+import { makeI18n, renderWithPlugins } from '@/__tests__/renderHelpers'
 
 const h = vi.hoisted(() => ({
   classifyModelBytes: vi.fn(),
@@ -12,9 +13,14 @@ const h = vi.hoisted(() => ({
   persistModelThumbnail: vi.fn(),
   guard: vi.fn(),
   guardDispose: vi.fn(),
+  exportSourceModel: vi.fn(),
+  exportModelObject: vi.fn(),
   viewInstances: [] as any[],
   controlsInstances: [] as any[],
 }))
+
+vi.mock('@/widgets/three/sourceModelExport', () => ({ exportSourceModel: h.exportSourceModel }))
+vi.mock('@/widgets/three/modelExporter', () => ({ exportModelObject: h.exportModelObject }))
 
 vi.mock('@/widgets/three/modelFormats', () => ({
   classifyModelBytes: h.classifyModelBytes,
@@ -120,6 +126,8 @@ beforeEach(() => {
   h.persistModelThumbnail.mockReset().mockResolvedValue(undefined)
   h.guard.mockReset().mockReturnValue(h.guardDispose)
   h.guardDispose.mockReset()
+  h.exportSourceModel.mockReset().mockResolvedValue(false)
+  h.exportModelObject.mockReset().mockResolvedValue(undefined)
   h.viewInstances.length = 0
   h.controlsInstances.length = 0
   MockSplatMesh.instances.length = 0
@@ -136,6 +144,31 @@ afterEach(() => {
 })
 
 describe('ModelPreview', () => {
+  it('uses source polygons for FBX/OBJ downloads from every preview consumer', async () => {
+    h.exportSourceModel.mockResolvedValue(true)
+    const wrapper = mount(ModelPreview, {
+      props: { src: '/view?filename=quad.fbx&type=output' },
+      global: { plugins: [makeI18n()] },
+    })
+    await flushPromises()
+    await wrapper.vm.exportModel('obj')
+    expect(h.exportSourceModel).toHaveBeenCalledWith('/view?filename=quad.fbx&type=output', 'obj')
+    expect(h.exportModelObject).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('does not silently triangulate when source conversion fails', async () => {
+    h.exportSourceModel.mockRejectedValue(new Error('Conversion failed'))
+    const wrapper = mount(ModelPreview, {
+      props: { src: '/view?filename=quad.obj&type=output' },
+      global: { plugins: [makeI18n()] },
+    })
+    await flushPromises()
+    await expect(wrapper.vm.exportModel('fbx')).rejects.toThrow('Conversion failed')
+    expect(h.exportModelObject).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('loads a mesh, emits view-changed and hides the loading overlay', async () => {
     const { emitted } = renderPreview('/view?filename=a.glb&subfolder=3d&type=input')
     await waitForViewChanged(() => emitted())

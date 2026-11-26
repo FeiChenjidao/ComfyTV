@@ -63,6 +63,7 @@ import {
 } from '@/composables/stages/useModelPreview'
 import { buildPointCloud, classifyModelBytes, loadSpark } from '@/widgets/three/modelFormats'
 import { exportModelObject, type ModelExportFormat } from '@/widgets/three/modelExporter'
+import { exportSourceModel } from '@/widgets/three/sourceModelExport'
 import { texturePng } from '@/widgets/three/modelTextures'
 import { downloadBlob } from '@/utils/download'
 import { app } from '@/lib/comfyApp'
@@ -667,6 +668,7 @@ onBeforeUnmount(() => {
 
 defineExpose({
   async exportModel(format: ModelExportFormat, baseName = 'model'): Promise<void> {
+    if (await exportSourceModel(props.src, format)) return
     if (!modelRoot || !modelReady.value) throw new Error('No model is ready to export')
     const restoreHighlight = mp.suspendHighlight()
     applyViewChannel(modelRoot, 'material')

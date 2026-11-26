@@ -95,6 +95,13 @@ Download: <https://huggingface.co/Comfy-Org/MiniMax-Music-3>
 
 Configure Comfy Org / Tripo / Rodin / Meshy API access in ComfyUI before Run.
 
+FBX/OBJ downloads preserve the source polygons. FBX → FBX saves the original file;
+FBX → OBJ and OBJ → FBX/OBJ use local Blender 4.2+ with triangulation disabled,
+and bundle materials and textures. Blender must be on `PATH`, installed under the
+standard Windows Blender Foundation directory, or specified with
+`COMFYTV_BLENDER_PATH`. Portable Windows installs under
+`%LOCALAPPDATA%/ComfyTV/tools/blender-*/blender.exe` are also detected.
+
 ---
 
 ## Image edits

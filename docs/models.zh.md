@@ -95,6 +95,12 @@ ACE-Step v1 和 MiniMax Music 3 都是 ComfyUI 核心原生支持,不需要装�
 
 Run 前在 ComfyUI 里配好 Comfy Org / Tripo / Rodin / Meshy API。
 
+FBX/OBJ 下载保留源文件的多边形：FBX → FBX 直接保存原文件；FBX → OBJ 和
+OBJ → FBX/OBJ 使用本机 Blender 4.2+，关闭三角化，并打包材质和贴图。
+Blender 可以在 `PATH` 中、Windows 默认 Blender Foundation 安装目录中，
+或通过 `COMFYTV_BLENDER_PATH` 指定。也会检测
+`%LOCALAPPDATA%/ComfyTV/tools/blender-*/blender.exe` 下的便携安装。
+
 ---
 
 ## 图像编辑(Edits)
