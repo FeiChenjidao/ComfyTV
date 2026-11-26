@@ -239,7 +239,6 @@ function refreshEmbeddedMaps(): void {
     if (!(child instanceof THREE.Mesh)) return
     const materials = Array.isArray(child.material) ? child.material : [child.material]
     for (const material of materials) {
-      if (!(material instanceof THREE.MeshStandardMaterial)) continue
       for (const key of MATERIAL_MAP_KEYS) {
         const texture = (material as unknown as Record<MaterialMapKey, THREE.Texture | null>)[key]
         if (!texture) continue

@@ -1,4 +1,4 @@
-"""Run with Blender's Python: source FBX/OBJ -> polygon-preserving FBX/OBJ."""
+"""Run with Blender's Python: source polygon export or embedded PBR preview."""
 
 from collections import Counter
 import json
@@ -70,6 +70,10 @@ def main():
     if not expected:
         raise ValueError('Source model contains no polygon meshes')
     save_textures(source, destination)
+    if destination.suffix == '.glb':
+        # Rendering uses triangles; the source FBX remains the download input.
+        bpy.ops.export_scene.gltf(filepath=str(destination), export_format='GLB')
+        return
     if destination.suffix == '.fbx':
         bpy.ops.export_scene.fbx(
             filepath=str(destination), use_mesh_modifiers=False, use_triangles=False,

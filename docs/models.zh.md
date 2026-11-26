@@ -100,6 +100,7 @@ OBJ → FBX/OBJ 使用本机 Blender 4.2+，关闭三角化，并打包材质和
 Blender 可以在 `PATH` 中、Windows 默认 Blender Foundation 安装目录中，
 或通过 `COMFYTV_BLENDER_PATH` 指定。也会检测
 `%LOCALAPPDATA%/ComfyTV/tools/blender-*/blender.exe` 下的便携安装。
+FBX 预览通过临时 GLB 显示内嵌 PBR 贴图；下载继续使用源 FBX，保留原始多边形。
 
 ---
 

@@ -45,20 +45,35 @@ def export_source_model(url: str, format_: str) -> tuple[bytes, str, str]:
     stem = re.sub(r'[\s\\/:*?"<>|\x00-\x1f]', '_', source.stem) or 'model'
     if source.suffix.lower() == '.fbx' and format_ == 'fbx':
         return source.read_bytes(), stem + '.fbx', 'application/octet-stream'
-    executable = blender_executable()
-    script = Path(__file__).with_name('_blender_model_export.py')
     with tempfile.TemporaryDirectory(prefix='comfytv-model-export-') as directory:
         destination = Path(directory) / f'{stem}.{format_}'
-        result = subprocess.run([
-            executable, '--background', '--factory-startup', '--disable-autoexec',
-            '--python-exit-code', '1', '--python', str(script), '--', str(source), str(destination),
-        ], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=300,
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-        if result.returncode or not destination.is_file():
-            raise RuntimeError('Source model export failed: ' + (result.stderr or result.stdout)[-2000:])
+        _convert(source, destination)
         output = BytesIO()
         with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
             for path in sorted(Path(directory).rglob('*')):
                 if path.is_file():
                     archive.write(path, path.relative_to(directory).as_posix())
         return output.getvalue(), f'{stem}_{format_}.zip', 'application/zip'
+
+
+def preview_fbx_model(url: str) -> bytes:
+    source = view_url_to_path(url)
+    if source is None:
+        raise FileNotFoundError('Source model not found')
+    if source.suffix.lower() != '.fbx':
+        raise ValueError('PBR preview conversion requires an FBX model')
+    with tempfile.TemporaryDirectory(prefix='comfytv-model-preview-') as directory:
+        destination = Path(directory) / 'preview.glb'
+        _convert(source, destination)
+        return destination.read_bytes()
+
+
+def _convert(source: Path, destination: Path) -> None:
+    script = Path(__file__).with_name('_blender_model_export.py')
+    result = subprocess.run([
+        blender_executable(), '--background', '--factory-startup', '--disable-autoexec',
+        '--python-exit-code', '1', '--python', str(script), '--', str(source), str(destination),
+    ], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=300,
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+    if result.returncode or not destination.is_file():
+        raise RuntimeError('Source model conversion failed: ' + (result.stderr or result.stdout)[-2000:])

@@ -101,6 +101,8 @@ and bundle materials and textures. Blender must be on `PATH`, installed under th
 standard Windows Blender Foundation directory, or specified with
 `COMFYTV_BLENDER_PATH`. Portable Windows installs under
 `%LOCALAPPDATA%/ComfyTV/tools/blender-*/blender.exe` are also detected.
+FBX previews use a temporary GLB to display the embedded PBR textures; downloads
+continue to use the source FBX so its original polygons are preserved.
 
 ---
 

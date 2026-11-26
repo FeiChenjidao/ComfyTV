@@ -1,6 +1,8 @@
 from collections import Counter
 from io import BytesIO
 from pathlib import Path
+import json
+import struct
 import subprocess
 from zipfile import ZipFile
 
@@ -104,6 +106,27 @@ def test_obj_to_obj_keeps_faces(source, blender):
     assert _obj_faces(obj) == _obj_faces(source)
 
 
+def test_fbx_pbr_preview_embeds_maps_without_changing_source(source, blender):
+    mtl = source.with_suffix('.mtl')
+    mtl.write_text(mtl.read_text().replace('map_Kd albedo.png',
+                   'map_Kd albedo.png\nmap_Pr roughness.png\nmap_Pm metallic.png\nmap_Bump normal.png'))
+    for name, color in [('roughness', (120, 120, 120)), ('metallic', (200, 200, 200)),
+                        ('normal', (128, 128, 255))]:
+        Image.new('RGB', (2, 2), color).save(source.parent / (name + '.png'))
+    fbx, _ = _export_file(source, 'fbx')
+    before = fbx.read_bytes()
+    relative = fbx.relative_to(Path(folder_paths.get_directory_by_type('output'))).as_posix()
+    preview = export.preview_fbx_model(f'/view?filename={relative}&type=output')
+    length = struct.unpack_from('<I', preview, 12)[0]
+    document = json.loads(preview[20:20 + length])
+    red = next(material for material in document['materials'] if material['name'] == 'Red')
+    assert 'baseColorTexture' in red['pbrMetallicRoughness']
+    assert 'metallicRoughnessTexture' in red['pbrMetallicRoughness']
+    assert 'normalTexture' in red
+    assert all('bufferView' in image for image in document['images'])
+    assert fbx.read_bytes() == before
+
+
 @pytest.mark.parametrize('size', [3, 4])
 def test_pure_triangles_or_quads_remain_the_same_in_both_formats(source, blender, size):
     lines = source.read_text().splitlines()
@@ -149,3 +172,14 @@ async def test_source_download_endpoint_preserves_unicode_filename(monkeypatch):
     response = await api.export_source(SimpleNamespace(query={'url': '/view?filename=a.fbx', 'format': 'obj'}))
     assert response.body == b'zip'
     assert "filename*=UTF-8''%E6%A8%A1%E5%9E%8B_obj.zip" in response.headers['Content-Disposition']
+
+
+@pytest.mark.asyncio
+async def test_fbx_preview_endpoint_returns_embedded_glb(monkeypatch):
+    from ComfyTV.api import model_export as api
+    from types import SimpleNamespace
+    monkeypatch.setattr(api, 'preview_fbx_model', lambda url: b'glTF preview bytes')
+    response = await api.preview_fbx(SimpleNamespace(query={'url': '/view?filename=model.fbx'}))
+    assert response.body == b'glTF preview bytes'
+    assert response.content_type == 'model/gltf-binary'
+    assert response.headers['Cache-Control'] == 'no-store'

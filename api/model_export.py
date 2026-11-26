@@ -4,7 +4,21 @@ from aiohttp import web
 from urllib.parse import quote
 
 from ._common import _log, routes
-from ..runners.model_export import export_source_model
+from ..runners.model_export import export_source_model, preview_fbx_model
+
+
+@routes.get("/comfytv/model/preview_fbx")
+async def preview_fbx(request: web.Request) -> web.Response:
+    try:
+        data = await asyncio.to_thread(preview_fbx_model, str(request.query.get('url') or ''))
+    except FileNotFoundError as error:
+        return web.json_response({'error': str(error)}, status=404)
+    except ValueError as error:
+        return web.json_response({'error': str(error)}, status=400)
+    except Exception as error:
+        _log.exception('[ComfyTV/model] FBX PBR preview conversion failed')
+        return web.json_response({'error': str(error)}, status=500)
+    return web.Response(body=data, content_type='model/gltf-binary', headers={'Cache-Control': 'no-store'})
 
 
 @routes.get("/comfytv/model/export_source")

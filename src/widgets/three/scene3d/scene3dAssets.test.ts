@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fetchApi = vi.hoisted(() => vi.fn())
+afterEach(() => vi.restoreAllMocks())
 
 vi.mock('@/lib/comfyApp', () => ({
   app: {
@@ -64,6 +65,45 @@ const VALID_MANIFEST = {
     { id: 'fox', name: 'Fox', animations: ['animations/fox-animations.glb'] }
   ]
 }
+
+describe('FBX material previews', () => {
+  it('loads all PBR maps from the converted preview and caches the result', async () => {
+    const { loadCustomModelAssets } = await importModule()
+    const THREE = await import('three')
+    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+    const group = new THREE.Group()
+    const material = new THREE.MeshStandardMaterial({
+      map: new THREE.Texture(), metalnessMap: new THREE.Texture(),
+      roughnessMap: new THREE.Texture(), normalMap: new THREE.Texture(),
+    })
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(), material))
+    const parse = vi.spyOn(GLTFLoader.prototype, 'parseAsync').mockResolvedValue({ scene: group, animations: [] } as any)
+    const bytes = new ArrayBuffer(16)
+    fetchApi.mockReset().mockResolvedValue({ ok: true, arrayBuffer: async () => bytes })
+    const url = '/view?filename=quad.fbx&subfolder=3d&type=output'
+    const assets = await loadCustomModelAssets(url)
+    const query = new URL(String(fetchApi.mock.calls[0][0]), 'http://localhost')
+    expect(query.pathname).toBe('/comfytv/model/preview_fbx')
+    expect(query.searchParams.get('url')).toBe(url)
+    expect(parse).toHaveBeenCalledWith(bytes, '')
+    expect(assets.template.children[0]).toBe(group)
+    expect(await loadCustomModelAssets(url)).toBe(assets)
+    expect(fetchApi).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps native FBX rendering when PBR conversion is unavailable', async () => {
+    const { loadCustomModelAssets } = await importModule()
+    const THREE = await import('three')
+    const { FBXLoader } = await import('three/examples/jsm/loaders/FBXLoader.js')
+    const group = new THREE.Group()
+    const load = vi.spyOn(FBXLoader.prototype, 'loadAsync').mockResolvedValue(group)
+    fetchApi.mockReset().mockResolvedValue({ ok: false, status: 503 })
+    const url = '/view?filename=legacy.fbx&type=output'
+    const assets = await loadCustomModelAssets(url)
+    expect(load).toHaveBeenCalledWith('/base' + url)
+    expect(assets.template.children[0]).toBe(group)
+  })
+})
 
 describe('fetchScene3dManifest', () => {
   beforeEach(() => {

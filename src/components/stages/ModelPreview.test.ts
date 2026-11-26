@@ -87,6 +87,7 @@ vi.mock('@/widgets/three/RendererView', () => {
 })
 
 import ModelPreview from './ModelPreview.vue'
+import ModelPreviewControls from './ModelPreviewControls.vue'
 
 class MockSplatMesh extends THREE.Object3D {
   static instances: MockSplatMesh[] = []
@@ -144,6 +145,26 @@ afterEach(() => {
 })
 
 describe('ModelPreview', () => {
+  it.each(['phong', 'lambert'] as const)('shows embedded maps from native FBX %s materials', async (type) => {
+    const map = new THREE.Texture({ src: 'blob:diffuse', width: 2, height: 2 } as HTMLImageElement)
+    const material = type === 'phong'
+      ? new THREE.MeshPhongMaterial({ map })
+      : new THREE.MeshLambertMaterial({ map })
+    const group = new THREE.Group()
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(), material))
+    h.loadCustomModelAssets.mockResolvedValue({ template: group, clips: [] })
+    const wrapper = mount(ModelPreview, {
+      props: { src: '/view?filename=textured.fbx', controls: true },
+      global: { plugins: [makeI18n()], stubs: { ModelPreviewControls: true } },
+    })
+    await flushPromises()
+    const slots = wrapper.getComponent(ModelPreviewControls).props('mapSlots')
+    expect(slots.find((slot) => slot.key === 'map')).toMatchObject({
+      source: 'embedded', previewUrl: 'blob:diffuse', count: 1,
+    })
+    wrapper.unmount()
+  })
+
   it('uses source polygons for FBX/OBJ downloads from every preview consumer', async () => {
     h.exportSourceModel.mockResolvedValue(true)
     const wrapper = mount(ModelPreview, {

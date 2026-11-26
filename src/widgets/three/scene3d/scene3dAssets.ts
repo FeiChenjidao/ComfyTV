@@ -187,6 +187,14 @@ export async function loadCustomModelAssets(
     cached = (async () => {
       const ext = modelUrlExtension(url)
       if (ext === '.fbx') {
+        try {
+          const response = await app.api.fetchApi(`/comfytv/model/preview_fbx?${new URLSearchParams({ url })}`)
+          if (!response.ok) throw new Error(`FBX PBR preview: HTTP ${response.status}`)
+          const gltf = await new GLTFLoader().parseAsync(await response.arrayBuffer(), '')
+          return { template: wrapModelTemplate(gltf.scene), clips: gltf.animations ?? [] }
+        } catch (error) {
+          console.warn('[ComfyTV] FBX PBR preview unavailable, loading native FBX materials:', error)
+        }
         const fbx = await new FBXLoader().loadAsync(assetUrl(url))
         return {
           template: wrapModelTemplate(fbx),
