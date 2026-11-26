@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { app } from '@/lib/comfyApp'
+import { claimStageUid } from '@/composables/stages/stageIdentity'
 
 const autoProxyOutput = vi.fn(async () => {})
 vi.mock('@/composables/widgets/useProxiedVideoUrl', () => ({
@@ -105,6 +106,42 @@ describe('stageStore.registerStage', () => {
     )
     expect(second).not.toBe(first)
     expect(second.mainPrompt).toBe('')
+  })
+
+  it('isolates a copied node before binding its widgets and run state', () => {
+    ;(app as any).extensionManager = { workflow: { activeWorkflow: { path: 'workflows/state-copy.json' } } }
+    const store = useStageStore()
+    const original: any = { id: 1 }
+    const state = store.registerStage(original, 'image-picker')
+    claimStageUid(original)
+    state.mainPrompt = 'original prompt'
+    state.pool = JSON.stringify({ images: [{ image_url: '/view?filename=original.png' }] })
+    state.pickedIndex = 1
+    store.setOutputSlot(state, 0, '/view?filename=original.png')
+
+    const copy: any = { id: 2, properties: structuredClone(original.properties) }
+    const copiedState = store.registerStage(copy, 'image-picker')
+    claimStageUid(copy)
+    expect(copiedState).not.toBe(state)
+    expect(copy.properties.comfytv_stage_uid).not.toBe(original.properties.comfytv_stage_uid)
+
+    copiedState.mainPrompt = 'copy prompt'
+    copiedState.pool = JSON.stringify({ images: [{ image_url: '/view?filename=copy.png' }] })
+    copiedState.pickedIndex = 2
+    copiedState.running = true
+    copiedState.progress = { value: 1, max: 10 }
+    store.setOutputSlot(copiedState, 0, '/view?filename=copy.png')
+
+    expect(state.mainPrompt).toBe('original prompt')
+    expect(state.pool).toContain('original.png')
+    expect(state.pickedIndex).toBe(1)
+    expect(state.output).toBe('/view?filename=original.png')
+    expect(state.outputs).toEqual(['/view?filename=original.png'])
+    expect(state.running).toBe(false)
+    expect(state.progress).toBeUndefined()
+
+    store.unregisterStage(copy)
+    expect(store.getStage(original)).toBe(state)
   })
 })
 

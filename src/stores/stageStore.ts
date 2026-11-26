@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 import { autoProxyOutput } from '@/composables/widgets/useProxiedVideoUrl'
-import { stageInstanceKey } from '@/composables/stages/stageIdentity'
+import { claimStageUid, stageInstanceKey } from '@/composables/stages/stageIdentity'
 import { OUTPUT_SLOTS, parseMultiOutputs } from '@/v2/customIo'
 
 export type StageKind =
@@ -177,6 +177,7 @@ export const useStageStore = defineStore('comfytv-stage', () => {
     kind: StageKind,
     variant: StageVariant = 'generator',
   ): StageState {
+    claimStageUid(node)
     const key = stageInstanceKey(node)
     let state = statesByKey.get(key)
     if (!state) {
