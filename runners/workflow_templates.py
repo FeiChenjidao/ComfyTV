@@ -14,6 +14,7 @@ WORKFLOW_ALIASES = {
         "GPT_Image_2.5": "GPT_Image_2.6",
     },
     "ComfyTV.Model3DStage": {"Meshy": "Meshy Multi"},
+    "ComfyTV.LayerSeparationStage": {"Seedream5.0Pro 图层分离": "Seedream5.5 图层分离"},
 }
 _CONTROLS = {"fixed", "increment", "decrement", "randomize"}
 

@@ -24,6 +24,7 @@ _WORKFLOWS_DIR: Optional[Path] = None
 
 _SHIPPED_LABEL_RENAMES = {
     ("image", "NanoBanana 2.1.json", "NanoBanana2"): "NanoBanana 2.1",
+    ("layer-separation", "Seedream5.0Pro 图层分离.json", "Seedream5.0Pro 图层分离"): "Seedream5.5 图层分离",
 }
 
 
@@ -340,11 +341,12 @@ def _migrate_shipped_label(s, row: db.Workflow, file_path: Path) -> bool:
     )
     if not new_label:
         return False
+    old_label = row.label
     changed = _claim_label_or_skip(s, row, new_label)
     if changed:
         _log.info(
             "[ComfyTV/workflow_db] migrated shipped workflow label %r -> %r",
-            "NanoBanana2",
+            old_label,
             new_label,
         )
     return changed

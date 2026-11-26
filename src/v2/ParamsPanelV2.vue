@@ -75,6 +75,7 @@ const props = withDefaults(defineProps<{
   /** When true, hide widgets until the workflow binds option:<name>. */
   boundOnly?: boolean
   workflowKind?: string | null
+  labels?: Record<string, string>
 }>(), {
   boundOnly: false,
   workflowKind: null,
@@ -117,6 +118,7 @@ const { keys: boundKeys } = useBoundOptionKeys(
 )
 
 function labelOf(name: string): string {
+  if (props.labels?.[name]) return props.labels[name]
   const key = optionLabelKey(name)
   if (key && te(key)) return String(t(key))
   return name

@@ -223,6 +223,7 @@ function attach(node: ComfyNode, kind: StageKind, variant: StageVariant) {
         exclude: ['compositor'],
         boundOnly: true,
         workflowKind: 'layer-separation',
+        labels: { size: '尺寸', max_images: '最大图像数', crop_layers: '裁剪图层' },
       }, paramsAnchor],
       [FooterSelectsV2, { getNode: () => node, linkKind: 'layer-separation', extra: [] }, wfAnchor],
       [ServerSelectV2, { getNode: () => node, state: stageState }, serverAnchor],

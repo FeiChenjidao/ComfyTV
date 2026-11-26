@@ -40,6 +40,18 @@ class LayerSeparationStage(io.ComfyNode):
                 tooltip="Layer preview state used by the official compositor.",
             ))
         inputs.append(_custom_params_input())
+        inputs.extend([
+            io.Combo.Input(
+                "size", display_name="尺寸",
+                options=["auto", "1K", "1.5K", "2K"], default="auto",
+            ),
+            io.Int.Input(
+                "max_images", display_name="最大图像数",
+                default=5, min=2, max=100, step=1,
+                tooltip="最多返回的图像数，包含背景图。实际数量由模型决定。",
+            ),
+            io.Boolean.Input("crop_layers", display_name="裁剪图层", default=True),
+        ])
 
         return io.Schema(
             node_id="ComfyTV.LayerSeparationStage",
@@ -59,14 +71,19 @@ class LayerSeparationStage(io.ComfyNode):
     @classmethod
     async def execute(cls, force_run_token=0, project_id="", parent_output_id=0,
                       workflow="", main_prompt="", image="", compositor=None,
-                      custom_params="{}"):
+                      custom_params="{}", size="auto", max_images=5,
+                      crop_layers=True):
         payload = await invoke_runner(
             custom_params=custom_params,
             kind='layer-separation',
             label=workflow,
             main_prompt=(main_prompt or '').strip(),
             upstream={'images': [image] if image else []},
-            options={},
+            options={
+                'size': size,
+                'max_images': max_images,
+                'crop_layers': crop_layers,
+            },
         )
 
         layer_group = compositor_layer_group(payload)

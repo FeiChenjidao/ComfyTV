@@ -328,3 +328,42 @@ def test_seedance_official_video_workflow_contract():
     assert preset["inputs"]["6"]["image"] == {
         "from": "upstream_image:annotated[1]",
     }
+
+
+def test_layer_separation_5_5_bindings_and_random_seeds(monkeypatch):
+    from ComfyTV.runners._workflow_mutate import _apply_overrides
+    from ComfyTV.runners._workflow_resolve import _Resolver
+    from ComfyTV.runners.base import RunnerContext
+
+    path = WORKFLOWS_DIR / "layer-separation" / "Seedream5.0Pro 图层分离.json"
+    workflow = json.loads(path.read_text(encoding="utf-8"))
+    preset = json.loads(path.with_name(f"{path.stem}_preset.json").read_text(encoding="utf-8"))
+    node = next(node for node in workflow["nodes"] if node["id"] == 14)
+    assert node["type"] == "ByteDanceSeedreamLayerSeparationNodeV2"
+    assert node["widgets_values_named"]["model"] == "seedream 5.5"
+    assert node["widgets_values_named"]["control_after_generate"] == "randomize"
+    link = next(link for link in workflow["links"] if link[0] == 13)
+    assert node["inputs"][link[4]]["name"] == "model.image"
+    assert node["outputs"][5]["links"] == [29]
+
+    seeds = iter([0, 2**31 - 1])
+
+    def random_seed(low, high):
+        assert (low, high) == (0, 2**31 - 1)
+        return next(seeds)
+
+    monkeypatch.setattr("ComfyTV.runners._workflow_resolve.random.randint", random_seed)
+    for options, seed in [({}, 0), ({'size': '2K', 'max_images': 12, 'crop_layers': False}, 2**31 - 1)]:
+        ctx = RunnerContext(
+            kind='layer-separation', main_prompt='分离主体与背景',
+            upstream={'images': ['/view?filename=input.png&type=input']}, options=options,
+        )
+        api = {'14': {'inputs': {}}, '15': {'inputs': {}}}
+        _apply_overrides(api, preset, _Resolver(preset, ctx))
+        values = api['14']['inputs']
+        assert values['model'] == 'seedream 5.5'
+        assert values['model.prompt'] == ctx.main_prompt
+        assert values['model.seed'] == seed
+        assert values['model.size'] == options.get('size', 'auto')
+        assert values['model.max_images'] == options.get('max_images', 5)
+        assert values['model.crop_layers'] == options.get('crop_layers', True)

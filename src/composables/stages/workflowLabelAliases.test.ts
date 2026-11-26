@@ -17,6 +17,12 @@ describe('workflow label aliases', () => {
     expect(canonicalWorkflowLabel('video', 'NanoBanana2')).toBe('NanoBanana2')
   })
 
+  it('upgrades restored layer separation workflows to Seedream 5.5', () => {
+    const node = { widgets: [{ name: 'workflow', value: 'Seedream5.0Pro 图层分离' }] }
+    expect(migrateWorkflowLabel(node, 'layer-separation')).toBe(true)
+    expect(node.widgets[0].value).toBe('Seedream5.5 图层分离')
+  })
+
   it('migrates renamed image and model providers without changing other kinds', () => {
     expect(canonicalWorkflowLabel('image', 'GPT_Image_2.5')).toBe('GPT_Image_2.6')
     expect(canonicalWorkflowLabel('model', 'Meshy')).toBe('Meshy Multi')

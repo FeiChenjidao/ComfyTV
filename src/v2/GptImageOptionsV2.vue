@@ -12,6 +12,7 @@
     <div class="v2-gptopt__pop" @pointerdown.stop>
       <div class="v2-gptopt__title">尺寸</div>
       <ComfyTVSelect :model-value="size" :options="SIZE_OPTIONS" :filterable="false" @update:model-value="v => setValue('size', v)" />
+      <ReferenceImageSizeButtonV2 :get-node="props.getNode" @size="useReferenceSize" />
       <div class="v2-gptopt__sliders" :data-disabled="size !== 'Custom' ? '1' : ''">
         <div class="v2-gptopt__dim-head">
           <span>自定义宽高</span>
@@ -93,6 +94,7 @@ import ComfyTVSelect from '@/components/widgets/ComfyTVSelect.vue'
 import { parseParamItems, serializeParamItems } from '@/composables/stages/useCustomParams'
 import type { LGraphNode } from '@/lib/comfyApp'
 import { useWidgetValues } from '@/v2/useWidgetValues'
+import ReferenceImageSizeButtonV2 from '@/v2/ReferenceImageSizeButtonV2.vue'
 
 const SIZE_OPTIONS = ['auto', '1024x1024', '1024x1536', '1536x1024', '2048x2048', '2048x1152', '1152x2048', '3840x2160', '2160x3840', 'Custom']
 const BACKGROUND_OPTIONS = ['auto', 'transparent', 'opaque']
@@ -183,6 +185,16 @@ function upsert(current: ReturnType<typeof items>, key: string, value: string | 
 function setValue(key: string, value: string | number) {
   if (key === 'custom_width' || key === 'custom_height') value = clampDim(Number(value))
   writeParams(upsert(items(), key, value))
+}
+
+function useReferenceSize(imageWidth: number, imageHeight: number) {
+  let next = upsert(items(), 'size', 'Custom')
+  next = upsert(next, 'custom_width', clampDim(imageWidth))
+  next = upsert(next, 'custom_height', clampDim(imageHeight))
+  widthDraft.value = null
+  heightDraft.value = null
+  writeParams(next)
+  captureRatio()
 }
 
 function commitDraft(which: 'width' | 'height') {

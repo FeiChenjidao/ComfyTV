@@ -218,11 +218,10 @@ class TestLoaderExecute:
             ],
         })
 
-        invoke_count = 0
+        runner_options = []
 
         async def fake_invoke_runner(**_kwargs):
-            nonlocal invoke_count
-            invoke_count += 1
+            runner_options.append(_kwargs['options'])
             return payload
 
         def fake_emit(cls, *, payload_str, extra_ui=None, **_kwargs):
@@ -239,9 +238,13 @@ class TestLoaderExecute:
         ))
         asyncio.run(layer_separation.LayerSeparationStage.execute(
             workflow="Seedream5.0Pro 图层分离",
+            size="2K", max_images=12, crop_layers=False,
         ))
 
-        assert invoke_count == 2
+        assert runner_options == [
+            {'size': 'auto', 'max_images': 5, 'crop_layers': True},
+            {'size': '2K', 'max_images': 12, 'crop_layers': False},
+        ]
         assert len(out.values) == 1
         group = json.loads(out.values[0])
         assert [item["label"] for item in group["images"]] == ["Background", "Subject"]

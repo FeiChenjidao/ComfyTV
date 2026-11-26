@@ -42,34 +42,38 @@ class TestSeed:
         assert len(cfg["bindings"]) == 1
         assert cfg["bindings"][0]["from"] == "option:seed"
 
+    @pytest.mark.parametrize("kind, stem, old_label, new_label", [
+        ("image", "NanoBanana 2.1", "NanoBanana2", "NanoBanana 2.1"),
+        ("layer-separation", "Seedream5.0Pro 图层分离", "Seedream5.0Pro 图层分离", "Seedream5.5 图层分离"),
+    ])
     def test_seed_migrates_renamed_shipped_workflow_label(
-            self, reset_db, tmp_path, monkeypatch):
+            self, reset_db, tmp_path, monkeypatch, kind, stem, old_label, new_label):
         from ComfyTV import db
 
         wdir = tmp_path / "workflows"
         make_workflow(
             wdir,
-            "NanoBanana 2.1",
-            "image",
-            preset={"label": "NanoBanana 2.1"},
+            stem,
+            kind,
+            preset={"label": new_label},
         )
         monkeypatch.setattr(wdb.seed, "_WORKFLOWS_DIR", wdir)
-        wdb.seed_workflows_from_disk(("image",))
+        wdb.seed_workflows_from_disk((kind,))
 
         with db.get_session() as session:
             row = session.execute(
                 select(db.Workflow).where(
-                    db.Workflow.kind == "image",
-                    db.Workflow.label == "NanoBanana 2.1",
+                    db.Workflow.kind == kind,
+                    db.Workflow.label == new_label,
                 )
             ).scalar_one()
-            row.label = "NanoBanana2"
+            row.label = old_label
             session.commit()
 
-        wdb.seed_workflows_from_disk(("image",))
+        wdb.seed_workflows_from_disk((kind,))
 
-        assert wdb.get_workflow_config("image", "NanoBanana2") is None
-        assert wdb.get_workflow_config("image", "NanoBanana 2.1") is not None
+        assert wdb.get_workflow_config(kind, old_label) is None
+        assert wdb.get_workflow_config(kind, new_label) is not None
 
     def test_import_workflow_writes_and_upserts(self, reset_db, tmp_path, monkeypatch):
         from pathlib import Path

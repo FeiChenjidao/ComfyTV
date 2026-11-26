@@ -27,6 +27,7 @@ WORKFLOW_KINDS: tuple[str, ...] = (
 
 WORKFLOW_LABEL_ALIASES: dict[tuple[str, str], str] = {
     ('image', 'NanoBanana2'): 'NanoBanana 2.1',
+    ('layer-separation', 'Seedream5.0Pro 图层分离'): 'Seedream5.5 图层分离',
 }
 
 

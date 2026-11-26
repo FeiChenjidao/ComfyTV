@@ -17,6 +17,7 @@
 
       <div class="v2-sdopt__title">{{ t('v2.seedream.sizePreset') }}</div>
       <ComfyTVSelect :model-value="sizePreset" :options="currentSpec.sizeOptions" @update:model-value="setSizePreset" />
+      <ReferenceImageSizeButtonV2 :get-node="props.getNode" @size="useReferenceSize" />
 
       <div class="v2-sdopt__dims" :data-disabled="customSize ? '0' : '1'">
         <label>
@@ -91,6 +92,7 @@ import { parseParamItems, serializeParamItems } from '@/composables/stages/useCu
 import { app, type LGraphNode } from '@/lib/comfyApp'
 import { parseSeedreamModels, type SeedreamModelSpec } from '@/v2/seedreamSchema'
 import { useWidgetValues } from '@/v2/useWidgetValues'
+import ReferenceImageSizeButtonV2 from '@/v2/ReferenceImageSizeButtonV2.vue'
 
 const BATCH_OPTIONS = Array.from({ length: 8 }, (_, i) => String(i + 1))
 const FALLBACK: SeedreamModelSpec = {
@@ -176,6 +178,16 @@ function setNumber(key: 'width' | 'height' | 'seed', raw: string) {
   const value = finite(raw, spec.default)
   const snapped = Math.round(value / spec.step) * spec.step
   setParam(key, Math.min(spec.max, Math.max(spec.min, snapped)))
+}
+
+function useReferenceSize(imageWidth: number, imageHeight: number) {
+  let next = upsert(items(), 'size_preset', 'Custom')
+  for (const [key, value] of [['width', imageWidth], ['height', imageHeight]] as const) {
+    const spec = currentSpec.value[key]
+    const snapped = Math.round(value / spec.step) * spec.step
+    next = upsert(next, key, Math.min(spec.max, Math.max(spec.min, snapped)))
+  }
+  writeParams(next)
 }
 
 function randomizeSeed() {

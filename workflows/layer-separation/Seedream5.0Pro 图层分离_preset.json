@@ -1,23 +1,43 @@
 {
-  "_comment": "Exported preset for the 'Seedream5.0Pro 图层分离' workflow (kind=layer-separation). Drop this next to the workflow JSON as `<name>_preset.json` so other users' first-seed picks up these defaults. See docs/custom-workflows.md.",
-  "label": "Seedream5.0Pro 图层分离",
+  "_comment": "Seedream 5.5 layer separation. Keep the file stem for existing workflow records. Seeds use the shared random_int31 resolver on every run.",
+  "label": "Seedream5.5 图层分离",
+  "is_default": true,
   "result": {
     "type": "ui_save_layered",
     "node": "25"
   },
   "inputs": {
     "14": {
-      "crop_layers": {
+      "model": {
+        "from": "literal:seedream 5.5",
+        "default": "seedream 5.5"
+      },
+      "model.crop_layers": {
+        "from": "option:crop_layers",
+        "default": "true",
+        "cast": "bool"
+      },
+      "model.prompt": {
+        "from": "main_prompt"
+      },
+      "model.size": {
+        "from": "option:size",
+        "default": "auto"
+      },
+      "model.max_images": {
+        "from": "option:max_images",
+        "default": "5",
+        "cast": "int"
+      },
+      "model.seed": {
+        "from": "option:seed",
+        "default": "random_int31",
+        "cast": "int"
+      },
+      "model.watermark": {
         "from": "literal:false",
         "default": "false",
         "cast": "bool"
-      },
-      "prompt": {
-        "from": "main_prompt"
-      },
-      "size": {
-        "from": "option:size",
-        "default": "auto"
       }
     },
     "15": {

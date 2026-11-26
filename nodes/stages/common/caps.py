@@ -37,7 +37,7 @@ CAPS_BY_KIND: dict[str, dict] = {
                            []),
     'image-edit':    _caps(['image'],                      ['option:seed'],
                            []),
-    'layer-separation': _caps(['image'],                   ['option:seed'],
+    'layer-separation': _caps(['image'],                   ['option:seed', 'option:size', 'option:max_images', 'option:crop_layers'],
                            []),
     'timeline':      _caps([],                             [],
                            []),
@@ -72,6 +72,9 @@ FALLBACK_CAPS: dict = _caps(
 BUILTIN_OPTION_META: dict[str, tuple[str, str]] = {
     'negative':       ('Stage negative prompt', 'string'),
     'seed':           ('Stage seed', 'int'),
+    'size':           ('尺寸', 'string'),
+    'max_images':     ('最大图像数', 'int'),
+    'crop_layers':    ('裁剪图层', 'boolean'),
     'batch_size':     ('Stage batch size', 'int'),
     'aspect_ratio':   ('Stage aspect ratio', 'string'),
     'resolution':     ('Stage resolution', 'string'),

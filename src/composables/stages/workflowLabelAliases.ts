@@ -4,6 +4,7 @@ const WORKFLOW_LABEL_ALIASES: Record<string, Record<string, string>> = {
     'GPT_Image_2.5': 'GPT_Image_2.6',
   },
   model: { Meshy: 'Meshy Multi' },
+  'layer-separation': { 'Seedream5.0Pro 图层分离': 'Seedream5.5 图层分离' },
 }
 
 export function canonicalWorkflowLabel(kind: string, label: unknown): string {
