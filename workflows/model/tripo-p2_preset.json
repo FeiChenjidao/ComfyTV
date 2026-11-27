@@ -8,6 +8,17 @@
   },
   "meta": {
     "prompt_required": false,
+    "option_enums": {
+      "model_version": [
+        "v3.1-20260211",
+        "v3.0-20250812",
+        "v2.5-20250123",
+        "meshy-7.1",
+        "meshy-7",
+        "meshy-6",
+        "latest"
+      ]
+    },
     "model_image_slots": [
       "front",
       "left",
@@ -17,6 +28,9 @@
   },
   "inputs": {
     "47": {
+      "model": {
+        "from": "literal:P2"
+      },
       "model.quad": {
         "from": "option:quad",
         "default": "false",
@@ -86,6 +100,9 @@
       }
     },
     "48": {
+      "model": {
+        "from": "literal:P2"
+      },
       "model.quad": {
         "from": "option:quad",
         "default": "false",

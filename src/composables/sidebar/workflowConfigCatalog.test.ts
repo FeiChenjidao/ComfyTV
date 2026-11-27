@@ -31,6 +31,7 @@ import {
   groupExposedWidgets,
   isResultNodeCandidate,
   loadCaps,
+  recommendedOptionForWidget,
   resultTypesForKind,
   type ExposedWidget,
 } from './workflowConfigCatalog'
@@ -47,6 +48,13 @@ function widget(over: Partial<ExposedWidget> = {}): ExposedWidget {
 
 beforeAll(async () => {
   await loadCaps()  // populate caps from the (mocked) API before reading synchronously
+})
+
+describe('recommendedOptionForWidget', () => {
+  it('does not confuse a DynamicCombo model branch selector with model_version', () => {
+    expect(recommendedOptionForWidget('model')).toBe('option:model')
+    expect(recommendedOptionForWidget('model_version')).toBe('option:model_version')
+  })
 })
 
 describe('buildBindingOptions', () => {

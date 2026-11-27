@@ -336,7 +336,6 @@ const WIDGET_TO_OPTION: Record<string, string> = {
   texture_delight: 'option:texture_delight', addon_highpack: 'option:addon_highpack',
   should_remesh: 'option:should_remesh',
   ultra_mode: 'option:ultra_mode',
-  model: 'option:model_version',
   should_texture: 'option:texture',
   tier: 'option:tier',
   creative: 'option:creative',

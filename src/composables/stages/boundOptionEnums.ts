@@ -70,7 +70,6 @@ export const LEAF_TO_OPTION_KEY: Record<string, string> = {
   texture_quality: 'texture_quality',
   geometry_quality: 'geometry_quality',
   model_version: 'model_version',
-  model: 'model_version',
   material: 'material',
   Material_Type: 'material',
   mode: 'mode',
@@ -194,6 +193,18 @@ function comboValuesOf(w: ExposedLike): string[] {
   return raw.map(String)
 }
 
+/**
+ * Tripo P-series exposes a DynamicCombo parent named `model`, but its sole
+ * `P2` value selects the node branch; it is not a Model3DStage model_version.
+ * Older frontends auto-bound this selector to option:model_version, so keep
+ * recognizing that stale binding long enough to remove it from the workflow.
+ */
+function isTripoP2BranchSelector(w: ExposedLike): boolean {
+  if (w.widget_name !== 'model' || w.widget_type !== 'COMBO') return false
+  const values = comboValuesOf(w)
+  return values.length === 1 && values[0] === 'P2'
+}
+
 function isComboWidget(w: { type?: unknown; options?: { values?: unknown } } | null | undefined): boolean {
   if (!w) return false
   const t = String(w.type ?? '')
@@ -224,6 +235,7 @@ export function enumsFromExposedWidgets(
   const out: Record<string, string[]> = {}
   for (const w of widgets) {
     const binding = w.stage_binding
+    if (binding === 'option:model_version' && isTripoP2BranchSelector(w)) continue
     if (w.widget_type !== 'COMBO' || typeof binding !== 'string' || !binding.startsWith('option:')) {
       continue
     }
@@ -268,6 +280,26 @@ export async function ensureOptionBindings(
 ): Promise<boolean> {
   if (!cfg?.id || !Array.isArray(cfg.exposed_widgets)) return false
   let wrote = false
+  // Repair the bad binding produced by releases that treated every `model`
+  // widget as a model version. Leaving it in place makes P2 leak into the
+  // ordinary Tripo node's `model_version` input after workflow switches.
+  for (const w of cfg.exposed_widgets) {
+    if (
+      w.stage_binding !== 'option:model_version'
+      || !w.node_id
+      || !isTripoP2BranchSelector(w)
+    ) continue
+    try {
+      await apiSend('/comfytv/workflows/config/binding', 'DELETE', OkSchema, {
+        workflow_id: cfg.id,
+        node_id: w.node_id,
+        input_name: w.widget_name,
+      })
+      wrote = true
+    } catch (e) {
+      console.warn('[ComfyTV] stale P2 model_version binding cleanup failed', e)
+    }
+  }
   for (const key of stageComboNames) {
     const already = cfg.exposed_widgets.some(w => w.stage_binding === `option:${key}`)
     if (already) continue

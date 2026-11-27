@@ -236,6 +236,18 @@ def test_shipped_model_versions_are_valid_stage_values():
             )
 
 
+def test_tripo_p2_branch_selector_is_pinned_and_not_bound_as_model_version():
+    preset_path = WORKFLOWS_DIR / "model" / "tripo-p2_preset.json"
+    preset = json.loads(preset_path.read_text(encoding="utf-8"))
+
+    for node_id in ("47", "48"):
+        assert preset["inputs"][node_id]["model"] == {"from": "literal:P2"}
+
+    assert not list(_bound_defaults(preset, "option:model_version"))
+    assert preset["meta"]["option_enums"]["model_version"][0] == "v3.1-20260211"
+    assert "P2" not in preset["meta"]["option_enums"]["model_version"]
+
+
 def test_shipped_model_workflows_default_to_high_quality():
     def workflow(name: str) -> dict:
         path = WORKFLOWS_DIR / "model" / name

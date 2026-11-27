@@ -247,6 +247,50 @@ describe('syncBoundOptionEnums', () => {
     expect(comboOptionsVersion.value).toBe(1)
   })
 
+  it('removes the stale Tripo P2 branch-selector binding instead of using P2 as model_version', async () => {
+    vi.mocked(fetchWorkflowConfig)
+      .mockResolvedValueOnce({
+        id: 10,
+        exposed_widgets: [{
+          node_id: '47',
+          widget_name: 'model',
+          stage_binding: 'option:model_version',
+          widget_type: 'COMBO',
+          widget_props: { values: ['P2'], dynamic_branches: { P2: ['model.image'] } },
+          current_value: 'P2',
+        }],
+      } as any)
+      .mockResolvedValueOnce({
+        id: 10,
+        exposed_widgets: [{
+          node_id: '47',
+          widget_name: 'model',
+          stage_binding: null,
+          widget_type: 'COMBO',
+          widget_props: { values: ['P2'], dynamic_branches: { P2: ['model.image'] } },
+          current_value: 'P2',
+        }],
+      } as any)
+
+    const node: any = {
+      widgets: [
+        { name: 'workflow', value: 'Tripo P2' },
+        { name: 'model_version', type: 'combo', value: 'P2', options: { values: ['P2'] }, callback: vi.fn() },
+      ],
+    }
+
+    await syncBoundOptionEnums(node, 'model', 'Tripo P2')
+
+    expect(apiSend).toHaveBeenCalledWith(
+      '/comfytv/workflows/config/binding',
+      'DELETE',
+      expect.anything(),
+      { workflow_id: 10, node_id: '47', input_name: 'model' },
+    )
+    expect(node.widgets[1].options.values).not.toContain('P2')
+    expect(node.widgets[1].value).toBe('v3.1-20260211')
+  })
+
   it('restores Stage combo lists when the workflow has no matching COMBOs', async () => {
     vi.mocked(fetchWorkflowConfig).mockResolvedValueOnce({
       id: 1,
