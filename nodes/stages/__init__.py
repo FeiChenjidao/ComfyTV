@@ -122,6 +122,7 @@ from .material import MaterialStage
 from .split_part import SplitPartStage, MaskCleanup
 from .batch_loop import BatchLoop
 from .custom_stage import CustomStage
+from ..alpha_merge import AlphaMerge
 from ..file3d_first import File3DFirst
 from ..save_webm import SaveWebM
 from ..vp9_to_vp8 import VP9ToVP8
@@ -198,7 +199,7 @@ def stage_classes() -> list:
         MaterialStage,
         SplitPartStage, MaskCleanup, BatchLoop,
         CustomStage,
-        File3DFirst, SaveWebM, VP9ToVP8, VideoBlackToAlphaVP8,
+        AlphaMerge, File3DFirst, SaveWebM, VP9ToVP8, VideoBlackToAlphaVP8,
         *_bridge_classes(),
     ]
 

@@ -1,5 +1,8 @@
 {
   "ComfyTV": {
+    "AlphaMerge": {
+      "display_name": "Alpha 合并"
+    },
     "AssetAudioLoaderStage": {
       "display_name": "从资产加载音频"
     },
@@ -527,6 +530,24 @@
     },
     "SaveWebM": {
       "display_name": "保存 WebM (ComfyTV)"
+    }
+  },
+  "ComfyTV_AlphaMerge": {
+    "display_name": "Alpha 合并",
+    "description": "使用 Alpha 图的亮度作为不透明度，输出 RGBA 图像。",
+    "inputs": {
+      "image": {
+        "name": "原图"
+      },
+      "alpha_image": {
+        "name": "Alpha 图",
+        "tooltip": "黑色全透明，白色完全不透明，灰色保留半透明。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "RGBA"
+      }
     }
   },
   "ComfyTV_AssetAudioLoaderStage": {
