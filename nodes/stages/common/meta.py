@@ -7,7 +7,7 @@ PENDING_STAGES: frozenset[str] = frozenset({
 })
 
 NON_STAGE_NODES: frozenset[str] = frozenset({
-    'AlphaMerge', 'MaskCleanup', 'MakeProxyStage', 'BatchLoop', 'File3DFirst', 'SaveWebM',
+    'MaskCleanup', 'MakeProxyStage', 'BatchLoop', 'File3DFirst', 'SaveWebM',
     'VP9ToVP8', 'VideoBlackToAlphaVP8',
 })
 
@@ -45,6 +45,7 @@ STAGE_META: dict[str, dict] = {
     'CustomSplitStage':             {'kind': 'image-batch', 'variant': 'transform'},
     'ImagesSplitStage':             {'kind': 'image',       'variant': 'transform'},
     'ImageMergeStage':              {'kind': 'image',       'variant': 'transform'},
+    'AlphaMerge':                   {'kind': 'image'},
     'DirectorTimelineStage':        {'kind': 'timeline',    'variant': 'transform'},
     'TimelineVideoStage':           {'kind': 'video',        'workflow_kind': 'timeline'},
     'LayerSeparationStage':         {'kind': 'image-batch',  'workflow_kind': 'layer-separation'},

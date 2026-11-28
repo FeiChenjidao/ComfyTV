@@ -534,14 +534,14 @@
   },
   "ComfyTV_AlphaMerge": {
     "display_name": "Alpha 合并",
-    "description": "使用 Alpha 图的亮度作为不透明度，输出 RGBA 图像。",
+    "description": "读取贴图自带的 Alpha 通道，应用到原图并输出 RGBA 图像。",
     "inputs": {
       "image": {
         "name": "原图"
       },
       "alpha_image": {
-        "name": "Alpha 图",
-        "tooltip": "黑色全透明，白色完全不透明，灰色保留半透明。"
+        "name": "Alpha 贴图",
+        "tooltip": "连接带 Alpha 通道的贴图，例如透明 PNG。"
       }
     },
     "outputs": {
