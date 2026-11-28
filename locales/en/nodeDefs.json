@@ -1,5 +1,8 @@
 {
   "ComfyTV": {
+    "AlphaMerge": {
+      "display_name": "Alpha Merge"
+    },
     "AssetAudioLoaderStage": {
       "display_name": "Load Audio from Asset"
     },

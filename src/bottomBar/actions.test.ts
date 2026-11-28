@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import * as stageMeta from '@/composables/stages/stageMeta'
 import {
   categoryFromMenuPath,
   filterNodes,
   groupNodesByCategory,
   inferSearchCategory,
+  listComfyTVNodes,
   nativeWorkflowFolder,
   openWorkflowTemplateRow,
   QUICK_CREATE,
@@ -33,6 +35,29 @@ describe('bottomBar actions', () => {
     expect(filterNodes(nodes, 'videostage').map((n) => n.classType)).toEqual(['ComfyTV.VideoStage'])
     expect(filterNodes(nodes, '', 'video').map((n) => n.classType)).toEqual(['ComfyTV.VideoCropStage'])
     expect(filterNodes(nodes, '')).toHaveLength(4)
+  })
+
+  it('includes Alpha Merge alongside nodes from stage metadata', async () => {
+    const stage = { node_id: 'ComfyTV.ImageStage', kind: 'image' }
+    const load = vi.spyOn(stageMeta, 'loadStageMeta').mockResolvedValue(new Map([[stage.node_id, stage]]))
+    vi.stubGlobal('LiteGraph', {
+      registered_node_types: {
+        'ComfyTV.AlphaMerge': { category: 'ComfyTV/Image' },
+        'ComfyTV.ImageStage': { category: 'ComfyTV/Generate' },
+        'ComfyTV.ProjectStage': { category: 'ComfyTV/Project' },
+        LoadImage: { category: 'image' },
+      },
+    })
+    try {
+      const nodes = await listComfyTVNodes()
+      expect(nodes.map(node => node.classType).sort()).toEqual(['ComfyTV.AlphaMerge', 'ComfyTV.ImageStage'])
+      expect(filterNodes(nodes, 'alpha', 'image')).toEqual([
+        expect.objectContaining({ classType: 'ComfyTV.AlphaMerge', category: 'image' }),
+      ])
+    } finally {
+      load.mockRestore()
+      vi.unstubAllGlobals()
+    }
   })
 
   it('derives folder badges from native workflow paths', () => {

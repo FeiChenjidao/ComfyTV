@@ -154,22 +154,12 @@ function buildCatalogEntry(
 
 export async function listComfyTVNodes(): Promise<NodeCatalogEntry[]> {
   const stages = await loadStageMeta()
-  const fromMeta: NodeCatalogEntry[] = []
-  for (const [nodeId, meta] of stages) {
-    if (!nodeId.startsWith('ComfyTV.')) continue
-    if (nodeId === 'ComfyTV.ProjectStage') continue
-    fromMeta.push(buildCatalogEntry(nodeId, meta))
-  }
-  if (fromMeta.length) {
-    return fromMeta.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }))
-  }
-
-  // Fallback: LiteGraph registry when stage meta is unavailable
   const types = (window as any)?.LiteGraph?.registered_node_types || {}
+  const nodeIds = new Set([...stages.keys(), ...Object.keys(types)])
   const out: NodeCatalogEntry[] = []
-  for (const key of Object.keys(types)) {
-    if (!key.startsWith('ComfyTV.') || key === 'ComfyTV.ProjectStage') continue
-    out.push(buildCatalogEntry(key))
+  for (const nodeId of nodeIds) {
+    if (!nodeId.startsWith('ComfyTV.') || nodeId === 'ComfyTV.ProjectStage') continue
+    out.push(buildCatalogEntry(nodeId, stages.get(nodeId)))
   }
   return out.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }))
 }
